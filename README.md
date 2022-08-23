@@ -6,6 +6,7 @@ A sleek music player app for your local library
 
 Features:
 - Import
+  - [x] Supports MP3, FLAC, AAC, OGG, WAV
   - [x] Basic info from ID3 tags (title, artist, album, genre, year)
   - [ ] Advanced metadata from ID3 tags
   - [x] Recursive folder import
