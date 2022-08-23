@@ -67,6 +67,16 @@
     const query = $rightClickedTrack.path.replace($rightClickedTrack.file, "");
     open(query);
   }
+  function lookUpChords() {
+    closeMenu();
+    const query = encodeURIComponent($rightClickedTrack.artist + ' ' + $rightClickedTrack.title + ' chords');
+    open(`https://duckduckgo.com/?q=${query}`);
+  }
+  function lookUpLyrics() {
+    closeMenu();
+    const query = encodeURIComponent($rightClickedTrack.artist + ' ' + $rightClickedTrack.title + ' lyrics');
+    open(`https://duckduckgo.com/?q=${query}`);
+  }
 </script>
 
 {#if showMenu}
@@ -92,6 +102,11 @@
       on:click={searchArtistOnWikipedia}
       text="Search for artist on Wikipedia"
     />
+    <MenuDivider />
+    <MenuOption on:click={lookUpChords} text="Look up chords" />
+    <MenuOption on:click={lookUpLyrics} text="Look up lyrics" />
+    <MenuDivider />
+
     <MenuOption on:click={openInFinder} text="Open in Finder" />
   </Menu>
 {/if}

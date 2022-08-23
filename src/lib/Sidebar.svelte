@@ -16,7 +16,7 @@
   import Knob from "./Knob.svelte";
   import hotkeys from "hotkeys-js";
   import { window } from "@tauri-apps/api";
-  import { WebviewWindow } from "@tauri-apps/api/window";
+  import { convertFileSrc } from '@tauri-apps/api/tauri';
 
   // What to show in the sidebar
   let title;
@@ -46,7 +46,7 @@
   currentSong.subscribe(async (song) => {
     if (song) {
       const metadata = await musicMetadata.fetchFromUrl(
-        window.__TAURI__.tauri.convertFileSrc(song.path)
+        convertFileSrc(song.path)
       );
       console.log("metadata", metadata);
       title = metadata.common.title;
@@ -106,7 +106,7 @@
     <input
       class="search"
       type="text"
-      placeholder="Search"
+      placeholder="Search..."
       bind:value={$query.query}
     />
   </div>
@@ -145,7 +145,7 @@
       {:else}
         <div class="artwork-placeholder">
           <iconify-icon icon="mdi:music-clef-treble" on:click={playPrev} />
-          <small>Drag art into here to add</small>
+          <!-- <small>No art</small> -->
         </div>
       {/if}
     </div>
@@ -207,6 +207,7 @@
     font-size: 2em;
     opacity: 0.2;
     user-select: none;
+    margin-bottom: 0;
     cursor: default;
     &:hover {
       opacity: 0.5;
@@ -230,10 +231,10 @@
         color: white;
       }
       &:focus {
-        outline: 1px solid #5123dd;
+        /* outline: 1px solid #5123dd; */
         background-color: #504c4c;
       }
-      background-color: #343030;
+      background-color: #3d3e4729;
 
       border: 1px solid rgb(63, 63, 63);
     }
@@ -277,7 +278,7 @@
         align-items: center;
         gap: 1em;
         iconify-icon {
-          margin-top: 0.7em;
+          /* margin-top: 0.7em; */
         }
       }
     }

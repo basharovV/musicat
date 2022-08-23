@@ -13,7 +13,7 @@ import { get } from "svelte/store";
 let songs: Song[] = [];
 
 export async function addSong(filePath: string, fileName: string) {
-  if (!filePath.match(/\.(mp3|ogg|flac|wav)$/)) {
+  if (!filePath.match(/\.(mp3|ogg|flac|aac|wav)$/)) {
     return;
   }
   const metadata = await musicMetadata.fetchFromUrl(
