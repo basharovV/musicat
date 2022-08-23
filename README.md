@@ -21,6 +21,7 @@ Features:
   - [ ] Advanced search
 - Player
   - [x] Current track info and artwork
+  - [x] Show format, bitrate, sample rate
   - [x] Seekbar
   - [x] EQ visualizer
   - [x] Media keys support (also Space for play/pause)
