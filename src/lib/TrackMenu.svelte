@@ -1,29 +1,41 @@
-<script>
-  import { rightClickedTrack } from "../data/store";
+<script lang="ts">
+  import { rightClickedTrack, rightClickedTracks } from "../data/store";
   import { db } from "../data/db";
   import Menu from "./menu/Menu.svelte";
   import MenuOption from "./menu/MenuOption.svelte";
   import { open } from "@tauri-apps/api/shell";
   import { get } from "svelte/store";
   import MenuDivider from "./menu/MenuDivider.svelte";
+  import { type, type OsType } from "@tauri-apps/api/os";
+  import { onMount } from "svelte";
 
   export let pos = { x: 0, y: 0 };
   export let showMenu = false;
+  let explorerName: string;
 
-  async function onRightClick(e) {
-    if (showMenu) {
-      showMenu = false;
-      await new Promise((res) => setTimeout(res, 100));
+  onMount(async () => {
+    const os = await type();
+    switch (os) {
+      case "Darwin":
+        explorerName = "Finder";
+        break;
+      case "Windows_NT":
+        explorerName = "Explorer";
+        break;
+      case "Linux":
+        explorerName = "File manager";
+        break;
     }
-
-    showMenu = true;
-  }
+  });
 
   let songId;
   let isConfirmingDelete = false;
 
   $: {
-    if (songId !== $rightClickedTrack?.id) {
+    if (
+      $rightClickedTracks?.map((s) => s.id).includes(songId) ||
+      songId !== $rightClickedTrack?.id
+    ) {
       isConfirmingDelete = false;
     }
   }
@@ -39,7 +51,14 @@
       isConfirmingDelete = true;
       return;
     }
-    if ($rightClickedTrack) {
+    if ($rightClickedTracks.length) {
+      closeMenu();
+      $rightClickedTracks.forEach((t) => {
+        db.songs.delete(t.id);
+      });
+      $rightClickedTracks = [];
+      isConfirmingDelete = false;
+    } else if ($rightClickedTrack) {
       closeMenu();
       db.songs.delete($rightClickedTrack.id);
       $rightClickedTrack = null;
@@ -69,44 +88,55 @@
   }
   function lookUpChords() {
     closeMenu();
-    const query = encodeURIComponent($rightClickedTrack.artist + ' ' + $rightClickedTrack.title + ' chords');
+    const query = encodeURIComponent(
+      $rightClickedTrack.artist + " " + $rightClickedTrack.title + " chords"
+    );
     open(`https://duckduckgo.com/?q=${query}`);
   }
   function lookUpLyrics() {
     closeMenu();
-    const query = encodeURIComponent($rightClickedTrack.artist + ' ' + $rightClickedTrack.title + ' lyrics');
+    const query = encodeURIComponent(
+      $rightClickedTrack.artist + " " + $rightClickedTrack.title + " lyrics"
+    );
     open(`https://duckduckgo.com/?q=${query}`);
   }
 </script>
 
 {#if showMenu}
   <Menu {...pos} on:clickoutside={closeMenu}>
-    <MenuOption isDisabled={true} text={$rightClickedTrack.title} />
+    <MenuOption
+      isDisabled={true}
+      text={$rightClickedTrack
+        ? $rightClickedTrack.title
+        : $rightClickedTracks.length + " tracks"}
+    />
     <MenuOption
       isDestructive={true}
       isConfirming={isConfirmingDelete}
       on:click={deleteTrack}
-      text="Delete track"
+      text={$rightClickedTrack ? "Delete track" : "Delete tracks"}
       confirmText="Click again to confirm"
     />
-    <MenuDivider />
-    <MenuOption
-      on:click={searchSongOnYouTube}
-      text="Search for song on YouTube"
-    />
-    <MenuOption
-      on:click={searchArtistOnYouTube}
-      text="Search for artist on YouTube"
-    />
-    <MenuOption
-      on:click={searchArtistOnWikipedia}
-      text="Search for artist on Wikipedia"
-    />
-    <MenuDivider />
-    <MenuOption on:click={lookUpChords} text="Look up chords" />
-    <MenuOption on:click={lookUpLyrics} text="Look up lyrics" />
-    <MenuDivider />
+    {#if $rightClickedTrack}
+      <MenuDivider />
+      <MenuOption
+        on:click={searchSongOnYouTube}
+        text="Search for song on YouTube"
+      />
+      <MenuOption
+        on:click={searchArtistOnYouTube}
+        text="Search for artist on YouTube"
+      />
+      <MenuOption
+        on:click={searchArtistOnWikipedia}
+        text="Search for artist on Wikipedia"
+      />
+      <MenuDivider />
+      <MenuOption on:click={lookUpChords} text="Look up chords" />
+      <MenuOption on:click={lookUpLyrics} text="Look up lyrics" />
+      <MenuDivider />
 
-    <MenuOption on:click={openInFinder} text="Open in Finder" />
+      <MenuOption on:click={openInFinder} text="Open in {explorerName}" />
+    {/if}
   </Menu>
 {/if}

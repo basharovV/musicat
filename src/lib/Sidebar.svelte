@@ -16,7 +16,7 @@
   import Knob from "./Knob.svelte";
   import hotkeys from "hotkeys-js";
   import { window } from "@tauri-apps/api";
-  import { convertFileSrc } from '@tauri-apps/api/tauri';
+  import { convertFileSrc } from "@tauri-apps/api/tauri";
 
   // What to show in the sidebar
   let title;
@@ -65,6 +65,7 @@
         console.log("artworkSrc", artworkSrc);
       } else {
         artworkSrc = null;
+        lookForArt();
       }
     }
   });
@@ -95,6 +96,23 @@
     console.log("clicked");
     $isInfoPopupOpen = true;
   }
+
+  async function lookForArt() {
+    const folder = $currentSong.path.replace($currentSong.file, "");
+
+    // Check are there any images in the folder?
+    try {
+      const src = "asset://" + folder + "folder.jpg";
+      const response = await fetch(src);
+      if (response.status === 200) {
+        console.log("got art!", response);
+        artworkSrc = src;
+        artworkFormat = "image/jpeg";
+      }
+    } catch (err) {
+      console.error("Couldn't find artwork " + err);
+    }
+  }
 </script>
 
 <sidebar>
@@ -102,31 +120,51 @@
   <!-- <div class="knob">
     <Knob bind:value={volumeKnob} max={100} min={0} pixelRange={200} />
   </div> -->
-  <div class="search-container">
-    <input
-      class="search"
-      type="text"
-      placeholder="Search..."
-      bind:value={$query.query}
-    />
-  </div>
-  <img class="cd-gif" src="images/cd6.gif" />
+  <div class="top">
+    <div class="search-container">
+      <input
+        class="search"
+        type="text"
+        placeholder="Search..."
+        bind:value={$query.query}
+      />
+    </div>
 
-  <div class="info">
-    {#if title}
-      <p class="title">{title}</p>
-    {/if}
-    {#if artist}
-      <p class="artist">{artist}</p>
-    {/if}
-    {#if album}
-      <small>{album}</small>
-    {/if}
-    {#if !artist && !title && !album}
-      <p>Take control of your library</p>
-    {/if}
+    <menu>
+      <items>
+        <item> <iconify-icon icon="fluent:library-20-filled" />Music</item>
+        <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
+
+        <!-- <hr />
+    <item>
+      <iconify-icon
+        icon="iconoir:album-carousel"
+      />Samples</item
+    > -->
+      </items>
+    </menu>
   </div>
 
+  <div class="track-info">
+    <hr />
+
+    <img class="cd-gif" src="images/cd6.gif" />
+
+    <div class="info">
+      {#if title}
+        <p class="title">{title}</p>
+      {/if}
+      {#if artist}
+        <p class="artist">{artist}</p>
+      {/if}
+      {#if album}
+        <small>{album}</small>
+      {/if}
+      {#if !artist && !title && !album}
+        <p class="is-placeholder">Take control of your library</p>
+      {/if}
+    </div>
+  </div>
   {#if codec}
     <div class="file">
       <p>{codec}</p>
@@ -138,40 +176,44 @@
   <div class="spectrum">
     <SpectrumAnalyzer />
   </div>
-  <div class="artwork-container">
-    <div class="artwork-frame">
-      {#if artworkSrc && artworkFormat}
-        <img type={artworkFormat} class="artwork" src={artworkSrc} />
-      {:else}
-        <div class="artwork-placeholder">
-          <iconify-icon icon="mdi:music-clef-treble" on:click={playPrev} />
-          <!-- <small>No art</small> -->
-        </div>
-      {/if}
+  {#if $currentSong}
+    <div class="artwork-container">
+      <div class="artwork-frame">
+        {#if artworkSrc && artworkFormat}
+          <img type={artworkFormat} class="artwork" src={artworkSrc} />
+        {:else}
+          <div class="artwork-placeholder">
+            <iconify-icon icon="mdi:music-clef-treble" on:click={playPrev} />
+            <!-- <small>No art</small> -->
+          </div>
+        {/if}
+      </div>
     </div>
-  </div>
-  <div class="seekbar">
-    <Seekbar {duration} />
-  </div>
-  <transport>
-    <iconify-icon icon="fe:backward" on:click={playPrev} />
-    <iconify-icon
-      on:click={togglePlayPause}
-      icon={$isPlaying ? "fe:pause" : "fe:play"}
-    />
-    <iconify-icon icon="fe:forward" on:click={playNext} />
-  </transport>
+  {/if}
+  <div class="bottom">
+    <div class="seekbar">
+      <Seekbar {duration} />
+    </div>
+    <transport>
+      <iconify-icon icon="fe:backward" on:click={playPrev} />
+      <iconify-icon
+        on:click={togglePlayPause}
+        icon={$isPlaying ? "fe:pause" : "fe:play"}
+      />
+      <iconify-icon icon="fe:forward" on:click={playNext} />
+    </transport>
 
-  <div class="volume">
-    <input
-      type="range"
-      min="0"
-      max="1"
-      step="0.01"
-      bind:value={$volume}
-      class="slider"
-      id="myRange"
-    />
+    <div class="volume">
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        bind:value={$volume}
+        class="slider"
+        id="myRange"
+      />
+    </div>
   </div>
 </sidebar>
 
@@ -214,10 +256,72 @@
     }
   }
 
-  .search-container {
+  hr {
     width: 100%;
+    border-top: 1px solid rgba(141, 139, 139, 0.139);
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+  }
+  menu {
+    width: 100%;
+    margin: 0;
+    user-select: none;
     padding: 1em;
-    height: 100%;
+    margin-block-start: 0;
+
+    background-color: #242026;
+    items {
+      display: flex;
+      flex-direction: column;
+      border-radius: 3px;
+      gap: 3px;
+    }
+
+    item {
+      text-transform: uppercase;
+      font-weight: bold;
+      text-align: left;
+      width: fit-content;
+      padding: 0.3em 0.5em;
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: rgb(181, 182, 186);
+
+      cursor: default;
+      &:hover {
+        color: rgb(255, 255, 255);
+      }
+      &:active {
+        color: rgb(130, 130, 130);
+      }
+
+      iconify-icon {
+        margin-right: 5px;
+        font-size: 15px;
+        text-align: center;
+        vertical-align: middle;
+        opacity: 0.4;
+      }
+    }
+  }
+
+  .top {
+    width: 100%;
+    position: sticky;
+    top: 0;
+  }
+
+  .bottom {
+    width: 100%;
+    position: sticky;
+    top: 400px;
+  }
+
+  .search-container {
+    padding: 1em;
+    width: 100%;
+    background-color: #242026;
 
     .search {
       margin: 0;
@@ -227,6 +331,8 @@
       padding-left: 5px;
       font-size: 13px;
       color: white;
+      backdrop-filter: blur(8px);
+      z-index: 10;
       &::placeholder {
         color: white;
       }
@@ -234,10 +340,19 @@
         /* outline: 1px solid #5123dd; */
         background-color: #504c4c;
       }
-      background-color: #3d3e4729;
+      background-color: #6061703a;
 
       border: 1px solid rgb(63, 63, 63);
     }
+  }
+
+  .track-info {
+    height: 100%;
+    width: 100%;
+
+    background-color: #242026;
+    position: sticky;
+    top: 110px;
   }
 
   .spectrum {
@@ -249,15 +364,16 @@
   }
 
   .cd-gif {
+    margin-top: 1em;
     width: 30px;
+    height: auto;
     margin-left: 10px;
-    position: relative;
     align-self: center;
     z-index: 0;
   }
 
   .artwork-container {
-    padding: 0.2em;
+    padding: 0em;
     width: 100%;
     height: 200px;
 
@@ -265,8 +381,8 @@
       width: 100%;
       height: 100%;
       box-sizing: border-box;
-      border-radius: 3px;
-      border: 1px solid rgb(94, 94, 94);
+      /* border-radius: 3px; */
+      /* border: 1px solid rgb(94, 94, 94); */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -285,6 +401,10 @@
   }
 
   .file {
+    position: sticky;
+    top: 270px;
+    background-color: #242026;
+
     display: flex;
     align-items: center;
     justify-content: center;
@@ -293,17 +413,20 @@
     user-select: none;
     pointer-events: none;
     width: 100%;
-    font-size: 0.8em;
     color: rgb(125, 125, 125);
-    font-weight: 400;
 
     p {
-      text-transform: lowercase;
-      /* background-color: rgba(85, 85, 85, 0.373); */
+      background-color: rgba(85, 85, 85, 0.162);
       padding: 0em 0.6em;
       margin: 0;
       border-radius: 2px;
-      border: 1px solid rgb(49, 49, 49);
+      font-size: 0.7em;
+      line-height: 1.5em;
+      font-weight: 600;
+      border-top: 1px solid rgb(49, 49, 49);
+      /* border-bottom: 1px dashed rgb(49, 49, 49); */
+      font-family: monospace;
+      text-transform: uppercase;
     }
   }
   .info {
@@ -316,7 +439,7 @@
       white-space: nowrap;
       font-weight: bold;
       font-size: 0.9em;
-      opacity: 0.8;
+      z-index: 1;
     }
     .title {
       white-space: nowrap;
@@ -328,7 +451,15 @@
     * {
       margin: 0;
     }
+
+    .is-placeholder {
+      font-family: "Snake", Courier, monospace;
+      font-size: 2em;
+      line-height: 1.2em;
+      margin: 0 1em;
+    }
   }
+
   @keyframes marquee {
     0% {
       transform: translate(0%, 0);
@@ -340,7 +471,7 @@
 
   img {
     width: 100%;
-    height: auto;
+    height: 100%;
     border-radius: 2px;
   }
 

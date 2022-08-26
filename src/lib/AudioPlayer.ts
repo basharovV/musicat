@@ -93,7 +93,6 @@ class AudioPlayer {
       this.audioFile.play();
       this.ticker = setInterval(() => {
         playerTime.set(this.audioFile.currentTime);
-        console.log("currentTime  ", this.audioFile.currentTime);
 
       }, 1000);
     }

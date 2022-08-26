@@ -87,3 +87,8 @@ button:focus-visible {
   font-family: "2Peas";
   src: url("/fonts/2Peas/2Peas.otf") format("opentype");
 }
+
+@font-face {
+  font-family: "Snake";
+  src: url("/fonts/Snake.ttf") format("truetype");
+}

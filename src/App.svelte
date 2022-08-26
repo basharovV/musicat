@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { isDraggingFiles, isInfoPopupOpen } from "./data/store";
+  import { isDraggingFiles, isInfoPopupOpen, uiView } from "./data/store";
+import Albums from "./lib/Albums.svelte";
 
   import Dropzone from "./lib/Dropzone.svelte";
   import InfoPopup from "./lib/InfoPopup.svelte";
@@ -36,7 +37,12 @@
 
 <main on:dragenter={onDragEnter}>
   <Sidebar />
-  <Library />
+
+  {#if $uiView === 'library'}
+    <Library />
+  {:else if $uiView === 'albums'}
+    <Albums />
+  {/if}
 </main>
 
 <style lang="scss">

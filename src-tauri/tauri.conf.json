@@ -67,7 +67,9 @@
         "height": 600,
         "resizable": true,
         "title": "Musicat",
-        "width": 800
+        "width": 1000,
+        "minHeight": 455,
+        "minWidth": 450
       }
     ]
   }
