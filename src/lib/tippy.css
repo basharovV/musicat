@@ -4,6 +4,9 @@
 [data-tippy-root] {
   max-width: calc(100vw - 10px);
 }
+.tippy-box[data-theme~='hidden'] {
+  display: none;
+}
 .tippy-box {
   position: relative;
   background-color: #181718;

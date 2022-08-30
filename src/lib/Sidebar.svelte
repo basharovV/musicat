@@ -162,6 +162,7 @@
     onMount(() => {
         height = window.innerHeight;
         window.onresize = onResize;
+        onResize(); // run once
         searchInput.onfocus = (evt) => {
             $singleKeyShortcutsEnabled = false;
         };
@@ -183,6 +184,10 @@
                 tauriWindow
                     .getCurrent()
                     .setSize(new LogicalSize(widthToRestore, heightToRestore));
+            } else {
+                tauriWindow
+                    .getCurrent()
+                    .setSize(new LogicalSize(1100, 700));
             }
         }
     }
@@ -233,6 +238,7 @@
         <div class="track-info-content">
             <iconify-icon
                 use:tippy={{
+                    theme: $isMiniPlayer ? "hidden" : "",
                     content: "Toggle the mini player.",
                     placement: "right"
                 }}
