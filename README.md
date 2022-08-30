@@ -1,11 +1,7 @@
-# Musicat
-
-
-
 <p align="center">
 <img height="140" src="src-tauri/icons/Square310x310Logo.png">
 </p>
-
+<h1 align="center">Musicat</h1>
 <p align="center">
 <b>A sleek player for your local music library</b>
 <br/>
@@ -17,15 +13,14 @@
 <br/>
 <small>💿 a nice little mini-player
 </small>
+<br/>
+  -
 </p>
 
-
-----
 
 ![screenshot](docs/screenshot.png)
 
 ## Features:
-----
 - File formats
   - [x] Supports MP3, FLAC, AAC, OGG, WAV
       - Metadata editing only for MP3 and FLAC
