@@ -2,14 +2,14 @@
 
 
 
-<p style="text-align: center;">
+<p align="center">
 <img height="140" src="src-tauri/icons/Square310x310Logo.png">
 </p>
 
-<p style="text-align: center;">
-A sleek player for your local music library
+<p align="center">
+<b>A sleek player for your local music library</b>
 <br/>
---
+-
 <br/>
 <small>🔗 linked music library, using original files on disk</small>
 <br/>
@@ -46,7 +46,7 @@ A sleek player for your local music library
   
   Small and widget-like. Window controls dissappear when in mini player mode.
   - [ ] Save window position
-<p style="text-align: center;">
+<p align="center">
 <img height="200" src="docs/mini-cover.png">
 <img height="200" src="docs/mini-ui.png">
 </p>
