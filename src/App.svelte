@@ -68,7 +68,7 @@
         height: 100vh;
         opacity: 1;
         position: relative;
-        background-color: #242026;
+        background-color: #242026c2;
 
         &.mini-player {
             border-radius: 5px;

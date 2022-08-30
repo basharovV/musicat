@@ -1,7 +1,7 @@
 #![cfg_attr(
-    all(not(debug_assertions), target_os = "window&&&&s"),
+    all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
-)]
+  )]
 
 use std::error::Error;
 use std::fmt;
@@ -9,12 +9,12 @@ use std::fs::File;
 use std::io::BufReader;
 use std::ops::Deref;
 
+use lofty::{read_from_path, ItemKey, ItemValue, Picture, TagItem, TagType};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Event, Manager};
-// use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
-use lofty::{read_from_path, ItemKey, ItemValue, Picture, TagItem, TagType};
-use serde_json::Value;
+use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
 fn main() {
     tauri::Builder::default()
@@ -26,6 +26,14 @@ fn main() {
             window.on_menu_event(move |event| {
                 window_reference.emit("menu", event.menu_item_id()).unwrap();
             });
+
+            #[cfg(target_os = "macos")]
+            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow)
+                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+
+            #[cfg(target_os = "windows")]
+            apply_blur(&window, Some((18, 18, 18, 125)))
+                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
 
             // Listen for metadata write event
 
@@ -122,7 +130,6 @@ impl fmt::Display for MyCustomError {
         }
     }
 }
-
 
 fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
     // println!("got event-name with payload {:?}", event.payload());

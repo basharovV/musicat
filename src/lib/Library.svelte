@@ -421,8 +421,8 @@
 <TrackMenu bind:showMenu={showTrackMenu} bind:pos />
 
 <style lang="scss">
-    $odd_color: rgb(42, 38, 40);
-    $even_color: rgb(42, 38, 40);
+    $odd_color: transparent;
+    $even_color: transparent;
     $selected_color: #5123dd;
     $playing_text_color: #00ddff;
     $highlight_color: #4b61dd45;
@@ -433,7 +433,7 @@
     library {
         height: 100vh;
         font-size: 0.9em;
-        background-color: rgb(36, 33, 34);
+        background-color: rgba(36, 33, 34, 0.688);
         position: relative;
         overflow: overlay;
 

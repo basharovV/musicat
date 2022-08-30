@@ -330,7 +330,7 @@
     $thumb_size: 22px;
     $mini_y_breakpoint: 400px;
     $xsmall_y_breakpoint: 320px;
-    $sidebar_primary_color: #242026;
+    $sidebar_primary_color: transparent;
     $sidebar_secondary_color: rgb(234, 226, 226);
     sidebar {
         position: relative;
