@@ -30,7 +30,7 @@
 </script>
 
 <div class="dropzone" on:dragleave={onDragLeave}>
-  <img src="images/drop-the-mic.gif" />
+  <img alt="Drop the mic" src="images/drop-the-mic.gif" />
 </div>
 
 <style lang="scss">

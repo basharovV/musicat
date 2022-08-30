@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { rightClickedTrack, rightClickedTracks } from "../data/store";
+  import {
+    isInfoPopupOpen,
+    isTrackInfoPopupOpen,
+    rightClickedTrack,
+    rightClickedTracks,
+  } from "../data/store";
   import { db } from "../data/db";
   import Menu from "./menu/Menu.svelte";
   import MenuOption from "./menu/MenuOption.svelte";
@@ -100,6 +105,9 @@
     );
     open(`https://duckduckgo.com/?q=${query}`);
   }
+  function openInfo() {
+    $isTrackInfoPopupOpen = true;
+  }
 </script>
 
 {#if showMenu}
@@ -137,6 +145,7 @@
       <MenuDivider />
 
       <MenuOption on:click={openInFinder} text="Open in {explorerName}" />
+      <MenuOption on:click={openInfo} text="Info & metadata" />
     {/if}
   </Menu>
 {/if}

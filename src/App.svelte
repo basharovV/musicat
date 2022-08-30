@@ -1,66 +1,93 @@
 <script lang="ts">
-  import { isDraggingFiles, isInfoPopupOpen, uiView } from "./data/store";
-import Albums from "./lib/Albums.svelte";
+    import {
+        isDraggingFiles,
+        isInfoPopupOpen,
+        isMiniPlayer,
+        isTrackInfoPopupOpen,
+        uiView
+    } from "./data/store";
+    import Albums from "./lib/Albums.svelte";
+    import toast, { Toaster } from "svelte-french-toast";
 
-  import Dropzone from "./lib/Dropzone.svelte";
-  import InfoPopup from "./lib/InfoPopup.svelte";
-  import Library from "./lib/Library.svelte";
-  import Sidebar from "./lib/Sidebar.svelte";
-  import { startMenuListener } from "./window/EventListener";
+    import Dropzone from "./lib/Dropzone.svelte";
+    import InfoPopup from "./lib/InfoPopup.svelte";
+    import Library from "./lib/Library.svelte";
+    import Sidebar from "./lib/Sidebar.svelte";
+    import TrackInfoPopup from "./lib/TrackInfoPopup.svelte";
+    import { startMenuListener } from "./window/EventListener";
 
-  startMenuListener();
+    startMenuListener();
 
-  function onDragEnter(e) {
-    e.preventDefault();
+    function onDragEnter(e) {
+        e.preventDefault();
 
-    e.dataTransfer.dropEffect = "copy";
-    isDraggingFiles.set(true);
-    console.log("drag enter");
-  }
+        e.dataTransfer.dropEffect = "copy";
+        isDraggingFiles.set(true);
+        console.log("drag enter");
+    }
 
-  function onPageClick() {
-    $isInfoPopupOpen = false;
-  }
+    function onPageClick() {
+        $isInfoPopupOpen = false;
+    }
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->
+<Toaster />
 
 {#if $isInfoPopupOpen}
-  <div class="info">
-    <InfoPopup />
-  </div>
+    <div class="info">
+        <InfoPopup />
+    </div>
+{/if}
+
+{#if $isTrackInfoPopupOpen}
+    <div class="info">
+        <TrackInfoPopup />
+    </div>
 {/if}
 
 {#if $isDraggingFiles}
-  <Dropzone />
+    <Dropzone />
 {/if}
 
-<main on:dragenter={onDragEnter}>
-  <Sidebar />
+<main on:dragenter={onDragEnter} class:mini-player={$isMiniPlayer}>
+    <Sidebar />
 
-  {#if $uiView === 'library'}
-    <Library />
-  {:else if $uiView === 'albums'}
-    <Albums />
-  {/if}
+    {#if $uiView === "library"}
+        <Library />
+    {:else if $uiView === "albums"}
+        <Albums />
+    {/if}
 </main>
 
 <style lang="scss">
-  main {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    width: 100vw;
-    height: 100vh;
-    opacity: 1;
-    position: relative;
-  }
+    main {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        width: 100vw;
+        height: 100vh;
+        opacity: 1;
+        position: relative;
+        background-color: #242026;
 
-  .info {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 2;
-  }
+        &.mini-player {
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        @media only screen and (max-width: 320px) {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .info {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2;
+        display: flex;
+        background-color: #242026b9;
+    }
 </style>

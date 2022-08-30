@@ -1,81 +1,173 @@
 import { open } from "@tauri-apps/api/dialog";
 import { BaseDirectory, readDir } from "@tauri-apps/api/fs";
-import { appDir } from "@tauri-apps/api/path";
+import { audioDir } from "@tauri-apps/api/path";
 import "iconify-icon";
 import md5 from "md5";
 import { db } from "./db";
 
-// TODO metadata
+import { convertFileSrc } from "@tauri-apps/api/tauri";
 import * as musicMetadata from "music-metadata-browser";
-import { songsJustAdded } from "./store";
-import { get } from "svelte/store";
+import { importStatus, songsJustAdded } from "./store";
+import { getMapForTagType } from "./LabelMap";
 
-let songs: Song[] = [];
+export async function addSong(
+    filePath: string,
+    fileName: string
+): Promise<Song | null> {
+    if (!filePath.match(/\.(mp3|ogg|flac|aac|wav)$/)) {
+        return null;
+    }
+    const metadata = await musicMetadata.fetchFromUrl(convertFileSrc(filePath));
+    const fileHash = md5(filePath);
+    const tagType = metadata.format.tagTypes.length
+        ? metadata.format.tagTypes[0]
+        : null;
+    const map = getMapForTagType(tagType, false);
+    const metadataMapped: MetadataEntry[] = tagType
+        ? metadata.native[tagType]
+              .map((tag) => ({
+                  genericId: map[tag.id],
+                  id: tag.id,
+                  value: tag.value
+              }))
+              .filter((tag) => typeof tag.value === "string")
+        : [];
+    try {
+        const songToAdd: Song = {
+            id: fileHash,
+            path: filePath,
+            file: fileName,
+            title: metadata.common.title || fileName || "",
+            artist: metadata.common.artist || "",
+            album: metadata.common.album || "",
+            year: metadata.common.year || 0,
+            genre: metadata.common.genre || [],
+            metadata: metadataMapped,
+            fileInfo: metadata.format
+        };
+        // Remove image, too large
+        let artworkIdx = songToAdd.metadata.findIndex(
+            (t) => t.id === "METADATA_BLOCK_PICTURE"
+        );
+        if (artworkIdx > -1) {
+            songToAdd.metadata.splice(artworkIdx, 1);
+        }
 
-export async function addSong(filePath: string, fileName: string) {
-  if (!filePath.match(/\.(mp3|ogg|flac|aac|wav)$/)) {
-    return;
-  }
-  const metadata = await musicMetadata.fetchFromUrl(
-    window.__TAURI__.tauri.convertFileSrc(filePath)
-  );
-  console.log(metadata);
-  const fileHash = md5(filePath);
-
-  try {
-    const songToAdd = {
-      id: fileHash,
-      path: filePath,
-      file: fileName,
-      title: metadata.common.title || fileName || "",
-      artist: metadata.common.artist || "",
-      album: metadata.common.album || "",
-      year: metadata.common.year || 0,
-      genre: metadata.common.genre || [],
-    };
-    await db.songs.add(songToAdd, "id");
-    songsJustAdded.update((songs) => {
-      songs.push(songToAdd);
-      return songs;
-    });
-  } catch (e) {
-    console.error(e);
-  }
+        await db.songs.put(songToAdd);
+        songsJustAdded.update((songs) => {
+            songs.push(songToAdd);
+            return songs;
+        });
+        return await db.songs.get(fileHash);
+    } catch (e) {
+        console.error(e);
+    }
 }
 
-function processEntries(entries) {
-  for (const entry of entries) {
-    console.log(`Entry: ${entry.name}`);
-    if (entry.children) {
-      processEntries(entry.children.filter((e) => !e.name.startsWith(".")));
-    } else {
-      addSong(entry.path, entry.name);
+async function processEntries(entries) {
+    for (const [index, entry] of entries.entries()) {
+        if (entry.children) {
+            importStatus.update((importStatus) => ({
+                ...importStatus,
+                currentFolder: entry.name,
+                totalTracks: entry.children.length
+            }));
+            await processEntries(
+                entry.children.filter((e) => !e.name.startsWith("."))
+            );
+        } else {
+            await addSong(entry.path, entry.name);
+            importStatus.update((importStatus) => ({
+                ...importStatus,
+                importedTracks: index
+            }));
+        }
     }
-  }
 }
 
 export async function addFolder(folderPath) {
-  const entries = await readDir(folderPath, {
-    dir: BaseDirectory.App,
-    recursive: true,
-  });
-  processEntries(entries.filter((e) => !e.name.startsWith(".")));
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        isImporting: true
+    }));
+    const entries = await readDir(folderPath, {
+        dir: BaseDirectory.App,
+        recursive: true
+    });
+    await processEntries(entries.filter((e) => !e.name.startsWith(".")));
+    importStatus.set({
+        totalTracks: 0,
+        importedTracks: 0,
+        isImporting: false,
+        currentFolder: ""
+    });
 }
 
 export async function openTauriImportDialog() {
-  // Open a selection dialog for directories
-  const selected = await open({
-    directory: true,
-    multiple: false,
-    defaultPath: await appDir(),
-  });
-  if (Array.isArray(selected)) {
-    // user selected multiple directories
-  } else if (selected === null) {
-    // user cancelled the selection
-  } else {
-    console.log("selected", selected);
-    // user selected a single directory
-    addFolder(selected);
-  }
+    // Open a selection dialog for directories
+    const selected = await open({
+        directory: true,
+        multiple: false,
+        defaultPath: await audioDir()
+    });
+    if (Array.isArray(selected)) {
+        // user selected multiple directories
+    } else if (selected === null) {
+        // user cancelled the selection
+    } else {
+        console.log("selected", selected);
+        // user selected a single directory
+        addFolder(selected);
+    }
+}
+
+type ArtworkFolderFilename = "folder.jpg" | "cover.jpg" | "artwork.jpg";
+
+interface LookForArtResult {
+    artworkSrc?: string;
+    artworkFormat: string;
+    artworkFilenameMatch: ArtworkFolderFilename;
+}
+
+async function checkFolderArtworkByFilename(folder, artworkFilename) {
+    const src = "asset://" + folder + artworkFilename;
+    const response = await fetch(src);
+    if (response.status === 200) {
+        return {
+            artworkSrc: src,
+            artworkFormat: "image/jpeg",
+            artworkFilenameMatch: artworkFilename
+        };
+    }
+    return null;
+}
+
+export async function lookForArt(
+    songPath,
+    songFileName
+): Promise<LookForArtResult | null> {
+    const folder = songPath.replace(songFileName, "");
+    const filenamesToSearch: ArtworkFolderFilename[] = [
+        "artwork.jpg",
+        "cover.jpg",
+        "folder.jpg"
+    ];
+    let foundResult: LookForArtResult | null = null;
+
+    // Check are there any images in the folder?
+    try {
+        for (const filename of filenamesToSearch) {
+            const artworkResult = await checkFolderArtworkByFilename(
+                folder,
+                filename
+            );
+            if (artworkResult?.artworkSrc) {
+                foundResult = artworkResult;
+            }
+        }
+    } catch (err) {
+        console.error("Couldn't find artwork " + err);
+    }
+    console.log("found result", foundResult);
+    return foundResult;
 }

@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import {
   currentSong,
+  currentSongArtworkSrc,
   isPlaying,
   playerTime,
   seekTime,
@@ -21,7 +22,9 @@ class AudioPlayer {
   gainNode: GainNode;
   ticker;
   isFinishedCallback;
-
+  artworkSrc: ArtworkSrc; // for media session (notifications)
+  currentSong: Song;
+  
   private constructor() {
     const audioCtx = new AudioContext();
     this.gainNode = audioCtx.createGain();
@@ -47,6 +50,11 @@ class AudioPlayer {
     volume.set(this.audioFile.volume);
     volume.subscribe((vol) => {
       this.gainNode.gain.value = vol;
+    });
+    this.setupMediaSession();
+    currentSongArtworkSrc.subscribe((artwork) => {
+      this.artworkSrc = artwork;
+      this.setMediaSessionData();
     });
   }
 
@@ -75,16 +83,56 @@ class AudioPlayer {
     this.isFinishedCallback = callback;
   }
 
+  /**
+   * Set the media session data (for browser / OS notifications)
+   */
+  setMediaSessionData() {
+    if (this.currentSong && "mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: this.currentSong.title,
+        artist: this.currentSong.artist,
+        album: this.currentSong.album,
+        artwork: this.artworkSrc
+          ? [
+              {
+                src: this.artworkSrc.src,
+                sizes: this.artworkSrc.size
+                  ? `${this.artworkSrc.size.width}x${this.artworkSrc.size.height}`
+                  : "128x128",
+                type: this.artworkSrc.format,
+              },
+            ]
+          : [],
+      });
+    }
+  }
+
+  setupMediaSession() {
+    navigator.mediaSession.setActionHandler("play", async () => {
+      console.log("[mediaSession] play");
+      // Resume playback
+      this.play();
+    });
+
+    navigator.mediaSession.setActionHandler("pause", () => {
+      console.log("[mediaSession] pause");
+
+      // Pause active playback
+      this.pause();
+    });
+  }
+
   // MEDIA
   playSong(song: Song) {
     console.log("playSong", song);
-    const convertedPath = window.__TAURI__.tauri.convertFileSrc(song.path);
     if (this.audioFile) {
       this.pause();
       this.audioFile.currentTime = 0;
-      this.audioFile.src = "asset://" + song.path.replace('?', '%3F');
+      this.audioFile.src = "asset://" + song.path.replace("?", "%3F");
       this.play();
       currentSong.set(song);
+      this.currentSong = song;
+      this.setMediaSessionData();
     }
   }
 
@@ -93,7 +141,6 @@ class AudioPlayer {
       this.audioFile.play();
       this.ticker = setInterval(() => {
         playerTime.set(this.audioFile.currentTime);
-
       }, 1000);
     }
   }

@@ -95,44 +95,14 @@
     /* box-shadow: -5px -10px 5px rgba(0, 0, 0, 0.071); */
     z-index: 4;
 
-    span {
-    }
   }
 
-  .play-button {
-    height: 70%;
-    &:hover {
-      transform: scale(1.1);
-      cursor: pointer;
-    }
-  }
 
-  .thumbnail {
-    height: 100%;
-    align-self: flex-end;
-    width: auto;
-    transition: all 0.1s cubic-bezier(0.165, 0.84, 0.44, 1);
-    border: 1px solid rgba(255, 255, 255, 0.788);
-    background: rgba(0, 0, 0, 0.872);
-    padding: 3px;
-    border-radius: 4px;
-  }
 
-  p,
-  small {
+  p{
     margin: 0;
   }
 
-  .info {
-    max-width: 300px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .description {
-    opacity: 0.7;
-  }
 
   @keyframes scroll {
     from {
@@ -150,9 +120,6 @@
     display: flex;
     /* cursor: ew-resize; */
 
-    @media only screen and (max-width: 522px) {
-      display: none;
-    }
   }
 
   .seekbar {
@@ -189,8 +156,6 @@
       overflow: visible;
       pointer-events: none;
 
-      :global(.dark-mode) & {
-      }
       top: -4px;
 
       &.hoverhead {
@@ -203,8 +168,6 @@
           stroke: white;
           stroke-width: 2px;
 
-          :global(.dark-mode) & {
-          }
         }
       }
     }
@@ -213,17 +176,5 @@
   .elapsed-time {
     opacity: 0.5;
     font-size: 12px;
-  }
-  .license-btn {
-    padding: 0.3em 0.5em;
-    border: 2px solid white;
-    color: white;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 0.8em;
-    &:hover {
-      background: rgba(255, 255, 255, 0.262);
-    }
   }
 </style>
