@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { createEventDispatcher, onDestroy, setContext } from "svelte";
+    import { onDestroy } from "svelte";
     import { fade } from "svelte/transition";
+    import { clickOutside } from "../../utils/ClickOutside";
     import MenuOption from "./MenuOption.svelte";
 
     interface MenuItem {
@@ -12,7 +13,8 @@
     export let x;
     export let y;
     export let items: MenuItem[] = [];
-    export let onItemSelected;
+    export let onItemSelected = null;
+    export let onClickOutside = null;
 
     let hoveredItemIdx = 0;
     $: numberOfItems = items.length;
@@ -38,7 +40,7 @@
 
     function onEnter() {
         // Select item callback
-        onItemSelected(items[hoveredItemIdx].source);
+        onItemSelected && onItemSelected(items[hoveredItemIdx].source);
     }
 
     // whenever x and y is changed, restrict box to be within bounds
@@ -50,17 +52,7 @@
         if (y > window.innerHeight - rect.height) y -= rect.height;
     })();
 
-    const dispatch = createEventDispatcher();
-
-    setContext("menu", {
-        dispatchClick: () => dispatch("click")
-    });
-
     let menuEl;
-    function onPageClick(e) {
-        if (e.target === menuEl || menuEl.contains(e.target)) return;
-        dispatch("clickoutside");
-    }
 
     function onKeyPressed(event) {
         if (event.keyCode === 38) {
@@ -91,11 +83,12 @@
     });
 </script>
 
-<svelte:body on:click={onPageClick} />
-
 <div
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
+    use:clickOutside={() => {
+        onClickOutside && onClickOutside();
+    }}
     style="top: {y}px; left: {x}px;"
 >
     {#each items as item, idx}
@@ -103,7 +96,10 @@
             text={item.text}
             description={item.description}
             isHighlighted={hoveredItemIdx === idx}
-            on:click={() => onItemSelected && onItemSelected(item.source)}
+            on:click={(evt) => {
+                evt.stopPropagation();
+                onItemSelected && onItemSelected(item.source);
+            }}
         />
     {:else}
         <slot />
@@ -124,6 +120,6 @@
         box-shadow: 10px 10px 10px 0px #0002;
         z-index: 20;
         max-width: 300px;
-        font-family:  system-ui, Avenir, Helvetica, Arial, sans-serif;
+        font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     }
 </style>

@@ -1,6 +1,7 @@
 export function clickOutside(element, callbackFunction) {
     function onClick(event) {
         if (!element.contains(event.target)) {
+            console.log('clicked ', event.target, element);
             callbackFunction();
         }
     }

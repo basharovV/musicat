@@ -251,7 +251,7 @@
         <Menu
             x={inputX}
             y={inputY}
-            on:clickoutside={closeAutoComplete}
+            onClickOutside={closeAutoComplete}
             items={matchingQueryParts.map((p) => ({
                 text: p.description,
                 description: "eg. " + p.example,

@@ -1,6 +1,4 @@
 <script>
-    import { getContext } from "svelte";
-
     export let isDisabled = false;
     export let isDestructive = false;
     export let text = "";
@@ -8,18 +6,10 @@
     export let confirmText = "";
     export let isConfirming = false;
     export let isHighlighted = false;
+    export let onClick = null;
 
     import { createEventDispatcher } from "svelte";
     const dispatch = createEventDispatcher();
-
-    const { dispatchClick } = getContext("menu");
-
-    const handleClick = (e) => {
-        if (isDisabled) return;
-
-        dispatch("click");
-        dispatchClick();
-    };
 
     $: {
         console.log("highlighted", isHighlighted);
@@ -31,7 +21,9 @@
     class:destructive={isDestructive}
     class:confirming={isConfirming}
     class:highlighted={isHighlighted}
-    on:click={handleClick}
+    on:click|stopPropagation={() => {
+        onClick && onClick();
+    }}
 >
     {#if isConfirming}
         {confirmText}

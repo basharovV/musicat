@@ -1,23 +1,20 @@
 <script lang="ts">
     import { getVersion } from "@tauri-apps/api/app";
 
-    import {
-        isInfoPopupOpen,
-        isSettingsOpen,
-        userSettings
-    } from "../data/store";
-    import Input from "./Input.svelte";
-    import ReleaseNotes from "./ReleaseNotes.svelte";
-    import { clickOutside } from "../utils/ClickOutside";
-    import hotkeys from "hotkeys-js";
-    import { onDestroy, onMount } from "svelte";
+    import { register,unregisterAll } from "@tauri-apps/api/globalShortcut";
+    import { onDestroy,onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
-    import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
+    import {
+    isSettingsOpen,
+    userSettings
+    } from "../data/store";
+    import { clickOutside } from "../utils/ClickOutside";
+    import Input from "./Input.svelte";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
 
-    function onUpdateFilenames(_) {
+    function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
         $userSettings.albumArtworkFilenames = commaSeparatedFilenames
             .split(",")
