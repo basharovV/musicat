@@ -13,7 +13,7 @@
       // check dir
       if (isAudioFile(entry)) {
         const file = entry.split("/").pop();
-        addSong(entry, file);
+        addSong(entry, file, true);
       } else {
         addFolder(entry);
       }

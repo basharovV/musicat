@@ -1,5 +1,5 @@
 <p align="center">
-<img height="140" src="src-tauri/icons/Square310x310Logo.png">
+<img height="140" src="src-tauri/icons/Square310x310Logo.jpeg">
 </p>
 <h1 align="center">Musicat</h1>
 <p align="center">
@@ -18,7 +18,7 @@
 </p>
 
 
-![screenshot](docs/screenshot.png)
+![screenshot](docs/screenshot.jpeg)
 
 ## Features:
 - File formats
@@ -32,7 +32,7 @@
   - [x] Basic search (matching by 'starts with' on title, album or artist)
   - [ ] Advanced search
 - Metadata / Track Info
-  ![info](docs/info.png)
+  ![info](docs/info.jpeg)
 
   - [x] Add or replace the track artwork
   - [x] View and Edit existing tags
@@ -42,8 +42,8 @@
   Small and widget-like. Window controls dissappear when in mini player mode.
   - [ ] Save window position
 <p align="center">
-<img height="200" src="docs/mini-cover.png">
-<img height="200" src="docs/mini-ui.png">
+<img height="200" src="docs/mini-cover.jpeg">
+<img height="200" src="docs/mini-ui.jpeg">
 </p>
 
 - Player

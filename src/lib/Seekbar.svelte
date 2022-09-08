@@ -60,16 +60,16 @@
     on:click={onSeek}
   >
     <div class="seekbar" bind:this={seekBar}>
-      <svg class="playhead" style="left:{playheadPos}%;" viewBox="0 0 25 10">
-        <rect width="25" height="8" y="1" />
+      <svg class="playhead" style="left:{playheadPos}%;" viewBox="0 0 20 20">
+        <circle r="9" cy="10"/>
       </svg>
       {#if showHoverHead}
         <div
           class="hoverhead-container"
           style="transform: translateX({hoverheadPosPx}px);"
         >
-          <svg class="hoverhead" viewBox="0 0 25 10">
-            <rect width="25" height="8" y="0" />
+          <svg class="hoverhead" viewBox="0 0 20 20">
+            <circle width="8" height="8" cy="9" r="10" stroke="white" stroke-width="2" />
           </svg>
           <div class="hoverhead-tooltip">
             <p>{hoverTime}</p>
@@ -136,7 +136,7 @@
       position: absolute;
       height: 12px;
       width: 12px;
-      left: -12px;
+      left: -5px;
 
       .hoverhead-tooltip {
         position: absolute;
@@ -150,7 +150,7 @@
 
     svg {
       height: 10px;
-      width: 15px;
+      width: 10px;
       fill: rgb(0, 197, 108);
       position: absolute;
       overflow: visible;

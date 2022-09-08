@@ -23,6 +23,8 @@ interface Song {
     album: string;
     year: number;
     genre: string[];
+    trackNumber: string;
+    duration: string;
     metadata: MetadataEntry[];
     fileInfo: any;
 }
@@ -47,3 +49,17 @@ interface ArtworkSrc {
         height: number;
     };
 }
+
+interface UserSettings {
+    albumArtworkFilenames: string[],
+}
+
+type DataType = "song";
+
+type Comparison =
+    | "is-equal"
+    | "is-greater-than"
+    | "is-less-than"
+    | "is-between"
+    | "contains";
+

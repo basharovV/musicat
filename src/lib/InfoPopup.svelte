@@ -15,13 +15,25 @@
     <div class="popup">
         <!-- <img src="images/cd6.gif" /> -->
         <section class="info">
-            <h1>Musicat</h1>
-            <p>🎹 for the love of music 🥁</p>
-            <small>built by <a href="https://vyacheslavbasharov.com">Slav</a></small>
-            <!-- <br /> -->
-            {#await version then versionValue}<small
-                    >version {versionValue}</small
-                >{/await}
+            <div>
+                <h1>Musicat</h1>
+                <p>🎹 for the love of music 🥁</p>
+            </div>
+            <div class="app-icon">
+                <img src="icon.png" />
+            </div>
+            <div class="dev-info">
+                <small
+                    >built by <a
+                        href="https://vyacheslavbasharov.com"
+                        target="_blank">Slav</a
+                    ></small
+                >
+                <!-- <br /> -->
+                {#await version then versionValue}<small
+                        >version {versionValue}</small
+                    >{/await}
+            </div>
         </section>
         <section class="release-notes">
             <ReleaseNotes />
@@ -55,11 +67,19 @@
     }
 
     .info {
+        min-height: 100%;
         min-width: 300px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
+        display: grid;
+        grid-template-rows: auto 250px 1fr;
 
+        .app-icon {
+            width: auto;
+            height: 100%;
+            img {
+                width: auto;
+                height: 100%;
+            }
+        }
         h1 {
             font-family: "2Peas";
             margin-bottom: 0;
@@ -67,6 +87,14 @@
 
         small {
             opacity: 0.5;
+        }
+
+        .dev-info {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 2em;
         }
     }
 

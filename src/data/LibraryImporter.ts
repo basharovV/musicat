@@ -7,16 +7,21 @@ import { db } from "./db";
 
 import { convertFileSrc } from "@tauri-apps/api/tauri";
 import * as musicMetadata from "music-metadata-browser";
-import { importStatus, songsJustAdded } from "./store";
+import { importStatus, songsJustAdded, userSettings } from "./store";
 import { getMapForTagType } from "./LabelMap";
+import { get } from "svelte/store";
+
+let addedSongs: Song[] = [];
 
 export async function addSong(
     filePath: string,
-    fileName: string
+    fileName: string,
+    singleFile = false
 ): Promise<Song | null> {
     if (!filePath.match(/\.(mp3|ogg|flac|aac|wav)$/)) {
         return null;
     }
+    console.log("fetching file", fileName);
     const metadata = await musicMetadata.fetchFromUrl(convertFileSrc(filePath));
     const fileHash = md5(filePath);
     const tagType = metadata.format.tagTypes.length
@@ -42,6 +47,12 @@ export async function addSong(
             album: metadata.common.album || "",
             year: metadata.common.year || 0,
             genre: metadata.common.genre || [],
+            trackNumber: metadata.common.track.no?.toString() || "",
+            duration: `${(~~(metadata.format.duration / 60))
+                .toString()
+                .padStart(2, "0")}:${(~~(metadata.format.duration % 60))
+                .toString()
+                .padStart(2, "0")}`,
             metadata: metadataMapped,
             fileInfo: metadata.format
         };
@@ -53,11 +64,22 @@ export async function addSong(
             songToAdd.metadata.splice(artworkIdx, 1);
         }
 
-        await db.songs.put(songToAdd);
-        songsJustAdded.update((songs) => {
-            songs.push(songToAdd);
-            return songs;
-        });
+        try {
+            await db.songs.put(songToAdd);
+        } catch(err) {
+            console.error(err);
+            // Catch 'already exists' case
+
+        }
+        if (singleFile) {
+            songsJustAdded.update((songs) => {
+                songs.push(songToAdd);
+                return songs;
+            });
+        } else {
+            addedSongs.push(songToAdd);
+        }
+        
         return await db.songs.get(fileHash);
     } catch (e) {
         console.error(e);
@@ -94,6 +116,8 @@ export async function addFolder(folderPath) {
         dir: BaseDirectory.App,
         recursive: true
     });
+
+    console.log("entries", entries);
     await processEntries(entries.filter((e) => !e.name.startsWith(".")));
     importStatus.set({
         totalTracks: 0,
@@ -101,6 +125,9 @@ export async function addFolder(folderPath) {
         isImporting: false,
         currentFolder: ""
     });
+    
+    songsJustAdded.set(addedSongs);
+    addedSongs = [];
 }
 
 export async function openTauriImportDialog() {
@@ -126,7 +153,7 @@ type ArtworkFolderFilename = "folder.jpg" | "cover.jpg" | "artwork.jpg";
 interface LookForArtResult {
     artworkSrc?: string;
     artworkFormat: string;
-    artworkFilenameMatch: ArtworkFolderFilename;
+    artworkFilenameMatch: string;
 }
 
 async function checkFolderArtworkByFilename(folder, artworkFilename) {
@@ -147,11 +174,7 @@ export async function lookForArt(
     songFileName
 ): Promise<LookForArtResult | null> {
     const folder = songPath.replace(songFileName, "");
-    const filenamesToSearch: ArtworkFolderFilename[] = [
-        "artwork.jpg",
-        "cover.jpg",
-        "folder.jpg"
-    ];
+    const filenamesToSearch = get(userSettings).albumArtworkFilenames;
     let foundResult: LookForArtResult | null = null;
 
     // Check are there any images in the folder?

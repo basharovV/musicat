@@ -1,5 +1,5 @@
 :root {
-  font-family:  system-ui, -apple-system, Avenir, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 24px;
   font-weight: 400;
@@ -12,7 +12,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 a {
@@ -45,6 +44,7 @@ h1 {
   margin: 0;
   text-align: center;
   overflow: hidden;
+  font-display: optional;
 }
 
 * {

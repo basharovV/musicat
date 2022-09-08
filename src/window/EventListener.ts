@@ -1,29 +1,49 @@
 import type { Event } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
+import {
+    isInfoPopupOpen,
+    isSettingsOpen,
+    isTrackInfoPopupOpen
+} from "../data/store";
 import { db } from "../data/db";
 
 export function startMenuListener() {
-  appWindow.listen("menu", ({ event, payload }) => {
-    switch (payload) {
-      case "clear-db":
-        console.log("clear-db");
-        db.songs.clear();
-        break;
-    }
-  });
+    appWindow.listen("menu", ({ event, payload }) => {
+        switch (payload) {
+            case "clear-db":
+                console.log("clear-db");
+                db.songs.clear();
+                break;
+            case "about":
+                console.log("about");
+                isInfoPopupOpen.set(true);
+                isSettingsOpen.set(false);
+                isTrackInfoPopupOpen.set(false);
+                break;
+            case "settings":
+                console.log("settings");
+                isSettingsOpen.set(true);
+                isInfoPopupOpen.set(false);
+                isTrackInfoPopupOpen.set(false);
+                break;
+        }
+    });
 }
 
 export async function listenForFileDrop(): Promise<Event<any>> {
-  return new Promise(async (resolve, reject) => {
-    try {
-    const unlisten = await appWindow.listen("tauri://file-drop", (event) => {
-      console.log("event", event);
-      resolve(event);
-      unlisten();
+    return new Promise(async (resolve, reject) => {
+        try {
+            const unlisten = await appWindow.listen(
+                "tauri://file-drop",
+                (event) => {
+                    console.log("event", event);
+                    resolve(event);
+                    unlisten();
+                }
+            );
+        } catch (e) {
+            console.error(e);
+            reject(e);
+        }
     });
-  } catch(e) {
-    console.error(e);
-    reject(e);
-  }
-  });
 }

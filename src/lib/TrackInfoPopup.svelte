@@ -20,6 +20,8 @@
     import { isTrackInfoPopupOpen, rightClickedTrack } from "../data/store";
     import { getMapForTagType } from "../data/LabelMap";
     import "./tippy.css";
+    import Input from "./Input.svelte";
+    import { focusTrap } from "../utils/FocusTrap";
 
     // optional
 
@@ -61,18 +63,22 @@
         return { defaults, others };
     }
 
+    let isUnsupportedFormat = false;
     function mergeDefault(metadata: MetadataEntry[], format: TagType) {
+        if ($rightClickedTrack.fileInfo.codec === "PCM") {
+            isUnsupportedFormat = true;
+            return []; // UNSUPPORTED FORMAT, for now...
+        }
+        isUnsupportedFormat = false;
         const cloned = cloneDeep(metadata);
         const { defaults, others } = addDefaults(cloned, format);
         return uniqBy(
-            [
-                ...defaults,
-                ...others.sort((a, b) => a.id.localeCompare(b.id))
-            ],
+            [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
             "id"
         );
     }
 
+    console.log("coded", $rightClickedTrack.fileInfo.codec);
     let metadata: MetadataEntry[] = mergeDefault(
         $rightClickedTrack.metadata,
         $rightClickedTrack.fileInfo.tagTypes[0]
@@ -252,7 +258,8 @@
             // Re-import track
             const updatedSong = await addSong(
                 $rightClickedTrack.path,
-                $rightClickedTrack.file
+                $rightClickedTrack.file,
+                true
             );
             $rightClickedTrack = updatedSong;
             await getArtwork();
@@ -260,23 +267,26 @@
         });
     });
 
+    let previousAlbum = $rightClickedTrack.album;
+
     function reset() {
-        artworkFormat = null;
-        artworkSrc = null;
-        foundArtwork = null;
-        isArtworkSet = false;
-        artworkFileToSet = null;
-        getArtwork();
+        if ($rightClickedTrack.album === previousAlbum && artworkSrc) {
+            // Don't update artwork if same as previous album
+        } else {
+            artworkFormat = null;
+            artworkSrc = null;
+            foundArtwork = null;
+            isArtworkSet = false;
+            artworkFileToSet = null;
+
+            getArtwork();
+        }
+
+        previousAlbum = $rightClickedTrack.album;
         metadata = mergeDefault($rightClickedTrack.metadata, tagType);
         hasChanges = !isEqual(
             metadata,
             mergeDefault($rightClickedTrack.metadata, tagType)
-        );
-        console.log(
-            "file1",
-            mergeDefault($rightClickedTrack.metadata, tagType),
-            "ui1",
-            metadata
         );
     }
 
@@ -294,7 +304,7 @@
     }
 </script>
 
-<container>
+<container use:focusTrap>
     <header>
         <div class="close">
             <iconify-icon
@@ -312,15 +322,16 @@
 
         <div class="title-container">
             <h2>Track info</h2>
-            <small>Use UP and DOWN keys to change tracks</small>
+            <small class="subtitle">Use UP and DOWN keys to change tracks</small
+            >
         </div>
     </header>
     <div class="top">
         <section class="file-section">
             {#if $rightClickedTrack}
                 <p>
-                    You can edit any metadata below, then click "Overwrite file"
-                    to save.
+                    Edit any metadata below, then click "Overwrite file" to
+                    save.
                 </p>
 
                 <p class="file-path">File path: {$rightClickedTrack.path}</p>
@@ -375,7 +386,7 @@
                 use:tippy={{
                     allowHTML: true,
                     content:
-                        "Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>Otherwise, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i>",
+                        "Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>Otherwise, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i> (you can change this list of filenames in Settings).",
                     placement: "left"
                 }}
                 ><iconify-icon icon="ic:round-info" /><small
@@ -388,15 +399,22 @@
         <section class="metadata-section">
             <h4>Metadata</h4>
             {#if $rightClickedTrack}
-                <form>
-                    {#each metadata as tag}
-                        <div class="tag">
-                            <p>{tag.genericId ? tag.genericId : tag.id}</p>
-                            <div class="line" />
-                            <input bind:value={tag.value} />
-                        </div>
-                    {/each}
-                </form>
+                {#if isUnsupportedFormat}
+                    <p>
+                        This file type is not yet supported for metadata
+                        viewing/editing
+                    </p>
+                {:else}
+                    <form>
+                        {#each metadata as tag}
+                            <div class="tag">
+                                <p>{tag.genericId ? tag.genericId : tag.id}</p>
+                                <div class="line" />
+                                <Input bind:value={tag.value} />
+                            </div>
+                        {/each}
+                    </form>
+                {/if}
             {:else}
                 <p>Song has no metadata</p>
             {/if}
@@ -411,6 +429,7 @@
     container {
         width: fit-content;
         max-height: 85%;
+        max-width: 740px;
         margin: auto;
         display: flex;
         flex-direction: column;
@@ -419,10 +438,13 @@
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(53, 51, 51);
-        background: rgba(67, 65, 73, 0.89);
-        backdrop-filter: blur(10px);
+        background: rgba(60, 60, 63, 0.2);
+        backdrop-filter: blur(8px);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        font-family: system-ui, -apple-system, Avenir, Helvetica, Arial,
+            sans-serif;
 
         @media only screen and (max-width: 400px) {
             display: none;
@@ -437,14 +459,17 @@
         top: 0;
         padding: 0.4em 0;
         width: 100%;
-        background: rgba(67, 65, 73, 0.89);
+        background: rgba(38, 37, 37, 0.601);
         border-bottom: 1px solid rgb(53, 51, 51);
-        backdrop-filter: blur(10px);
         z-index: 20;
 
         .title-container {
-            small {
+            > .subtitle {
                 opacity: 0.5;
+                display: block;
+                margin: 0;
+                font-family: system-ui, -apple-system, Avenir, Helvetica, Arial,
+                    sans-serif;
             }
         }
 
@@ -577,14 +602,18 @@
     }
 
     .file-section {
+        width: 100%;
         padding: 0em 1em;
         border-right: 1px solid rgba(255, 255, 255, 0.099);
 
+        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
         .file-path {
             opacity: 0.5;
             font-size: 13px;
             max-width: 400px;
             margin: auto;
+            font-family: -apple-system, Avenir, Helvetica, Arial,
+                sans-serif;
         }
         .file-info {
             display: flex;
@@ -593,13 +622,14 @@
             gap: 1em;
             text-align: left;
             margin-top: 1em;
+            width: 100%;
+            font-size: 13px;
             /* border: 1px solid rgb(97, 92, 92); */
 
             p {
                 background-color: rgba(0, 0, 0, 0.118);
                 padding: 0.2em 0.5em;
                 width: fit-content;
-                font-size: 12px;
                 color: rgb(175, 187, 197);
                 user-select: none;
                 cursor: default;
@@ -642,7 +672,7 @@
         width: 100%;
         /* border: 1px solid rgb(78, 73, 73); */
         background: rgba(56, 54, 60, 0.842);
-
+        font-family: system-ui, -apple-system, Avenir, Helvetica, Arial, sans-serif;
         h4 {
             user-select: none;
             position: absolute;
@@ -718,19 +748,6 @@
                 height: 1px;
                 background-color: rgba(255, 255, 255, 0.125);
                 width: 40px;
-            }
-
-            input {
-                line-height: 0.9em;
-                padding: 0.3em;
-                background-color: rgba(53, 48, 48, 0.349);
-                border: 1px solid rgb(81, 76, 76);
-                border-radius: 2px;
-                font-size: 14px;
-
-                &:focus {
-                    background-color: rgba(102, 92, 92, 0.349);
-                }
             }
         }
     }

@@ -8,13 +8,20 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "musicat",
+    "productName": "Musicat",
     "version": "0.2.0"
   },
   "tauri": {
     "macOSPrivateApi": true,
     "allowlist": {
       "all": true,
+      "fs": {
+        "all": true,
+        "scope": ["*"]
+      },
+      "path": {
+        "all": true
+      },
       "protocol": {
         "all": true,
         "asset": true,
@@ -55,7 +62,7 @@
       }
     },
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost"
+      "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com asset: https://asset.localhost; img-src 'self' asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'"
     },
     "updater": {
       "active": false

@@ -106,6 +106,7 @@
     open(`https://duckduckgo.com/?q=${query}`);
   }
   function openInfo() {
+    closeMenu();
     $isTrackInfoPopupOpen = true;
   }
 </script>

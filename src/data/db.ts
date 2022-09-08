@@ -8,8 +8,8 @@ export class MySubClassedDexie extends Dexie {
 
   constructor() {
     super('musicatdb');
-    this.version(1).stores({
-    songs: 'id, title, artist, album, genre, year' // Primary key and indexed props
+    this.version(4).stores({
+    songs: 'id, title, artist, album, genre, year, duration, [artist+album+trackNumber], [album+trackNumber]' // Primary key and indexed props
     });
   }
 }

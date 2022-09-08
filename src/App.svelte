@@ -4,6 +4,7 @@
         isInfoPopupOpen,
         isMiniPlayer,
         isTrackInfoPopupOpen,
+        isSettingsOpen,
         uiView
     } from "./data/store";
     import Albums from "./lib/Albums.svelte";
@@ -15,6 +16,8 @@
     import Sidebar from "./lib/Sidebar.svelte";
     import TrackInfoPopup from "./lib/TrackInfoPopup.svelte";
     import { startMenuListener } from "./window/EventListener";
+import SettingsPopup from "./lib/SettingsPopup.svelte";
+import { onMount } from "svelte";
 
     startMenuListener();
 
@@ -29,10 +32,21 @@
     function onPageClick() {
         $isInfoPopupOpen = false;
     }
+
+    // App start
+    onMount(() => {
+        
+    })
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->
 <Toaster />
+
+{#if $isSettingsOpen}
+    <div class="info">
+        <SettingsPopup />
+    </div>
+{/if}
 
 {#if $isInfoPopupOpen}
     <div class="info">

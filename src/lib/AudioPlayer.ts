@@ -35,11 +35,11 @@ class AudioPlayer {
     this.source = audioCtx.createMediaElementSource(this.audioFile);
     this.source.connect(this.gainNode);
 
-    seekTime.subscribe((playerTime) => {
+    seekTime.subscribe((time) => {
       if (this.audioFile) {
-        console.log("seeking to ", playerTime);
-        this.audioFile.currentTime = playerTime;
-
+        console.log("seeking to ", time);
+        this.audioFile.currentTime = time;
+        playerTime.set(time);
         console.log("seeked  ", this.audioFile.currentTime);
       }
     });

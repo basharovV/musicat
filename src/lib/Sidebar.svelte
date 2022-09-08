@@ -1,5 +1,6 @@
 <script lang="ts">
     import { window as tauriWindow } from "@tauri-apps/api";
+    import { emit } from "@tauri-apps/api/event";
     import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
     import { LogicalSize } from "@tauri-apps/api/window";
@@ -15,9 +16,13 @@
         isInfoPopupOpen,
         isMiniPlayer,
         isPlaying,
+        isSmartQueryBuilderOpen,
+        isSmartQueryUiOpen,
+        isTrackInfoPopupOpen,
         os,
         queriedSongs,
         query,
+        rightClickedTrack,
         singleKeyShortcutsEnabled,
         volume
     } from "../data/store";
@@ -131,6 +136,13 @@
         AudioPlayer.playSong($queriedSongs[--$currentSongIdx]);
     }
 
+    function openTrackInfo() {
+        if ($currentSong) {
+            $rightClickedTrack = $currentSong;
+            $isTrackInfoPopupOpen = true;
+        }
+    }
+
     function openInfoWindow() {
         // const webview = new WebviewWindow("theUniqueLabel", {
         //   url: "path/to/page.html",
@@ -146,14 +158,16 @@
         height = window.innerHeight;
         width = window.innerWidth;
         hasDecorations = await tauriWindow.getCurrent().isDecorated();
-        if (!$isMiniPlayer && height <= 210 && width <= 210) {
+        if (!$isMiniPlayer && height <= 220 && width <= 210) {
             $isMiniPlayer = true;
             console.log("setting to false");
-            await tauriWindow.getCurrent().setDecorations(false);
-        } else if ($isMiniPlayer && (height > 210 || width > 210)) {
+            // await tauriWindow.getCurrent().setDecorations(false);
+            emit("hide-toolbar");
+        } else if ($isMiniPlayer && (height > 220 || width > 210)) {
             $isMiniPlayer = false;
             console.log("setting to true");
-            await tauriWindow.getCurrent().setDecorations(true);
+            emit("show-toolbar");
+            // await tauriWindow.getCurrent().setDecorations(true);
         }
     }
 
@@ -174,21 +188,22 @@
     let widthToRestore = 0;
     let heightToRestore = 0;
 
-    function toggleMiniPlayer() {
+    async function toggleMiniPlayer() {
         if (!$isMiniPlayer) {
             widthToRestore = window.innerWidth;
             heightToRestore = window.innerHeight;
             tauriWindow.getCurrent().setSize(new LogicalSize(210, 210));
         } else {
             if (widthToRestore && heightToRestore) {
-                tauriWindow
+                await tauriWindow
                     .getCurrent()
                     .setSize(new LogicalSize(widthToRestore, heightToRestore));
             } else {
-                tauriWindow
+                await tauriWindow
                     .getCurrent()
                     .setSize(new LogicalSize(1100, 700));
             }
+            tauriWindow.getCurrent().center();
         }
     }
 </script>
@@ -198,11 +213,11 @@
     class:empty={!$currentSong}
     data-tauri-drag-region
 >
-    <h1 class="app-title" on:click={openInfoWindow}>Musicat</h1>
     <!-- <div class="knob">
     <Knob bind:value={volumeKnob} max={100} min={0} pixelRange={200} />
   </div> -->
     <div class="top">
+        <h1 class="app-title" on:click={openInfoWindow}>Musicat</h1>
         <div class="search-container">
             <input
                 bind:this={searchInput}
@@ -213,12 +228,25 @@
                     : 'Ctrl + F'})"
                 bind:value={$query.query}
             />
+            <div class="search-icon">
+                <iconify-icon icon="ion:search" />
+            </div>
         </div>
 
         <menu>
             <items>
                 <item>
                     <iconify-icon icon="fluent:library-20-filled" />Music</item
+                >
+                <item
+                    on:click={() => {
+                        $isSmartQueryUiOpen = !$isSmartQueryUiOpen;
+                        if (!$isSmartQueryUiOpen) {
+                            $isSmartQueryBuilderOpen = false;
+                        }
+                    }}
+                >
+                    <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
                 >
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
 
@@ -251,16 +279,25 @@
             <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
 
             <div class="info">
-                {#if title}
-                    <p class="title">{title}</p>
-                {/if}
-                {#if artist}
-                    <p class="artist">{artist}</p>
-                {/if}
-                {#if album}
-                    <small>{album}</small>
-                {/if}
-                {#if !artist && !title && !album}
+                {#if $currentSong}
+                    {#if title}
+                        <p class="title">{title}</p>
+                    {:else}
+                        <p class="title">{$currentSong?.file}</p>
+                    {/if}
+                    {#if artist}
+                        <p class="artist">{artist}</p>
+                    {/if}
+                    {#if !title && !album && !artist}
+                        <button
+                            class="add-metadata-btn"
+                            on:click={openTrackInfo}>Add metadata</button
+                        >
+                    {/if}
+                    {#if album}
+                        <small>{album}</small>
+                    {/if}
+                {:else}
                     <p class="is-placeholder">Take control of your library</p>
                 {/if}
             </div>
@@ -289,10 +326,7 @@
                     />
                 {:else}
                     <div class="artwork-placeholder">
-                        <iconify-icon
-                            icon="mdi:music-clef-treble"
-                            on:click={playPrev}
-                        />
+                        <iconify-icon icon="mdi:music-clef-treble" />
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
@@ -304,12 +338,20 @@
             <Seekbar {duration} />
         </div>
         <transport>
-            <iconify-icon icon="fe:backward" on:click={playPrev} />
+            <iconify-icon
+                icon="fe:backward"
+                class:disabled={$currentSongIdx === 0}
+                on:click={playPrev}
+            />
             <iconify-icon
                 on:click={togglePlayPause}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
             />
-            <iconify-icon icon="fe:forward" on:click={playNext} />
+            <iconify-icon
+                icon="fe:forward"
+                class:disabled={$currentSongIdx === $queriedSongs.length - 1}
+                on:click={playNext}
+            />
         </transport>
 
         <div class="volume">
@@ -331,7 +373,7 @@
     $mini_y_breakpoint: 400px;
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
-    $sidebar_secondary_color: rgb(234, 226, 226);
+    $sidebar_secondary_color: #242026;
     sidebar {
         position: relative;
         display: flex;
@@ -394,6 +436,9 @@
                 top: 10px;
                 transition: opacity 0.2s ease-in;
             }
+            .add-metadata-btn {
+                display: none;
+            }
         }
         @media only screen and (max-height: 260px) {
             .track-info {
@@ -403,6 +448,10 @@
                 .cd-gif {
                     /* display: none; */
                 }
+            }
+
+            .add-metadata-btn {
+                display: none;
             }
         }
         @media only screen and (max-height: 280px) {
@@ -417,9 +466,8 @@
                 display: none;
             }
             .track-info {
-                margin-top: 3em;
                 hr {
-                    display: none;
+                    opacity: 0;
                 }
             }
         }
@@ -438,7 +486,7 @@
                 display: none;
             }
             .track-info {
-                top: 0px !important;
+                top: -10px !important;
             }
         }
         @media only screen and (max-height: 420px) and (min-height: 360px) {
@@ -521,7 +569,7 @@
         padding: 1em;
         margin-block-start: 0;
 
-        background-color: $sidebar_primary_color;
+        background-color: $sidebar_secondary_color;
         items {
             display: flex;
             flex-direction: column;
@@ -560,6 +608,7 @@
     .top {
         width: 100%;
         position: sticky;
+        background-color: $sidebar_secondary_color;
         top: 0;
     }
 
@@ -572,7 +621,8 @@
     .search-container {
         padding: 1em;
         width: 100%;
-        background-color: $sidebar_primary_color;
+        position: relative;
+        background-color: $sidebar_secondary_color;
 
         .search {
             margin: 0;
@@ -585,15 +635,32 @@
             backdrop-filter: blur(8px);
             z-index: 10;
             &::placeholder {
-                color: rgb(128, 126, 126);
+                color: rgb(103, 100, 100);
             }
             &:focus {
                 /* outline: 1px solid #5123dd; */
                 background-color: #504c4c;
+                &::placeholder {
+                    color: rgb(151, 147, 147);
+                }
             }
-            background-color: #6061703a;
+            background-color: transparent;
 
             border: 1px solid rgb(63, 63, 63);
+        }
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 5px;
+            bottom: 0;
+            height: fit-content;
+            padding: 5px;
+            margin: auto 0;
+            > iconify-icon {
+                font-size: 17px;
+                color: rgb(115, 115, 115);
+                pointer-events: none;
+            }
         }
     }
 
@@ -603,7 +670,7 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        background-color: $sidebar_primary_color;
+        background-color: $sidebar_secondary_color;
         position: sticky;
         top: 110px;
         cursor: default;
@@ -631,7 +698,8 @@
     .artwork-container {
         padding: 0em;
         width: 100%;
-        height: 200px;
+        height: 210px;
+        margin: auto;
         pointer-events: none;
 
         .artwork-frame {
@@ -643,13 +711,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-
+            > img {
+                object-fit: cover;
+            }
             .artwork-placeholder {
                 opacity: 0.2;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 gap: 1em;
+                z-index: -1;
                 iconify-icon {
                     /* margin-top: 0.7em; */
                 }
@@ -660,7 +731,7 @@
     .file {
         position: sticky;
         top: 265px;
-        background-color: $sidebar_primary_color;
+        background-color: $sidebar_secondary_color;
 
         display: flex;
         align-items: center;
@@ -694,8 +765,9 @@
 
         .artist {
             white-space: nowrap;
-            font-weight: bold;
+            font-weight: 500;
             font-size: 0.9em;
+            opacity: 0.9;
             z-index: 1;
         }
         .title {
@@ -704,6 +776,7 @@
         }
         small {
             white-space: nowrap;
+            opacity: 0.7;
         }
         * {
             margin: 0;
@@ -714,6 +787,15 @@
             font-size: 2em;
             line-height: 1.2em;
             margin: 0 1em;
+        }
+        .add-metadata-btn {
+            border-radius: 4px;
+            font-size: 13px;
+            color: rgb(166, 140, 207);
+            margin-top: 5px;
+            height: 25px;
+            padding: 2px 10px;
+            pointer-events: all;
         }
     }
 
@@ -729,7 +811,6 @@
     img {
         width: 100%;
         height: 100%;
-        border-radius: 2px;
     }
 
     .seekbar {
@@ -763,7 +844,7 @@
                 appearance: none;
                 width: $thumb_size;
                 height: $thumb_size;
-                background: url("images/volume-up.svg");
+                background: url("/images/volume-up.svg");
             }
 
             &::-moz-range-thumb {
@@ -776,7 +857,10 @@
 
     iconify-icon {
         font-size: 40px;
-
+        &.disabled {
+            pointer-events: none;
+            color: #474747;
+        }
         &:hover {
             opacity: 0.5;
         }

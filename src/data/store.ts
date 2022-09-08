@@ -1,4 +1,6 @@
 import { type, type OsType } from "@tauri-apps/api/os";
+import SmartQuery from "../lib/smart-query/Query";
+import Query from "./SmartQueries";
 import { writable, type Writable } from "svelte/store";
 
 interface Query {
@@ -29,13 +31,26 @@ export const seekTime = writable(0);
 export const volume = writable(1);
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
+
+// Smart query
+export const isSmartQueryUiOpen = writable(false);
+export const isSmartQueryBuilderOpen = writable(false);
+export const smartQuery: Writable<SmartQuery> = writable(new SmartQuery());
+export const selectedSmartQuery = writable(Query[0].value);
+export const isSmartQueryValid = writable(false);
+export const smartQueryUpdater = writable(0);
+export const isSettingsOpen = writable(false);
+export const userSettings: Writable<UserSettings> = writable({
+    albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"]
+});
 export const uiView: Writable<UIView> = writable("library");
 export const os: Writable<OsType> = writable("Darwin");
+
 export const importStatus: Writable<ImportStatus> = writable({
     totalTracks: 0,
     importedTracks: 0,
     isImporting: false,
-    currentFolder: ''
+    currentFolder: ""
 });
 export const singleKeyShortcutsEnabled = writable(true);
 

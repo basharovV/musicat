@@ -1,18 +1,18 @@
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
-  )]
+)]
 
 use std::error::Error;
-use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::ops::Deref;
+use std::{fmt, mem};
 
 use lofty::{read_from_path, ItemKey, ItemValue, Picture, TagItem, TagType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
+use tauri::{CustomMenuItem, Menu, MenuItem, Runtime, Submenu, Window};
 use tauri::{Event, Manager};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
@@ -52,6 +52,16 @@ fn main() {
                 }
             });
 
+            let windowClone = Box::new(window.clone());
+
+            let _id2 = app.listen_global("show-toolbar", move |_| {
+                window.set_decorations(true).unwrap();
+            });
+
+            let _id2 = app.listen_global("hide-toolbar", move |_| {
+                windowClone.set_decorations(false).unwrap();
+            });
+
             // #[cfg(target_os = "macos")]
             // apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow)
             //   .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
@@ -71,6 +81,10 @@ fn build_menu() -> Menu {
         .add_submenu(Submenu::new(
             "Musicat",
             Menu::new()
+                .add_item(CustomMenuItem::new("about", "About Musicat"))
+                .add_item(
+                    CustomMenuItem::new("settings", "Settings").accelerator("CommandOrControl+,"),
+                )
                 .add_native_item(MenuItem::Hide)
                 .add_native_item(MenuItem::Quit),
         ))
