@@ -6,9 +6,10 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::{fmt, mem};
 
+use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{read_from_path, ItemKey, ItemValue, Picture, TagItem, TagType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -159,7 +160,8 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
         if !v.metadata.is_empty() {
             // println!("{:?}", v.metadata);
             let mut tag_type: Option<TagType> = None;
-            match v.tag_type.as_deref().unwrap() {
+            let mut tag_type_evt = v.tag_type.as_deref().unwrap();
+            match tag_type_evt {
                 "vorbis" => tag_type = Some(TagType::VorbisComments),
                 "ID3v2.2" => tag_type = Some(TagType::ID3v2),
                 "ID3v2.3" => tag_type = Some(TagType::ID3v2),
@@ -173,22 +175,31 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
             for item in v.metadata.iter() {
                 if tag_type.is_some() {
                     if item.id == "METADATA_BLOCK_PICTURE" {
-                        // let pictureObject = &item.value.as_object().unwrap();
-                        // let pictureFormat = &pictureObject["format"].as_str();
-                        // let mut tagFormatMimeType: MimeType = MimeType::Jpeg;
-                        // match (pictureFormat) {
-                        //     Some("image/jpeg") => {
-                        //         tagFormatMimeType = MimeType::Jpeg;
-                        //     }
-                        //     _ => println!("Unknown file format for picture"),
-                        // }
-                        // println!("GOT PICTURE, format: {}", pictureFormat.unwrap());
-                        // println!("GOT PICTURE, tagFormatMimeType: {:?}", &tagFormatMimeType);
-                        // print_type_of(&pictureObject["data"]);
-                        // let pictureVec = &pictureObject["data"].as_str().unwrap();
-                        // let decoded = base64::decode(pictureVec);
+                        // Ignore picture, set by artwork_file_to_set
                     } else {
-                        let item_key = ItemKey::from_key(tag_type_value, &item.id.deref());
+                        let mut tag_key: String = item.id.clone();
+
+                        if tag_type_evt == "ID3v2.2" {
+                            println!("Upgrading to v3 tag: {}", tag_key);
+                            let item_keyv3 = upgrade_v2(tag_key.as_str());
+                            println!("Result v3: {:?}", item_keyv3);
+                            if item_keyv3.is_some() {
+                                tag_key = item_keyv3.unwrap().to_string();
+                                let item_keyv4 = upgrade_v3(tag_key.as_str());
+                                println!("Result v4: {:?}", item_keyv4);
+                                if (item_keyv4.is_some()) {
+                                    tag_key = item_keyv4.unwrap().to_string();
+                                    println!("Upgraded ID3v2.2 tag to ID3v2.3: {}", tag_key);
+                                } 
+                            }
+                        } else if tag_type_evt == "ID3v2.3" {
+                            let item_keyv3 = upgrade_v2(tag_key.as_str());
+                            if item_keyv3.is_some() {
+                                tag_key = item_keyv3.unwrap().to_string();
+                                println!("Upgraded ID3v2.3 tag to ID3v2.4: {}", tag_key);
+                            }
+                        }
+                        let item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
                         let item_value: ItemValue =
                             ItemValue::Text(String::from(item.value.as_str().unwrap()));
                         primary_tag.insert_item_unchecked(TagItem::new(item_key, item_value));

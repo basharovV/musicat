@@ -44,25 +44,11 @@ const genericToVorbisMap: TagFieldMap = {
 
 const vorbisToGenericMap = inverse(genericToVorbisMap);
 
-const genericToId3v23Map: TagFieldMap = {
-    title: "TIT2",
-    artist: "TPE1",
-    album: "TALB",
-    albumArtist: "TPE2",
-    composer: "TCOM",
-    genre: "TCON",
-    date: "TDAT",
-    trackNumber: "TRCK",
-    copyright: "TCOP",
-    publisher: "TPUB",
-    license: "LICENSE",
-    location: "LOCATION",
-    isrc: "TSRC",
-    bpm: "TBPM"
-};
-
-const id3v23ToGenericMap = inverse(genericToId3v23Map);
-
+/*
+ID3v2.2
+-------
+Three character ids
+*/
 const genericToId3v22Map: TagFieldMap = {
     title: "TT2",
     artist: "TPE1",
@@ -74,11 +60,45 @@ const genericToId3v22Map: TagFieldMap = {
     trackNumber: "TRK",
     copyright: "TCR",
     publisher: "TPB",
+    isrc: "TRC",
+    bpm: "TBP"
+};
+
+const id3v22ToGenericMap = inverse(genericToId3v22Map);
+
+const genericToId3v23Map: TagFieldMap = {
+    title: "TIT2",
+    artist: "TPE1",
+    album: "TALB",
+    albumArtist: "TPE2",
+    composer: "TCOM",
+    genre: "TCON",
+    date: "TDAT",
+    trackNumber: "TRCK",
+    copyright: "TCOP",
+    publisher: "TPUB",
     isrc: "TSRC",
     bpm: "TBPM"
 };
 
-const id3v22ToGenericMap = inverse(genericToId3v22Map);
+const id3v23ToGenericMap = inverse(genericToId3v23Map);
+
+const genericToId3v24Map: TagFieldMap = {
+    title: "TIT2",
+    artist: "TPE1",
+    album: "TALB",
+    albumArtist: "TPE2",
+    composer: "TCOM",
+    genre: "TCON",
+    date: "TDRC",
+    trackNumber: "TRCK",
+    copyright: "TCOP",
+    publisher: "TPUB",
+    isrc: "TSRC",
+    bpm: "TBPM"
+};
+
+const id3v24ToGenericMap = inverse(genericToId3v24Map);
 
 function getMapForTagType(
     tagType: TagType,

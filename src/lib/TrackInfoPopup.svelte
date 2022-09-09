@@ -78,7 +78,7 @@
         );
     }
 
-    console.log("coded", $rightClickedTrack.fileInfo.codec);
+    // console.log("track", $rightClickedTrack);
     let metadata: MetadataEntry[] = mergeDefault(
         $rightClickedTrack.metadata,
         $rightClickedTrack.fileInfo.tagTypes[0]
