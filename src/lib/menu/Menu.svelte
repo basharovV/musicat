@@ -68,6 +68,10 @@
             event.preventDefault();
             onEnter();
             console.log("onEnter");
+        } else if (event.keyCode === 27) {
+            // 'Esc' to close
+            event.preventDefault();
+            onClickOutside && onClickOutside();
         }
     }
 
@@ -96,8 +100,7 @@
             text={item.text}
             description={item.description}
             isHighlighted={hoveredItemIdx === idx}
-            on:click={(evt) => {
-                evt.stopPropagation();
+            onClick={() => {
                 onItemSelected && onItemSelected(item.source);
             }}
         />

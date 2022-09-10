@@ -2,6 +2,7 @@
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import "iconify-icon";
+    import type { Song } from "src/App";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
@@ -9,7 +10,7 @@
     import { get } from "svelte/store";
     import { db } from "../data/db";
     import { openTauriImportDialog } from "../data/LibraryImporter";
-    import SmartQuery from "../data/SmartQueries";
+    import BuiltInQueries from "../data/SmartQueries";
     import {
         currentSong,
         currentSongIdx,
@@ -26,11 +27,13 @@
         selectedSmartQuery,
         singleKeyShortcutsEnabled,
         smartQuery,
+        smartQueryResults,
         smartQueryUpdater,
         songsJustAdded
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
+    import SmartQuery from "./smart-query/Query";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
@@ -40,17 +43,45 @@
 
     $: songs = liveQuery(async () => {
         let results;
-        if (
-            $isSmartQueryBuilderOpen &&
-            $smartQueryUpdater
-        ) {
-            console.log("results?!");
-            results = await $smartQuery.run();
-        } else if ($isSmartQueryUiOpen) {
-            results = await SmartQuery.find(
-                (q) => q.value === $selectedSmartQuery
-            ).query();
-            console.log("smart results", results);
+        let isSmartQueryResults = false;
+        let isIndexed = true;
+        if ($isSmartQueryUiOpen) {
+            /**
+             * User-built smart queries don't support indexing
+             */
+            if ($isSmartQueryBuilderOpen) {
+                if ($smartQuery.isEmpty) {
+                    results = [];
+                } else if ($smartQueryUpdater) {
+                    results = await $smartQuery.run();
+                }
+
+                isSmartQueryResults = true;
+                isIndexed = false;
+            } else {
+                /**
+                 * Built-in smart queries support indexing, so they return a
+                 * Collection instead of an array.
+                 */
+                console.log("selected query: ", $selectedSmartQuery);
+                if ($selectedSmartQuery.startsWith("~usq:")) {
+                    // Run the query from the user-built blocks
+                    const queryName = $selectedSmartQuery.substring(5);
+                    const savedQuery = await db.smartQueries.get(queryName);
+                    const query = new SmartQuery(savedQuery);
+                    results = await query.run();
+                    console.log("results query: ", results);
+                    isIndexed = false;
+                } else {
+                    // Run the query from built-in functions
+                    results = await BuiltInQueries.find(
+                        (q) => q.value === $selectedSmartQuery
+                    ).query();
+
+                    isIndexed = true;
+                }
+                isSmartQueryResults = true;
+            }
         } else if ($query.query.length) {
             results = db.songs
                 .where("title")
@@ -68,10 +99,10 @@
                     : $query.orderBy
             );
         }
-        let resultsArray;
+        let resultsArray: Song[] = [];
 
         // Depending whether this is a smart query or not
-        if (!Array.isArray(results)) {
+        if (isIndexed) {
             if ($query.reverse) {
                 results = results.reverse();
             }
@@ -80,7 +111,36 @@
             resultsArray = results;
         }
 
-        queriedSongs.set(resultsArray);
+        // Do sorting for non-indexed results
+        if (!isIndexed) {
+            resultsArray = resultsArray.sort((a, b) => {
+                switch ($query.orderBy) {
+                    case "title":
+                    case "album":
+                    case "track":
+                    case "year":
+                    case "duration":
+                    case "genre":
+                        return a[$query.orderBy].localeCompare(
+                            b[$query.orderBy]
+                        );
+                    case "artist":
+                        // TODO this one needs to match the multiple indexes sorting from Dexie
+                        // i.e Artist -> Album -> Track N.
+                        return a.artist.localeCompare(b.artist);
+                }
+            });
+        }
+
+        /**
+         * Set in store
+         */
+        if (isSmartQueryResults) {
+            smartQueryResults.set(resultsArray);
+        } else {
+            queriedSongs.set(resultsArray);
+        }
+
         if ($query.query.length && resultsArray.length === 1) {
             // Highlight the only result
             highlightSong(resultsArray[0], 0, false);
@@ -104,7 +164,10 @@
         return albums.length;
     });
 
-    $: noSongs = !$songs || $songs.length === 0;
+    $: noSongs =
+        !$songs ||
+        $songs.length === 0 ||
+        ($isSmartQueryBuilderOpen && $smartQuery.isEmpty);
 
     function updateOrderBy(newOrderBy) {
         if ($query.orderBy === newOrderBy) {
@@ -336,12 +399,11 @@
     // Smart query stuff
 
     // Smart query - predefined or user-defined queries i.e smart playlists
-    let smartQuerySelectedVal = SmartQuery[0].value;
+    let smartQuerySelectedVal = BuiltInQueries[0].value;
 
     function hideSmartQueryBuilder() {
         if (tableHeaders[0] === "smart-query-builder") {
             tableHeaders.splice(0, 1);
-            $isSmartQueryBuilderOpen = false;
         }
         tableHeaders = tableHeaders;
     }
@@ -430,11 +492,11 @@
                                         {#if $query.orderBy === "title"}
                                             {#if $query.reverse}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
+                                                    icon="heroicons-solid:sort-ascending"
                                                 />
                                             {:else}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
+                                                    icon="heroicons-solid:sort-descending"
                                                 />
                                             {/if}
                                         {/if}
@@ -454,11 +516,11 @@
                                         {#if $query.orderBy === "artist"}
                                             {#if $query.reverse}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
+                                                    icon="heroicons-solid:sort-ascending"
                                                 />
                                             {:else}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
+                                                    icon="heroicons-solid:sort-descending"
                                                 />
                                             {/if}
                                         {/if}
@@ -472,11 +534,11 @@
                                         {#if $query.orderBy === "album"}
                                             {#if $query.reverse}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
+                                                    icon="heroicons-solid:sort-ascending"
                                                 />
                                             {:else}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
+                                                    icon="heroicons-solid:sort-descending"
                                                 />
                                             {/if}
                                         {/if}
@@ -491,11 +553,11 @@
                                         {#if $query.orderBy === "year"}
                                             {#if $query.reverse}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
+                                                    icon="heroicons-solid:sort-ascending"
                                                 />
                                             {:else}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
+                                                    icon="heroicons-solid:sort-descending"
                                                 />
                                             {/if}
                                         {/if}
@@ -509,11 +571,11 @@
                                         {#if $query.orderBy === "genre"}
                                             {#if $query.reverse}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
+                                                    icon="heroicons-solid:sort-ascending"
                                                 />
                                             {:else}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
+                                                    icon="heroicons-solid:sort-descending"
                                                 />
                                             {/if}
                                         {/if}
@@ -528,11 +590,11 @@
                                         {#if $query.orderBy === "duration"}
                                             {#if $query.reverse}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
+                                                    icon="heroicons-solid:sort-ascending"
                                                 />
                                             {:else}
                                                 <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
+                                                    icon="heroicons-solid:sort-descending"
                                                 />
                                             {/if}
                                         {/if}
@@ -543,9 +605,6 @@
                     {/each}
                 </thead>
 
-                {#if $isSmartQueryBuilderOpen && noSongs}
-                    <SmartQueryResultsPlaceholder />
-                {/if}
                 {#if $songs}
                     {#each $songs as song, idx (song.id)}
                         <tr
@@ -583,7 +642,7 @@
                                 </p></td
                             >
                             <td data-type="track"
-                                >{song.trackNumber === "" ||
+                                >{song.trackNumber === -1 ||
                                 song.trackNumber === null
                                     ? "-"
                                     : song.trackNumber}
@@ -599,6 +658,10 @@
                     {/each}
                 {/if}
             </table>
+
+            {#if $isSmartQueryBuilderOpen && noSongs}
+                <SmartQueryResultsPlaceholder />
+            {/if}
             <div>
                 <button style="margin-top:2em" on:click={openTauriImportDialog}
                     >Add music +</button
@@ -668,7 +731,7 @@
 
         &.builder {
             background-color: rgba(77, 52, 124, 0.8);
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.149);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.097);
             &:hover {
                 background-color: rgba(77, 52, 124, 0.8);
             }

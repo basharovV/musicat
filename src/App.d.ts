@@ -1,3 +1,5 @@
+import type { UserQueryPart } from "./lib/smart-query/UserQueryPart";
+
 interface MetadataEntry {
     /** Musicat's cross-file tag identifier */
     genericId: string?;
@@ -23,7 +25,7 @@ interface Song {
     album: string;
     year: number;
     genre: string[];
-    trackNumber: string;
+    trackNumber: number;
     duration: string;
     metadata: MetadataEntry[];
     fileInfo: any;
@@ -62,4 +64,3 @@ type Comparison =
     | "is-less-than"
     | "is-between"
     | "contains";
-

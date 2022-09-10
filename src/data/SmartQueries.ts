@@ -1,4 +1,5 @@
 import type { Collection, IndexableType } from "dexie";
+import type { Song } from "src/App";
 import { get } from "svelte/store";
 import { db } from "./db";
 import { query } from "./store";

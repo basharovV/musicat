@@ -1,8 +1,25 @@
-import type { InputType, QueryPartInput, QueryPartStruct } from "./QueryPart";
+import type {
+    InputType,
+    QueryPartInput,
+    QueryPartStruct,
+    QueryPartStructWithValues
+} from "./QueryPart";
 import "../string.extensions";
+import type { Song } from "src/App";
+
+function instanceOfQueryPartStructWithValues(
+    object: any
+): object is QueryPartStructWithValues {
+    return "values" in object;
+}
 
 export class UserQueryPart {
+    // Not saved variant (builder mode)
     queryPart: QueryPartStruct;
+    withValues = false;
+    // Saved variant (already in db, just run it)
+    queryPartWithValues: QueryPartStructWithValues;
+
     userInputs: {
         [key: string]: QueryPartInput<InputType>;
     } = {};
@@ -12,35 +29,56 @@ export class UserQueryPart {
      * Can we run this query part?
      */
     get isValid() {
+        if (this.queryPartWithValues) return true;
         return Object.values(this.userInputs).every((input) => {
             if (input.isRequired) {
-                return String(input.value)?.length > 0;
+                return (
+                    input?.value !== undefined &&
+                    input?.value !== null &&
+                    String(input.value)?.length > 0
+                );
             }
             return true;
         });
     }
 
-    constructor(queryPart: QueryPartStruct) {
-        this.queryPart = queryPart;
-        this.fieldKey = queryPart.fieldKey;
+    constructor(queryPart: QueryPartStruct | QueryPartStructWithValues) {
+        if (instanceOfQueryPartStructWithValues(queryPart)) {
+            this.queryPartWithValues = queryPart;
+        } else {
+            this.queryPart = queryPart;
 
-        // Prepare inputs, with null value
-        Object.entries(queryPart.inputRequired).forEach((p) => {
-            this.userInputs[p[0]] = { ...p[1], value: null };
-        });
+            // Prepare inputs, with null value
+            Object.entries(queryPart.inputRequired).forEach((p) => {
+                this.userInputs[p[0]] = { ...p[1], value: null };
+            });
+        }
+
+        this.fieldKey = queryPart.fieldKey;
     }
-    
+
     run(song: Song): boolean {
         const lhs = String(song[this.fieldKey]).trim().toLowerCase();
-        const rhs1 = String(Object.values(this.userInputs)[0].value)
-            .toLowerCase();
-        const rhs2 =
-            Object.values(this.userInputs).length > 1
-                ? String(Object.values(this.userInputs)[1].value)
-                      .toLowerCase()
-                : null;
-
-        switch (this.queryPart.comparison) {
+        const rhs1 = String(
+            this.queryPartWithValues
+                ? this.queryPartWithValues.values[
+                      Object.keys(this.queryPartWithValues.inputRequired)[0]
+                  ]
+                : Object.values(this.userInputs)[0].value
+        ).toLowerCase();
+        const rhs2 = String(
+            this.queryPartWithValues
+                ? this.queryPartWithValues.values[
+                      Object.keys(this.queryPartWithValues.inputRequired)[1]
+                  ]
+                : Object.values(this.userInputs).length > 1
+                ? Object.values(this.userInputs)[1].value
+                : null
+        ).toLowerCase();
+        
+        const comparison = this.queryPartWithValues ? this.queryPartWithValues.comparison : this.queryPart.comparison
+        
+        switch (comparison) {
             case "is-equal":
                 return lhs === rhs1;
             case "contains":
@@ -60,33 +98,5 @@ export class UserQueryPart {
                     return false;
                 }
         }
-    }
-
-    /** This simply validates the input, it does not run the condition! run() does that. */
-    validate() {
-        switch (this.queryPart.comparison) {
-            case "is-equal":
-            case "contains":
-            case "is-greater-than":
-            case "is-less-than":
-                this.isValid = lhs?.length > 0 && this.rhs1?.length > 0;
-                break;
-            case "is-between":
-                this.isValid =
-                    lhs?.length > 0 &&
-                    this.rhs1?.length > 0 &&
-                    this.rhs2?.length > 0;
-                break;
-        }
-    }
-
-    toString() {
-        const str = `${
-            this.rhs2
-                ? this.queryPart.description.format(this.rhs1, this.rhs2)
-                : this.queryPart.description.format(this.rhs1)
-        }`;
-        console.log("str", str);
-        return str;
     }
 }

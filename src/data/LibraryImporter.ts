@@ -10,6 +10,7 @@ import * as musicMetadata from "music-metadata-browser";
 import { importStatus, songsJustAdded, userSettings } from "./store";
 import { getMapForTagType } from "./LabelMap";
 import { get } from "svelte/store";
+import type { MetadataEntry, Song } from "src/App";
 
 let addedSongs: Song[] = [];
 
@@ -47,7 +48,7 @@ export async function addSong(
             album: metadata.common.album || "",
             year: metadata.common.year || 0,
             genre: metadata.common.genre || [],
-            trackNumber: metadata.common.track.no?.toString() || "",
+            trackNumber: metadata.common.track.no || -1,
             duration: `${(~~(metadata.format.duration / 60))
                 .toString()
                 .padStart(2, "0")}:${(~~(metadata.format.duration % 60))

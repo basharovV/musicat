@@ -59,8 +59,12 @@ button {
   font-weight: 500;
   font-family: inherit;
   background-color: #1a1a1a;
-  cursor: pointer;
   transition: border-color 0.1s;
+  white-space: nowrap;
+}
+
+button:active {
+  opacity: 0.8;
 }
 button:hover {
   border-color: #646cff;

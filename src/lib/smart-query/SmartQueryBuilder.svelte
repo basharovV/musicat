@@ -2,7 +2,7 @@
     import { UserQueryPart } from "./UserQueryPart";
 
     import { autoWidth } from "../../utils/AutoWidth";
-    import { smartQuery } from "../../data/store";
+    import { isSmartQueryValid, smartQuery } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import type { QueryPartStruct } from "./QueryPart";
     import SmartQueryPart from "./SmartQueryPart.svelte";
@@ -246,6 +246,18 @@
             /></span
         >
     </div>
+    <div class="validation">
+        {#if $isSmartQueryValid}
+            <p>query is valid</p>
+            <iconify-icon class="valid" icon="charm:tick" />
+        {:else}
+            <p>query is not valid</p>
+            <iconify-icon
+                class="invalid"
+                icon="ant-design:warning-outlined"
+            />
+        {/if}
+    </div>
 
     {#if matchingQueryParts.length > 0}
         <Menu
@@ -264,18 +276,19 @@
 
 <style lang="scss">
     container {
-        margin-left: 2em;
         margin-top: 0.5em;
-        display: flex;
-        flex-direction: row;
+        display: grid;
+        grid-template-columns: 1fr auto;
         overflow: visible;
     }
 
     .query-parts {
+        flex-grow: 1;
         display: flex;
         flex-direction: row;
         gap: 0.5em 0.2em;
         margin-right: 1em;
+        margin-left: 1em;
         flex-wrap: wrap;
         max-width: 90%;
         > p {
@@ -297,6 +310,28 @@
         width: fit-content;
         min-width: 100px;
     }
+
+
+    .validation {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.3em;
+            font-weight: normal;
+
+            p {
+                font-size: 13px;
+                opacity: 0.7;
+                margin: 0;
+            }
+            .valid {
+                color: green;
+            }
+
+            .invalid {
+                color: orange;
+            }
+        }
 
     .autocomplete {
         position: fixed;

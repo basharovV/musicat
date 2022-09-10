@@ -9,6 +9,7 @@
     import { onDestroy, onMount } from "svelte";
     import tippy from "svelte-tippy";
     import { lookForArt } from "../data/LibraryImporter";
+    import { throttle } from 'lodash-es';
     import {
         currentSong,
         currentSongArtworkSrc,
@@ -175,7 +176,7 @@
 
     onMount(() => {
         height = window.innerHeight;
-        window.onresize = onResize;
+        window.onresize = throttle(() => {onResize()}, 200);
         onResize(); // run once
         searchInput.onfocus = (evt) => {
             $singleKeyShortcutsEnabled = false;

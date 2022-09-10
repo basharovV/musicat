@@ -1,19 +1,40 @@
 <script lang="ts">
+    import { liveQuery } from "dexie";
+    import { db } from "../../data/db";
+
     import SmartQuery from "../../data/SmartQueries";
 
     import {
         isSmartQueryBuilderOpen,
         isSmartQueryUiOpen,
         isSmartQueryValid,
-        selectedSmartQuery
+        selectedSmartQuery,
+        smartQuery
     } from "../../data/store";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+
+    $: savedSmartQueries = liveQuery(async () => {
+        return db.smartQueries.toArray();
+    });
 
     function hideSmartQuery() {
         $isSmartQueryUiOpen = false;
     }
 
+    function hideSmartQueryBuilder() {
+        $isSmartQueryBuilderOpen = false;
+    }
+
     function showSmartQueryBuilder() {
         $isSmartQueryBuilderOpen = true;
+    }
+
+    function save() {
+        $smartQuery.save();
+        // Close the builder UI and set the current selected query to the one we just saved
+        $isSmartQueryBuilderOpen = false;
+        $selectedSmartQuery = `~usq:${$smartQuery.name}`;
+        $smartQuery.reset();
     }
 </script>
 
@@ -32,6 +53,15 @@
                 {#each SmartQuery as query}
                     <option value={query.value}>{query.name}</option>
                 {/each}
+                <option value="----">----</option>
+
+                {#if $savedSmartQueries}
+                    {#each $savedSmartQueries as query}
+                        <option value={`~usq:${query.name}`}
+                            >{query.name}</option
+                        >
+                    {/each}
+                {/if}
             </select>
         </div>
         <div>
@@ -44,22 +74,20 @@
     </div>
 {:else}
     <div class="query-editor-info">
-        <div class="validation">
-            {#if $isSmartQueryValid}
-                <p>query is valid</p>
-                <iconify-icon class="valid" icon="charm:tick" />
-            {:else}
-                <p>query is not valid</p>
-                <iconify-icon
-                    class="invalid"
-                    icon="ant-design:warning-outlined"
-                />
-            {/if}
-        </div>
+        <ButtonWithIcon
+            icon="mingcute:close-circle-fill"
+            onClick={hideSmartQueryBuilder}
+            text="Hide builder"
+        />
 
-        <img src="images/arrow-down-right.svg" />
-        <div>
-            <button>Save smart query</button>
+        <div class="smart-query-actions">
+            <p>Name:</p>
+            <input bind:value={$smartQuery.name} />
+            <img src="images/arrow-down-right.svg" />
+            <button
+                disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
+                on:click={save}>Save smart query</button
+            >
         </div>
     </div>
 {/if}
@@ -109,6 +137,11 @@
     button {
         background-color: rgb(98, 77, 212);
         border-radius: 4px;
+
+        &:disabled {
+            background-color: rgb(73, 53, 184);
+            color: rgb(116, 114, 114);
+        }
     }
 
     .query-editor-info {
@@ -116,34 +149,57 @@
         align-items: center;
         justify-content: space-between;
         display: grid;
-        grid-template-columns: 1fr auto auto;
+        grid-template-columns: auto 1fr;
         gap: 1em;
 
-        .validation {
-            margin-left: 2em;
+        .exit-builder-mode {
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 0.3em;
+            gap: 5px;
+            margin-left: 1em;
             font-weight: normal;
-
+            /* background-color: rgba(240, 248, 255, 0.088); */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.3em 0.5em;
+            border-radius: 4px;
+            color: rgba(255, 255, 255, 0.811);
+            white-space: nowrap;
             p {
-                font-size: 13px;
-                opacity: 0.7;
+                margin: 0;
             }
-            .valid {
-                color: green;
+            &:active {
+                opacity: 0.8;
             }
-
-            .invalid {
-                color: orange;
+            &:hover {
+                background-color: rgba(240, 248, 255, 0.088);
             }
         }
 
+        .smart-query-actions {
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+            justify-content: flex-end;
+        }
+
+        input {
+            background-color: transparent;
+            outline: none;
+            border: none;
+            margin-left: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.36);
+            border-radius: 4px;
+            padding: 0 0.5em;
+            font-size: 1em;
+            line-height: 1.8rem;
+            width: fit-content;
+            min-width: 100px;
+        }
+
         img {
-            height: 50px;
+            width: 40px;
             position: relative;
-            top: -20px;
             opacity: 0.2;
         }
 

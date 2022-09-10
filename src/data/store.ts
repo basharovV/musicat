@@ -2,6 +2,7 @@ import { type, type OsType } from "@tauri-apps/api/os";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
 import { writable, type Writable } from "svelte/store";
+import type { ArtworkSrc, ImportStatus, Song, UserSettings } from "src/App";
 
 interface Query {
     orderBy: string;
@@ -35,10 +36,14 @@ export const isTrackInfoPopupOpen = writable(false);
 // Smart query
 export const isSmartQueryUiOpen = writable(false);
 export const isSmartQueryBuilderOpen = writable(false);
+export const isSmartQuerySaveUiOpen = writable(false);
 export const smartQuery: Writable<SmartQuery> = writable(new SmartQuery());
 export const selectedSmartQuery = writable(Query[0].value);
 export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);
+export const smartQueryResults: Writable<Song[]> = writable([]);
+
+// Settings
 export const isSettingsOpen = writable(false);
 export const userSettings: Writable<UserSettings> = writable({
     albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"]
@@ -52,8 +57,8 @@ export const importStatus: Writable<ImportStatus> = writable({
     isImporting: false,
     currentFolder: ""
 });
-export const singleKeyShortcutsEnabled = writable(true);
 
+export const singleKeyShortcutsEnabled = writable(true);
 export const currentSongArtworkSrc: Writable<ArtworkSrc> = writable(null);
 export const isMiniPlayer = writable(false);
 async function getOs() {

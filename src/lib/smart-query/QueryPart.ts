@@ -1,21 +1,31 @@
+import type { Comparison, DataType } from "src/App";
+
 /**
- * At the moment we just create query parts per field. 
+ * At the moment we just create query parts per field.
  * This can expand to more complex queries
  */
-type FieldKey = 'title'|'artist'|'album'|'year'|'genre'|'duration'
+type FieldKey = "title" | "artist" | "album" | "year" | "genre" | "duration";
 
 export type InputType = string | number | boolean;
-export type InputTypeStr = 'string' | 'number' | 'boolean';
+export type InputTypeStr = "string" | "number" | "boolean";
 
+interface QueryPart {
+    queryPart: QueryPartStruct;
+    userInputs: {
+        [key: string]: QueryPartInput<InputType>;
+    };
+    fieldKey;
+}
 interface QueryPartInputStruct<T extends InputType> {
-    defaultVal: T,
-    isRequired: boolean,
-    isFieldKey: boolean // Is this input for the query part field eg. album or genre
+    defaultVal: T;
+    isRequired: boolean;
+    isFieldKey: boolean; // Is this input for the query part field eg. album or genre
     type: InputTypeStr;
 }
 
-export interface QueryPartInput<T extends InputType> extends QueryPartInputStruct<T> {
-    value: T
+export interface QueryPartInput<T extends InputType>
+    extends QueryPartInputStruct<T> {
+    value: T;
 }
 
 export interface QueryPartStruct {
@@ -54,6 +64,16 @@ export interface QueryPartStruct {
      * Input map required
      */
     inputRequired: {
-        [key: string]: QueryPartInputStruct<InputType>
-    }
+        [key: string]: QueryPartInputStruct<InputType>;
+    };
+}
+export interface QueryPartStructWithValues extends QueryPartStruct {
+    values: {
+        [key: string]: any;
+    };
+}
+
+export interface SavedSmartQuery {
+    name: string;
+    queryParts: QueryPartStructWithValues[];
 }

@@ -22,6 +22,7 @@
     import "./tippy.css";
     import Input from "./Input.svelte";
     import { focusTrap } from "../utils/FocusTrap";
+import type { MetadataEntry, TagType } from "src/App";
 
     // optional
 

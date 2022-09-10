@@ -13,6 +13,7 @@ export function startMenuListener() {
             case "clear-db":
                 console.log("clear-db");
                 db.songs.clear();
+                db.smartQueries.clear();
                 break;
             case "about":
                 console.log("about");
