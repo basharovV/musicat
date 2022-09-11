@@ -29,6 +29,7 @@
         queriedSongs,
         query,
         rightClickedTrack,
+        selectedSidebarItem,
         singleKeyShortcutsEnabled,
         userSettings,
         volume
@@ -257,7 +258,10 @@
                         .setPosition(
                             new PhysicalPosition(
                                 monitor.position.x + paddingPx,
-                                monitor.position.y + ($os === 'Darwin' ? paddingPx + 40 : paddingPx)
+                                monitor.position.y +
+                                    ($os === "Darwin"
+                                        ? paddingPx + 40
+                                        : paddingPx)
                             )
                         );
                     break;
@@ -270,7 +274,10 @@
                                     monitor.size.width -
                                     windowSize.width -
                                     paddingPx,
-                                monitor.position.y + ($os === 'Darwin' ? paddingPx + 40 : paddingPx)
+                                monitor.position.y +
+                                    ($os === "Darwin"
+                                        ? paddingPx + 40
+                                        : paddingPx)
                             )
                         );
                     break;
@@ -289,7 +296,6 @@
                     .getCurrent()
                     .setSize(new LogicalSize(1100, 750));
             }
-
 
             await tauriWindow.getCurrent().center();
             await tauriWindow.getCurrent().show();
@@ -329,20 +335,28 @@
 
         <menu>
             <items>
-                <item>
+                <item
+                    class:selected={$selectedSidebarItem === "library"}
+                    on:click={() => {
+                        $selectedSidebarItem = "library";
+                    }}
+                >
                     <iconify-icon icon="fluent:library-20-filled" />Music</item
                 >
                 <item
+                    class:selected={$selectedSidebarItem === "smart-query"}
                     on:click={() => {
-                        $isSmartQueryUiOpen = !$isSmartQueryUiOpen;
-                        if (!$isSmartQueryUiOpen) {
-                            $isSmartQueryBuilderOpen = false;
-                        }
+                        $selectedSidebarItem = "smart-query";
                     }}
                 >
                     <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
                 >
-                <item>
+                <item
+                    class:selected={$selectedSidebarItem === "your-music"}
+                    on:click={() => {
+                        $selectedSidebarItem = "your-music";
+                    }}
+                >
                     <iconify-icon icon="fluent:library-20-filled" />Your music</item
                 >
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
@@ -703,13 +717,23 @@
             font-size: 13px;
             letter-spacing: 1px;
             color: rgb(181, 182, 186);
+            width: 100%;
+            border-radius: 3px;
+            box-sizing: border-box;
+            border: 1px solid transparent;
 
             cursor: default;
-            &:hover {
-                color: rgb(255, 255, 255);
+            &.selected {
+                color: white;
+                iconify-icon {
+                    color: #45fffcf3;
+                }
             }
-            &:active {
-                color: rgb(130, 130, 130);
+
+            &:not(.selected) {
+                &:active {
+                    color: rgb(130, 130, 130);
+                }
             }
 
             iconify-icon {
@@ -717,7 +741,6 @@
                 font-size: 15px;
                 text-align: center;
                 vertical-align: middle;
-                opacity: 0.4;
             }
         }
     }
@@ -756,6 +779,7 @@
         width: 100%;
         position: sticky;
         top: 400px;
+        z-index: 3;
     }
 
     .search-container {
@@ -944,8 +968,9 @@
         margin: auto;
         pointer-events: none;
         opacity: 1;
-        border: 0.7px solid #ffffff23;
         box-sizing: content-box;
+        border-top: 0.7px solid #ffffff23;
+        border-bottom: 0.7px solid #ffffff23;
         z-index: 0;
 
         .artwork-frame {

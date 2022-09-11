@@ -2,7 +2,7 @@ import { type, type OsType } from "@tauri-apps/api/os";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
 import { writable, type Writable } from "svelte/store";
-import type { ArtworkSrc, ImportStatus, Song, UserSettings } from "src/App";
+import type { ArtworkSrc, ImportStatus, SidebarItem, Song, UserSettings } from "src/App";
 
 interface Query {
     orderBy: string;
@@ -32,6 +32,7 @@ export const seekTime = writable(0);
 export const volume = writable(1);
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
+export const selectedSidebarItem: Writable<SidebarItem> = writable('library');
 
 // Smart query
 export const isSmartQueryUiOpen = writable(false);

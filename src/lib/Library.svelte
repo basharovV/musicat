@@ -12,24 +12,23 @@
     import { openTauriImportDialog } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
     import {
-        currentSong,
-        currentSongIdx,
-        importStatus,
-        isSmartQueryBuilderOpen,
-        isSmartQueryUiOpen,
-        isSmartQueryValid,
-        isTrackInfoPopupOpen,
-        os,
-        queriedSongs,
-        query,
-        rightClickedTrack,
-        rightClickedTracks,
-        selectedSmartQuery,
-        singleKeyShortcutsEnabled,
-        smartQuery,
-        smartQueryResults,
-        smartQueryUpdater,
-        songsJustAdded
+    currentSong,
+    currentSongIdx,
+    importStatus,
+    isSmartQueryBuilderOpen,
+    isSmartQueryUiOpen,isTrackInfoPopupOpen,
+    os,
+    queriedSongs,
+    query,
+    rightClickedTrack,
+    rightClickedTracks,
+    selectedSidebarItem,
+    selectedSmartQuery,
+    singleKeyShortcutsEnabled,
+    smartQuery,
+    smartQueryResults,
+    smartQueryUpdater,
+    songsJustAdded
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
@@ -45,7 +44,7 @@
         let results;
         let isSmartQueryResults = false;
         let isIndexed = true;
-        if ($isSmartQueryUiOpen) {
+        if ($selectedSidebarItem === 'smart-query') {
             /**
              * User-built smart queries don't support indexing
              */
@@ -445,7 +444,7 @@
      */
     let tableHeaders = ["track-fields"];
     $: {
-        if ($isSmartQueryUiOpen) {
+        if ($selectedSidebarItem === 'smart-query') {
             showSmartQuery();
         } else {
             hideSmartQuery();

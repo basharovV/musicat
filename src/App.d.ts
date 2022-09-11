@@ -71,3 +71,5 @@ type Comparison =
     | "is-less-than"
     | "is-between"
     | "contains";
+
+type SidebarItem = "library" | "smart-query" | "your-music";

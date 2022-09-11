@@ -40,11 +40,6 @@ async function jazzFromThe50s() {
 
 export default [
     {
-        name: "all tracks",
-        value: 'all-tracks',
-        query: allTracks
-    },
-    {
         name: "tracks with no metadata",
         value: 'no-metadata',
         query: tracksWithEmptyMetadata
