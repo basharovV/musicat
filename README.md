@@ -1,5 +1,5 @@
 <p align="center">
-<img height="140" src="src-tauri/icons/Square310x310Logo.jpeg">
+<img height="140" src="src-tauri/icons/Square310x310Logo.png">
 </p>
 <h1 align="center">Musicat</h1>
 <p align="center">

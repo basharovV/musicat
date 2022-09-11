@@ -45,9 +45,14 @@ export const smartQueryResults: Writable<Song[]> = writable([]);
 
 // Settings
 export const isSettingsOpen = writable(false);
-export const userSettings: Writable<UserSettings> = writable({
-    albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"]
-});
+const defaultSettings: UserSettings = {
+    albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"],
+    miniPlayerLocation: 'bottom-left'
+}
+export const userSettings: Writable<UserSettings> = writable(JSON.parse(localStorage.getItem('settings')) || defaultSettings);
+// Auto-persist settings
+userSettings.subscribe(val => localStorage.setItem("settings", JSON.stringify(val)));
+
 export const uiView: Writable<UIView> = writable("library");
 export const os: Writable<OsType> = writable("Darwin");
 

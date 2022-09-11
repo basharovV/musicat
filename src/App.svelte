@@ -1,23 +1,20 @@
 <script lang="ts">
+    import { Toaster } from "svelte-french-toast";
     import {
-        isDraggingFiles,
-        isInfoPopupOpen,
-        isMiniPlayer,
-        isTrackInfoPopupOpen,
-        isSettingsOpen,
-        uiView
+    isDraggingFiles,
+    isInfoPopupOpen,
+    isMiniPlayer,isSettingsOpen,isTrackInfoPopupOpen,uiView
     } from "./data/store";
     import Albums from "./lib/Albums.svelte";
-    import toast, { Toaster } from "svelte-french-toast";
 
+    import { onMount } from "svelte";
     import Dropzone from "./lib/Dropzone.svelte";
     import InfoPopup from "./lib/InfoPopup.svelte";
     import Library from "./lib/Library.svelte";
+    import SettingsPopup from "./lib/SettingsPopup.svelte";
     import Sidebar from "./lib/Sidebar.svelte";
     import TrackInfoPopup from "./lib/TrackInfoPopup.svelte";
     import { startMenuListener } from "./window/EventListener";
-import SettingsPopup from "./lib/SettingsPopup.svelte";
-import { onMount } from "svelte";
 
     startMenuListener();
 

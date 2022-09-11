@@ -1,18 +1,22 @@
 <script lang="ts">
     import { getVersion } from "@tauri-apps/api/app";
 
-    import { register,unregisterAll } from "@tauri-apps/api/globalShortcut";
-    import { onDestroy,onMount } from "svelte";
+    import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
+    import type { MiniPlayerLocation } from "src/App";
+    import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
-    import {
-    isSettingsOpen,
-    userSettings
-    } from "../data/store";
+    import { isSettingsOpen, userSettings } from "../data/store";
     import { clickOutside } from "../utils/ClickOutside";
     import Input from "./Input.svelte";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
+    let miniPlayerLocations: MiniPlayerLocation[] = [
+        "bottom-left",
+        "bottom-right",
+        "top-left",
+        "top-right"
+    ];
 
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
@@ -33,8 +37,7 @@
 
     onDestroy(() => {
         unregisterAll();
-    })
-
+    });
 </script>
 
 <container>
@@ -63,6 +66,16 @@
                             onChange={onUpdateFilenames}
                             fullWidth
                         /></td
+                    >
+                </tr>
+                <tr>
+                    <td>Mini-player default location</td>
+                    <td>
+                        <select bind:value={$userSettings.miniPlayerLocation}>
+                            {#each miniPlayerLocations as location}
+                                <option value={location}>{location}</option>
+                            {/each}
+                        </select></td
                     >
                 </tr>
             </table>
@@ -183,6 +196,16 @@
         padding: 2em;
         table {
             width: 100%;
+            tr {
+                
+                td:nth-child(1) {
+                    padding-right: 10px;
+                    text-align: right;
+                }
+                td:nth-child(2) {
+                    text-align: left;
+                }
+            }
         }
     }
 </style>

@@ -10,10 +10,10 @@ interface MetadataEntry {
 }
 
 interface ImportStatus {
-  totalTracks: number;
-  importedTracks: number;
-  isImporting: boolean;
-  currentFolder: string;
+    totalTracks: number;
+    importedTracks: number;
+    isImporting: boolean;
+    currentFolder: string;
 }
 
 interface Song {
@@ -53,8 +53,15 @@ interface ArtworkSrc {
 }
 
 interface UserSettings {
-    albumArtworkFilenames: string[],
+    albumArtworkFilenames: string[];
+    miniPlayerLocation: MiniPlayerLocation;
 }
+
+type MiniPlayerLocation =
+    | "bottom-left"
+    | "bottom-right"
+    | "top-left"
+    | "top-right";
 
 type DataType = "song";
 

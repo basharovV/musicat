@@ -22,7 +22,6 @@ export async function addSong(
     if (!filePath.match(/\.(mp3|ogg|flac|aac|wav)$/)) {
         return null;
     }
-    console.log("fetching file", fileName);
     const metadata = await musicMetadata.fetchFromUrl(convertFileSrc(filePath));
     const fileHash = md5(filePath);
     const tagType = metadata.format.tagTypes.length
@@ -32,7 +31,7 @@ export async function addSong(
     const metadataMapped: MetadataEntry[] = tagType
         ? metadata.native[tagType]
               .map((tag) => ({
-                  genericId: map[tag.id],
+                  genericId: map && tag ? map[tag.id] : "unknown",
                   id: tag.id,
                   value: tag.value
               }))
@@ -67,10 +66,9 @@ export async function addSong(
 
         try {
             await db.songs.put(songToAdd);
-        } catch(err) {
+        } catch (err) {
             console.error(err);
             // Catch 'already exists' case
-
         }
         if (singleFile) {
             songsJustAdded.update((songs) => {
@@ -80,7 +78,7 @@ export async function addSong(
         } else {
             addedSongs.push(songToAdd);
         }
-        
+
         return await db.songs.get(fileHash);
     } catch (e) {
         console.error(e);
@@ -126,7 +124,7 @@ export async function addFolder(folderPath) {
         isImporting: false,
         currentFolder: ""
     });
-    
+
     songsJustAdded.set(addedSongs);
     addedSongs = [];
 }

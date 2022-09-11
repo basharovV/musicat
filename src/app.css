@@ -29,6 +29,7 @@ body {
   place-items: center;
   min-width: 210px;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 h1 {
@@ -45,6 +46,7 @@ h1 {
   text-align: center;
   overflow: hidden;
   font-display: optional;
+  height: 100%;
 }
 
 * {

@@ -1,15 +1,20 @@
 <script lang="ts">
-    import { window as tauriWindow } from "@tauri-apps/api";
+    import { tauri, window as tauriWindow } from "@tauri-apps/api";
     import { emit } from "@tauri-apps/api/event";
     import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
-    import { LogicalSize } from "@tauri-apps/api/window";
+    import {
+        LogicalSize,
+        currentMonitor,
+        LogicalPosition,
+        PhysicalPosition
+    } from "@tauri-apps/api/window";
     import hotkeys from "hotkeys-js";
     import * as musicMetadata from "music-metadata-browser";
-    import { onDestroy, onMount } from "svelte";
+    import { createEventDispatcher, onDestroy, onMount } from "svelte";
     import tippy from "svelte-tippy";
     import { lookForArt } from "../data/LibraryImporter";
-    import { throttle } from 'lodash-es';
+    import { throttle } from "lodash-es";
     import {
         currentSong,
         currentSongArtworkSrc,
@@ -25,6 +30,7 @@
         query,
         rightClickedTrack,
         singleKeyShortcutsEnabled,
+        userSettings,
         volume
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
@@ -176,7 +182,9 @@
 
     onMount(() => {
         height = window.innerHeight;
-        window.onresize = throttle(() => {onResize()}, 200);
+        window.onresize = throttle(() => {
+            onResize();
+        }, 200);
         onResize(); // run once
         searchInput.onfocus = (evt) => {
             $singleKeyShortcutsEnabled = false;
@@ -186,15 +194,92 @@
         };
     });
 
+    let miniToggleBtn: HTMLElement;
     let widthToRestore = 0;
     let heightToRestore = 0;
+    let paddingPx = 40;
+    let isMiniToggleHovered = false;
+
+    /**
+     * We handle the hover event manually because otherwise
+     * the hover state gets stuck when resizing and moving the window
+     */
+    function onMiniToggleMouseOver() {
+        isMiniToggleHovered = true;
+    }
+    function onMiniToggleMouseOut() {
+        isMiniToggleHovered = false;
+    }
 
     async function toggleMiniPlayer() {
         if (!$isMiniPlayer) {
             widthToRestore = window.innerWidth;
             heightToRestore = window.innerHeight;
-            tauriWindow.getCurrent().setSize(new LogicalSize(210, 210));
+
+            emit("hide-toolbar");
+            await tauriWindow.getCurrent().hide();
+            await tauriWindow.getCurrent().setSize(new LogicalSize(210, 210));
+            const monitor = await currentMonitor();
+            const windowSize = await tauriWindow.getCurrent().innerSize();
+            switch ($userSettings.miniPlayerLocation) {
+                case "bottom-left":
+                    await tauriWindow
+                        .getCurrent()
+                        .setPosition(
+                            new PhysicalPosition(
+                                monitor.position.x + paddingPx,
+                                monitor.position.y +
+                                    monitor.size.height -
+                                    windowSize.height -
+                                    paddingPx
+                            )
+                        );
+                    break;
+                case "bottom-right":
+                    await tauriWindow
+                        .getCurrent()
+                        .setPosition(
+                            new PhysicalPosition(
+                                monitor.position.x +
+                                    monitor.size.width -
+                                    windowSize.width -
+                                    paddingPx,
+                                monitor.position.y +
+                                    monitor.size.height -
+                                    windowSize.height -
+                                    paddingPx
+                            )
+                        );
+                    break;
+                case "top-left":
+                    await tauriWindow
+                        .getCurrent()
+                        .setPosition(
+                            new PhysicalPosition(
+                                monitor.position.x + paddingPx,
+                                monitor.position.y + ($os === 'Darwin' ? paddingPx + 40 : paddingPx)
+                            )
+                        );
+                    break;
+                case "top-right":
+                    await tauriWindow
+                        .getCurrent()
+                        .setPosition(
+                            new PhysicalPosition(
+                                monitor.position.x +
+                                    monitor.size.width -
+                                    windowSize.width -
+                                    paddingPx,
+                                monitor.position.y + ($os === 'Darwin' ? paddingPx + 40 : paddingPx)
+                            )
+                        );
+                    break;
+            }
+
+            await tauriWindow.getCurrent().show();
+            await tauriWindow.getCurrent().setAlwaysOnTop(true);
         } else {
+            await tauriWindow.getCurrent().hide();
             if (widthToRestore && heightToRestore) {
                 await tauriWindow
                     .getCurrent()
@@ -202,10 +287,16 @@
             } else {
                 await tauriWindow
                     .getCurrent()
-                    .setSize(new LogicalSize(1100, 700));
+                    .setSize(new LogicalSize(1100, 750));
             }
-            tauriWindow.getCurrent().center();
+
+
+            await tauriWindow.getCurrent().center();
+            await tauriWindow.getCurrent().show();
+            await tauriWindow.getCurrent().setAlwaysOnTop(false);
         }
+
+        isMiniToggleHovered = false;
     }
 </script>
 
@@ -218,19 +309,21 @@
     <Knob bind:value={volumeKnob} max={100} min={0} pixelRange={200} />
   </div> -->
     <div class="top">
-        <h1 class="app-title" on:click={openInfoWindow}>Musicat</h1>
-        <div class="search-container">
-            <input
-                bind:this={searchInput}
-                class="search"
-                type="text"
-                placeholder="Search ({$os === 'Darwin'
-                    ? 'Cmd + F'
-                    : 'Ctrl + F'})"
-                bind:value={$query.query}
-            />
-            <div class="search-icon">
-                <iconify-icon icon="ion:search" />
+        <div class="top-header">
+            <h1 class="app-title" on:click={openInfoWindow}>Musicat</h1>
+            <div class="search-container">
+                <input
+                    bind:this={searchInput}
+                    class="search"
+                    type="text"
+                    placeholder="Search ({$os === 'Darwin'
+                        ? 'Cmd + F'
+                        : 'Ctrl + F'})"
+                    bind:value={$query.query}
+                />
+                <div class="search-icon">
+                    <iconify-icon icon="ion:search" />
+                </div>
             </div>
         </div>
 
@@ -249,6 +342,9 @@
                 >
                     <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
                 >
+                <item>
+                    <iconify-icon icon="fluent:library-20-filled" />Your music</item
+                >
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
 
                 <!-- <hr />
@@ -262,16 +358,21 @@
     </div>
 
     <div class="track-info">
-        <hr />
+        <!-- <hr /> -->
 
         <div class="track-info-content">
+            <!-- svelte-ignore a11y-mouse-events-have-key-events -->
             <iconify-icon
                 use:tippy={{
                     theme: $isMiniPlayer ? "hidden" : "",
                     content: "Toggle the mini player.",
                     placement: "right"
                 }}
+                bind:this={miniToggleBtn}
                 class="mini-toggle"
+                class:hovered={isMiniToggleHovered}
+                on:mouseover={onMiniToggleMouseOver}
+                on:mouseout={onMiniToggleMouseOut}
                 icon={$isMiniPlayer
                     ? "gg:arrows-expand-up-right"
                     : "gg:arrows-expand-down-left"}
@@ -303,14 +404,15 @@
                 {/if}
             </div>
         </div>
+
+        {#if codec}
+            <div class="file">
+                <p>{codec}</p>
+                {#if bitrate}<p>{bitrate} bit</p>{/if}
+                <p>{sampleRate} smpls</p>
+            </div>
+        {/if}
     </div>
-    {#if codec}
-        <div class="file">
-            <p>{codec}</p>
-            {#if bitrate}<p>{bitrate} bit</p>{/if}
-            <p>{sampleRate} smpls</p>
-        </div>
-    {/if}
 
     <div class="spectrum">
         <SpectrumAnalyzer />
@@ -327,7 +429,8 @@
                     />
                 {:else}
                     <div class="artwork-placeholder">
-                        <iconify-icon icon="mdi:music-clef-treble" />
+                        <img alt="placeholder" src="icon.png" />
+                        <!-- <iconify-icon icon="mdi:music-clef-treble" /> -->
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
@@ -394,7 +497,7 @@
         }
     }
     sidebar:hover {
-        @media only screen and (max-height: 210px) {
+        @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,
             .bottom,
             .mini-toggle {
@@ -408,6 +511,31 @@
     }
 
     .has-current-song {
+        @media only screen and (max-height: 210px) and (max-width: 210px) {
+            .track-info,
+            .bottom,
+            .mini-toggle {
+                opacity: 0;
+            }
+
+            .artwork-container {
+                opacity: 1 !important;
+            }
+        }
+
+        @media only screen and (max-height: 210px) and (min-width: 211px) {
+            .track-info,
+            .mini-toggle {
+                top: 20px !important;
+            }
+            .bottom {
+                height: 120px;
+            }
+            .artwork-container {
+                opacity: 0.2 !important;
+            }
+        }
+
         @media only screen and (max-height: 210px) {
             .cd-gif,
             .search-container {
@@ -426,23 +554,23 @@
                 top: 0;
                 bottom: 0;
                 position: absolute;
-                opacity: 1;
                 height: 100%;
             }
 
             .track-info,
             .bottom,
             .mini-toggle {
-                opacity: 0;
                 top: 10px;
                 transition: opacity 0.2s ease-in;
             }
+
             .add-metadata-btn {
                 display: none;
             }
         }
         @media only screen and (max-height: 260px) {
             .track-info {
+                justify-content: flex-start;
                 small {
                     display: none;
                 }
@@ -455,6 +583,13 @@
                 display: none;
             }
         }
+
+        @media only screen and (max-height: 260px) and (max-width: 211px) {
+            .mini-toggle {
+                position: fixed;
+            }
+        }
+
         @media only screen and (max-height: 280px) {
             .track-info {
                 .artist {
@@ -474,33 +609,38 @@
         }
         @media only screen and (max-height: 380px) {
             .top {
-                position: relative;
+                /* position: relative; */
             }
             .file {
-                top: 100px;
+                /* top: 100px; */
             }
         }
-        @media only screen and (max-height: 365px) {
-            menu,
-            .app-title,
-            .artwork-container {
+        @media only screen and (max-height: 391px) {
+            menu {
                 display: none;
             }
-            .track-info {
-                top: -10px !important;
+
+            .top,
+            .track-info,
+            .bottom {
+                position: relative;
+                top: 0;
+            }
+            .artwork-container {
+                position: absolute;
+                border: none;
+                opacity: 0;
             }
         }
         @media only screen and (max-height: 420px) and (min-height: 360px) {
-            menu,
-            .artwork-container,
             .app-title {
+                opacity: 0;
+            }
+            menu {
                 display: none;
             }
             .track-info {
-                top: 40px !important;
-            }
-            .file {
-                top: 100px !important;
+                /* top: 40px !important; */
             }
         }
     }
@@ -512,47 +652,23 @@
                 display: none;
             }
             .track-info {
-                top: 50px !important;
+                top: 0px !important;
+                .track-info-content {
+                    height: 100%;
+                    justify-content: flex-start;
+                }
             }
         }
         @media only screen and (max-height: $xsmall_y_breakpoint) {
-            .track-info,
             .top {
                 display: none !important;
             }
-        }
-    }
 
-    .track-info-content {
-        width: 100%;
-        position: relative;
-    }
-
-    .mini-toggle {
-        pointer-events: all;
-        font-size: 20px;
-
-        position: absolute;
-        top: 5px;
-        right: 10px;
-        color: rgb(115, 115, 115);
-
-        &:active {
-            color: rgb(141, 47, 47);
-            opacity: 1;
-        }
-    }
-    .app-title {
-        font-family: "2Peas";
-        width: fit-content;
-        font-size: 2em;
-        opacity: 0.2;
-        user-select: none;
-        margin: 1em auto 0;
-
-        cursor: default;
-        &:hover {
-            opacity: 0.5;
+            .track-info {
+                .is-placeholder {
+                    display: none;
+                }
+            }
         }
     }
 
@@ -608,9 +724,32 @@
 
     .top {
         width: 100%;
+        height: 100%;
         position: sticky;
         background-color: $sidebar_secondary_color;
         top: 0;
+        z-index: 1;
+        transition: height 1s ease-in-out;
+
+        .top-header {
+            height: 80px;
+            position: sticky;
+            top: 0;
+        }
+
+        .app-title {
+            font-family: "2Peas";
+            width: fit-content;
+            font-size: 2em;
+            opacity: 0.2;
+            user-select: none;
+            margin: 1em auto 0;
+            transition: height 1s ease-in-out;
+            cursor: default;
+            &:hover {
+                opacity: 0.5;
+            }
+        }
     }
 
     .bottom {
@@ -666,96 +805,48 @@
     }
 
     .track-info {
-        height: 100%;
+        /* height: 150px; */
+        min-height: 150px;
         width: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
         background-color: $sidebar_secondary_color;
         position: sticky;
         top: 110px;
         cursor: default;
         user-select: none;
         pointer-events: none;
+        border-top: 0.7px solid #ffffff23;
+        z-index: 2;
     }
 
-    .spectrum {
-        z-index: 1;
-        position: absolute;
-        bottom: -5px;
-        pointer-events: none;
-        opacity: 0.2;
-    }
-
-    .cd-gif {
-        margin-top: 1em;
-        width: 30px;
-        height: auto;
-        margin-left: 10px;
-        align-self: center;
-        z-index: 0;
-    }
-
-    .artwork-container {
-        padding: 0em;
+    .track-info-content {
+        top: 0;
+        max-height: 170px;
         width: 100%;
-        height: 210px;
-        margin: auto;
-        pointer-events: none;
-
-        .artwork-frame {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            /* border-radius: 3px; */
-            /* border: 1px solid rgb(94, 94, 94); */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            > img {
-                object-fit: cover;
-            }
-            .artwork-placeholder {
-                opacity: 0.2;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1em;
-                z-index: -1;
-                iconify-icon {
-                    /* margin-top: 0.7em; */
-                }
-            }
-        }
-    }
-
-    .file {
+        height: fit-content;
         position: sticky;
-        top: 265px;
-        background-color: $sidebar_secondary_color;
-
         display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        padding: 8px 0;
-        user-select: none;
-        pointer-events: none;
-        width: 100%;
-        color: rgb(125, 125, 125);
+        flex-direction: column;
+        justify-content: flex-end;
+    }
 
-        p {
-            background-color: rgba(85, 85, 85, 0.162);
-            padding: 0em 0.6em;
-            margin: 0;
-            border-radius: 2px;
-            font-size: 0.7em;
-            line-height: 1.5em;
-            font-weight: 600;
-            border-top: 1px solid rgb(49, 49, 49);
-            /* border-bottom: 1px dashed rgb(49, 49, 49); */
-            font-family: monospace;
-            text-transform: uppercase;
+    .mini-toggle {
+        pointer-events: all;
+        font-size: 20px;
+
+        position: absolute;
+        top: 15px;
+        right: 8px;
+        color: rgb(115, 115, 115);
+        padding: 3px;
+
+        &:active {
+            color: rgb(141, 47, 47);
+            opacity: 1;
+        }
+
+        &.hovered {
+            background-color: rgba(0, 0, 0, 0.457);
+            border-radius: 4px;
         }
     }
     .info {
@@ -797,6 +888,92 @@
             height: 25px;
             padding: 2px 10px;
             pointer-events: all;
+        }
+    }
+
+    .file {
+        position: absolute;
+        bottom: 0px;
+        background-color: $sidebar_secondary_color;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 0;
+        user-select: none;
+        pointer-events: none;
+        width: 100%;
+        color: rgb(125, 125, 125);
+
+        p {
+            background-color: rgba(85, 85, 85, 0.162);
+            padding: 0em 0.6em;
+            margin: 0;
+            border-radius: 2px;
+            font-size: 0.7em;
+            line-height: 1.5em;
+            font-weight: 600;
+            border-top: 1px solid rgb(49, 49, 49);
+            /* border-bottom: 1px dashed rgb(49, 49, 49); */
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+    }
+    .spectrum {
+        z-index: 1;
+        position: absolute;
+        bottom: -5px;
+        pointer-events: none;
+        opacity: 0.2;
+    }
+
+    .cd-gif {
+        margin-top: 1em;
+        width: 30px;
+        height: auto;
+        margin-left: 10px;
+        align-self: center;
+        z-index: 0;
+    }
+
+    .artwork-container {
+        padding: 0em;
+        width: 100%;
+        height: 210px;
+        margin: auto;
+        pointer-events: none;
+        opacity: 1;
+        border: 0.7px solid #ffffff23;
+        box-sizing: content-box;
+        z-index: 0;
+
+        .artwork-frame {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            /* border-radius: 3px; */
+            /* border: 1px solid rgb(94, 94, 94); */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            > img {
+                object-fit: cover;
+            }
+            .artwork-placeholder {
+                opacity: 0.8;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1em;
+                z-index: -1;
+                img {
+                    width: 80%;
+                }
+                iconify-icon {
+                    /* margin-top: 0.7em; */
+                }
+            }
         }
     }
 
