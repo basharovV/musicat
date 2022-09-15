@@ -29,7 +29,7 @@
         queriedSongs,
         query,
         rightClickedTrack,
-        selectedSidebarItem,
+        uiView,
         singleKeyShortcutsEnabled,
         userSettings,
         volume
@@ -336,28 +336,28 @@
         <menu>
             <items>
                 <item
-                    class:selected={$selectedSidebarItem === "library"}
+                    class:selected={$uiView === "library"}
                     on:click={() => {
-                        $selectedSidebarItem = "library";
+                        $uiView = "library";
                     }}
                 >
-                    <iconify-icon icon="fluent:library-20-filled" />Music</item
+                    <iconify-icon icon="fluent:library-20-filled" />Library</item
                 >
                 <item
-                    class:selected={$selectedSidebarItem === "smart-query"}
+                    class:selected={$uiView === "smart-query"}
                     on:click={() => {
-                        $selectedSidebarItem = "smart-query";
+                        $uiView = "smart-query";
                     }}
                 >
                     <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
                 >
                 <item
-                    class:selected={$selectedSidebarItem === "your-music"}
+                    class:selected={$uiView === "your-music"}
                     on:click={() => {
-                        $selectedSidebarItem = "your-music";
+                        $uiView = "your-music";
                     }}
                 >
-                    <iconify-icon icon="fluent:library-20-filled" />Your music</item
+                    <iconify-icon icon="mdi:music-clef-treble" />Artist's toolkit</item
                 >
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
 
@@ -714,9 +714,9 @@
             text-align: left;
             width: fit-content;
             padding: 0.3em 0.5em;
-            font-size: 13px;
-            letter-spacing: 1px;
-            color: rgb(181, 182, 186);
+            font-size: 12px;
+            letter-spacing: 0.2px;
+            color: rgb(143, 144, 147);
             width: 100%;
             border-radius: 3px;
             box-sizing: border-box;

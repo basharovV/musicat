@@ -3,6 +3,7 @@
     import hotkeys from "hotkeys-js";
     import "iconify-icon";
     import type { Song } from "src/App";
+    import { onDestroy } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
@@ -12,27 +13,23 @@
     import { openTauriImportDialog } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
     import {
-    currentSong,
-    currentSongIdx,
-    importStatus,
-    isSmartQueryBuilderOpen,
-    isSmartQueryUiOpen,isTrackInfoPopupOpen,
-    os,
-    queriedSongs,
-    query,
-    rightClickedTrack,
-    rightClickedTracks,
-    selectedSidebarItem,
-    selectedSmartQuery,
-    singleKeyShortcutsEnabled,
-    smartQuery,
-    smartQueryResults,
-    smartQueryUpdater,
-    songsJustAdded
+        currentSong,
+        currentSongIdx,
+        importStatus,
+        isSmartQueryBuilderOpen,
+        isSmartQueryUiOpen,
+        isTrackInfoPopupOpen,
+        os,
+        query,
+        rightClickedTrack,
+        rightClickedTracks,
+        singleKeyShortcutsEnabled,
+        smartQuery,
+        songsJustAdded,
+        uiView
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
-    import SmartQuery from "./smart-query/Query";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
@@ -40,114 +37,19 @@
     // TODO
     async function calculateSize(songs: Song[]) {}
 
-    $: songs = liveQuery(async () => {
-        let results;
-        let isSmartQueryResults = false;
-        let isIndexed = true;
-        if ($selectedSidebarItem === 'smart-query') {
-            /**
-             * User-built smart queries don't support indexing
-             */
-            if ($isSmartQueryBuilderOpen) {
-                if ($smartQuery.isEmpty) {
-                    results = [];
-                } else if ($smartQueryUpdater) {
-                    results = await $smartQuery.run();
-                }
+    export let songs;
+    export let fields = [
+        { name: "Title", value: "title" },
+        { name: "Artist", value: "artist" },
+        { name: "Album", value: "album" },
+        { name: "Track", value: "trackNumber" },
+        { name: "Year", value: "year" },
+        { name: "Genre", value: "genre" },
+        { name: "Duration", value: "duration" }
+    ];
 
-                isSmartQueryResults = true;
-                isIndexed = false;
-            } else {
-                /**
-                 * Built-in smart queries support indexing, so they return a
-                 * Collection instead of an array.
-                 */
-                console.log("selected query: ", $selectedSmartQuery);
-                if ($selectedSmartQuery.startsWith("~usq:")) {
-                    // Run the query from the user-built blocks
-                    const queryName = $selectedSmartQuery.substring(5);
-                    const savedQuery = await db.smartQueries.get(queryName);
-                    const query = new SmartQuery(savedQuery);
-                    results = await query.run();
-                    console.log("results query: ", results);
-                    isIndexed = false;
-                } else {
-                    // Run the query from built-in functions
-                    results = await BuiltInQueries.find(
-                        (q) => q.value === $selectedSmartQuery
-                    ).query();
-
-                    isIndexed = true;
-                }
-                isSmartQueryResults = true;
-            }
-        } else if ($query.query.length) {
-            results = db.songs
-                .where("title")
-                .startsWithIgnoreCase($query.query)
-                .or("artist")
-                .startsWithIgnoreCase($query.query)
-                .or("album")
-                .startsWithIgnoreCase($query.query);
-        } else {
-            results = db.songs.orderBy(
-                $query.orderBy === "artist"
-                    ? "[artist+album+trackNumber]"
-                    : $query.orderBy === "album"
-                    ? "[album+trackNumber]"
-                    : $query.orderBy
-            );
-        }
-        let resultsArray: Song[] = [];
-
-        // Depending whether this is a smart query or not
-        if (isIndexed) {
-            if ($query.reverse) {
-                results = results.reverse();
-            }
-            resultsArray = await results.toArray();
-        } else {
-            resultsArray = results;
-        }
-
-        // Do sorting for non-indexed results
-        if (!isIndexed) {
-            resultsArray = resultsArray.sort((a, b) => {
-                switch ($query.orderBy) {
-                    case "title":
-                    case "album":
-                    case "track":
-                    case "year":
-                    case "duration":
-                    case "genre":
-                        return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
-                        );
-                    case "artist":
-                        // TODO this one needs to match the multiple indexes sorting from Dexie
-                        // i.e Artist -> Album -> Track N.
-                        return a.artist.localeCompare(b.artist);
-                }
-            });
-        }
-
-        /**
-         * Set in store
-         */
-        if (isSmartQueryResults) {
-            smartQueryResults.set(resultsArray);
-        } else {
-            queriedSongs.set(resultsArray);
-        }
-
-        if ($query.query.length && resultsArray.length === 1) {
-            // Highlight the only result
-            highlightSong(resultsArray[0], 0, false);
-        } else {
-            // Keep it highlighted after?
-        }
-        return resultsArray;
-    });
+    export let theme = "default";
+    export let isSmartQueryEnabled = true; // Only for main view
 
     $: count = liveQuery(() => {
         return db.songs.count();
@@ -202,18 +104,18 @@
         return isAdded;
     }
 
-    let songIdsHighlighted: Song[] = [];
+    export let songsHighlighted: Song[] = [];
 
     function isSongHighlighted(song: Song) {
-        return songIdsHighlighted.map((s) => s.id).includes(song.id);
+        return songsHighlighted.map((s) => s.id).includes(song.id);
     }
 
     function toggleHighlight(song, idx, isKeyboardArrows = false) {
         if (!song) song = $songs[0];
         highlightedSongIdx = idx;
         if (isSongHighlighted(song)) {
-            if (songIdsHighlighted.length) {
-                songIdsHighlighted = [];
+            if (songsHighlighted.length) {
+                songsHighlighted = [];
                 highlightSong(song, idx, isKeyboardArrows);
             } else {
                 unhighlightSong(song);
@@ -239,16 +141,24 @@
             isCmdOrCtrlPressed = true;
         });
     }
+
+    hotkeys("esc", function (event, handler) {
+        if ($isSmartQueryBuilderOpen) {
+            $isSmartQueryBuilderOpen = false;
+        }
+    });
+
     // hotkeys("up", function (event, handler) {});
 
     // hotkeys("down", function (event, handler) {});
-    addEventListener("keydown", (event) => {
+    function onKeyDown(event) {
         if (event.keyCode === 16) {
             isShiftPressed = true;
             console.log("shift pressed");
         } else if (
             event.keyCode === 38 &&
-            document.activeElement.tagName.toLowerCase() !== "input"
+            document.activeElement.tagName.toLowerCase() !== "input" &&
+            document.activeElement.tagName.toLowerCase() !== "textarea" 
         ) {
             event.preventDefault();
             // up
@@ -261,7 +171,8 @@
             }
         } else if (
             event.keyCode === 40 &&
-            document.activeElement.tagName.toLowerCase() !== "input"
+            document.activeElement.tagName.toLowerCase() !== "input" &&
+            document.activeElement.tagName.toLowerCase() !== "textarea" 
         ) {
             // down
             event.preventDefault();
@@ -276,34 +187,48 @@
             event.keyCode === 73 &&
             !$isTrackInfoPopupOpen &&
             $singleKeyShortcutsEnabled &&
-            document.activeElement.tagName.toLowerCase() !== "input"
+            document.activeElement.tagName.toLowerCase() !== "input" &&
+            document.activeElement.tagName.toLowerCase() !== "textarea" 
         ) {
             // 'i' for info popup
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if (!$isTrackInfoPopupOpen && songIdsHighlighted.length) {
-                $rightClickedTrack = songIdsHighlighted[0];
+            if (!$isTrackInfoPopupOpen && songsHighlighted.length) {
+                console.log("opening info", songsHighlighted);
+                $rightClickedTrack = songsHighlighted[0];
                 $isTrackInfoPopupOpen = true;
             }
         } else if (
             event.keyCode === 13 &&
             !$isTrackInfoPopupOpen &&
-            document.activeElement.tagName.toLowerCase() !== "input"
+            document.activeElement.tagName.toLowerCase() !== "input" &&
+            document.activeElement.tagName.toLowerCase() !== "textarea" 
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
             if (!$isTrackInfoPopupOpen) {
                 $currentSongIdx = highlightedSongIdx;
-                AudioPlayer.playSong(songIdsHighlighted[0]);
+                AudioPlayer.playSong(songsHighlighted[0]);
             }
         }
-    });
-    addEventListener("keyup", (event) => {
+    }
+    function onKeyUp(event) {
         if (event.keyCode === 16) {
             isShiftPressed = false;
             console.log("shift lifted");
         }
+    }
+
+    addEventListener("keydown", onKeyDown);
+    addEventListener("keyup", onKeyUp);
+
+    onDestroy(() => {
+        hotkeys.unbind("ctrl");
+        hotkeys.unbind("cmd");
+        hotkeys.unbind("esc");
+        removeEventListener("keydown", onKeyDown);
+        removeEventListener("keyup", onKeyUp);
     });
 
     function highlightSong(song: Song, idx, isKeyboardArrows: boolean) {
@@ -320,25 +245,25 @@
                     rangeStartSongIdx = rangeEndSongIdx;
                     rangeEndSongIdx = startIdx;
                 }
-                songIdsHighlighted = $songs.slice(
+                songsHighlighted = $songs.slice(
                     rangeStartSongIdx,
                     rangeEndSongIdx + 1
                 );
                 rangeStartSongIdx = null;
                 rangeEndSongIdx = null;
                 $rightClickedTrack = null;
-                console.log("highlighted2", songIdsHighlighted);
+                console.log("highlighted2", songsHighlighted);
             }
         } else if (
             (isKeyboardArrows && isShiftPressed) ||
             isCmdOrCtrlPressed ||
             hotkeys.isPressed(91)
         ) {
-            songIdsHighlighted.push(song);
+            songsHighlighted.push(song);
             rangeStartSongIdx = idx;
         } else {
             // Highlight single song, via a good old click
-            songIdsHighlighted = [song];
+            songsHighlighted = [song];
             highlightedSongIdx = idx;
             $rightClickedTracks = [];
             $rightClickedTracks = $rightClickedTracks;
@@ -351,25 +276,25 @@
         }
         console.log("start", rangeStartSongIdx);
 
-        songIdsHighlighted = songIdsHighlighted;
+        songsHighlighted = songsHighlighted;
     }
 
     function unhighlightSong(song: Song) {
-        songIdsHighlighted.splice(songIdsHighlighted.indexOf(song), 1);
-        songIdsHighlighted = songIdsHighlighted;
+        songsHighlighted.splice(songsHighlighted.indexOf(song), 1);
+        songsHighlighted = songsHighlighted;
     }
 
     let showTrackMenu = false;
     let pos;
 
     function onRightClick(e, song, idx) {
-        if (!songIdsHighlighted.includes(song)) {
+        if (!songsHighlighted.includes(song)) {
             highlightSong(song, idx, false);
         }
 
-        console.log("songIdsHighlighted", songIdsHighlighted);
-        if (songIdsHighlighted.length > 1) {
-            $rightClickedTracks = songIdsHighlighted;
+        console.log("songIdsHighlighted", songsHighlighted);
+        if (songsHighlighted.length > 1) {
+            $rightClickedTracks = songsHighlighted;
             $rightClickedTrack = null;
         } else {
             $rightClickedTrack = song;
@@ -444,13 +369,13 @@
      */
     let tableHeaders = ["track-fields"];
     $: {
-        if ($selectedSidebarItem === 'smart-query') {
+        if (isSmartQueryEnabled && $uiView === "smart-query") {
             showSmartQuery();
         } else {
             hideSmartQuery();
         }
 
-        if ($isSmartQueryBuilderOpen) {
+        if (isSmartQueryEnabled && $isSmartQueryBuilderOpen) {
             showSmartQueryBuilder();
         } else {
             hideSmartQueryBuilder();
@@ -458,147 +383,71 @@
     }
 </script>
 
-{#if $importStatus.isImporting || (noSongs && $query.query.length === 0 && !$isSmartQueryBuilderOpen)}
+{#if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && !$isSmartQueryBuilderOpen))}
     <ImportPlaceholder />
 {:else}
-    <container>
+    <container class="theme-{theme}">
         <library>
             <table>
-                <thead class:smart-query={$isSmartQueryUiOpen}>
+                <thead class:smart-query={$uiView === "smart-query"}>
                     {#each tableHeaders as header (header)}
                         <tr animate:flip={{ duration: 220, easing: quadOut }}>
                             {#if header === "smart-query-builder"}
                                 <td
                                     class="query-header-cell builder"
-                                    colspan="7"
+                                    colspan={fields.length}
                                 >
                                     <SmartQueryBuilder />
                                 </td>
                             {/if}
 
                             {#if header === "smart-query"}
-                                <td class="query-header-cell query" colspan="7">
+                                <td
+                                    class="query-header-cell query"
+                                    colspan={fields.length}
+                                >
                                     <SmartQueryMainHeader />
                                 </td>
                             {/if}
 
                             {#if header === "track-fields"}
-                                <td
-                                    data-type="title"
-                                    on:click={() => updateOrderBy("title")}
-                                    ><div>
-                                        Title
-                                        {#if $query.orderBy === "title"}
-                                            {#if $query.reverse}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
-                                                />
-                                            {:else}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
-                                                />
+                                {#each fields as field (field.value)}
+                                    <td
+                                        data-type={field.value}
+                                        on:click={() =>
+                                            updateOrderBy(field.value)}
+                                        use:tippy={{
+                                            allowHTML: true,
+                                            content:
+                                                "Artist sort shows tracks like this:<br/>Artist > Album > Track №. <br/><br/>Albums for that artist are in alphabetical order, and tracks are in correct album order.",
+                                            placement: "bottom"
+                                        }}
+                                        ><div>
+                                            <p>
+                                                {field.name}
+                                            </p>
+
+                                            <iconify-icon
+                                                class="icon-clock"
+                                                icon="akar-icons:clock"
+                                            />
+
+                                            {#if $query.orderBy === field.value}
+                                                {#if $query.reverse}
+                                                    <iconify-icon
+                                                        class="icon-order"
+                                                        icon="heroicons-solid:sort-ascending"
+                                                    />
+                                                {:else}
+                                                    <iconify-icon
+                                                        class="icon-order"
+                                                        icon="heroicons-solid:sort-descending"
+                                                    />
+                                                {/if}
                                             {/if}
-                                        {/if}
-                                    </div></td
-                                >
-                                <td
-                                    data-type="artist"
-                                    on:click={() => updateOrderBy("artist")}
-                                    use:tippy={{
-                                        allowHTML: true,
-                                        content:
-                                            "Artist sort shows tracks like this:<br/>Artist > Album > Track №. <br/><br/>Albums for that artist are in alphabetical order, and tracks are in correct album order.",
-                                        placement: "bottom"
-                                    }}
-                                    ><div>
-                                        Artist
-                                        {#if $query.orderBy === "artist"}
-                                            {#if $query.reverse}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
-                                                />
-                                            {:else}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
-                                                />
-                                            {/if}
-                                        {/if}
-                                    </div></td
-                                >
-                                <td
-                                    data-type="album"
-                                    on:click={() => updateOrderBy("album")}
-                                    ><div>
-                                        Album
-                                        {#if $query.orderBy === "album"}
-                                            {#if $query.reverse}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
-                                                />
-                                            {:else}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
-                                                />
-                                            {/if}
-                                        {/if}
-                                    </div></td
-                                >
-                                <td data-type="track"><div>Track</div></td>
-                                <td
-                                    data-type="year"
-                                    on:click={() => updateOrderBy("year")}
-                                    ><div>
-                                        Year
-                                        {#if $query.orderBy === "year"}
-                                            {#if $query.reverse}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
-                                                />
-                                            {:else}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
-                                                />
-                                            {/if}
-                                        {/if}
-                                    </div></td
-                                >
-                                <td
-                                    data-type="genre"
-                                    on:click={() => updateOrderBy("genre")}
-                                    ><div>
-                                        Genre
-                                        {#if $query.orderBy === "genre"}
-                                            {#if $query.reverse}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
-                                                />
-                                            {:else}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
-                                                />
-                                            {/if}
-                                        {/if}
-                                    </div></td
-                                >
-                                <td
-                                    data-type="duration"
-                                    on:click={() => updateOrderBy("duration")}
-                                    ><div>
-                                        <p>Duration</p>
-                                        <iconify-icon icon="akar-icons:clock" />
-                                        {#if $query.orderBy === "duration"}
-                                            {#if $query.reverse}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-ascending"
-                                                />
-                                            {:else}
-                                                <iconify-icon
-                                                    icon="heroicons-solid:sort-descending"
-                                                />
-                                            {/if}
-                                        {/if}
-                                    </div></td
-                                >
+                                        </div></td
+                                    >
+                                {/each}
                             {/if}
                         </tr>
                     {/each}
@@ -611,48 +460,32 @@
                                 song.id === $currentSong.id}
                             class:just-added={$songsJustAdded.length < 50 &&
                                 isSongJustAdded(song.id)}
-                            class:highlight={songIdsHighlighted &&
+                            class:highlight={songsHighlighted &&
                                 isSongHighlighted(song)}
                             on:contextmenu|preventDefault={(e) =>
                                 onRightClick(e, song, idx)}
                             on:click={() => toggleHighlight(song, idx)}
                             on:dblclick={() => onDoubleClickSong(song, idx)}
                         >
-                            <td data-type="title">
-                                <div>
-                                    <p>
-                                        {song.title === "" ? "-" : song.title}
-                                    </p>
-                                    {#if get(currentSong) && song.id === $currentSong.id}
-                                        <iconify-icon
-                                            icon="heroicons-solid:volume-up"
-                                        />
-                                    {/if}
-                                </div>
-                            </td>
-                            <td data-type="artist"
-                                ><p>
-                                    {song.artist === "" ? "-" : song.artist}
-                                </p></td
-                            >
-                            <td data-type="album">
-                                <p>
-                                    {song.album === "" ? "-" : song.album}
-                                </p></td
-                            >
-                            <td data-type="track"
-                                >{song.trackNumber === -1 ||
-                                song.trackNumber === null
-                                    ? "-"
-                                    : song.trackNumber}
-                            </td>
-                            <td data-type="year"
-                                >{song.year === 0 ? "-" : song.year}</td
-                            >
-                            <td data-type="genre"
-                                >{song.genre?.length ? song.genre : "-"}</td
-                            >
-                            <td data-type="duration">{song.duration}</td>
+                            {#each fields as field (field)}
+                                <td data-type={field.value}>
+                                    <div>
+                                        <p>
+                                            {song[field.value] === "" ||
+                                            song[field.value] === -1 ||
+                                            song[field.value] === 0 ||
+                                            song[field.value] === null
+                                                ? "-"
+                                                : song[field.value]}
+                                        </p>
+                                        {#if field.value === "title" && get(currentSong) && song.id === $currentSong.id}
+                                            <iconify-icon
+                                                icon="heroicons-solid:volume-up"
+                                            />
+                                        {/if}
+                                    </div>
+                                </td>
+                            {/each}
                         </tr>
                     {/each}
                 {/if}
@@ -661,16 +494,19 @@
             {#if $isSmartQueryBuilderOpen && noSongs}
                 <SmartQueryResultsPlaceholder />
             {/if}
-            <div>
-                <button style="margin-top:2em" on:click={openTauriImportDialog}
-                    >Add music +</button
-                >
-            </div>
-            <bottom-bar>
-                <p>{$count} songs</p>
-                <p>{$artistCount} artists</p>
-                <p>{$albumCount} albums</p>
-            </bottom-bar>
+            {#if theme === "default"}
+                <div>
+                    <button
+                        style="margin-top:2em"
+                        on:click={openTauriImportDialog}>Add music +</button
+                    >
+                </div>
+                <bottom-bar>
+                    <p>{$count} songs</p>
+                    <p>{$artistCount} artists</p>
+                    <p>{$albumCount} albums</p>
+                </bottom-bar>
+            {/if}
         </library>
     </container>
 {/if}
@@ -696,6 +532,11 @@
         overflow: overlay;
         border-bottom: 1px solid rgb(51, 51, 51);
 
+        &.theme-outline {
+            background-color: transparent;
+            height: fit-content;
+            border-bottom: none;
+        }
         @media only screen and (max-width: 320px) {
             display: none;
         }
@@ -787,6 +628,9 @@
                 }
             }
             td {
+                .theme-outline & {
+                    background-color: transparent;
+                }
                 background-color: #71658e7e;
                 border-right: none;
                 overflow: hidden;
@@ -812,7 +656,9 @@
             border-right: 0.5px solid rgba(242, 242, 242, 0.144);
             max-width: 120px;
             overflow: hidden;
-
+            .icon-clock {
+                display: none;
+            }
             &[data-type="track"] {
                 max-width: min-content;
             }
@@ -843,7 +689,7 @@
                     p {
                         display: none;
                     }
-                    iconify-icon {
+                    .icon-clock {
                         display: block;
                     }
                 }
@@ -889,6 +735,13 @@
             white-space: nowrap;
             user-select: none;
             color: $text_color;
+
+            .theme-outline & {
+                color: #bbb9b9;
+                &.highlight {
+                    color: white;
+                }
+            }
 
             > td {
                 font-size: 13px;

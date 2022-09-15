@@ -8,7 +8,7 @@
         isSmartQueryBuilderOpen,
         isSmartQueryUiOpen,
         isSmartQueryValid,
-        selectedSidebarItem,
+        uiView,
         selectedSmartQuery,
         smartQuery
     } from "../../data/store";
@@ -19,7 +19,7 @@
     });
 
     function hideSmartQuery() {
-        $selectedSidebarItem = 'library';
+        $uiView = 'library';
     }
 
     function hideSmartQueryBuilder() {

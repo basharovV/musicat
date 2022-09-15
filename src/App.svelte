@@ -1,19 +1,19 @@
 <script lang="ts">
     import { Toaster } from "svelte-french-toast";
     import {
-    isDraggingFiles,
-    isInfoPopupOpen,
-    isMiniPlayer,isSettingsOpen,isTrackInfoPopupOpen,uiView
+        isDraggingFiles,
+        isInfoPopupOpen,
+        isMiniPlayer, isSettingsOpen, isTrackInfoPopupOpen, uiView
     } from "./data/store";
-    import Albums from "./lib/Albums.svelte";
 
     import { onMount } from "svelte";
     import Dropzone from "./lib/Dropzone.svelte";
     import InfoPopup from "./lib/InfoPopup.svelte";
-    import Library from "./lib/Library.svelte";
     import SettingsPopup from "./lib/SettingsPopup.svelte";
     import Sidebar from "./lib/Sidebar.svelte";
     import TrackInfoPopup from "./lib/TrackInfoPopup.svelte";
+    import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
+    import LibraryView from "./lib/views/LibraryView.svelte";
     import { startMenuListener } from "./window/EventListener";
 
     startMenuListener();
@@ -64,10 +64,10 @@
 <main on:dragenter={onDragEnter} class:mini-player={$isMiniPlayer}>
     <Sidebar />
 
-    {#if $uiView === "library"}
-        <Library />
-    {:else if $uiView === "albums"}
-        <Albums />
+    {#if $uiView === "library" || $uiView === 'smart-query'}
+        <LibraryView />
+    {:else if $uiView === "your-music"}
+        <ArtistsToolkitView />
     {/if}
 </main>
 
@@ -97,7 +97,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 2;
+        z-index: 30;
         display: flex;
         background-color: #242026b9;
     }

@@ -17,6 +17,9 @@ interface ImportStatus {
 }
 
 interface Song {
+    /**
+     * A hash of the filepath
+     */
     id: string;
     path: string;
     file: string;
@@ -29,6 +32,35 @@ interface Song {
     duration: string;
     metadata: MetadataEntry[];
     fileInfo: any;
+}
+
+/**
+ * Represents a song/track that's in progress. 
+ */
+interface SongProject {
+    id?: number; // incremental id 
+    title: string; // Needs to have at least this, everything else is optional
+    artist: string;
+    album: string;
+    key?: string;
+    bpm?: number;
+    musicComposedBy: string[]; // Multiple people
+    lyricsWrittenBy: string[]; // Multiple people
+    artworkFilePath?: string;
+    masterLyricsFilePath?: string;
+    recordings: SongProjectRecording[];
+    songId?: string; // If this exists - the song is added to the library (master audio)
+}
+
+interface ArtistProject {
+    name: string;
+}
+
+type RecordingType = 'master' | 'live' | 'demo' | 'rehearsal';
+
+interface SongProjectRecording {
+    recordingType: RecordingType,
+    song: Song;
 }
 
 type TagType =
@@ -73,3 +105,31 @@ type Comparison =
     | "contains";
 
 type SidebarItem = "library" | "smart-query" | "your-music";
+
+type ArtistItemType = 'lyrics' | 'file' | 'link';
+
+type ArtistContentItem = ArtistFileItem | ArtistLinkItem | ArtistLyricsItem
+
+interface ContentItem {
+    type: 'lyrics' | 'file' | 'link';
+    name: string; // Grab from filename
+    tags: string[];
+    songId?: string; // Could just use "artist-title"
+}
+
+
+export interface ArtistLinkItem extends ContentItem {
+    type: 'link',
+    url: string;
+}
+
+export interface ArtistFileItem extends ContentItem {
+    type: 'file',
+    filename: string | null;
+    filepath: string | null;
+}
+export interface ArtistLyricsItem extends ContentItem {
+    type: 'lyrics',
+    filename: string | null;
+    filepath: string | null;
+}

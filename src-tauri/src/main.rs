@@ -4,13 +4,13 @@
 )]
 
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::BufReader;
 use std::ops::{Deref, DerefMut};
 use std::{fmt, mem};
 
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
-use lofty::{read_from_path, ItemKey, ItemValue, Picture, TagItem, TagType};
+use lofty::{read_from_path, ItemKey, ItemValue, Picture, TagItem, TagType, Probe};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{CustomMenuItem, Menu, MenuItem, Runtime, Submenu, Window};
@@ -169,8 +169,14 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
                 _ => println!("Unhandled tag type: {:?}", v.tag_type),
             }
             let tag_type_value = tag_type.unwrap();
+            let probe = Probe::open(&v.file_path).unwrap().guess_file_type()?;
+            // &probe.guess_file_type();
+            let fileType = &probe.file_type();
+            println!("fileType: {:?}", &fileType);
+            let mut tag = read_from_path(&v.file_path, true).unwrap();
+            let tagFileType = tag.file_type();
+            println!("tag fileType: {:?}", &tagFileType);
 
-            let mut tag = read_from_path(&v.file_path, false).unwrap();
             let primary_tag = tag.primary_tag_mut().unwrap();
             for item in v.metadata.iter() {
                 if tag_type.is_some() {
@@ -225,7 +231,7 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
             // }
             let mut file = File::options().read(true).write(true).open(&v.file_path)?;
             println!("{:?}", file);
-
+            println!("FILETYPE: {:?}", fileType);
             tag.save_to(&mut file)?;
             println!("File saved succesfully!");
         }

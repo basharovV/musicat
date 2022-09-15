@@ -1,6 +1,6 @@
 // db.ts
 import Dexie, { type Table } from 'dexie';
-import type { Song } from 'src/App';
+import type { ArtistProject, Song, SongProject } from 'src/App';
 import type { SavedSmartQuery } from 'src/lib/smart-query/QueryPart';
 
 export class MySubClassedDexie extends Dexie {
@@ -8,11 +8,15 @@ export class MySubClassedDexie extends Dexie {
   // We just tell the typing system this is the case
   songs!: Table<Song>; 
   smartQueries!: Table<SavedSmartQuery>;
+  songProjects!: Table<SongProject>;
+  artistProjects!: Table<ArtistProject>;
   constructor() {
     super('musicatdb');
-    this.version(5).stores({
+    this.version(7).stores({
     songs: 'id, title, artist, album, genre, year, duration, [artist+album+trackNumber], [album+trackNumber]', // Primary key and indexed props
-    smartQueries: 'name'
+    smartQueries: 'name',
+    artistProjects: 'name',
+    songProjects: '++id, title, artist, album'
     });
   }
 }

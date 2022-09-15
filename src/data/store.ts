@@ -32,7 +32,7 @@ export const seekTime = writable(0);
 export const volume = writable(1);
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
-export const selectedSidebarItem: Writable<SidebarItem> = writable('library');
+export const uiView: Writable<SidebarItem> = writable('library');
 
 // Smart query
 export const isSmartQueryUiOpen = writable(false);
@@ -54,7 +54,6 @@ export const userSettings: Writable<UserSettings> = writable(JSON.parse(localSto
 // Auto-persist settings
 userSettings.subscribe(val => localStorage.setItem("settings", JSON.stringify(val)));
 
-export const uiView: Writable<UIView> = writable("library");
 export const os: Writable<OsType> = writable("Darwin");
 
 export const importStatus: Writable<ImportStatus> = writable({

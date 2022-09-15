@@ -1,3 +1,4 @@
+import type { ArtworkSrc, Song } from "src/App";
 import { get } from "svelte/store";
 import {
   currentSong,
@@ -122,13 +123,23 @@ class AudioPlayer {
     });
   }
 
+  async wait(ms) {
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        resolve()
+      }, ms)
+    })
+  }
+
   // MEDIA
-  playSong(song: Song) {
+  async playSong(song: Song) {
     console.log("playSong", song);
     if (this.audioFile) {
-      this.pause();
+      this.audioFile.preload = "none";
       this.audioFile.currentTime = 0;
       this.audioFile.src = "asset://" + song.path.replace("?", "%3F");
+      // await this.wait(500);
+      this.audioFile.load();
       this.play();
       currentSong.set(song);
       this.currentSong = song;

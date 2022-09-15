@@ -103,6 +103,23 @@
                     type: "number"
                 }
             }
+        },
+        {
+            dataType: "song",
+            fieldKey: "genre",
+            comparison: "contains",
+            description: "contains genre",
+            example: "contains 'disco'",
+            prompt: "contains {genre}",
+            name: "contains-genre",
+            inputRequired: {
+                "genre": {
+                    defaultVal: "",
+                    isFieldKey: true,
+                    isRequired: true,
+                    type: "string"
+                }
+            }
         }
     ];
 

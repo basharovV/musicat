@@ -1,3 +1,3 @@
 export function isAudioFile(filename: string): boolean {
-    return filename.match(/\.(mp3|ogg|flac|wav)$/) !== null;
+    return filename.match(/\.(mp3|ogg|aac|flac|wav)$/) !== null;
 }

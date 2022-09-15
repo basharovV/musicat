@@ -15,6 +15,7 @@
     export let items: MenuItem[] = [];
     export let onItemSelected = null;
     export let onClickOutside = null;
+    export let position: 'auto'|'manual' = 'auto';
 
     let hoveredItemIdx = 0;
     $: numberOfItems = items.length;
@@ -45,7 +46,7 @@
 
     // whenever x and y is changed, restrict box to be within bounds
     $: (() => {
-        if (!menuEl) return;
+        if (!menuEl || position === 'manual') return;
 
         const rect = menuEl.getBoundingClientRect();
         x = Math.min(window.innerWidth - rect.width, x);

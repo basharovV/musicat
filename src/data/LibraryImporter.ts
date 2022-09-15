@@ -11,18 +11,15 @@ import { importStatus, songsJustAdded, userSettings } from "./store";
 import { getMapForTagType } from "./LabelMap";
 import { get } from "svelte/store";
 import type { MetadataEntry, Song } from "src/App";
+import { isAudioFile } from "../utils/FileUtils";
 
 let addedSongs: Song[] = [];
 
-export async function addSong(
-    filePath: string,
-    fileName: string,
-    singleFile = false
-): Promise<Song | null> {
-    if (!filePath.match(/\.(mp3|ogg|flac|aac|wav)$/)) {
+export async function getSongFromFile(filePath: string, fileName: string) {
+    if (!isAudioFile(fileName)) {
         return null;
     }
-    const metadata = await musicMetadata.fetchFromUrl(convertFileSrc(filePath));
+    const metadata = await musicMetadata.fetchFromUrl(convertFileSrc(filePath), { duration: false, skipCovers: true, skipPostHeaders: true });
     const fileHash = md5(filePath);
     const tagType = metadata.format.tagTypes.length
         ? metadata.format.tagTypes[0]
@@ -63,26 +60,38 @@ export async function addSong(
         if (artworkIdx > -1) {
             songToAdd.metadata.splice(artworkIdx, 1);
         }
-
-        try {
-            await db.songs.put(songToAdd);
-        } catch (err) {
-            console.error(err);
-            // Catch 'already exists' case
-        }
-        if (singleFile) {
-            songsJustAdded.update((songs) => {
-                songs.push(songToAdd);
-                return songs;
-            });
-        } else {
-            addedSongs.push(songToAdd);
-        }
-
-        return await db.songs.get(fileHash);
+        return songToAdd;
     } catch (e) {
         console.error(e);
     }
+}
+
+export async function addSong(
+    filePath: string,
+    fileName: string,
+    singleFile = false
+): Promise<Song | null> {
+    const songToAdd = await getSongFromFile(filePath, fileName);
+    console.log("songTOAdd", songToAdd);
+    try {
+        if (!songToAdd) {
+            return;
+        }
+        await db.songs.put(songToAdd);
+    } catch (err) {
+        console.error(err);
+        // Catch 'already exists' case
+    }
+    if (singleFile) {
+        songsJustAdded.update((songs) => {
+            songs.push(songToAdd);
+            return songs;
+        });
+    } else {
+        addedSongs.push(songToAdd);
+    }
+
+    return await db.songs.get(songToAdd.id);
 }
 
 async function processEntries(entries) {
