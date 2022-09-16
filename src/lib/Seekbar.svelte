@@ -155,6 +155,7 @@
       position: absolute;
       overflow: visible;
       pointer-events: none;
+      transition: all 0.16s cubic-bezier(0.075, 0.82, 0.165, 1);
 
       top: -4px;
 

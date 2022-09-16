@@ -28,7 +28,8 @@ export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);
 export const seekTime = writable(0);
-export const volume = writable(1);
+export const volume: Writable<number> = writable(parseInt(localStorage.getItem('volume')) ?? 0.6);
+
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
 export const uiView: Writable<SidebarItem> = writable('library');

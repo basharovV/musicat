@@ -1,37 +1,27 @@
 <script lang="ts">
-    import { tauri, window as tauriWindow } from "@tauri-apps/api";
+    import { window as tauriWindow } from "@tauri-apps/api";
     import { emit } from "@tauri-apps/api/event";
-    import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
     import {
-        LogicalSize,
-        currentMonitor,
-        LogicalPosition,
-        PhysicalPosition
+        appWindow, currentMonitor, LogicalSize, PhysicalPosition
     } from "@tauri-apps/api/window";
     import hotkeys from "hotkeys-js";
+    import { throttle } from "lodash-es";
     import * as musicMetadata from "music-metadata-browser";
-    import { createEventDispatcher, onDestroy, onMount } from "svelte";
+    import { onMount } from "svelte";
     import tippy from "svelte-tippy";
     import { lookForArt } from "../data/LibraryImporter";
-    import { throttle } from "lodash-es";
     import {
         currentSong,
         currentSongArtworkSrc,
         currentSongIdx,
         isInfoPopupOpen,
         isMiniPlayer,
-        isPlaying,
-        isSmartQueryBuilderOpen,
-        isSmartQueryUiOpen,
-        isTrackInfoPopupOpen,
+        isPlaying, isTrackInfoPopupOpen,
         os,
         queriedSongs,
         query,
-        rightClickedTrack,
-        uiView,
-        singleKeyShortcutsEnabled,
-        userSettings,
+        rightClickedTrack, singleKeyShortcutsEnabled, uiView, userSettings,
         volume
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
@@ -200,6 +190,7 @@
     let heightToRestore = 0;
     let paddingPx = 40;
     let isMiniToggleHovered = false;
+    let isMiniPlayerHovered = false;
 
     /**
      * We handle the hover event manually because otherwise
@@ -210,6 +201,12 @@
     }
     function onMiniToggleMouseOut() {
         isMiniToggleHovered = false;
+    }
+    function onMiniPlayerMouseOver() {
+        isMiniPlayerHovered = true;
+    }
+    function onMiniPlayerMouseOut() {
+        isMiniPlayerHovered = false;
     }
 
     async function toggleMiniPlayer() {
@@ -285,6 +282,7 @@
 
             await tauriWindow.getCurrent().show();
             await tauriWindow.getCurrent().setAlwaysOnTop(true);
+            isMiniPlayerHovered = false; // By default we want to show the pretty artwork
         } else {
             await tauriWindow.getCurrent().hide();
             if (widthToRestore && heightToRestore) {
@@ -304,11 +302,19 @@
 
         isMiniToggleHovered = false;
     }
+
+    appWindow.listen("tauri://focus", evt => {
+        isMiniPlayerHovered = true;
+    })
 </script>
 
+<!-- svelte-ignore a11y-mouse-events-have-key-events -->
 <sidebar
     class:has-current-song={$currentSong}
     class:empty={!$currentSong}
+    class:hovered={isMiniPlayerHovered}
+    on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
+    on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
 >
     <!-- <div class="knob">
@@ -341,7 +347,9 @@
                         $uiView = "library";
                     }}
                 >
-                    <iconify-icon icon="fluent:library-20-filled" />Library</item
+                    <iconify-icon
+                        icon="fluent:library-20-filled"
+                    />Library</item
                 >
                 <item
                     class:selected={$uiView === "smart-query"}
@@ -357,7 +365,8 @@
                         $uiView = "your-music";
                     }}
                 >
-                    <iconify-icon icon="mdi:music-clef-treble" />Artist's toolkit</item
+                    <iconify-icon icon="mdi:music-clef-treble" />Artist's
+                    toolkit</item
                 >
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
 
@@ -510,7 +519,7 @@
             /* max-width: 100% !important; */
         }
     }
-    sidebar:hover {
+    sidebar.hovered {
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,
             .bottom,
