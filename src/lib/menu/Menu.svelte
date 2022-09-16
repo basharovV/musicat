@@ -49,7 +49,7 @@
         if (!menuEl || position === 'manual') return;
 
         const rect = menuEl.getBoundingClientRect();
-        x = Math.min(window.innerWidth - rect.width, x);
+        x = Math.min(window.innerWidth - rect.width - 30, x);
         if (y > window.innerHeight - rect.height) y -= rect.height;
     })();
 

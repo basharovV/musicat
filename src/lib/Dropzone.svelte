@@ -5,7 +5,7 @@
 
   import type { Event } from "@tauri-apps/api/event";
   import { isAudioFile } from "../utils/FileUtils";
-  import { isDraggingFiles } from "../data/store";
+  import { isDraggingExternalFiles } from "../data/store";
 
   async function startDragListener() {
     const filedropEvent: Event<any> = await listenForFileDrop();
@@ -18,13 +18,13 @@
         addFolder(entry);
       }
     });
-    isDraggingFiles.set(false);
+    isDraggingExternalFiles.set(false);
   }
   startDragListener();
 
   function onDragLeave(e) {
     e.preventDefault();
-    isDraggingFiles.set(false);
+    isDraggingExternalFiles.set(false);
     console.log("drag leave");
   }
 </script>

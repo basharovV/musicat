@@ -1,34 +1,57 @@
 <script lang="ts">
+    import {} from "@tauri-apps/api/os";
+    import { open } from "@tauri-apps/api/shell";
     import type { ArtistFileItem } from "src/App";
+    import { draggedScrapbookItems } from "../../data/store";
+    import { getSongFromFile } from "../../data/LibraryImporter";
+    import audioPlayer from "../AudioPlayer";
 
     export let item: ArtistFileItem;
-    export let mediaType: "audio" | "video" | "other";
-    if (item.filename.match(/.(wav|mp3|aiff|ogg|flac)$/)) {
-        mediaType = "audio";
-    } else if (item.filename.match(/.(mp4|mov)/)) {
-        mediaType = "video";
-    } else {
-        mediaType = "other";
+
+    async function openFile() {
+        if (item.fileType.type === "audio") {
+            // Play it in this app
+            const song = await getSongFromFile(item.path, item.name);
+            audioPlayer.playSong(song);
+        } else {
+            // Play in default system app
+            open(item.path);
+        }
+    }
+    function onDragStart(ev: DragEvent) {
+        console.log("dragStart");
+        // Add this element's id to the drag payload so the drop handler will
+        // know which element to add to its tree
+        $draggedScrapbookItems = [item];
+        $draggedScrapbookItems = $draggedScrapbookItems;
     }
 </script>
 
-<div class="item">
+<div
+    class="item {item.fileType.type}"
+    on:click={openFile}
+    draggable="true"
+    on:dragstart={onDragStart}
+>
     <div class="container">
         <div class="background">
             <iconify-icon
-                icon={mediaType === "video"
+                icon={item.fileType.type === "video"
                     ? "bxs:video"
                     : "system-uicons:audio-wave"}
             />
         </div>
-        <div class="item-info {mediaType}">
-            <iconify-icon
-                icon={mediaType === "video"
-                    ? "dashicons:editor-video"
-                    : "bi:file-earmark-play"}
-            />
-
-            <p>{item.filename}</p>
+        <div class="item-info">
+            {#if item.fileType.type === "audio"}
+                <iconify-icon icon="bi:file-earmark-play" />
+            {:else if item.fileType.type === "video"}
+                <iconify-icon icon="dashicons:editor-video" />
+            {:else if item.fileType.type === "image"}
+                <iconify-icon icon="dashicons:editor-video" />
+            {:else if item.fileType.type === "txt"}
+                <iconify-icon icon="dashicons:editor-video" />
+            {/if}
+            <p>{item.name}</p>
         </div>
     </div>
 
@@ -45,7 +68,23 @@
         width: fit-content;
         display: flex;
         flex-direction: column;
+        max-width: 195px;
 
+        &.audio {
+            iconify-icon {
+                color: rgb(199, 69, 199);
+            }
+        }
+        &.video {
+            iconify-icon {
+                color: rgb(224, 72, 72);
+            }
+        }
+        &.txt {
+            iconify-icon {
+                color: rgb(212, 212, 66);
+            }
+        }
         .container {
             height: 60px;
             overflow: hidden;
@@ -67,24 +106,21 @@
                 p {
                     margin: 0;
                     line-height: 1em;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 iconify-icon {
                     width: auto;
                     height: fit-content;
                     display: flex;
-                    color: rgb(212, 212, 66);
-                }
-
-                &.audio > iconify-icon {
-                    color: rgb(199, 69, 199);
-                }
-                &.video > iconify-icon {
-                    color: rgb(224, 72, 72);
                 }
             }
 
             &:hover {
                 border: 1px solid rgb(199, 69, 199);
+                .txt > & {
+                    border: 1px solid rgb(212, 212, 66);
+                }
             }
             .background {
                 width: 100%;

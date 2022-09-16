@@ -1,13 +1,21 @@
 <script lang="ts">
     import { open } from "@tauri-apps/api/dialog";
     import { audioDir } from "@tauri-apps/api/path";
-    import type { SongProject, SongProjectRecording } from "src/App";
+    import type { Song, SongProject, SongProjectRecording } from "src/App";
+    import { currentSong, songDetailsUpdater } from "../../data/store";
     import { db } from "../../data/db";
-    import { getSongFromFile } from "../../data/LibraryImporter";
     import AudioPlayer from "../AudioPlayer";
+    import { fly } from "svelte/transition";
+    import { quadInOut, quadOut } from "svelte/easing";
+    import { flip } from "svelte/animate";
 
     export let recordings: SongProjectRecording[];
     export let songProject: SongProject;
+    export let song: Song;
+    export let addRecording;
+    export let showDropPlaceholder = false;
+    export let onSelectSong;
+
     $: isProject = songProject?.id !== undefined;
 
     export async function openImportDialog() {
@@ -28,18 +36,10 @@
         }
     }
 
-    async function addRecording(filePath) {
-        const filename = filePath.split("/").pop();
-        const song = await getSongFromFile(filePath, filename);
-        if (!recordings) recordings = [];
-        recordings.push({
-            recordingType: "master",
-            song
-        });
-        await db.songProjects.update(songProject.id, {
-            recordings
-        });
+    function deleteRecording(recordingIdx) {
+        recordings.splice(recordingIdx, 1);
         recordings = recordings;
+        $songDetailsUpdater = $songDetailsUpdater + 1;
     }
 
     function playSong(recording) {
@@ -47,14 +47,21 @@
     }
 
     async function createProject() {
-        await db.songProjects.add(songProject);
+        const songProjectId = await db.songProjects.add(songProject) as number;
+        if (song) {
+            song.songProjectId = songProjectId;
+            await db.songs.put(song)
+            onSelectSong && onSelectSong(song);
+        }
     }
 </script>
 
 <container>
     {#if recordings}
-        {#each recordings as recording}
+        {#each recordings as recording, idx (idx)}
             <div
+                transition:fly={{ duration: 150, easing: quadOut }}
+                class:playing={$currentSong?.file === recording.song.file}
                 class="recording"
                 on:click={() => {
                     playSong(recording);
@@ -62,11 +69,30 @@
             >
                 <iconify-icon icon="fe:play" />
                 <p>{recording.song.file}</p>
+                {#if isProject}
+                    <iconify-icon
+                        class="delete"
+                        icon="ant-design:delete-outlined"
+                        on:click|preventDefault|stopPropagation={() => {
+                            deleteRecording(idx);
+                        }}
+                    />
+                {/if}
             </div>
         {/each}
+
+        {#if showDropPlaceholder}
+            <div class="recording drop-placeholder">
+                <iconify-icon icon="fe:play" />
+                <p>Drop files here</p>
+            </div>
+        {/if}
     {/if}
     {#if isProject}
         <button on:click={openImportDialog}>Add recording</button>
+        <p class="prompt">
+            Or drop a file here.<br /> You can also drag files in here from the Scrapbook.
+        </p>
     {:else}
         <p>
             This song is in your library but doesn't have a project. To attach
@@ -78,6 +104,8 @@
 </container>
 
 <style lang="scss">
+    $playing_text_color: #00ddff;
+    $selected_color: #5123dd;
     container {
         display: block;
         padding: 3em 2em;
@@ -86,16 +114,52 @@
             display: flex;
             flex-direction: row;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
             border-radius: 4px;
             padding: 0.2em 0.5em;
             margin: 0.5em 0;
+
+            &.drop-placeholder {
+                border: 1px dashed white;
+            }
+
             p {
                 margin: 0;
+                text-align: left;
+                flex-grow: 2;
+                cursor: default;
+            }
+
+            .delete {
+                visibility: hidden;
+            }
+
+            &.playing {
+                background: $selected_color;
+                color: $playing_text_color;
+                &:hover {
+                    background: $selected_color;
+                    color: $playing_text_color;
+                }
             }
             &:hover {
                 background-color: #7c787823;
+
+                .delete {
+                    visibility: visible;
+                    padding: 5px;
+                    z-index: 2;
+                    &:hover {
+                        color: rgb(224, 72, 72);
+                        background-color: rgba(0, 0, 0, 0.457);
+                    }
+                }
             }
+        }
+
+        .prompt {
+            opacity: 0.5;
         }
 
         button {

@@ -72,7 +72,6 @@ export async function addSong(
     singleFile = false
 ): Promise<Song | null> {
     const songToAdd = await getSongFromFile(filePath, fileName);
-    console.log("songTOAdd", songToAdd);
     try {
         if (!songToAdd) {
             return;

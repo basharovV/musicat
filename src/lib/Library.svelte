@@ -50,6 +50,7 @@
 
     export let theme = "default";
     export let isSmartQueryEnabled = true; // Only for main view
+    export let onSongsHighlighted = null;
 
     $: count = liveQuery(() => {
         return db.songs.count();
@@ -277,11 +278,13 @@
         console.log("start", rangeStartSongIdx);
 
         songsHighlighted = songsHighlighted;
+        onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
 
     function unhighlightSong(song: Song) {
         songsHighlighted.splice(songsHighlighted.indexOf(song), 1);
         songsHighlighted = songsHighlighted;
+        onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
 
     let showTrackMenu = false;
@@ -383,7 +386,7 @@
     }
 </script>
 
-{#if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && !$isSmartQueryBuilderOpen))}
+{#if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== 'smart-query'))}
     <ImportPlaceholder />
 {:else}
     <container class="theme-{theme}">

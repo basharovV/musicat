@@ -2,7 +2,7 @@ import { type, type OsType } from "@tauri-apps/api/os";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
 import { writable, type Writable } from "svelte/store";
-import type { ArtworkSrc, ImportStatus, SidebarItem, Song, UserSettings } from "src/App";
+import type { ArtistContentItem, ArtworkSrc, ImportStatus, SidebarItem, Song, UserSettings } from "src/App";
 
 interface Query {
     orderBy: string;
@@ -21,7 +21,6 @@ export const query: Writable<Query> = writable({
 export const isPlaying = writable(false);
 export const currentSong: Writable<Song> = writable(null);
 export const currentSongIdx = writable(0);
-export const isDraggingFiles = writable(false);
 export const queriedSongs: Writable<Song[]> = writable([]);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
@@ -33,6 +32,17 @@ export const volume = writable(1);
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
 export const uiView: Writable<SidebarItem> = writable('library');
+
+// File drop
+export const droppedFiles: Writable<string[]> = writable([]);
+export const hoveredFiles: Writable<string[]> = writable([]);
+export const isDraggingExternalFiles = writable(false);
+export const draggedScrapbookItems: Writable<ArtistContentItem[]> = writable([]);
+export const emptyDropEvent: Writable<{ x: number, y: number }|null> = writable(null);
+export const fileDropHandler: Writable<string> = writable(null);
+
+// Artist's toolkit details
+export const songDetailsUpdater = writable(0);
 
 // Smart query
 export const isSmartQueryUiOpen = writable(false);

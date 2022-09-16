@@ -1,9 +1,11 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import type { ArtistProject, Song, SongProject } from "src/App";
+    import { isDraggingExternalFiles } from "../../data/store";
     import { db } from "../../data/db";
 
     import Library from "../Library.svelte";
+    import ContentDropzone from "../your-music/ContentDropzone.svelte";
     import Scrapbook from "../your-music/Scrapbook.svelte";
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
@@ -12,7 +14,7 @@
     let selectedSong: Song;
     let selectedSongProject: SongProject;
     let songProjectSelection;
-    $: songs = liveQuery(async () => {
+    $: songs = liveQuery<Song[]>(async () => {
         let resultsArray = [];
         if (selectedArtist) {
             const results = await db.songs
@@ -23,7 +25,7 @@
         return resultsArray;
     });
 
-    $: songProjects = liveQuery(async () => {
+    $: songProjects = liveQuery<SongProject[]>(async () => {
         let resultsArray = [];
         if (selectedArtist) {
             const results = await db.songProjects
@@ -38,29 +40,52 @@
 
     function onSelectSong(song: Song) {
         selectedSong = song;
-        selectedSongProject = {
-            title: song?.title ?? "",
-            artist: song?.artist ?? "",
-            album: song?.album ?? "",
-            musicComposedBy: [],
-            lyricsWrittenBy: [],
-            recordings: [{
-                recordingType: 'master',
-                song: song
-            }]
-        };
-        songProjectSelection = null;
-        console.log("library songs", song);
+        const existingSongProject = $songProjects.find(
+            (s) => s.id === song.songProjectId
+        );
+        if (existingSongProject) {
+            selectedSongProject = existingSongProject;
+            songProjectSelection = selectedSongProject;
+        } else {
+            selectedSongProject = {
+                title: song?.title ?? "",
+                artist: song?.artist ?? "",
+                album: song?.album ?? "",
+                musicComposedBy: [],
+                lyricsWrittenBy: [],
+                recordings: [
+                    {
+                        recordingType: "master",
+                        song: song
+                    }
+                ],
+                otherContentItems: []
+            };
+            songProjectSelection = null;
+            console.log("library songs", song);
+        }
     }
 
     function onSelectSongProject(songProject: SongProject) {
         selectedSongProject = songProject;
         selectedSong = null;
-        librarySongsHighlighted = [];
+        if (selectedSongProject?.recordings) {
+            // Also highlighted the corresponding song if any
+            const foundSong = $songs?.find(
+                (s) => s?.songProjectId === selectedSongProject?.id
+            );
+            if (foundSong) {
+                librarySongsHighlighted = [foundSong];
+            } else {
+                librarySongsHighlighted = [];
+            }
+        } else {
+            librarySongsHighlighted = [];
+        }
     }
 
     async function onDeleteSongProject(songProject: SongProject) {
-        console.log('deieting ', songProject);
+        console.log("deieting ", songProject);
 
         const currentIndex = $songProjects?.findIndex(
             (s) => s.id === songProject.id
@@ -76,10 +101,11 @@
         songProjectSelection = selectedSongProject;
     }
 
+    function onSongsHighlighted(songsHighlighted) {
+        songsHighlighted.length > 0 && onSelectSong(librarySongsHighlighted[0]);
+    }
+
     $: {
-        if (librarySongsHighlighted.length > 0) {
-            onSelectSong(librarySongsHighlighted[0]);
-        }
         if (selectedArtist?.name !== selectedSongProject?.artist) {
             selectedSongProject = null;
         }
@@ -87,6 +113,9 @@
 </script>
 
 <container>
+    {#if $isDraggingExternalFiles}
+        <ContentDropzone songProject={selectedSongProject} />
+    {/if}
     <header>
         <h2>Artists</h2>
         <YourArtists bind:selectedArtist />
@@ -122,10 +151,16 @@
                 { name: "Title", value: "title" },
                 { name: "Album", value: "album" }
             ]}
+            {onSongsHighlighted}
         />
     </section>
     <section class="song-details">
-        <SongDetails songProject={selectedSongProject} {onDeleteSongProject} />
+        <SongDetails
+            songProject={selectedSongProject}
+            {onDeleteSongProject}
+            song={selectedSong}
+            {onSelectSong}
+        />
     </section>
 
     <img class="bulb" src="images/bulby_bulb.png" alt="" />
@@ -204,6 +239,7 @@
             grid-column: 3;
             height: 100%;
             border-left: 1px solid rgba(255, 255, 255, 0.093);
+            overflow: auto;
             div {
                 padding: 2em;
             }

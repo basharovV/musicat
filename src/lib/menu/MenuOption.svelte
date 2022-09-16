@@ -79,8 +79,13 @@
             display: block;
             padding: 0.2em 0 0.3em 0;
             p {
+                white-space: nowrap;
                 margin: 0;
                 line-height: 20px;
+                max-width: 250px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
             }
 
             small {

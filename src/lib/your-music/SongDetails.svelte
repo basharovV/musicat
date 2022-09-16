@@ -1,20 +1,35 @@
 <script lang="ts">
-    import type { Song, SongProject } from "src/App";
-    import { debounce } from "lodash-es";
-    import { autoWidth } from "../../utils/AutoWidth";
-    import { db } from "../../data/db";
-    import MusicTab from "./MusicTab.svelte";
-    import LyricsTab from "./LyricsTab.svelte";
-    import OtherTab from "./OtherTab.svelte";
-    import { cloneDeep, isEqual, uniqBy } from "lodash-es";
-    import { os } from "../../data/store";
     import hotkeys from "hotkeys-js";
-    import { onDestroy } from "svelte";
+    import { cloneDeep, debounce, isEqual } from "lodash-es";
+    import type { ArtistFileItem, Song, SongProject } from "src/App";
+    import { onDestroy, onMount } from "svelte";
+    import { db } from "../../data/db";
+    import {
+        draggedScrapbookItems,
+        emptyDropEvent,
+        os,
+        songDetailsUpdater
+    } from "../../data/store";
+    import { autoWidth } from "../../utils/AutoWidth";
+    import LyricsTab from "./LyricsTab.svelte";
+    import MusicTab from "./MusicTab.svelte";
+    import OtherTab from "./OtherTab.svelte";
+
+    import { getSongFromFile } from "../../data/LibraryImporter";
+    import {
+        droppedFiles,
+        fileDropHandler,
+        hoveredFiles
+    } from "../../data/store";
 
     export let songProject: SongProject;
+    export let song: Song;  // We might need to create a project based on this song
+    export let onSelectSong;
+
     let songProjectClone = cloneDeep(songProject);
     $: isProject = songProject?.id;
 
+    // TODO move the music stuff into MusicTab?
     let bpmTicker = 1;
     let bpmInterval;
 
@@ -50,6 +65,17 @@
         startBPMTicker(songProject?.bpm);
     }
 
+    let hasChanged = false;
+
+    /**
+     * Reset this component to match new song selection.
+     */
+    function reset() {
+        songProjectClone = cloneDeep(songProject);
+    }
+
+    // Automatically save to database on any changes
+
     $: {
         // Will only have ID once it's a song project
         // So normal Songs won't be saved automatically,
@@ -59,15 +85,16 @@
             songProject?.id !== undefined &&
             songProject.id !== songProjectClone?.id
         ) {
-            songProjectClone = cloneDeep(songProject);
+            reset();
         } else if (
-            songProject?.id !== undefined &&
-            songProject.id === songProjectClone?.id &&
-            !isEqual(songProject, songProjectClone)
+            (songProject?.id !== undefined &&
+                songProject.id === songProjectClone?.id &&
+                !isEqual(songProject, songProjectClone)) ||
+            $songDetailsUpdater
         ) {
             db.songProjects.put(songProjectClone);
         } else {
-            songProjectClone = cloneDeep(songProject);
+            reset();
         }
     }
 
@@ -113,13 +140,180 @@
         decreaseFontSize();
     });
 
+    // Lifecycle
+
+    onMount(() => {
+        containerRect = container.getBoundingClientRect();
+    });
+
     onDestroy(() => {
         hotkeys.unbind(`${modifier}+=`);
         hotkeys.unbind(`${modifier}+-`);
     });
+
+    async function addRecording(filePath: string) {
+        console.log("adding recording", filePath);
+        const filename = filePath.split("/").pop();
+        console.log("filename", filename);
+        const song = await getSongFromFile(filePath, filename);
+        console.log("song", song);
+
+        if (!songProjectClone?.recordings) songProjectClone.recordings = [];
+        songProjectClone.recordings.push({
+            recordingType: "master",
+            song
+        });
+        songProjectClone.recordings = songProjectClone.recordings;
+        songProjectClone = songProjectClone;
+    }
+
+    function onMouseEnter() {
+        console.log("Entered song-details: hovered files: ", $hoveredFiles);
+        if ($hoveredFiles.length > 0) {
+            $fileDropHandler = "song-details";
+        }
+    }
+
+    function onMouseLeave() {}
+
+    async function handleFileDrop(files: string[]) {
+        console.log("drop:", files);
+        for (const droppedFile of files) {
+            addRecording(droppedFile);
+        }
+        $droppedFiles = [];
+        $hoveredFiles = [];
+    }
+
+    $: {
+        if (
+            $droppedFiles &&
+            $droppedFiles.length > 0 &&
+            $fileDropHandler === "song-details"
+        ) {
+            handleFileDrop($droppedFiles);
+            isDragging = false;
+        }
+    }
+
+    let isDragging = false;
+    let container: HTMLElement;
+    let containerRect;
+
+    async function onDragEnter(evt: DragEvent) {
+        isDragging = true;
+        evt.dataTransfer.dropEffect = "copy";
+        $fileDropHandler = "song-details";
+    }
+
+    function onDragLeave(evt) {
+        if (
+            evt.clientY < containerRect.top ||
+            evt.clientY >= container.clientHeight + containerRect.top ||
+            evt.clientX < containerRect.left ||
+            evt.clientX >= container.clientWidth + containerRect.left
+        ) {
+            console.log("dragleave", evt.dataTransfer.items);
+            isDragging = false;
+        }
+    }
+
+    async function getDropDataAsString(
+        item: DataTransferItem
+    ): Promise<string> {
+        return new Promise((resolve, reject) => {
+            try {
+                item.getAsString((str) => {
+                    resolve(str);
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    async function onDrop(evt: DragEvent) {
+        /*
+        Unfortunately this doesn't trigger when using system file drop in Tauri (fileDropEnabled). 
+        At the moment there is no support for both drag&drop and HTML drag&drop, we need to choose. 
+        If we disable the system event, then we won't get access to the full path 
+        because browsers don't expose this due to security reasons
+
+        So we use a hack (below this function) - we use the empty system event that's triggered to 
+        handle a drop, grabbing the dragged item from the store. 
+        */
+        console.log("drop", evt);
+
+        // If we have support for
+        // const items = evt.dataTransfer.items;
+        // for (let i = 0; i < items.length; i++) {
+        //     try {
+        //         const content = await getDropDataAsString(items[i]);
+        //         const parsed = JSON.parse(content);
+        //         if (parsed && parsed.type) {
+        //             const item = parsed as ArtistContentItem;
+
+        //             switch (item.type) {
+        //                 case "file":
+        //                     if (item.fileType.type === "audio") {
+        //                         // Add as recording
+        //                         await addRecording(item.path);
+        //                     }
+        //             }
+        //         }
+        //     } catch (err) {
+        //         console.error("error doing drop: ", err);
+        //     }
+        // }
+    }
+
+    $: {
+        if (
+            $droppedFiles &&
+            $droppedFiles.length > 0 &&
+            $fileDropHandler === "song-details"
+        ) {
+            handleFileDrop($droppedFiles);
+        }
+
+        if (
+            $emptyDropEvent &&
+            $draggedScrapbookItems &&
+            $draggedScrapbookItems.length > 0
+        ) {
+            const fileItems = $draggedScrapbookItems.filter(
+                (i) => i.type === "file"
+            ) as ArtistFileItem[];
+            isDragging = false;
+            // Only handle if global cursor position is in this component
+            if (
+                containerRect &&
+                songProject?.id &&
+                $emptyDropEvent.x >= containerRect.left &&
+                $emptyDropEvent.x <=
+                    containerRect.left + container.clientWidth &&
+                $emptyDropEvent.y >= containerRect.top &&
+                $emptyDropEvent.y <= containerRect.top + container.clientHeight
+            ) {
+                handleFileDrop(fileItems.map((i) => i.path));
+
+                $emptyDropEvent = null;
+                $draggedScrapbookItems = [];
+            }
+        }
+    }
 </script>
 
-<container class:full-screen={fullScreenLyrics}>
+<container
+    bind:this={container}
+    class:full-screen={fullScreenLyrics}
+    class:dragging={isDragging}
+    on:mouseenter={onMouseEnter}
+    on:mouseleave={onMouseLeave}
+    on:dragenter={onDragEnter}
+    on:dragleave={onDragLeave}
+    dropzone="copy"
+>
     <header>
         {#if songProjectClone}
             <div class="info">
@@ -226,7 +420,11 @@
                 {#if selectedTab === "music"}
                     <MusicTab
                         recordings={songProjectClone.recordings}
+                        {addRecording}
                         {songProject}
+                        {song}
+                        {onSelectSong}
+                        showDropPlaceholder={isDragging}
                     />
                 {:else if selectedTab === "lyrics"}
                     <LyricsTab
@@ -246,6 +444,11 @@
         display: grid;
         grid-template-rows: auto auto auto 1fr;
         height: 100%;
+        &.dragging {
+            * {
+                pointer-events: none !important;
+            }
+        }
 
         &.full-screen {
             position: fixed;
@@ -372,7 +575,6 @@
 
         .content-container {
             position: relative;
-            overflow: overlay;
             height: 100%;
             overflow: hidden;
 

@@ -32,13 +32,14 @@ interface Song {
     duration: string;
     metadata: MetadataEntry[];
     fileInfo: any;
+    songProjectId?: number; // Link to project id
 }
 
 /**
- * Represents a song/track that's in progress. 
+ * Represents a song/track that's in progress.
  */
 interface SongProject {
-    id?: number; // incremental id 
+    id?: number; // incremental id
     title: string; // Needs to have at least this, everything else is optional
     artist: string;
     album: string;
@@ -49,6 +50,7 @@ interface SongProject {
     artworkFilePath?: string;
     masterLyricsFilePath?: string;
     recordings: SongProjectRecording[];
+    otherContentItems: ArtistContentItem[];
     songId?: string; // If this exists - the song is added to the library (master audio)
 }
 
@@ -56,10 +58,10 @@ interface ArtistProject {
     name: string;
 }
 
-type RecordingType = 'master' | 'live' | 'demo' | 'rehearsal';
+type RecordingType = "master" | "live" | "demo" | "rehearsal";
 
 interface SongProjectRecording {
-    recordingType: RecordingType,
+    recordingType: RecordingType;
     song: Song;
 }
 
@@ -106,30 +108,28 @@ type Comparison =
 
 type SidebarItem = "library" | "smart-query" | "your-music";
 
-type ArtistItemType = 'lyrics' | 'file' | 'link';
+type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 
-type ArtistContentItem = ArtistFileItem | ArtistLinkItem | ArtistLyricsItem
+interface ContentFileType {
+    type: "audio" | "video" | "txt" | "image" | "unsupported";
+    extension: string;
+}
 
 interface ContentItem {
-    type: 'lyrics' | 'file' | 'link';
+    id?: number;
+    type: "file" | "link";
     name: string; // Grab from filename
     tags: string[];
     songId?: string; // Could just use "artist-title"
 }
 
-
 export interface ArtistLinkItem extends ContentItem {
-    type: 'link',
+    type: "link";
     url: string;
 }
 
 export interface ArtistFileItem extends ContentItem {
-    type: 'file',
-    filename: string | null;
-    filepath: string | null;
-}
-export interface ArtistLyricsItem extends ContentItem {
-    type: 'lyrics',
-    filename: string | null;
-    filepath: string | null;
+    type: "file";
+    fileType: ContentFileType;
+    path?: string;
 }

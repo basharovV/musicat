@@ -1,3 +1,5 @@
+import type { TagType } from "src/App";
+
 function inverse(obj) {
     var retobj = {};
     for (var key in obj) {

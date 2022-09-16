@@ -80,7 +80,6 @@ class AudioPlayer {
   }
 
   setAudioFinishedCallback(callback) {
-    console.log("passing in callback", callback);
     this.isFinishedCallback = callback;
   }
 
@@ -134,12 +133,10 @@ class AudioPlayer {
   // MEDIA
   async playSong(song: Song) {
     console.log("playSong", song);
-    if (this.audioFile) {
-      this.audioFile.preload = "none";
+    if (this.audioFile && song) {
       this.audioFile.currentTime = 0;
       this.audioFile.src = "asset://" + song.path.replace("?", "%3F");
       // await this.wait(500);
-      this.audioFile.load();
       this.play();
       currentSong.set(song);
       this.currentSong = song;

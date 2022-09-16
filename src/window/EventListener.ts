@@ -8,12 +8,16 @@ import {
 import { db } from "../data/db";
 
 export function startMenuListener() {
-    appWindow.listen("menu", ({ event, payload }) => {
+    appWindow.listen("menu", async ({ event, payload }) => {
         switch (payload) {
             case "clear-db":
                 console.log("clear-db");
-                db.songs.clear();
-                db.smartQueries.clear();
+                await db.songs.clear();
+                await db.smartQueries.clear();
+                await db.songProjects.clear();
+                await db.artistProjects.clear();
+                await db.scrapbook.clear();
+                await db.delete();
                 break;
             case "about":
                 console.log("about");

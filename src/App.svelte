@@ -1,12 +1,21 @@
 <script lang="ts">
     import { Toaster } from "svelte-french-toast";
     import {
-        isDraggingFiles,
+        draggedScrapbookItems,
+        droppedFiles,
+        emptyDropEvent,
+        hoveredFiles,
+        isDraggingExternalFiles,
         isInfoPopupOpen,
-        isMiniPlayer, isSettingsOpen, isTrackInfoPopupOpen, uiView
+        isMiniPlayer,
+        isSettingsOpen,
+        isTrackInfoPopupOpen,
+        uiView
     } from "./data/store";
 
-    import { onMount } from "svelte";
+    import { type UnlistenFn } from "@tauri-apps/api/event";
+    import { appWindow } from "@tauri-apps/api/window";
+    import { onDestroy, onMount } from "svelte";
     import Dropzone from "./lib/Dropzone.svelte";
     import InfoPopup from "./lib/InfoPopup.svelte";
     import SettingsPopup from "./lib/SettingsPopup.svelte";
@@ -18,22 +27,76 @@
 
     startMenuListener();
 
-    function onDragEnter(e) {
-        e.preventDefault();
+    let unlistenFileDrop: UnlistenFn;
 
-        e.dataTransfer.dropEffect = "copy";
-        isDraggingFiles.set(true);
-        console.log("drag enter");
-    }
+    // function onDragEnter(e) {
+    //     e.preventDefault();
+
+    //     e.dataTransfer.dropEffect = "copy";
+    //     isDraggingFiles.set(true);
+    //     console.log("drag enter");
+    // }
 
     function onPageClick() {
         $isInfoPopupOpen = false;
     }
 
-    // App start
-    onMount(() => {
-        
-    })
+    let mouseX;
+    let mouseY;
+
+    /**
+     * Listen for native file drop and hover events here.
+     *
+     * How this will be handled depends on the current UI view shown:
+     * - Main library view: Import track(s)
+     * - Artist's toolkit view: Add to scrapbook or song project
+     */
+    onMount(async () => {
+        unlistenFileDrop = await appWindow.onFileDropEvent((evt) => {
+            switch (evt.payload.type) {
+                case "drop":
+                    console.log("paths:", evt.payload);
+                    if (evt.payload.paths.length > 0) {
+                        $droppedFiles = evt.payload.paths;
+                    } else {
+                        // This is a temporary hack to get internal drag and drop working,
+                        // while also supporting external files dropped into the app.
+                        $emptyDropEvent = { x: mouseX, y: mouseY };
+                    }
+
+                    // Let the destination ui handle the files, and set the array to empty again.
+                    break;
+                case "hover":
+                    $hoveredFiles = evt.payload.paths;
+                    console.log("files:", $hoveredFiles);
+
+                    break;
+                case "cancel":
+                    $droppedFiles = [];
+                    $hoveredFiles = [];
+                    console.log("files:", $hoveredFiles);
+                    break;
+            }
+        });
+    });
+
+    function onDragMove(evt: MouseEvent) {
+        mouseX = evt.x;
+        mouseY = evt.y;
+    }
+
+    draggedScrapbookItems.subscribe((items) => {
+        if (items.length > 0) {
+            // Track mouse position to see where it gets dropped (hack)
+            document.addEventListener("dragover", onDragMove);
+        } else {
+            document.removeEventListener("dragover", onDragMove);
+        }
+    });
+
+    onDestroy(() => {
+        unlistenFileDrop();
+    });
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->
@@ -57,14 +120,14 @@
     </div>
 {/if}
 
-{#if $isDraggingFiles}
+{#if $isDraggingExternalFiles && $uiView !== "your-music"}
     <Dropzone />
 {/if}
 
-<main on:dragenter={onDragEnter} class:mini-player={$isMiniPlayer}>
+<main class:mini-player={$isMiniPlayer}>
     <Sidebar />
 
-    {#if $uiView === "library" || $uiView === 'smart-query'}
+    {#if $uiView === "library" || $uiView === "smart-query"}
         <LibraryView />
     {:else if $uiView === "your-music"}
         <ArtistsToolkitView />

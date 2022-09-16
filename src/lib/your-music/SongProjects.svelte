@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ArtistProject, SongProject } from "src/App";
+    import type { ArtistProject, Song, SongProject } from "src/App";
     import { db } from "../../data/db";
     import { autoWidth } from "../../utils/AutoWidth";
 
@@ -16,7 +16,8 @@
             album: "",
             musicComposedBy: [artist.name], // Multiple people
             lyricsWrittenBy: [], // Multiple people,
-            recordings: []
+            recordings: [],
+            otherContentItems: []
         });
         const createdProject = await db.songProjects.get(createdProjectId);
         selectedSongProject = createdProject;
