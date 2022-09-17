@@ -14,11 +14,27 @@
 <small>💿 a nice little mini-player
 </small>
 <br/>
+<small>🪕 Artist's toolkit for musicians
+</small>
+<br/>
   -
 </p>
 
 
-![screenshot](docs/screenshot.jpeg)
+![screenshot](docs/screenshot-2.jpeg)
+
+Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback! 
+
+## Build locally
+Pre-requisits: Set up the [Tauri](https://tauri.app/) framework.
+
+You can then create a development build using `npm run tauri dev`. 
+### macOS Universal build 
+To generate a Universal build for macOS:
+``npm run tauri build -- --target universal-apple-darwin`
+
+### Windows, Linux
+Windows and Linux builds have not been tested yet, but you can generate this using `npm run tauri build` on your system. 
 
 ## Features:
 - File formats
@@ -30,17 +46,17 @@
   - [x] Look up tracks on YouTube / Wikipedia via right click
   - [x] Look up chords and lyrics on DuckDuckGo
   - [x] Basic search (matching by 'starts with' on title, album or artist)
-  - [ ] Advanced search
-- Metadata / Track Info
+  - [x] Advanced search (Smart queries)
+- __Metadata / Track Info__
   ![info](docs/info.jpeg)
 
   - [x] Add or replace the track artwork
   - [x] View and Edit existing tags
-  - [x] Add new tags (see [here]() for list of supported tags)
-- Mini-player 
+  - [x] Add new tags (from common list), custom tags not supported yet
+- __Mini-player__
   
   Small and widget-like. Window controls dissappear when in mini player mode.
-  - [ ] Save window position
+  - [x] Save window position (four corners). Configurable in settings.
 <p align="center">
 <img height="200" src="docs/mini-cover.jpeg">
 <img height="200" src="docs/mini-ui.jpeg">
