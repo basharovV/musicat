@@ -13,6 +13,7 @@
     export let songProject: SongProject;
     export let song: Song;
     export let addRecording;
+    export let deleteRecording;
     export let showDropPlaceholder = false;
     export let onSelectSong;
 
@@ -36,12 +37,6 @@
         }
     }
 
-    function deleteRecording(recordingIdx) {
-        recordings.splice(recordingIdx, 1);
-        recordings = recordings;
-        $songDetailsUpdater = $songDetailsUpdater + 1;
-    }
-
     function playSong(recording) {
         AudioPlayer.playSong(recording.song);
     }
@@ -60,7 +55,7 @@
     {#if recordings}
         {#each recordings as recording, idx (idx)}
             <div
-                transition:fly={{ duration: 150, easing: quadOut }}
+                in:fly={{ duration: 150, easing: quadOut }}
                 class:playing={$currentSong?.file === recording.song.file}
                 class="recording"
                 on:click={() => {
@@ -89,7 +84,7 @@
         {/if}
     {/if}
     {#if isProject}
-        <button on:click={openImportDialog}>Add recording</button>
+        <button on:click={openImportDialog}>Add recordings</button>
         <p class="prompt">
             Or drop a file here.<br /> You can also drag files in here from the Scrapbook.
         </p>

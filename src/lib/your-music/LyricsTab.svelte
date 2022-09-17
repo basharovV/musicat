@@ -1,11 +1,31 @@
 <script lang="ts">
     export let fontSize;
     export let isFullScreen;
-    export let lyrics = "";
+    export let lyrics;
+    export let onLyricsUpdated;
+    export let enabled = false;
+
+    $: {
+        console.log("lyrics", lyrics);
+    }
+    $: hasLyrics = enabled && typeof lyrics === 'string';
+
+    function onLyricsChanged(e) {
+        onLyricsUpdated(e.target.value);
+    }
 </script>
 
 <div class={fontSize} class:full-screen={isFullScreen}>
-    <textarea placeholder="Start typing...">{lyrics}</textarea>
+    {#if hasLyrics}
+        <textarea
+            placeholder="Start typing..."
+            on:input={onLyricsChanged}
+            bind:value={lyrics}
+        />
+    {:else}
+        <br />
+        <p>Create a project to add lyrics</p>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -13,6 +33,10 @@
         text-align: center;
         width: 100%;
         height: 100%;
+
+        p {
+            opacity: 0.5;
+        }
 
         textarea {
             appearance: none;

@@ -1,22 +1,32 @@
 <script lang="ts">
     import type { ArtistLinkItem } from "src/App";
+    import { draggedScrapbookItems } from "../../data/store";
+    import { open } from "@tauri-apps/api/shell";
 
     export let item: ArtistLinkItem;
 
-    let thumbnail;
-    let videoId;
+    export let style: "dashed" | "outline" = "dashed";
+    async function openUrl() {
+        open(item.url);
+    }
 
-    $: if (item.url.includes("youtube")) {
-        videoId = item.url.split("v=")[1].split("&")[0];
-        if (videoId) {
-            thumbnail = `https://img.youtube.com/vi/${videoId}/sddefault.jpg`;
-        }
+    function onDragStart(ev: DragEvent) {
+        console.log("dragStart");
+        // Add this element's id to the drag payload so the drop handler will
+        // know which element to add to its tree
+        $draggedScrapbookItems = [item];
+        $draggedScrapbookItems = $draggedScrapbookItems;
     }
 </script>
 
-<div class="item">
+<div
+    class="item {style}"
+    draggable="true"
+    on:dragstart={onDragStart}
+    on:click={openUrl}
+>
     <div class="container">
-        {#if thumbnail} <img src={thumbnail} alt="thumnbail" /> {/if}
+        {#if item.imageUrl} <img src={item.imageUrl} alt="thumnbail" /> {/if}
         <div class="item-info">
             <iconify-icon icon="akar-icons:link-chain" />
             <p>{item.name}</p>
@@ -39,11 +49,24 @@
         border-radius: 4px;
         background-color: rgba(138, 138, 138, 0.067);
 
+        &.dashed {
+            .container {
+                border-style: dashed;
+            }
+        }
+
+        &.outline {
+            .container {
+                border-style: solid;
+            }
+        }
+
         .container {
             height: 60px;
             overflow: hidden;
             border-radius: 4px;
-            border: 1px dashed rgb(97, 97, 97);
+            border-width: 1px;
+            border-color: rgb(97, 97, 97);
             background-color: rgba(138, 138, 138, 0.067);
             padding: 0.7em 1em;
             display: flex;

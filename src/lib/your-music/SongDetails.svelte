@@ -1,7 +1,15 @@
 <script lang="ts">
     import hotkeys from "hotkeys-js";
     import { cloneDeep, debounce, isEqual } from "lodash-es";
-    import type { ArtistFileItem, Song, SongProject } from "src/App";
+    import type {
+        ArtistContentItem,
+        ArtistFileItem,
+        ArtistLinkItem,
+        ContentFileType,
+        ContentItem,
+        Song,
+        SongProject
+    } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { db } from "../../data/db";
     import {
@@ -21,12 +29,15 @@
         fileDropHandler,
         hoveredFiles
     } from "../../data/store";
+    import { getContentFileType } from "../../utils/FileUtils";
+    import { readTextFile } from "@tauri-apps/api/fs";
+    import toast from "svelte-french-toast";
 
     export let songProject: SongProject;
-    export let song: Song;  // We might need to create a project based on this song
+    export let song: Song; // We might need to create a project based on this song
     export let onSelectSong;
 
-    let songProjectClone = cloneDeep(songProject);
+    let songProjectClone: SongProject = cloneDeep(songProject);
     $: isProject = songProject?.id;
 
     // TODO move the music stuff into MusicTab?
@@ -37,7 +48,7 @@
     function startBPMTicker(bpm: number) {
         if (bpmTicker === 1 && !bpmInterval) {
             bpmInterval = setInterval(() => {
-                if (songProject.bpm !== undefined) {
+                if (songProjectClone?.bpm !== undefined) {
                     bpmTicker++;
                 } else {
                     stopBpmTicker();
@@ -52,17 +63,10 @@
         bpmTicker = 1;
     }
 
-    function onBpmUpdated(e) {
-        if (e.target.value) {
-            stopBpmTicker();
-            startBPMTicker(e.target.value);
-        } else {
-            stopBpmTicker();
-        }
-    }
-
     function onBpmFocus() {
-        startBPMTicker(songProject?.bpm);
+        if (songProjectClone?.bpm < 400) {
+            startBPMTicker(songProjectClone?.bpm);
+        }
     }
 
     let hasChanged = false;
@@ -70,36 +74,165 @@
     /**
      * Reset this component to match new song selection.
      */
-    function reset() {
-        songProjectClone = cloneDeep(songProject);
-    }
+    $: songProjectClone = songProject;
 
     // Automatically save to database on any changes
 
-    $: {
-        // Will only have ID once it's a song project
-        // So normal Songs won't be saved automatically,
-        // needs to be converted into a project first
+    // $: {
+    //     // Will only have ID once it's a song project
+    //     // So normal Songs won't be saved automatically,
+    //     // needs to be converted into a project first
 
-        if (
-            songProject?.id !== undefined &&
-            songProject.id !== songProjectClone?.id
-        ) {
-            reset();
-        } else if (
-            (songProject?.id !== undefined &&
-                songProject.id === songProjectClone?.id &&
-                !isEqual(songProject, songProjectClone)) ||
-            $songDetailsUpdater
-        ) {
+    //     if (
+    //         songProject?.id !== undefined &&
+    //         songProject.id !== songProjectClone?.id
+    //     ) {
+    //         reset();
+    //     } else if (
+    //         (songProject?.id !== undefined &&
+    //             songProject.id === songProjectClone?.id &&
+    //             !isEqual(songProject, songProjectClone)) ||
+    //         $songDetailsUpdater
+    //     ) {
+    //         console.log("putting clone: ;", songProjectClone);
+    //         if (songProjectClone) {
+    //             db.songProjects.put(songProjectClone);
+    //         }
+    //     } else {
+    //         reset();
+    //     }
+    // }
+
+    // Instead of the above just have listeners for things that have changed
+    // and then we don't need to worry about which direction the changes are in.
+    // i.e we know a user has initiated the action
+
+    function saveSongProject() {
+        console.log("saving clone to db:", songProjectClone);
+        if (songProjectClone) {
             db.songProjects.put(songProjectClone);
-        } else {
-            reset();
         }
     }
 
-    const tabs = ["music", "lyrics", "other"];
-    let selectedTab = tabs[0];
+    function onTitleUpdated(evt) {
+        songProjectClone.title = evt.target.value;
+        saveSongProject();
+    }
+
+    function onAlbumUpdated(evt) {
+        songProjectClone.album = evt.target.value;
+        saveSongProject();
+    }
+
+    function onComposerUpdated(evt) {
+        songProjectClone.musicComposedBy = [evt.target.value];
+        saveSongProject();
+    }
+
+    function onLyricistUpdated(evt) {
+        songProjectClone.lyricsWrittenBy = [evt.target.value];
+        saveSongProject();
+    }
+
+    function onBpmUpdated(e) {
+        if (e.target.value) {
+            songProjectClone.bpm = e.target.value;
+            if (e.target.value > 0 && e.target.value < 400) {
+                stopBpmTicker();
+                startBPMTicker(e.target.value);
+            } else {
+                stopBpmTicker();
+            }
+        } else {
+            songProjectClone.bpm = null;
+            stopBpmTicker();
+        }
+        saveSongProject();
+    }
+
+    function onKeyUpdated(evt) {
+        songProjectClone.key = evt.target.value;
+        saveSongProject();
+    }
+
+    /**
+     * Add a recording from a file path
+     * Note: the path is treated as a key, no duplicates allowed
+     * @param filePath
+     */
+    async function addRecording(filePath: string) {
+        console.log("adding recording", filePath);
+        const filename = filePath.split("/").pop();
+
+        if (
+            songProjectClone?.recordings
+                .map((r) => r.song.path)
+                .includes(filePath)
+        ) {
+            toast.error(
+                `${filename} already exists in ${songProjectClone.title}'s recordings`
+            );
+            return;
+        }
+        console.log("filename", filename);
+        const song = await getSongFromFile(filePath, filename);
+        console.log("song", song);
+
+        if (!songProjectClone?.recordings) songProjectClone.recordings = [];
+        songProjectClone.recordings.push({
+            recordingType: "master",
+            song
+        });
+        songProjectClone.recordings = songProjectClone.recordings;
+        saveSongProject();
+    }
+
+    function deleteRecording(recordingIdx) {
+        songProjectClone.recordings?.splice(recordingIdx, 1);
+        songProjectClone = songProjectClone;
+        saveSongProject();
+    }
+
+    function onLyricsUpdated(lyrics: string) {
+        songProjectClone.lyrics = lyrics;
+        saveSongProject();
+    }
+
+    function addContentItem(item: ArtistContentItem) {
+        const files = songProjectClone?.otherContentItems.filter(
+            (i) => i.type === "file"
+        ) as ArtistFileItem[];
+        const links = songProjectClone?.otherContentItems.filter(
+            (i) => i.type === "link"
+        ) as ArtistLinkItem[];
+
+        if (
+            (item.type == "file" &&
+                files.map((r) => r.path).includes(item.path)) ||
+            (item.type == "link" && links.map((r) => r.url).includes(item.url))
+        ) {
+            toast.error(
+                `${item.name} already exists in ${songProjectClone.title}`
+            );
+            return;
+        }
+        songProjectClone.otherContentItems?.push(item);
+        songProjectClone.otherContentItems = songProjectClone.otherContentItems;
+        saveSongProject();
+    }
+
+    function deleteContentItem(rightClickedItemIdx) {
+        songProjectClone.otherContentItems?.splice(rightClickedItemIdx, 1);
+        songProjectClone.otherContentItems = songProjectClone.otherContentItems;
+        saveSongProject();
+    }
+
+    const tabs: Array<"music" | "lyrics" | "other"> = [
+        "music",
+        "lyrics",
+        "other"
+    ];
+    let selectedTab: "music" | "lyrics" | "other" = tabs[0];
 
     export let onDeleteSongProject;
 
@@ -151,20 +284,32 @@
         hotkeys.unbind(`${modifier}+-`);
     });
 
-    async function addRecording(filePath: string) {
-        console.log("adding recording", filePath);
+    async function addOther(filePath: string, type: ContentFileType) {
+        // Check if already exists, if so show a message
         const filename = filePath.split("/").pop();
-        console.log("filename", filename);
-        const song = await getSongFromFile(filePath, filename);
-        console.log("song", song);
 
-        if (!songProjectClone?.recordings) songProjectClone.recordings = [];
-        songProjectClone.recordings.push({
-            recordingType: "master",
-            song
-        });
-        songProjectClone.recordings = songProjectClone.recordings;
-        songProjectClone = songProjectClone;
+        if (!songProjectClone?.otherContentItems)
+            songProjectClone.otherContentItems = [];
+        const toAdd: ArtistFileItem = {
+            name: filename,
+            tags: [],
+            type: "file",
+            fileType: type,
+            path: filePath
+        };
+        addContentItem(toAdd);
+    }
+
+    /**
+     * Adding an existing link item that was already in the Scrapbook.
+     * It also already likely has the attached metadata (eg Youtube video title, img)
+     * so no need to fetch it again.
+     * @param item
+     */
+    async function addLinkItemFromScrapbook(item: ArtistLinkItem) {
+        if (!songProjectClone?.otherContentItems)
+            songProjectClone.otherContentItems = [];
+        addContentItem(item);
     }
 
     function onMouseEnter() {
@@ -176,10 +321,48 @@
 
     function onMouseLeave() {}
 
+    /**
+     * Handle file drop (applies to both scrapbook and file drop from system)
+     * @param files the file paths to add
+     */
     async function handleFileDrop(files: string[]) {
         console.log("drop:", files);
         for (const droppedFile of files) {
-            addRecording(droppedFile);
+            const fileType = getContentFileType(droppedFile);
+            switch (fileType.type) {
+                case "audio":
+                    if (selectedTab === "music") {
+                        addRecording(droppedFile);
+                    } else if (selectedTab === "other") {
+                        addOther(droppedFile, fileType);
+                    }
+                    break;
+                case "txt":
+                    if (selectedTab === "lyrics") {
+                        const readText = await readTextFile(droppedFile);
+                        if (readText) {
+                            // TODO confirm if want to append or replace?
+                            songProjectClone.lyrics = readText;
+                        } else {
+                            console.error("Empty/invalid lyrics file?");
+                        }
+                    } else {
+                        addOther(droppedFile, fileType);
+                    }
+                    break;
+                case "image":
+                case "video":
+                    addOther(droppedFile, fileType);
+                    break;
+            }
+        }
+        $droppedFiles = [];
+        $hoveredFiles = [];
+    }
+
+    async function handleLinkDrop(links: ArtistLinkItem[]) {
+        for (const droppedLink of links) {
+            await addLinkItemFromScrapbook(droppedLink);
         }
         $droppedFiles = [];
         $hoveredFiles = [];
@@ -281,9 +464,9 @@
             $draggedScrapbookItems &&
             $draggedScrapbookItems.length > 0
         ) {
-            const fileItems = $draggedScrapbookItems.filter(
-                (i) => i.type === "file"
-            ) as ArtistFileItem[];
+            const scrapbookItems = $draggedScrapbookItems.filter(
+                (i) => i.type === "file" || i.type === "link"
+            ) as ArtistContentItem[];
             isDragging = false;
             // Only handle if global cursor position is in this component
             if (
@@ -295,7 +478,15 @@
                 $emptyDropEvent.y >= containerRect.top &&
                 $emptyDropEvent.y <= containerRect.top + container.clientHeight
             ) {
-                handleFileDrop(fileItems.map((i) => i.path));
+                const files = scrapbookItems.filter(
+                    (i) => i.type === "file"
+                ) as ArtistFileItem[];
+                const links = scrapbookItems.filter(
+                    (i) => i.type === "link"
+                ) as ArtistLinkItem[];
+
+                files.length && handleFileDrop(files.map((f) => f.path));
+                links.length && handleLinkDrop(links);
 
                 $emptyDropEvent = null;
                 $draggedScrapbookItems = [];
@@ -321,7 +512,8 @@
                     <p>"</p>
                     <input
                         use:autoWidth
-                        bind:value={songProjectClone.title}
+                        value={songProjectClone.title}
+                        on:input={onTitleUpdated}
                         placeholder="?"
                     />
                     <p>"</p></span
@@ -346,21 +538,24 @@
             <div>
                 <p>in album:</p>
                 <input
-                    bind:value={songProjectClone.album}
+                    value={songProjectClone.album}
+                    on:input={onAlbumUpdated}
                     placeholder="add an album"
                 />
             </div>
             <div>
                 <p>music written by:</p>
                 <input
-                    bind:value={songProjectClone.musicComposedBy}
+                    value={songProjectClone.musicComposedBy}
+                    on:input={onComposerUpdated}
                     placeholder="add a composer"
                 />
             </div>
             <div>
                 <p>lyrics written by:</p>
                 <input
-                    bind:value={songProjectClone.lyricsWrittenBy}
+                    value={songProjectClone.lyricsWrittenBy}
+                    on:input={onLyricistUpdated}
                     placeholder="add a lyricist"
                 />
             </div>
@@ -370,18 +565,26 @@
             <div>
                 <p class:bpm={bpmTicker % 2 === 0}>BPM:</p>
                 <input
-                    bind:value={songProjectClone.bpm}
+                    value={songProjectClone.bpm ?? null}
                     on:input={debounce(onBpmUpdated, 300)}
                     on:focus={onBpmFocus}
                     on:blur={stopBpmTicker}
                     placeholder="bpm"
                     max="300"
                     min="20"
+                    autocomplete="off"
+                    spellcheck="false"
                 />
             </div>
             <div>
                 <p>key:</p>
-                <input bind:value={songProjectClone.key} placeholder="key" />
+                <input
+                    value={songProjectClone.key ?? null}
+                    on:input={onKeyUpdated}
+                    placeholder="key"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
             </div>
         </div>
         <div class="content-container">
@@ -414,13 +617,16 @@
                     />
                 </div>
 
-                <div class="bg-gradient" />
+                {#if selectedTab !== "other"}
+                    <div class="bg-gradient" />
+                {/if}
             </div>
             <content class={selectedTab}>
                 {#if selectedTab === "music"}
                     <MusicTab
-                        recordings={songProjectClone.recordings}
+                        recordings={songProjectClone?.recordings}
                         {addRecording}
+                        {deleteRecording}
                         {songProject}
                         {song}
                         {onSelectSong}
@@ -430,9 +636,18 @@
                     <LyricsTab
                         fontSize={currentFontSize}
                         isFullScreen={fullScreenLyrics}
+                        lyrics={songProjectClone?.lyrics}
+                        {onLyricsUpdated}
+                        enabled={songProjectClone?.id !== undefined}
                     />
                 {:else if selectedTab === "other"}
-                    <OtherTab />
+                    <OtherTab
+                        items={songProjectClone.otherContentItems}
+                        enabled={songProjectClone?.id !== undefined}
+                        showDropPlaceholder={isDragging}
+                        addContentItem={handleFileDrop}
+                        {deleteContentItem}
+                    />
                 {/if}
             </content>
         </div>

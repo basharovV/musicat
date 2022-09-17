@@ -48,9 +48,16 @@
         { name: "Duration", value: "duration" }
     ];
 
+    export let showMyArtists = false;
+
     export let theme = "default";
     export let isSmartQueryEnabled = true; // Only for main view
     export let onSongsHighlighted = null;
+
+    $: artists = liveQuery(async () => {
+        let results = await db.artistProjects.toArray();
+        return results.map((a) => a.name);
+    });
 
     $: count = liveQuery(() => {
         return db.songs.count();
@@ -159,7 +166,7 @@
         } else if (
             event.keyCode === 38 &&
             document.activeElement.tagName.toLowerCase() !== "input" &&
-            document.activeElement.tagName.toLowerCase() !== "textarea" 
+            document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             event.preventDefault();
             // up
@@ -173,7 +180,7 @@
         } else if (
             event.keyCode === 40 &&
             document.activeElement.tagName.toLowerCase() !== "input" &&
-            document.activeElement.tagName.toLowerCase() !== "textarea" 
+            document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             // down
             event.preventDefault();
@@ -189,7 +196,7 @@
             !$isTrackInfoPopupOpen &&
             $singleKeyShortcutsEnabled &&
             document.activeElement.tagName.toLowerCase() !== "input" &&
-            document.activeElement.tagName.toLowerCase() !== "textarea" 
+            document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             // 'i' for info popup
             event.preventDefault();
@@ -204,7 +211,7 @@
             event.keyCode === 13 &&
             !$isTrackInfoPopupOpen &&
             document.activeElement.tagName.toLowerCase() !== "input" &&
-            document.activeElement.tagName.toLowerCase() !== "textarea" 
+            document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
@@ -386,7 +393,7 @@
     }
 </script>
 
-{#if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== 'smart-query'))}
+{#if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
     <ImportPlaceholder />
 {:else}
     <container class="theme-{theme}">
@@ -473,7 +480,12 @@
                             {#each fields as field (field)}
                                 <td data-type={field.value}>
                                     <div>
-                                        <p>
+                                        <p
+                                            class:my-artist={field.value ===
+                                                "artist" &&
+                                                $artists &&
+                                               $artists.includes(song[field.value])}
+                                        >
                                             {song[field.value] === "" ||
                                             song[field.value] === -1 ||
                                             song[field.value] === 0 ||
@@ -671,6 +683,12 @@
                 text-overflow: ellipsis;
                 overflow: hidden;
                 white-space: nowrap;
+                &.my-artist {
+                    &::before {
+                        content: '© ';
+                        color:#855cff;
+                    }
+                }
             }
             @media only screen and (max-width: 522px) {
                 &:not(:nth-child(1)) {

@@ -12,10 +12,11 @@
 
     export let x;
     export let y;
+    export let fixed = false;
     export let items: MenuItem[] = [];
     export let onItemSelected = null;
     export let onClickOutside = null;
-    export let position: 'auto'|'manual' = 'auto';
+    export let position: "auto" | "manual" = "auto";
 
     let hoveredItemIdx = 0;
     $: numberOfItems = items.length;
@@ -46,7 +47,7 @@
 
     // whenever x and y is changed, restrict box to be within bounds
     $: (() => {
-        if (!menuEl || position === 'manual') return;
+        if (!menuEl || position === "manual") return;
 
         const rect = menuEl.getBoundingClientRect();
         x = Math.min(window.innerWidth - rect.width - 30, x);
@@ -89,6 +90,7 @@
 </script>
 
 <div
+    class:fixed
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
     use:clickOutside={() => {
@@ -110,7 +112,7 @@
     {/each}
 </div>
 
-<style>
+<style lang="scss">
     div {
         position: absolute;
         display: grid;
@@ -125,5 +127,8 @@
         z-index: 20;
         max-width: 300px;
         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+        &.fixed {
+            position: fixed;
+        }
     }
 </style>

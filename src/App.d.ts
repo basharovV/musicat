@@ -48,7 +48,7 @@ interface SongProject {
     musicComposedBy: string[]; // Multiple people
     lyricsWrittenBy: string[]; // Multiple people
     artworkFilePath?: string;
-    masterLyricsFilePath?: string;
+    lyrics?: string;
     recordings: SongProjectRecording[];
     otherContentItems: ArtistContentItem[];
     songId?: string; // If this exists - the song is added to the library (master audio)
@@ -126,6 +126,7 @@ interface ContentItem {
 export interface ArtistLinkItem extends ContentItem {
     type: "link";
     url: string;
+    imageUrl?: string;
 }
 
 export interface ArtistFileItem extends ContentItem {

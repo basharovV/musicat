@@ -116,4 +116,4 @@
     });
 </script>
 
-<Library songs={songs}/>
+<Library songs={songs} showMyArtists={true}/>

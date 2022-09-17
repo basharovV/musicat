@@ -306,6 +306,9 @@
     appWindow.listen("tauri://focus", evt => {
         isMiniPlayerHovered = true;
     })
+    appWindow.listen("tauri://blur", evt => {
+        isMiniPlayerHovered = false;
+    })
 </script>
 
 <!-- svelte-ignore a11y-mouse-events-have-key-events -->

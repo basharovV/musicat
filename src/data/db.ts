@@ -13,7 +13,7 @@ export class MySubClassedDexie extends Dexie {
     scrapbook!: Table<ContentItem>;
     constructor() {
         super("musicatdb");
-        this.version(2).stores({
+        this.version(3).stores({
             songs: "id, title, artist, album, genre, year, duration, [artist+album+trackNumber], [album+trackNumber], [artist+album]", // Primary key and indexed props
             smartQueries: "name",
             artistProjects: "name",

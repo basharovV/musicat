@@ -1,12 +1,13 @@
 <script lang="ts">
-    import {} from "@tauri-apps/api/os";
     import { open } from "@tauri-apps/api/shell";
     import type { ArtistFileItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
     import { getSongFromFile } from "../../data/LibraryImporter";
     import audioPlayer from "../AudioPlayer";
+    import { convertFileSrc } from "@tauri-apps/api/tauri";
 
     export let item: ArtistFileItem;
+    export let style: "dashed" | "outline" = "dashed";
 
     async function openFile() {
         if (item.fileType.type === "audio") {
@@ -28,19 +29,28 @@
 </script>
 
 <div
-    class="item {item.fileType.type}"
+    class="item {item.fileType.type} {style}"
     on:click={openFile}
     draggable="true"
     on:dragstart={onDragStart}
 >
     <div class="container">
-        <div class="background">
-            <iconify-icon
-                icon={item.fileType.type === "video"
-                    ? "bxs:video"
-                    : "system-uicons:audio-wave"}
-            />
-        </div>
+        {#if item.fileType.type === "image"}
+            <img src={convertFileSrc(item.path)} alt="thumnbail" />
+        {:else if item.fileType.type === "video"}
+            <!-- svelte-ignore a11y-media-has-caption -->
+            <video preload="metadata" controls={false}>
+                <source src="{convertFileSrc(item.path)}#t=0.1" type="video/mp4" />
+            </video>
+        {:else}
+            <div class="background">
+                <iconify-icon
+                    icon={item.fileType.type === "video"
+                        ? "bxs:video"
+                        : "system-uicons:audio-wave"}
+                />
+            </div>
+        {/if}
         <div class="item-info">
             {#if item.fileType.type === "audio"}
                 <iconify-icon icon="bi:file-earmark-play" />
@@ -85,11 +95,24 @@
                 color: rgb(212, 212, 66);
             }
         }
+
+        &.dashed {
+            .container {
+                border-style: dashed;
+            }
+        }
+
+        &.outline {
+            .container {
+                border-style: solid;
+            }
+        }
         .container {
             height: 60px;
             overflow: hidden;
             border-radius: 4px;
-            border: 1px dashed rgb(97, 97, 97);
+            border-width: 1px;
+            border-color: rgb(97, 97, 97);
             background-color: rgba(138, 138, 138, 0.067);
             padding: 0.7em 1em;
             display: flex;
@@ -103,6 +126,7 @@
                 height: fit-content;
                 align-items: flex-end;
                 gap: 5px;
+                z-index: 2;
                 p {
                     margin: 0;
                     line-height: 1em;
@@ -114,6 +138,19 @@
                     height: fit-content;
                     display: flex;
                 }
+            }
+
+            img, video {
+                width: 100%;
+                height: 100%;
+                position: absolute;
+                object-fit: cover;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 0;
+                opacity: 0.4;
             }
 
             &:hover {

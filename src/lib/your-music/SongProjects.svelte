@@ -16,6 +16,7 @@
             album: "",
             musicComposedBy: [artist.name], // Multiple people
             lyricsWrittenBy: [], // Multiple people,
+            lyrics: "",
             recordings: [],
             otherContentItems: []
         });

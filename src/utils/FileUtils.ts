@@ -1,3 +1,4 @@
+import { readTextFile } from "@tauri-apps/api/fs";
 import type { ContentFileType } from "src/App";
 
 export function isAudioFile(filename: string): boolean {

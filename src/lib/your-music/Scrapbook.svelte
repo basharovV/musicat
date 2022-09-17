@@ -5,6 +5,7 @@
     import type {
         ArtistContentItem,
         ArtistFileItem,
+        ArtistLinkItem,
         ContentItem
     } from "src/App";
     import { db } from "../../data/db";
@@ -22,6 +23,7 @@
     import MenuOption from "../menu/MenuOption.svelte";
     import { flip } from "svelte/animate";
     import { quadInOut } from "svelte/easing";
+    import { getLinkItemWithData } from "../../utils/URLMetadata";
 
     $: contentItems = liveQuery(async () => {
         return await db.scrapbook.toArray();
@@ -43,9 +45,15 @@
         db.scrapbook.add(toAdd);
     }
 
+    async function addLink(url) {
+        const item = await getLinkItemWithData(url);
+        db.scrapbook.add(item);
+    }
+
     function importContentItem() {
         openImportDialog();
     }
+
     export async function openImportDialog() {
         // Open a selection dialog for directories
         const selected = await open({
@@ -65,7 +73,7 @@
     }
 
     function onMouseEnter() {
-        console.log('Entered scrapbook: hovered files: ', $hoveredFiles)
+        console.log("Entered scrapbook: hovered files: ", $hoveredFiles);
         if ($hoveredFiles.length > 0) {
             $fileDropHandler = "scrapbook";
         }
@@ -195,6 +203,13 @@
         rightClickedItem = item;
         rightClickedPos = { x: e.clientX, y: e.clientY };
     }
+
+    function onPaste(evt: ClipboardEvent) {
+        const data = evt.clipboardData.getData("text");
+        if (data && data.startsWith("https://")) {
+            addLink(data);
+        }
+    }
 </script>
 
 <container
@@ -202,6 +217,7 @@
     on:mouseenter={onMouseEnter}
     on:mouseleave={onMouseLeave}
     on:dragenter={onMouseEnter}
+    on:paste|preventDefault={onPaste}
     class:file-drop={$hoveredFiles.length}
 >
     <div class="legend">
@@ -226,7 +242,7 @@
         {#if $contentItems}
             <div>
                 {#each $contentItems as item (item.id)}
-                    <div 
+                    <div
                         animate:flip={{ duration: 180, easing: quadInOut }}
                         class="item"
                         on:contextmenu|preventDefault={(e) => {
@@ -273,6 +289,7 @@
     container {
         position: relative;
         height: 100%;
+        display: block;
 
         &.dragging {
             * {

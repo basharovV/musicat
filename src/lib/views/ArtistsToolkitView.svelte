@@ -41,7 +41,7 @@
     function onSelectSong(song: Song) {
         selectedSong = song;
         const existingSongProject = $songProjects.find(
-            (s) => s.id === song.songProjectId
+            (s) => s.id === song?.songProjectId
         );
         if (existingSongProject) {
             selectedSongProject = existingSongProject;
@@ -53,6 +53,7 @@
                 album: song?.album ?? "",
                 musicComposedBy: [],
                 lyricsWrittenBy: [],
+                lyrics: "",
                 recordings: [
                     {
                         recordingType: "master",
@@ -130,7 +131,7 @@
     </section>
     <section class="songs">
         <div>
-            <h2>Songs in progress</h2>
+            <h2>my songs</h2>
         </div>
         <SongProjects
             songProjects={$songProjects}
@@ -140,7 +141,7 @@
         />
         <hr />
         <div>
-            <h2>In Library</h2>
+            <h2>in library</h2>
         </div>
         <Library
             theme="outline"
