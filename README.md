@@ -26,7 +26,7 @@
 Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback! 
 
 ## Build locally
-Pre-requisits: Set up the [Tauri](https://tauri.app/) framework.
+Pre-requisites: Set up the [Tauri](https://tauri.app/) framework.
 
 You can then create a development build using `npm run tauri dev`. 
 ### macOS Universal build 
