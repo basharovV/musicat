@@ -6,7 +6,11 @@ export function clickOutside(element, callbackFunction) {
         }
     }
     
-    document.body.addEventListener('click', onClick);
+    // For some reason the click event from the button that shows the component is fired here
+    // so we need to wait before adding a listener. 
+    setTimeout(() => {
+        document.body.addEventListener('click', onClick);
+    }, 100);
     
     return {
         update(newCallbackFunction) {

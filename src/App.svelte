@@ -38,8 +38,10 @@
     //     console.log("drag enter");
     // }
 
-    function onPageClick() {
-        $isInfoPopupOpen = false;
+    function onCloseAppInfo() {
+        if ($isInfoPopupOpen) {
+            $isInfoPopupOpen = false;
+        }
     }
 
     let mouseX;
@@ -123,7 +125,7 @@
 
 {#if $isInfoPopupOpen}
     <div class="info">
-        <InfoPopup />
+        <InfoPopup onClickOutside={onCloseAppInfo} />
     </div>
 {/if}
 

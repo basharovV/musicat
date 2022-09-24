@@ -2,6 +2,13 @@
     <h3>Release Notes</h3>
 
     <section>
+        <h3>📦 0.3.0 <i>"Enhance, enhance!"</i></h3>
+        <li>
+            The new Smart Query section allows you to create powerful query chains, made up of condition blocks such as "where genre is x" and "released between year1 and year2". 
+        </li>
+    </section>
+
+    <section>
         <h3>📦 0.2.0 <i>"Very meta"</i></h3>
         <li>
             Right-click on track -> "Info & metadata" to view and edit the

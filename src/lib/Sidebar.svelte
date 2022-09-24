@@ -29,6 +29,9 @@
     import SpectrumAnalyzer from "./SpectrumAnalyzer.svelte";
     import "./tippy.css";
 
+    // Env
+    let isArtistToolkitEnabled = process.env.NODE_ENV === 'development';
+
     // What to show in the sidebar
     let title;
     let artist;
@@ -147,6 +150,10 @@
         // });
         console.log("clicked");
         $isInfoPopupOpen = true;
+    }
+    $: {
+        console.log('info popup:', $isInfoPopupOpen);
+        
     }
     let height = 0;
     let width = 0;
@@ -362,6 +369,7 @@
                 >
                     <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
                 >
+                {#if isArtistToolkitEnabled}
                 <item
                     class:selected={$uiView === "your-music"}
                     on:click={() => {
@@ -371,6 +379,7 @@
                     <iconify-icon icon="mdi:music-clef-treble" />Artist's
                     toolkit</item
                 >
+                {/if}
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
 
                 <!-- <hr />

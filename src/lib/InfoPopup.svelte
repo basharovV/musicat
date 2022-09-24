@@ -2,17 +2,15 @@
     import { getVersion } from "@tauri-apps/api/app";
 
     import { isInfoPopupOpen } from "../data/store";
+    import { clickOutside } from "../utils/ClickOutside";
     import ReleaseNotes from "./ReleaseNotes.svelte";
 
     let version = getVersion();
-
-    function onPageClick() {
-        $isInfoPopupOpen = false;
-    }
+    export let onClickOutside;
 </script>
 
-<container on:click={onPageClick}>
-    <div class="popup">
+<container>
+    <div class="popup" use:clickOutside={onClickOutside}>
         <!-- <img src="images/cd6.gif" /> -->
         <section class="info">
             <div>
