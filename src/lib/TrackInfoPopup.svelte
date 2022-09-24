@@ -22,7 +22,8 @@
     import "./tippy.css";
     import Input from "./Input.svelte";
     import { focusTrap } from "../utils/FocusTrap";
-import type { MetadataEntry, TagType } from "src/App";
+    import type { MetadataEntry, TagType } from "src/App";
+    import { db } from "../data/db";
 
     // optional
 
@@ -139,11 +140,11 @@ import type { MetadataEntry, TagType } from "src/App";
      */
     function writeMetadata() {
         const toWrite = metadata
-                .filter((m) => m.value !== null)
-                .map((t) => ({ id: t.id, value: t.value }));
-        console.log('Writing: ', toWrite)
+            .filter((m) => m.value !== null)
+            .map((t) => ({ id: t.id, value: t.value }));
+        console.log("Writing: ", toWrite);
         emit("write-metadata", {
-            metadata: toWrite,                
+            metadata: toWrite,
             "tag_type": tagType,
             "file_path": $rightClickedTrack.path,
             "artwork_file_to_set": artworkFileToSet ? artworkFileToSet : ""
@@ -305,6 +306,31 @@ import type { MetadataEntry, TagType } from "src/App";
             reset();
         }
     }
+
+    let matchingArtists: string[] = [];
+
+    let distinctArtists;
+
+    let firstMatch: string = null;
+    
+    async function onArtistUpdated(evt) {
+        let matched = [];
+        const artist = evt.target.value;
+        if (artist && artist.trim().length > 0) {
+            if (distinctArtists === undefined) {
+                distinctArtists = await db.songs.orderBy("artist").uniqueKeys();
+            }
+            distinctArtists.forEach((a) => {
+                if (a.toLowerCase().includes(artist.toLowerCase())) {
+                    matched.push(a);
+                }
+            });
+
+            firstMatch = distinctArtists[0];
+        } else {
+            firstMatch = null;
+        }
+    }
 </script>
 
 <container use:focusTrap>
@@ -410,11 +436,24 @@ import type { MetadataEntry, TagType } from "src/App";
                 {:else}
                     <form>
                         {#each metadata as tag}
-                            <div class="tag">
-                                <p>{tag.genericId ? tag.genericId : tag.id}</p>
-                                <div class="line" />
-                                <Input bind:value={tag.value} />
-                            </div>
+                            {#if tag.genericId === "artist"}
+                                <div class="tag">
+                                    <p>artist</p>
+                                    <div class="line" />
+                                    <Input
+                                        bind:value={tag.value}
+                                        onChange={onArtistUpdated}
+                                    />
+                                </div>
+                            {:else}
+                                <div class="tag">
+                                    <p>
+                                        {tag.genericId ? tag.genericId : tag.id}
+                                    </p>
+                                    <div class="line" />
+                                    <Input bind:value={tag.value} />
+                                </div>
+                            {/if}
                         {/each}
                     </form>
                 {/if}
@@ -615,8 +654,7 @@ import type { MetadataEntry, TagType } from "src/App";
             font-size: 13px;
             max-width: 400px;
             margin: auto;
-            font-family: -apple-system, Avenir, Helvetica, Arial,
-                sans-serif;
+            font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
         }
         .file-info {
             display: flex;
@@ -675,7 +713,8 @@ import type { MetadataEntry, TagType } from "src/App";
         width: 100%;
         /* border: 1px solid rgb(78, 73, 73); */
         background: rgba(56, 54, 60, 0.842);
-        font-family: system-ui, -apple-system, Avenir, Helvetica, Arial, sans-serif;
+        font-family: system-ui, -apple-system, Avenir, Helvetica, Arial,
+            sans-serif;
         h4 {
             user-select: none;
             position: absolute;

@@ -35,7 +35,7 @@
         onClick && onClick();
     }}
 >
-    <div class="bg" style={color ? `background-color: ${color}cb` : ""} />
+    <div class="bg" style={color ? `background-color: ${color}` : ""} />
     {#if isConfirming}
         {confirmText}
     {:else if text}
@@ -56,8 +56,8 @@
     .bg {
         position: absolute;
         top: 2px;
-        left: 2px;
         right: 2px;
+        width: 5px;
         bottom: 2px;
         border-radius: 2px;
     }

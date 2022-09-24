@@ -175,6 +175,7 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
             println!("fileType: {:?}", &fileType);
             let mut tag = read_from_path(&v.file_path, true).unwrap();
             let tagFileType = tag.file_type();
+            let mut to_write = lofty::Tag::new(tag_type.unwrap());
             println!("tag fileType: {:?}", &tagFileType);
 
             let primary_tag = tag.primary_tag_mut().unwrap();
@@ -208,7 +209,7 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
                         let item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
                         let item_value: ItemValue =
                             ItemValue::Text(String::from(item.value.as_str().unwrap()));
-                        primary_tag.insert_item_unchecked(TagItem::new(item_key, item_value));
+                            to_write.insert_item_unchecked(TagItem::new(item_key, item_value));
                     }
                 }
             }
@@ -223,7 +224,7 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
 
                 let mut reader = BufReader::new(picture_file);
                 let picture = Picture::from_reader(reader.get_mut());
-                primary_tag.set_picture(0, picture.unwrap());
+                to_write.set_picture(0, picture.unwrap());
             }
 
             for tagItem in tag.tags() {
@@ -235,6 +236,8 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
             println!("{:?}", file);
             println!("FILETYPE: {:?}", fileType);
 
+            tag.clear();
+            tag.insert_tag(to_write);
             tag.save_to(&mut file)?;
             println!("File saved succesfully!");
         }

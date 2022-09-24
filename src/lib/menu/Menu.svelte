@@ -131,6 +131,7 @@
         box-shadow: 10px 10px 10px 0px #0002;
         z-index: 20;
         max-width: 300px;
+        min-width: 65px;
         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
         &.fixed {
             position: fixed;

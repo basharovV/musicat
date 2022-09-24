@@ -10,28 +10,22 @@
 
     $: firstMatch = (matches.length && matches[0]) ?? null;
     let textInputColor;
-    $: {
-        if (value) {
-            textInputColor = options.find((o) => o.name === value)?.color;
-        } else {
-            textInputColor = "#FFFFFF";
-        }
-    }
 
-    $: correctedTextInputColor = isDarkColor(textInputColor)
+
+    $: correctedTextInputColor = textInputColor !== null && isDarkColor(textInputColor)
         ? "white"
-        : textInputColor;
+        : textInputColor ?? '#FFFFFF';
     let options: { name: string; color: string }[] = [
         // Major#
-        { name: "C", color: "#13EDA9" },
+        { name: "C", color: "#006CFF" },
         { name: "C#", color: "#E5C874" },
-        { name: "D", color: "#EB9D13" },
+        { name: "D", color: "#FFD600" },
         { name: "D#", color: "#48BF8D" },
         { name: "E", color: "#70EE3D" },
         { name: "F", color: "#ED7513" },
         { name: "F#", color: "#ED4A8F" },
-        { name: "G", color: "#FF1700" },
-        { name: "G#", color: "#A8B50B" },
+        { name: "G", color: "#FF3400" },
+        { name: "G#", color: "#E600FF" },
         { name: "A", color: "#3BBDDF" },
         { name: "A#", color: "#936339" },
         { name: "B", color: "#FF4F00" },
@@ -49,13 +43,21 @@
         { name: "A#m", color: "#422210" },
         { name: "Bm", color: "#723DEE" }
     ];
+    $: {
+        if (value) {
+            textInputColor = options.find((o) => o.name === value)?.color ?? '#FFFFFF';
+        } else {
+            textInputColor = "#FFFFFF";
+        }
+    }
 
     function onFocus() {
         console.log("onfocus");
         setTimeout(() => {
+            matches = options;
+            updateQueryPartsAutocompletePos();
+
             if (value && value.trim().length === 0) {
-                matches = options;
-                updateQueryPartsAutocompletePos();
                 matches = matches;
                 console.log("matching parts", matches);
             }
@@ -114,6 +116,7 @@
     use:autoWidth
     bind:this={artistInput}
     {value}
+    maxlength="3"
     on:input={onInput}
     on:focus={onFocus}
     on:blur={onLostFocus}
@@ -145,6 +148,7 @@
 <style lang="scss">
     input {
         min-width: 60px;
+        max-width: 40px;
         width: 100%;
         align-items: center;
         padding: 0.2em 0.5em;
