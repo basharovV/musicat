@@ -138,10 +138,12 @@ import type { MetadataEntry, TagType } from "src/App";
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
     function writeMetadata() {
-        emit("write-metadata", {
-            metadata: metadata
+        const toWrite = metadata
                 .filter((m) => m.value !== null)
-                .map((t) => ({ id: t.id, value: t.value })),
+                .map((t) => ({ id: t.id, value: t.value }));
+        console.log('Writing: ', toWrite)
+        emit("write-metadata", {
+            metadata: toWrite,                
             "tag_type": tagType,
             "file_path": $rightClickedTrack.path,
             "artwork_file_to_set": artworkFileToSet ? artworkFileToSet : ""

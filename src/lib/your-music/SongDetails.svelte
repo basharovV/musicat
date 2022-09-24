@@ -32,6 +32,8 @@
     import { getContentFileType } from "../../utils/FileUtils";
     import { readTextFile } from "@tauri-apps/api/fs";
     import toast from "svelte-french-toast";
+    import DropdownInput from "../ui/KeySelector.svelte";
+    import KeySelector from "../ui/KeySelector.svelte";
 
     export let songProject: SongProject;
     export let song: Song; // We might need to create a project based on this song
@@ -150,8 +152,10 @@
         saveSongProject();
     }
 
-    function onKeyUpdated(evt) {
-        songProjectClone.key = evt.target.value;
+    function onKeyUpdated(key) {
+        console.log("key updated", key);
+        
+        songProjectClone.key = key;
         saveSongProject();
     }
 
@@ -578,13 +582,7 @@
             </div>
             <div>
                 <p>key:</p>
-                <input
-                    value={songProjectClone.key ?? null}
-                    on:input={onKeyUpdated}
-                    placeholder="key"
-                    autocomplete="off"
-                    spellcheck="false"
-                />
+                <KeySelector value={songProjectClone.key ?? null} {onKeyUpdated}/>
             </div>
         </div>
         <div class="content-container">

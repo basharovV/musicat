@@ -29,7 +29,7 @@ fn main() {
             });
 
             #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow)
+            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
             #[cfg(target_os = "windows")]
@@ -226,12 +226,15 @@ fn write_metadata(event: Event) -> Result<(), Box<dyn Error>> {
                 primary_tag.set_picture(0, picture.unwrap());
             }
 
-            // for tagItem in tag.items() {
-            //     println!("{:?}", tagItem);
-            // }
+            for tagItem in tag.tags() {
+                for tag in tagItem.items() {
+                    println!("{:?}", tag);
+                }
+            }
             let mut file = File::options().read(true).write(true).open(&v.file_path)?;
             println!("{:?}", file);
             println!("FILETYPE: {:?}", fileType);
+
             tag.save_to(&mut file)?;
             println!("File saved succesfully!");
         }

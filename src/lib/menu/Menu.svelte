@@ -8,6 +8,7 @@
         text: string;
         description: string;
         source: any;
+        color?: string;
     }
 
     export let x;
@@ -17,6 +18,7 @@
     export let onItemSelected = null;
     export let onClickOutside = null;
     export let position: "auto" | "manual" = "auto";
+    export let padding = 0;
 
     let hoveredItemIdx = 0;
     $: numberOfItems = items.length;
@@ -96,13 +98,14 @@
     use:clickOutside={() => {
         onClickOutside && onClickOutside();
     }}
-    style="top: {y}px; left: {x}px;"
+    style="top: {y}px; left: {x}px;gap: {padding}px;"
 >
     {#each items as item, idx}
         <MenuOption
             text={item.text}
             description={item.description}
             isHighlighted={hoveredItemIdx === idx}
+            color={item.color}
             onClick={() => {
                 onItemSelected && onItemSelected(item.source);
             }}
@@ -115,7 +118,9 @@
 <style lang="scss">
     div {
         position: absolute;
-        display: grid;
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
         border: 1px solid rgba(255, 255, 255, 0.23);
         box-shadow: 2px 2px 5px 0px #0002;
         border-radius: 8px;

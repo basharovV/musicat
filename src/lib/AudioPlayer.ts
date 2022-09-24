@@ -147,7 +147,6 @@ class AudioPlayer {
             this.audioFile.currentTime = 0;
             playerTime.set(this.audioFile.currentTime);
             this.audioFile.src = "asset://" + song.path.replace("?", "%3F");
-            // await this.wait(500);
             this.play();
             currentSong.set(song);
             this.currentSong = song;

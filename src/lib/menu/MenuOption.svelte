@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+    import isDarkColor from 'is-dark-color'
+
     export let isDisabled = false;
     export let isDestructive = false;
     export let text = "";
@@ -7,6 +9,7 @@
     export let isConfirming = false;
     export let isHighlighted = false;
     export let onClick = null;
+    export let color: string | null = null;
 
     import { createEventDispatcher } from "svelte";
     const dispatch = createEventDispatcher();
@@ -16,15 +19,23 @@
     }
 </script>
 
-<div
+<container
     class:disabled={isDisabled}
     class:destructive={isDestructive}
     class:confirming={isConfirming}
     class:highlighted={isHighlighted}
+    class:with-bg={color !== null && color !== undefined}
+
+    style={isHighlighted
+        ? color
+            ? `border: 1px solid ${isDarkColor(color) ? 'white' : color}e7;background-color: transparent;`
+            : "background-color: #c6c8ca;"
+        : ""}
     on:click|stopPropagation={() => {
         onClick && onClick();
     }}
 >
+    <div class="bg" style={color ? `background-color: ${color}cb` : ""} />
     {#if isConfirming}
         {confirmText}
     {:else if text}
@@ -39,10 +50,21 @@
     {:else}
         <slot />
     {/if}
-</div>
+</container>
 
 <style lang="scss">
-    div {
+    .bg {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        right: 2px;
+        bottom: 2px;
+        border-radius: 2px;
+    }
+    container {
+        box-sizing: border-box;
+        border: 1px solid transparent;
+        position: relative;
         padding: 0px 10px;
         cursor: default;
         font-size: 13.5px;
@@ -51,9 +73,20 @@
         grid-gap: 5px;
         color: rgb(255, 255, 255);
         border-radius: 2.5px;
+
+            &:hover.with-bg,
+            &.highlighted.with-bg {
+                background: transparent;
+                transform: scale(1.1);
+                border: 1px solid white;
+                color: white;
+            }
+        &:not(.with-bg) {
+            transform: scale(1);
+        }
+
         &:hover,
         &.highlighted {
-            background: #c6c8ca;
             color: rgb(37, 36, 36);
         }
         &.disabled {
@@ -78,6 +111,7 @@
         span {
             display: block;
             padding: 0.2em 0 0.3em 0;
+            z-index: 1;
             p {
                 white-space: nowrap;
                 margin: 0;
@@ -85,7 +119,6 @@
                 max-width: 250px;
                 overflow: hidden;
                 text-overflow: ellipsis;
-
             }
 
             small {

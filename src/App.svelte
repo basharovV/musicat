@@ -24,6 +24,7 @@
     import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
     import LibraryView from "./lib/views/LibraryView.svelte";
     import { startMenuListener } from "./window/EventListener";
+    import { addFolder, addPaths } from "./data/LibraryImporter";
 
     startMenuListener();
 
@@ -44,6 +45,8 @@
     let mouseX;
     let mouseY;
 
+    let showDropzone = false;
+
     /**
      * Listen for native file drop and hover events here.
      *
@@ -55,9 +58,14 @@
         unlistenFileDrop = await appWindow.onFileDropEvent((evt) => {
             switch (evt.payload.type) {
                 case "drop":
+                    showDropzone = false;
                     console.log("paths:", evt.payload);
                     if (evt.payload.paths.length > 0) {
-                        $droppedFiles = evt.payload.paths;
+                        if ($uiView === "library") {
+                            addPaths(evt.payload.paths);
+                        } else if ($uiView === "your-music") {
+                            $droppedFiles = evt.payload.paths;
+                        }
                     } else {
                         // This is a temporary hack to get internal drag and drop working,
                         // while also supporting external files dropped into the app.
@@ -69,11 +77,16 @@
                 case "hover":
                     $hoveredFiles = evt.payload.paths;
                     console.log("files:", $hoveredFiles);
-
+                    if ($uiView === "library") {
+                        showDropzone = true;
+                    }
                     break;
                 case "cancel":
                     $droppedFiles = [];
                     $hoveredFiles = [];
+                    if ($uiView === "library") {
+                        showDropzone = false;
+                    }
                     console.log("files:", $hoveredFiles);
                     break;
             }
@@ -120,7 +133,7 @@
     </div>
 {/if}
 
-{#if $isDraggingExternalFiles && $uiView !== "your-music"}
+{#if showDropzone}
     <Dropzone />
 {/if}
 

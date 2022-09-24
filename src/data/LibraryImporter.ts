@@ -19,7 +19,10 @@ export async function getSongFromFile(filePath: string, fileName: string) {
     if (!isAudioFile(fileName)) {
         return null;
     }
-    const metadata = await musicMetadata.fetchFromUrl(convertFileSrc(filePath), { duration: false, skipCovers: true, skipPostHeaders: true });
+    const metadata = await musicMetadata.fetchFromUrl(
+        convertFileSrc(filePath),
+        { duration: false, skipCovers: true, skipPostHeaders: true }
+    );
     const fileHash = md5(filePath);
     const tagType = metadata.format.tagTypes.length
         ? metadata.format.tagTypes[0]
@@ -135,6 +138,17 @@ export async function addFolder(folderPath) {
 
     songsJustAdded.set(addedSongs);
     addedSongs = [];
+}
+
+export async function addPaths(paths: string[]) {
+    for (const path of paths) {
+        if (isAudioFile(path)) {
+            const file = path.split("/").pop();
+            await addSong(path, file, true);
+        } else if (path.match(`/.+(?=/)/`).length) {
+            await addFolder(path);
+        }
+    }
 }
 
 export async function openTauriImportDialog() {
