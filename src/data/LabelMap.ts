@@ -118,4 +118,20 @@ function getMapForTagType(
             return null;
     }
 }
-export { getMapForTagType };
+
+/**
+ * If we don't know the tagType from metadata, or the metadata is empty,
+ * we can infer the type from the file codec.
+ * @param codec
+ */
+const codecToTagTypeMap = {
+    "FLAC": "vorbis",
+    "MPEG 1 Layer 3": "ID3v2.4"
+};
+
+function getTagTypeFromCodec(codec) {
+    if (!codec) return null;
+    return codecToTagTypeMap[codec];
+}
+
+export { getMapForTagType, getTagTypeFromCodec };

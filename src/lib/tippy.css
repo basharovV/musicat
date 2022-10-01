@@ -4,9 +4,22 @@
 [data-tippy-root] {
   max-width: calc(100vw - 10px);
 }
+
+/* THEMES */
 .tippy-box[data-theme~='hidden'] {
   display: none;
 }
+
+.tippy-box[data-theme~='error'] {
+  background-color: #b71f1f;
+}
+
+.tippy-box[data-theme~='error'] > .tippy-arrow {
+  width: 16px;
+  height: 16px;
+  color: #b71f1f;
+}
+
 .tippy-box {
   position: relative;
   background-color: #181718;

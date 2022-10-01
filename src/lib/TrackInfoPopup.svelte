@@ -7,7 +7,7 @@
         unregister,
         unregisterAll
     } from "@tauri-apps/api/globalShortcut";
-    import { pictureDir } from "@tauri-apps/api/path";
+    import { join, pictureDir } from "@tauri-apps/api/path";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
 
     import "iconify-icon";
@@ -17,13 +17,16 @@
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { addSong, lookForArt } from "../data/LibraryImporter";
-    import { isTrackInfoPopupOpen, rightClickedTrack } from "../data/store";
-    import { getMapForTagType } from "../data/LabelMap";
+    import { isTrackInfoPopupOpen, os, rightClickedTrack } from "../data/store";
+    import { getMapForTagType, getTagTypeFromCodec } from "../data/LabelMap";
     import "./tippy.css";
     import Input from "./Input.svelte";
     import { focusTrap } from "../utils/FocusTrap";
     import type { MetadataEntry, TagType } from "src/App";
     import { db } from "../data/db";
+    import { optionalTippy } from "./ui/TippyAction";
+    import hotkeys from "hotkeys-js";
+    import { fly } from "svelte/transition";
 
     // optional
 
@@ -66,11 +69,17 @@
     }
 
     let isUnsupportedFormat = false;
-    function mergeDefault(metadata: MetadataEntry[], format: TagType) {
+    function mergeDefault(
+        metadata: MetadataEntry[],
+        format: TagType
+    ): MetadataEntry[] {
         if ($rightClickedTrack.fileInfo.codec === "PCM") {
             isUnsupportedFormat = true;
             return []; // UNSUPPORTED FORMAT, for now...
         }
+
+        if (!format) return [];
+
         isUnsupportedFormat = false;
         const cloned = cloneDeep(metadata);
         const { defaults, others } = addDefaults(cloned, format);
@@ -97,7 +106,11 @@
     let artworkFormat;
     let artworkBuffer: Buffer;
     let artworkSrc;
-    $: tagType = $rightClickedTrack.fileInfo.tagTypes[0];
+
+    $: tagType = $rightClickedTrack.fileInfo?.tagTypes?.length
+        ? $rightClickedTrack.fileInfo.tagTypes[0]
+        : getTagTypeFromCodec($rightClickedTrack.fileInfo.codec);
+
     let foundArtwork;
     let isArtworkSet = false;
     let artworkFileToSet = null;
@@ -244,15 +257,6 @@
                 }
             }
         });
-        await unregisterAll();
-        await register("CommandOrControl+Enter", () => {
-            if (hasChanges) {
-                writeMetadata();
-            }
-        });
-        await register("Esc", () => {
-            onClose();
-        });
 
         unlisten = await listen("write-success", async (event) => {
             // console.log("Successfully written metadata!");
@@ -285,20 +289,33 @@
 
             getArtwork();
         }
-
+        containsError = null;
         previousAlbum = $rightClickedTrack.album;
         metadata = mergeDefault($rightClickedTrack.metadata, tagType);
         hasChanges = !isEqual(
             metadata,
             mergeDefault($rightClickedTrack.metadata, tagType)
         );
+        console.log("metadata", metadata);
     }
+
+    // Shortcuts
+    let modifier = $os === "Darwin" ? "cmd" : "ctrl";
+    hotkeys(`${modifier}+enter`, function (event, handler) {
+        if (hasChanges) {
+            writeMetadata();
+        }
+    });
+    hotkeys("esc", () => {
+        onClose();
+    });
 
     onDestroy(() => {
         if (unlisten) {
             unlisten();
         }
-        unregisterAll();
+        hotkeys.unbind(`${modifier}+enter`);
+        hotkeys.unbind("esc");
     });
 
     $: {
@@ -312,8 +329,32 @@
     let distinctArtists;
 
     let firstMatch: string = null;
-    
+    $: firstMatchRemainder = firstMatch?.startsWith(artistInput)
+        ? firstMatch.substring(artistInput.length, firstMatch.length)
+        : "";
+    $: {
+        console.log(firstMatchRemainder);
+    }
+
+    $: artistInput =
+        metadata?.find((m) => m.genericId === "artist")?.value ?? "";
+
+    let artistInputField: HTMLInputElement;
+
+    function onArtistAutocompleteSelected() {
+        if (firstMatch?.length) {
+            artistInput = firstMatch;
+            firstMatch = null;
+        }
+    }
+
     async function onArtistUpdated(evt) {
+        artistInput = evt.target.value;
+        const artistField = metadata.find((m) => m.genericId === "artist");
+        if (artistField) {
+            artistField.value = artistInput;
+        }
+        metadata = metadata;
         let matched = [];
         const artist = evt.target.value;
         if (artist && artist.trim().length > 0) {
@@ -321,15 +362,95 @@
                 distinctArtists = await db.songs.orderBy("artist").uniqueKeys();
             }
             distinctArtists.forEach((a) => {
-                if (a.toLowerCase().includes(artist.toLowerCase())) {
+                if (a.toLowerCase().startsWith(artist.toLowerCase())) {
                     matched.push(a);
                 }
             });
 
-            firstMatch = distinctArtists[0];
+            firstMatch = matched.length && matched[0] ? matched[0] : "";
         } else {
             firstMatch = null;
         }
+    }
+
+    const VALIDATION_STRINGS = {
+        "err:invalid-chars":
+            "Invalid characters in metadata tag (hidden/unicode characters?)",
+        "err:null-chars": "Hidden null characer",
+        "warn:custom-tag":
+            "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead."
+    };
+
+    type ValidationErrors = "err:invalid-chars" | "err:null-chars";
+    type ValidationWarnings = "warn:custom-tag";
+
+    type Validation = {
+        [key: string]: {
+            errors: ValidationErrors[];
+            warnings: ValidationWarnings[];
+        };
+    };
+
+    /**
+     * Some tags have a \u0000 character dangling at the end.
+     * This prevents the metadata from being ready properly, so we can
+     * show a prompt to fix this with the user's permission.
+     */
+    let containsError: ValidationErrors = null;
+
+    function stripNonAsciiChars() {
+        metadata = metadata.map((entry) => ({
+            ...entry,
+            id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id
+        }));
+        console.log("stripped ascii: ", metadata);
+        writeMetadata();
+    }
+
+    /**
+     * A map of tag id <-> errors that apply to this tag
+     */
+    $: errors =
+        metadata?.reduce((errors: Validation, currentTag) => {
+            containsError = null;
+            if (!errors[currentTag.id]) {
+                errors[currentTag.id] = {
+                    errors: [],
+                    warnings: []
+                };
+            }
+            if (!errors[currentTag.id].errors) {
+                errors[currentTag.id].errors = [];
+            }
+            if (!errors[currentTag.id].warnings) {
+                errors[currentTag.id].warnings = [];
+            }
+
+            // Invalid characters - null unicode
+            if (currentTag.id.match(/[\u0000]+/g)) {
+                errors[currentTag.id].errors.push("err:null-chars");
+                containsError = "err:null-chars"; // We want to display a prompt
+            } // Invalid characters
+            else if (!currentTag.id.match(/^[a-zA-Z0-9_:-]+$/g)) {
+                errors[currentTag.id].errors.push("err:invalid-chars");
+            }
+
+            // Custom tag - warning
+            if (currentTag.id.match(/^(TXXX:)/g)) {
+                errors[currentTag.id].warnings.push("warn:custom-tag");
+            }
+
+            console.log("hasErrors", hasError("err:null-chars"));
+            return errors;
+        }, {}) ?? {};
+
+    function hasError(errorType: ValidationErrors): boolean {
+        return (
+            errors &&
+            Object.values(errors).filter((err) =>
+                err.errors.includes(errorType)
+            ).length > 0
+        );
     }
 </script>
 
@@ -434,24 +555,70 @@
                         viewing/editing
                     </p>
                 {:else}
+                    {#if containsError === "err:null-chars"}
+                        <div transition:fly={{y: -20, duration: 100}} class="error-prompt">
+                            <iconify-icon icon="ant-design:warning-outlined" />
+                            <p>
+                                Some tags have a hidden character that prevents
+                                them from being read properly.
+                            </p>
+                            <button on:click={stripNonAsciiChars}>Fix</button>
+                        </div>
+                    {/if}
                     <form>
-                        {#each metadata as tag}
+                        {#each metadata as tag, idx}
                             {#if tag.genericId === "artist"}
                                 <div class="tag">
-                                    <p>artist</p>
+                                    <p class="label">artist</p>
                                     <div class="line" />
-                                    <Input
-                                        bind:value={tag.value}
-                                        onChange={onArtistUpdated}
-                                    />
+                                    <div
+                                        class="artist-input"
+                                        use:optionalTippy={{
+                                            content:
+                                                "Press ENTER to autocomplete",
+                                            placement: "bottom",
+                                            show: firstMatch !== null,
+                                            showOnCreate: true,
+                                            trigger: "manual"
+                                        }}
+                                    >
+                                        <Input
+                                            value={artistInput}
+                                            autoCompleteValue={firstMatch}
+                                            onChange={onArtistUpdated}
+                                            onEnterPressed={onArtistAutocompleteSelected}
+                                            fullWidth
+                                        />
+                                    </div>
                                 </div>
                             {:else}
-                                <div class="tag">
-                                    <p>
+                                <div
+                                    use:optionalTippy={{
+                                        content: errors[tag.id]?.errors
+                                            .map((e) => VALIDATION_STRINGS[e])
+                                            .concat(
+                                                errors[tag.id]?.warnings.map(
+                                                    (e) => VALIDATION_STRINGS[e]
+                                                )
+                                            )
+                                            .join(","),
+                                        placement: "bottom",
+                                        theme: "error",
+                                        show: errors[tag.id]?.errors.length > 0
+                                    }}
+                                    class="tag
+                                        {errors[tag.id]?.warnings.length > 0
+                                        ? 'validation-warning'
+                                        : ''}
+                                         {errors[tag.id]?.errors.length > 0
+                                        ? 'validation-error'
+                                        : ''}"
+                                >
+                                    <p class="label">
                                         {tag.genericId ? tag.genericId : tag.id}
                                     </p>
                                     <div class="line" />
-                                    <Input bind:value={tag.value} />
+                                    <Input bind:value={tag.value} fullWidth />
                                 </div>
                             {/if}
                         {/each}
@@ -498,11 +665,12 @@
         flex-direction: column;
         align-items: center;
         position: sticky;
-        top: 0;
+        top: -1px;
         padding: 0.4em 0;
         width: 100%;
         background: rgba(38, 37, 37, 0.601);
         border-bottom: 1px solid rgb(53, 51, 51);
+        backdrop-filter: blur(10px);
         z-index: 20;
 
         .title-container {
@@ -641,6 +809,7 @@
 
     .bottom {
         padding: 0 1em 1em;
+        width: 100%;
     }
 
     .file-section {
@@ -773,7 +942,8 @@
         .tag {
             display: flex;
             align-items: center;
-            > p {
+            position: relative;
+            > .label {
                 width: fit-content;
                 margin: 0;
                 font-size: 13px;
@@ -791,6 +961,34 @@
                 background-color: rgba(255, 255, 255, 0.125);
                 width: 40px;
             }
+
+            &.validation-error {
+                border: 1px solid rgb(161, 46, 46);
+            }
+
+            &.validation-warning {
+                border: 1px solid rgb(225, 154, 0);
+            }
+        }
+
+        .artist-input {
+            /* overflow: hidden; */
+        }
+    }
+    .error-prompt {
+        padding: 0.2em;
+        border-radius: 8px;
+        margin: 1em;
+        background-color: rgb(111, 87, 87);
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+
+        iconify-icon {
+            padding: 1em;
+        }
+        p {
+            margin: 0;
         }
     }
 </style>

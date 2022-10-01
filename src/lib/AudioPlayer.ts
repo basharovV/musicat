@@ -26,9 +26,9 @@ class AudioPlayer {
     artworkSrc: ArtworkSrc; // for media session (notifications)
     currentSong: Song;
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
-
     private constructor() {
-        const audioCtx = new AudioContext();
+        let AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx: AudioContext = new AudioContext();
         this.gainNode = audioCtx.createGain();
         this.gainNode.gain.value = 1;
         this.gainNode.connect(audioCtx.destination);
@@ -117,13 +117,13 @@ class AudioPlayer {
     }
 
     setupMediaSession() {
-        navigator.mediaSession.setActionHandler("play", async () => {
+        navigator.mediaSession?.setActionHandler("play", async () => {
             console.log("[mediaSession] play");
             // Resume playback
             this.play();
         });
 
-        navigator.mediaSession.setActionHandler("pause", () => {
+        navigator.mediaSession?.setActionHandler("pause", () => {
             console.log("[mediaSession] pause");
 
             // Pause active playback

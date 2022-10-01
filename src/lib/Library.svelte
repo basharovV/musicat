@@ -240,7 +240,7 @@
     });
 
     function highlightSong(song: Song, idx, isKeyboardArrows: boolean) {
-        console.log("highlighted", song, idx);
+        // console.log("highlighted", song, idx);
         if (!isKeyboardArrows && isShiftPressed) {
             if (rangeStartSongIdx === null) {
                 rangeStartSongIdx = idx;
@@ -282,7 +282,7 @@
                 $rightClickedTrack = song;
             }
         }
-        console.log("start", rangeStartSongIdx);
+        // console.log("start", rangeStartSongIdx);
 
         songsHighlighted = songsHighlighted;
         onSongsHighlighted && onSongsHighlighted(songsHighlighted);

@@ -23,6 +23,7 @@ export async function getSongFromFile(filePath: string, fileName: string) {
         convertFileSrc(filePath),
         { duration: false, skipCovers: true, skipPostHeaders: true }
     );
+    // console.log('metadata: ', metadata);
     const fileHash = md5(filePath);
     const tagType = metadata.format.tagTypes.length
         ? metadata.format.tagTypes[0]
@@ -56,6 +57,7 @@ export async function getSongFromFile(filePath: string, fileName: string) {
             metadata: metadataMapped,
             fileInfo: metadata.format
         };
+        console.log('song: ', songToAdd);
         // Remove image, too large
         let artworkIdx = songToAdd.metadata.findIndex(
             (t) => t.id === "METADATA_BLOCK_PICTURE"
