@@ -3,8 +3,11 @@ import { get } from "svelte/store";
 import {
     currentSong,
     currentSongArtworkSrc,
+    currentSongIdx,
     isPlaying,
+    nextUpSong,
     playerTime,
+    playlist,
     seekTime,
     volume
 } from "../data/store";
@@ -18,24 +21,26 @@ class AudioPlayer {
     }
 
     audioFile: HTMLAudioElement;
-    source: MediaElementAudioSourceNode;
+    // source: MediaElementAudioSourceNode;
     duration: number;
-    gainNode: GainNode;
+    // gainNode: GainNode;
     ticker;
     isFinishedCallback;
     artworkSrc: ArtworkSrc; // for media session (notifications)
     currentSong: Song;
+    currentSongIdx: number;
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
+    playlist: Song[];
     private constructor() {
-        let AudioContext = window.AudioContext || window.webkitAudioContext;
-        const audioCtx: AudioContext = new AudioContext();
-        this.gainNode = audioCtx.createGain();
-        this.gainNode.gain.value = 1;
-        this.gainNode.connect(audioCtx.destination);
+        // let AudioContext = window.AudioContext || window.webkitAudioContext;
+        // const audioCtx: AudioContext = new AudioContext();
+        // this.gainNode = audioCtx.createGain();
+        // this.gainNode.gain.value = 1;
+        // this.gainNode.connect(audioCtx.destination);
 
         this.audioFile = new Audio();
-        this.source = audioCtx.createMediaElementSource(this.audioFile);
-        this.source.connect(this.gainNode);
+        // this.source = audioCtx.createMediaElementSource(this.audioFile);
+        // this.source.connect(this.gainNode);
 
         seekTime.subscribe((time) => {
             if (this.audioFile) {
@@ -50,15 +55,27 @@ class AudioPlayer {
         this.audioFile.addEventListener("play", this.onPlay.bind(this));
         this.audioFile.addEventListener("ended", this.onEnded.bind(this));
         // volume.set(this.audioFile.volume);
-        volume.subscribe((vol) => {
-            console.log("vol", vol);
-            this.gainNode.gain.value = vol;
-            localStorage.setItem("volume", String(vol));
-        });
+
         this.setupMediaSession();
         currentSongArtworkSrc.subscribe((artwork) => {
             this.artworkSrc = artwork;
             this.setMediaSessionData();
+        });
+        playlist.subscribe(async (playlist) => {
+            this.playlist = playlist;
+            let newCurrentSongIdx = playlist.findIndex(
+                (s) => s.id === this.currentSong?.id
+            );
+            if (newCurrentSongIdx === -1) {
+                newCurrentSongIdx = 0;
+            }
+            this.currentSongIdx = newCurrentSongIdx;
+            currentSongIdx.set(newCurrentSongIdx);
+
+            this.setNextUpSong();
+        });
+        currentSongIdx.subscribe((idx) => {
+            this.currentSongIdx = idx;
         });
     }
 
@@ -70,10 +87,14 @@ class AudioPlayer {
     onPlay() {
         isPlaying.set(true);
         console.log("callback in play", this.isFinishedCallback);
+        if (navigator.mediaSession)
+            navigator.mediaSession.playbackState = "playing";
     }
 
     onPause() {
         isPlaying.set(false);
+        if (navigator.mediaSession)
+            navigator.mediaSession.playbackState = "paused";
     }
 
     onEnded() {
@@ -85,7 +106,14 @@ class AudioPlayer {
             isPlaying.set(false);
             console.log("callback", this.isFinishedCallback);
             this.isFinishedCallback && this.isFinishedCallback();
+            this.playNext();
         }
+    }
+
+    playNext() {
+        this.currentSongIdx++;
+        this.playSong(this.playlist[this.currentSongIdx]);
+        currentSongIdx.set(this.currentSongIdx);
     }
 
     setAudioFinishedCallback(callback) {
@@ -117,18 +145,57 @@ class AudioPlayer {
     }
 
     setupMediaSession() {
-        navigator.mediaSession?.setActionHandler("play", async () => {
-            console.log("[mediaSession] play");
-            // Resume playback
-            this.play();
-        });
+        const actionHandlers = [
+            [
+                "play",
+                () => {
+                    this.play();
+                }
+            ],
+            [
+                "pause",
+                () => {
+                    // Pause active playback
+                    this.pause();
+                }
+            ],
+            [
+                "previoustrack",
+                () => {
+                    /* ... */
+                }
+            ],
+            [
+                "nexttrack",
+                () => {
+                    /* ... */
+                }
+            ],
+            [
+                "stop",
+                () => {
+                    /* ... */
+                }
+            ],
+            ["seekbackward", null],
+            ["seekforward", null],
+            [
+                "seekto",
+                (details) => {
+                    /* ... */
+                }
+            ]
+        ];
 
-        navigator.mediaSession?.setActionHandler("pause", () => {
-            console.log("[mediaSession] pause");
-
-            // Pause active playback
-            this.pause();
-        });
+        for (const [action, handler] of actionHandlers) {
+            try {
+                navigator.mediaSession.setActionHandler(action, handler);
+            } catch (error) {
+                console.log(
+                    `The media session action "${action}" is not supported yet.`
+                );
+            }
+        }
     }
 
     async wait(ms) {
@@ -137,6 +204,14 @@ class AudioPlayer {
                 resolve();
             }, ms);
         });
+    }
+
+    setNextUpSong() {
+        if (this.currentSongIdx + 1 < this.playlist.length) {
+            nextUpSong.set(this.playlist[this.currentSongIdx + 1]);
+        } else {
+            nextUpSong.set(null);
+        }
     }
 
     // MEDIA
@@ -149,6 +224,7 @@ class AudioPlayer {
             this.audioFile.src = "asset://" + song.path.replace("?", "%3F");
             this.play();
             currentSong.set(song);
+            this.setNextUpSong();
             this.currentSong = song;
             this.setMediaSessionData();
         }

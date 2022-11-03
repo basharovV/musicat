@@ -7,8 +7,9 @@
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
-    import { quadOut } from "svelte/easing";
+    import { cubicInOut, quadOut } from "svelte/easing";
     import { get } from "svelte/store";
+    import { fade } from "svelte/transition";
     import { db } from "../data/db";
     import { openTauriImportDialog } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
@@ -19,7 +20,9 @@
         isSmartQueryBuilderOpen,
         isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
+        nextUpSong,
         os,
+        playlist,
         query,
         rightClickedTrack,
         rightClickedTracks,
@@ -28,16 +31,29 @@
         songsJustAdded,
         uiView
     } from "../data/store";
+    import Albums from "./Albums.svelte";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
+    import { optionalTippy } from "./ui/TippyAction";
     // TODO
     async function calculateSize(songs: Song[]) {}
 
-    export let songs;
+    export let allSongs = null;
+
+    $: songs = $allSongs?.filter((song: Song) => {
+        if (compressionSelected === "lossless") {
+            return song.fileInfo.lossless;
+        } else if (compressionSelected === "lossy") {
+            return song.fileInfo.lossless === false;
+        } else return true;
+    });
+
+    export let isLoading = true;
+
     export let fields = [
         { name: "Title", value: "title" },
         { name: "Artist", value: "artist" },
@@ -74,8 +90,8 @@
     });
 
     $: noSongs =
-        !$songs ||
-        $songs.length === 0 ||
+        !songs ||
+        songs.length === 0 ||
         ($isSmartQueryBuilderOpen && $smartQuery.isEmpty);
 
     function updateOrderBy(newOrderBy) {
@@ -119,7 +135,7 @@
     }
 
     function toggleHighlight(song, idx, isKeyboardArrows = false) {
-        if (!song) song = $songs[0];
+        if (!song) song = songs[0];
         highlightedSongIdx = idx;
         if (isSongHighlighted(song)) {
             if (songsHighlighted.length) {
@@ -138,6 +154,12 @@
     let rangeStartSongIdx = null;
     let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
+
+    $: {
+        if (songs?.length) {
+            highlightSong(songs[0], 0, false);
+        }
+    }
 
     // Shortcuts
     if ($os === "Darwin") {
@@ -165,28 +187,34 @@
             console.log("shift pressed");
         } else if (
             event.keyCode === 38 &&
-            document.activeElement.tagName.toLowerCase() !== "input" &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
             document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             event.preventDefault();
             // up
             if (highlightedSongIdx > 0) {
                 toggleHighlight(
-                    $songs[highlightedSongIdx - 1],
+                    songs[highlightedSongIdx - 1],
                     highlightedSongIdx - 1,
                     true
                 );
             }
         } else if (
             event.keyCode === 40 &&
-            document.activeElement.tagName.toLowerCase() !== "input" &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
             document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             // down
             event.preventDefault();
-            if (highlightedSongIdx < $songs.length) {
+            if (highlightedSongIdx < songs.length) {
                 toggleHighlight(
-                    $songs[highlightedSongIdx + 1],
+                    songs[highlightedSongIdx + 1],
                     highlightedSongIdx + 1,
                     true
                 );
@@ -195,7 +223,10 @@
             event.keyCode === 73 &&
             !$isTrackInfoPopupOpen &&
             $singleKeyShortcutsEnabled &&
-            document.activeElement.tagName.toLowerCase() !== "input" &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
             document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             // 'i' for info popup
@@ -210,7 +241,10 @@
         } else if (
             event.keyCode === 13 &&
             !$isTrackInfoPopupOpen &&
-            document.activeElement.tagName.toLowerCase() !== "input" &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
             document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
             // 'Enter' to play highlighted track
@@ -253,7 +287,7 @@
                     rangeStartSongIdx = rangeEndSongIdx;
                     rangeEndSongIdx = startIdx;
                 }
-                songsHighlighted = $songs.slice(
+                songsHighlighted = songs.slice(
                     rangeStartSongIdx,
                     rangeEndSongIdx + 1
                 );
@@ -318,18 +352,6 @@
         AudioPlayer.playSong(song);
     }
 
-    const onAudioEnded = () => {
-        console.log("audio ended");
-        playNext();
-    };
-
-    function playNext() {
-        AudioPlayer.playSong($songs[++$currentSongIdx]);
-    }
-
-    // Play next automatically
-    AudioPlayer.setAudioFinishedCallback(onAudioEnded);
-
     // Smart query stuff
 
     // Smart query - predefined or user-defined queries i.e smart playlists
@@ -391,12 +413,21 @@
             hideSmartQueryBuilder();
         }
     }
+
+    let compressionSelected: "lossy" | "lossless" | "both" = "both";
 </script>
 
-{#if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
+{#if isLoading}
+    <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
+        <p>💿 one sec...</p>
+    </div>
+{:else if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
     <ImportPlaceholder />
 {:else}
-    <container class="theme-{theme}">
+    <container
+        class="theme-{theme}"
+        in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
+    >
         <library>
             <table>
                 <thead class:smart-query={$uiView === "smart-query"}>
@@ -426,11 +457,12 @@
                                         data-type={field.value}
                                         on:click={() =>
                                             updateOrderBy(field.value)}
-                                        use:tippy={{
+                                        use:optionalTippy={{
                                             allowHTML: true,
                                             content:
                                                 "Artist sort shows tracks like this:<br/>Artist > Album > Track №. <br/><br/>Albums for that artist are in alphabetical order, and tracks are in correct album order.",
-                                            placement: "bottom"
+                                            placement: "bottom",
+                                            show: field.value === "artist"
                                         }}
                                         ><div>
                                             <p>
@@ -463,8 +495,8 @@
                     {/each}
                 </thead>
 
-                {#if $songs}
-                    {#each $songs as song, idx (song.id)}
+                {#if songs}
+                    {#each songs as song, idx (song.id)}
                         <tr
                             class:playing={get(currentSong) &&
                                 song.id === $currentSong.id}
@@ -484,7 +516,9 @@
                                             class:my-artist={field.value ===
                                                 "artist" &&
                                                 $artists &&
-                                               $artists.includes(song[field.value])}
+                                                $artists.includes(
+                                                    song[field.value]
+                                                )}
                                         >
                                             {song[field.value] === "" ||
                                             song[field.value] === -1 ||
@@ -517,6 +551,36 @@
                     >
                 </div>
                 <bottom-bar>
+                    <div class="left">
+                        <div class="lossy-selector">
+                            <div
+                                class:selected={compressionSelected === "lossy"}
+                                on:click={() => (compressionSelected = "lossy")}
+                            >
+                                <p>Lossy</p>
+                            </div>
+                            <div
+                                class:selected={compressionSelected ===
+                                    "lossless"}
+                                on:click={() =>
+                                    (compressionSelected = "lossless")}
+                            >
+                                <p>Lossless</p>
+                            </div>
+                            <div
+                                class:selected={compressionSelected === "both"}
+                                on:click={() => (compressionSelected = "both")}
+                            >
+                                <p>both</p>
+                            </div>
+                        </div>
+                        {#if $nextUpSong}
+                            <div class="next-up">
+                                <p class="label">Next up:</p>
+                                <p>{$nextUpSong.title}</p>
+                            </div>
+                        {/if}
+                    </div>
                     <p>{$count} songs</p>
                     <p>{$artistCount} artists</p>
                     <p>{$albumCount} albums</p>
@@ -624,6 +688,58 @@
                 display: none;
             }
         }
+
+        .left {
+            display: flex;
+            flex-direction: row;
+            flex-grow: 1;
+            align-items: center;
+
+            .next-up {
+                display: flex;
+                flex-direction: row;
+                gap: 5px;
+                .label {
+                    opacity: 0.5;
+                }
+                padding: 0 1.5em;
+                p {
+                    margin: 0;
+                    font-size: 0.9em;
+                }
+            }
+
+            .lossy-selector {
+                display: flex;
+                flex-direction: row;
+                background-color: #24232332;
+                /* border: 1px solid rgba(128, 128, 128, 0.29); */
+                border-radius: 3px;
+                overflow: hidden;
+                > div {
+                    padding: 1px 10px;
+                    cursor: default;
+                    &:hover {
+                        background-color: #bbb9b92e;
+                    }
+                    &:active {
+                        background-color: #bbb9b923;
+                    }
+                    &.selected {
+                        p {
+                            color: rgb(224, 218, 218);
+                        }
+                        background-color: #35309784;
+                    }
+                    p {
+                        margin: 0;
+                        line-height: 1.3em;
+                        user-select: none;
+                        text-transform: lowercase;
+                    }
+                }
+            }
+        }
     }
 
     table {
@@ -685,8 +801,8 @@
                 white-space: nowrap;
                 &.my-artist {
                     &::before {
-                        content: '© ';
-                        color:#855cff;
+                        content: "© ";
+                        color: #855cff;
                     }
                 }
             }
@@ -793,6 +909,13 @@
                     background-color: #1f1f1f;
                 }
             }
+        }
+    }
+
+    .loading {
+        margin: auto;
+        p {
+            opacity: 0.6;
         }
     }
 </style>

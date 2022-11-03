@@ -3,7 +3,10 @@
     import { emit } from "@tauri-apps/api/event";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
     import {
-        appWindow, currentMonitor, LogicalSize, PhysicalPosition
+        appWindow,
+        currentMonitor,
+        LogicalSize,
+        PhysicalPosition
     } from "@tauri-apps/api/window";
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
@@ -17,11 +20,15 @@
         currentSongIdx,
         isInfoPopupOpen,
         isMiniPlayer,
-        isPlaying, isTrackInfoPopupOpen,
+        isPlaying,
+        isTrackInfoPopupOpen,
         os,
         queriedSongs,
         query,
-        rightClickedTrack, singleKeyShortcutsEnabled, uiView, userSettings,
+        rightClickedTrack,
+        singleKeyShortcutsEnabled,
+        uiView,
+        userSettings,
         volume
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
@@ -30,7 +37,7 @@
     import "./tippy.css";
 
     // Env
-    let isArtistToolkitEnabled = process.env.NODE_ENV === 'development';
+    let isArtistToolkitEnabled = true;
 
     // What to show in the sidebar
     let title;
@@ -152,8 +159,7 @@
         $isInfoPopupOpen = true;
     }
     $: {
-        console.log('info popup:', $isInfoPopupOpen);
-        
+        console.log("info popup:", $isInfoPopupOpen);
     }
     let height = 0;
     let width = 0;
@@ -177,6 +183,18 @@
     }
 
     let searchInput: HTMLInputElement;
+
+    function onSearchInputKeyDown(event: KeyboardEvent) {
+        if (event.keyCode === 38) {
+            event.preventDefault();
+            // up
+        } else if (event.keyCode === 40) {
+            // down
+            event.preventDefault();
+        } else if (event.keyCode === 13) {
+            event.preventDefault();
+        }
+    }
 
     onMount(() => {
         height = window.innerHeight;
@@ -310,12 +328,12 @@
         isMiniToggleHovered = false;
     }
 
-    appWindow.listen("tauri://focus", evt => {
+    appWindow.listen("tauri://focus", (evt) => {
         isMiniPlayerHovered = true;
-    })
-    appWindow.listen("tauri://blur", evt => {
+    });
+    appWindow.listen("tauri://blur", (evt) => {
         isMiniPlayerHovered = false;
-    })
+    });
 </script>
 
 <!-- svelte-ignore a11y-mouse-events-have-key-events -->
@@ -332,16 +350,28 @@
   </div> -->
     <div class="top">
         <div class="top-header">
-            <h1 class="app-title" on:click={openInfoWindow}>Musicat</h1>
+            <h1
+                class="app-title"
+                style={process.env.NODE_ENV === "development"
+                    ? "opacity: 1"
+                    : ""}
+                on:click={openInfoWindow}
+            >
+                Musicat{process.env.NODE_ENV === "development" ? " 🚧" : ""}
+            </h1>
             <div class="search-container">
                 <input
                     bind:this={searchInput}
                     class="search"
+                    id="search"
                     type="text"
+                    autocomplete="off"
+                    spellcheck="false"
                     placeholder="Search ({$os === 'Darwin'
                         ? 'Cmd + F'
                         : 'Ctrl + F'})"
                     bind:value={$query.query}
+                    on:keydown={onSearchInputKeyDown}
                 />
                 <div class="search-icon">
                     <iconify-icon icon="ion:search" />
@@ -370,15 +400,15 @@
                     <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
                 >
                 {#if isArtistToolkitEnabled}
-                <item
-                    class:selected={$uiView === "your-music"}
-                    on:click={() => {
-                        $uiView = "your-music";
-                    }}
-                >
-                    <iconify-icon icon="mdi:music-clef-treble" />Artist's
-                    toolkit</item
-                >
+                    <item
+                        class:selected={$uiView === "your-music"}
+                        on:click={() => {
+                            $uiView = "your-music";
+                        }}
+                    >
+                        <iconify-icon icon="mdi:music-clef-treble" />Artist's
+                        toolkit</item
+                    >
                 {/if}
                 <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
 
@@ -461,6 +491,7 @@
                         type={artworkFormat}
                         class="artwork"
                         src={artworkSrc}
+                        async
                     />
                 {:else}
                     <div class="artwork-placeholder">

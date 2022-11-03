@@ -5,12 +5,20 @@
     import { db } from "../../data/db";
     import BuiltInQueries from "../../data/SmartQueries";
     import {
-        isSmartQueryBuilderOpen, queriedSongs, query, selectedSmartQuery, smartQuery,
+        isSmartQueryBuilderOpen,
+        playlist,
+        queriedSongs,
+        query,
+        selectedSmartQuery,
+        smartQuery,
         smartQueryResults,
-        smartQueryUpdater, uiView
+        smartQueryUpdater,
+        uiView
     } from "../../data/store";
     import Library from "../Library.svelte";
     import SmartQuery from "../smart-query/Query";
+
+    let isLoading = true;
 
     $: songs = liveQuery(async () => {
         let results;
@@ -55,12 +63,25 @@
             }
         } else if ($query.query.length) {
             results = db.songs
-                .where("title")
-                .startsWithIgnoreCase($query.query)
-                .or("artist")
-                .startsWithIgnoreCase($query.query)
-                .or("album")
-                .startsWithIgnoreCase($query.query);
+                .orderBy(
+                    $query.orderBy === "artist"
+                        ? "[artist+album+trackNumber]"
+                        : $query.orderBy === "album"
+                        ? "[album+trackNumber]"
+                        : $query.orderBy
+                )
+                .and(
+                    (song) =>
+                        song.title
+                            .toLowerCase()
+                            .startsWith($query.query.toLowerCase()) ||
+                        song.artist
+                            .toLowerCase()
+                            .startsWith($query.query.toLowerCase()) ||
+                        song.album
+                            .toLowerCase()
+                            .startsWith($query.query.toLowerCase())
+                );
         } else {
             results = db.songs.orderBy(
                 $query.orderBy === "artist"
@@ -112,8 +133,10 @@
             queriedSongs.set(resultsArray);
         }
 
+        isLoading = false;
+        $playlist = resultsArray;
         return resultsArray;
     });
 </script>
 
-<Library songs={songs} showMyArtists={true}/>
+<Library allSongs={songs} showMyArtists={true} {isLoading}/>
