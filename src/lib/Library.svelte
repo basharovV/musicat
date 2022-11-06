@@ -156,7 +156,7 @@
     let highlightedSongIdx = 0;
 
     $: {
-        if (songs?.length) {
+        if (songs?.length && $query.query?.length) {
             highlightSong(songs[0], 0, false);
         }
     }
@@ -415,6 +415,18 @@
     }
 
     let compressionSelected: "lossy" | "lossless" | "both" = "both";
+
+    async function favouriteSong(song: Song) {
+        await db.songs.update(song, {
+            isFavourite: true
+        });
+    }
+
+    async function unfavouriteSong(song: Song) {
+        await db.songs.update(song, {
+            isFavourite: false
+        });
+    }
 </script>
 
 {#if isLoading}
@@ -460,7 +472,7 @@
                                         use:optionalTippy={{
                                             allowHTML: true,
                                             content:
-                                                "Artist sort shows tracks like this:<br/>Artist > Album > Track №. <br/><br/>Albums for that artist are in alphabetical order, and tracks are in correct album order.",
+                                                "Sorting by artist = viewing the discography<br/><br/> 🕺 Artists shown in alphabetical order <br/> 💿 Albums in chronological order <br/> 🎵 Tracks in album order <br/>",
                                             placement: "bottom",
                                             show: field.value === "artist"
                                         }}
@@ -511,7 +523,7 @@
                         >
                             {#each fields as field (field)}
                                 <td data-type={field.value}>
-                                    <div>
+                                    <div class="field">
                                         <p
                                             class:my-artist={field.value ===
                                                 "artist" &&
@@ -527,11 +539,32 @@
                                                 ? "-"
                                                 : song[field.value]}
                                         </p>
-                                        {#if field.value === "title" && get(currentSong) && song.id === $currentSong.id}
-                                            <iconify-icon
-                                                icon="heroicons-solid:volume-up"
-                                            />
+                                        {#if field.value === "title"}
+                                            <div class="title-icons-left">
+                                                {#if get(currentSong) && song.id === $currentSong.id}
+                                                    <iconify-icon
+                                                        icon="heroicons-solid:volume-up"
+                                                    />
+                                                {/if}
+                                            </div>
                                         {/if}
+                                        <div class="title-icons-right">
+                                            {#if field.value === "title" && song.isFavourite}
+                                                <iconify-icon
+                                                    class="favourite-solid"
+                                                    icon="clarity:heart-solid"
+                                                    on:click|stopPropagation={() =>
+                                                        unfavouriteSong(song)}
+                                                />
+                                            {:else if field.value === "title"}
+                                                <iconify-icon
+                                                    class="favourite-outline"
+                                                    icon="clarity:heart-line"
+                                                    on:click|stopPropagation={() =>
+                                                        favouriteSong(song)}
+                                                />
+                                            {/if}
+                                        </div>
                                     </div>
                                 </td>
                             {/each}
@@ -858,13 +891,33 @@
                 }
             }
 
-            div {
+            .field {
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: stretch;
+
+                .title-icons-left {
+                    margin-left: 10px;
+                    display: flex;
+                    align-items: center;
+                    flex-grow: 0;
+                }
+
+                .title-icons-right {
+                    display: flex;
+                    flex-grow: 1;
+                    justify-content: flex-end;
+                    .favourite-outline {
+                        display: none;
+                        color: #784bff;
+                    }
+                    .favourite-solid {
+                        color: #5123dd;
+                    }
+                }
             }
         }
 
@@ -900,6 +953,9 @@
 
                 &:hover {
                     background-color: #1f1f1f;
+                    .favourite-outline {
+                        display: block;
+                    }
                 }
             }
             &:nth-child(even) {
@@ -907,6 +963,10 @@
 
                 &:hover {
                     background-color: #1f1f1f;
+
+                    .favourite-outline {
+                        display: block;
+                    }
                 }
             }
         }

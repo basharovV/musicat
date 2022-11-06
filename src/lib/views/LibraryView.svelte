@@ -65,7 +65,7 @@
             results = db.songs
                 .orderBy(
                     $query.orderBy === "artist"
-                        ? "[artist+album+trackNumber]"
+                        ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
                         ? "[album+trackNumber]"
                         : $query.orderBy
@@ -85,7 +85,7 @@
         } else {
             results = db.songs.orderBy(
                 $query.orderBy === "artist"
-                    ? "[artist+album+trackNumber]"
+                    ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
                     ? "[album+trackNumber]"
                     : $query.orderBy

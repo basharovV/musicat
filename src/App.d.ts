@@ -33,6 +33,7 @@ interface Song {
     metadata: MetadataEntry[];
     fileInfo: any;
     songProjectId?: number; // Link to project id
+    isFavourite: boolean
 }
 
 /**
@@ -56,6 +57,7 @@ interface SongProject {
 
 interface ArtistProject {
     name: string;
+    members: string[];
 }
 
 type RecordingType = "master" | "live" | "demo" | "rehearsal";
@@ -133,4 +135,17 @@ export interface ArtistFileItem extends ContentItem {
     type: "file";
     fileType: ContentFileType;
     path?: string;
+}
+
+
+export interface MenuItem {
+    text: string;
+    description?: string;
+    source?: any;
+    color?: string;
+}
+
+export interface MenuSection {
+    items: MenuItem[];
+    title: string;
 }

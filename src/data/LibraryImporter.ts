@@ -55,7 +55,8 @@ export async function getSongFromFile(filePath: string, fileName: string) {
                 .toString()
                 .padStart(2, "0")}`,
             metadata: metadataMapped,
-            fileInfo: metadata.format
+            fileInfo: metadata.format,
+            isFavourite: false
         };
         console.log('song: ', songToAdd);
         // Remove image, too large
@@ -76,6 +77,9 @@ export async function addSong(
     fileName: string,
     singleFile = false
 ): Promise<Song | null> {
+    if (singleFile) {
+        songsJustAdded.set([]);
+    }
     const songToAdd = await getSongFromFile(filePath, fileName);
     try {
         if (!songToAdd) {
