@@ -207,8 +207,12 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
-        if (this.currentSongIdx + 1 < this.playlist.length) {
-            nextUpSong.set(this.playlist[this.currentSongIdx + 1]);
+        if (this.audioFile.src) {
+            if (this.currentSongIdx + 1 < this.playlist.length) {
+                nextUpSong.set(this.playlist[this.currentSongIdx + 1]);
+            } else {
+                nextUpSong.set(null);
+            }
         } else {
             nextUpSong.set(null);
         }
