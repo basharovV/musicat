@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/api/dialog";
-import { BaseDirectory, readDir } from "@tauri-apps/api/fs";
+import { BaseDirectory, exists, readDir } from "@tauri-apps/api/fs";
 import { audioDir } from "@tauri-apps/api/path";
 import "iconify-icon";
 import md5 from "md5";
@@ -58,7 +58,7 @@ export async function getSongFromFile(filePath: string, fileName: string) {
             fileInfo: metadata.format,
             isFavourite: false
         };
-        console.log('song: ', songToAdd);
+        console.log("song: ", songToAdd);
         // Remove image, too large
         let artworkIdx = songToAdd.metadata.findIndex(
             (t) => t.id === "METADATA_BLOCK_PICTURE"
@@ -184,7 +184,14 @@ interface LookForArtResult {
 }
 
 async function checkFolderArtworkByFilename(folder, artworkFilename) {
-    const src = "asset://" + folder + artworkFilename;
+    const src = "asset://localhost/" + folder + artworkFilename;
+
+    try {
+        await exists(src);
+    } catch (err) {
+        return null;
+    }
+
     const response = await fetch(src);
     if (response.status === 200) {
         return {
