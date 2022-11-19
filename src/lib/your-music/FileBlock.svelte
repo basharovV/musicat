@@ -65,11 +65,6 @@
         </div>
     </div>
 
-    <div class="tags">
-        {#each item.tags as tag}
-            <p>{tag}</p>
-        {/each}
-    </div>
 </div>
 
 <style lang="scss">
@@ -78,7 +73,7 @@
         width: fit-content;
         display: flex;
         flex-direction: column;
-        max-width: 195px;
+        max-width: 165px;
 
         &.audio {
             iconify-icon {
@@ -143,6 +138,8 @@
             img, video {
                 width: 100%;
                 height: 100%;
+                min-height: 96px;
+                min-width: 170px;
                 position: absolute;
                 object-fit: cover;
                 top: 0;
@@ -177,22 +174,6 @@
                     font-size: 40px;
                     color: white;
                 }
-            }
-        }
-
-        .tags {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 5px;
-            > p {
-                font-size: 12px;
-                margin: 0;
-                width: fit-content;
-                border-radius: 3px;
-                color: rgba(255, 127, 80, 1);
-                /* border: 1px solid rgb(255, 255, 255, 0.2); */
-                padding: 0 0.3em;
             }
         }
     }

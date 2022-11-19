@@ -5,6 +5,7 @@
         ArtistContentItem,
         ArtistFileItem,
         ArtistLinkItem,
+        ArtistProject,
         ContentFileType,
         ContentItem,
         Song,
@@ -34,6 +35,8 @@
     import toast from "svelte-french-toast";
     import DropdownInput from "../ui/KeySelector.svelte";
     import KeySelector from "../ui/KeySelector.svelte";
+    import Input from "../Input.svelte";
+    import ArtistInfo from "./ArtistInfo.svelte";
 
     export let songProject: SongProject;
     export let song: Song; // We might need to create a project based on this song
@@ -126,14 +129,74 @@
         saveSongProject();
     }
 
-    function onComposerUpdated(evt) {
-        songProjectClone.musicComposedBy = [evt.target.value];
+    let composerInput;
+    let lyricistInput;
+    let composerAutocomplete;
+    let lyricistAutocomplete;
+
+    export let artist: ArtistProject;
+
+    function onAddComposer() {
+        if (composerAutocomplete?.length) {
+            songProjectClone.musicComposedBy.push(composerAutocomplete);
+        } else {
+            songProjectClone.musicComposedBy.push(composerInput);
+        }
+        songProjectClone.musicComposedBy = songProjectClone.musicComposedBy;
         saveSongProject();
+        composerInput = "";
+        composerAutocomplete = "";
+    }
+
+    function onAddLyricist() {
+        if (lyricistAutocomplete?.length) {
+            songProjectClone.lyricsWrittenBy.push(lyricistAutocomplete);
+        } else {
+            songProjectClone.lyricsWrittenBy.push(lyricistInput);
+        }
+        songProjectClone.lyricsWrittenBy = songProjectClone.lyricsWrittenBy;
+        saveSongProject();
+        lyricistInput = "";
+        lyricistAutocomplete = "";
+    }
+
+    function onComposerUpdated(evt) {
+        composerInput = evt.target.value;
+        composerAutocomplete = composerInput.length
+            ? artist.members.find((a) => a.startsWith(composerInput))
+            : "";
+        console.log("match", composerAutocomplete);
     }
 
     function onLyricistUpdated(evt) {
-        songProjectClone.lyricsWrittenBy = [evt.target.value];
-        saveSongProject();
+        lyricistInput = evt.target.value;
+        lyricistAutocomplete = lyricistInput.length
+            ? artist.members.find((a) => a.startsWith(lyricistInput))
+            : "";
+        console.log("match", lyricistAutocomplete);
+    }
+
+    function removeLastComposer() {
+        if (songProjectClone.musicComposedBy.length) {
+            songProjectClone.musicComposedBy.splice(
+                songProjectClone.musicComposedBy.length - 1,
+                1
+            );
+            songProjectClone.musicComposedBy = songProjectClone.musicComposedBy;
+
+            saveSongProject();
+        }
+    }
+    function removeLastLyricist() {
+        if (songProjectClone.lyricsWrittenBy.length) {
+            songProjectClone.lyricsWrittenBy.splice(
+                songProjectClone.lyricsWrittenBy.length - 1,
+                1
+            );
+            songProjectClone.lyricsWrittenBy = songProjectClone.lyricsWrittenBy;
+
+            saveSongProject();
+        }
     }
 
     function onBpmUpdated(e) {
@@ -154,7 +217,7 @@
 
     function onKeyUpdated(key) {
         console.log("key updated", key);
-        
+
         songProjectClone.key = key;
         saveSongProject();
     }
@@ -533,7 +596,14 @@
                 />
             {/if}
         {:else}
-            <p>Select a song on the left</p>
+            <div class="no-song-selected">
+                <p>Select a song on the left</p>
+                <br />
+                <h2>- organise your music and lyrics ideas</h2>
+                <h2>- track progress of songs</h2>
+                <h2>- for multiple artists and projects</h2>
+                <img src="/icon.png" />
+            </div>
         {/if}
     </header>
 
@@ -549,17 +619,43 @@
             </div>
             <div>
                 <p>music written by:</p>
-                <input
-                    value={songProjectClone.musicComposedBy}
-                    on:input={onComposerUpdated}
+                <div class="members">
+                    {#each songProjectClone.musicComposedBy as composer}
+                        <div class="member">
+                            <p>{composer}</p>
+                        </div>
+                        ,
+                    {/each}
+                </div>
+                <Input
+                    value={composerInput}
+                    onChange={onComposerUpdated}
+                    autoCompleteValue={composerAutocomplete}
+                    onEnterPressed={onAddComposer}
+                    onBackspacePressed={removeLastComposer}
+                    minimal
+                    tabBehavesAsEnter
                     placeholder="add a composer"
                 />
             </div>
             <div>
                 <p>lyrics written by:</p>
-                <input
-                    value={songProjectClone.lyricsWrittenBy}
-                    on:input={onLyricistUpdated}
+                <div class="members">
+                    {#each songProjectClone.lyricsWrittenBy as lyricist}
+                        <div class="member">
+                            <p>{lyricist}</p>
+                        </div>
+                        ,
+                    {/each}
+                </div>
+                <Input
+                    value={lyricistInput}
+                    onChange={onLyricistUpdated}
+                    autoCompleteValue={lyricistAutocomplete}
+                    onEnterPressed={onAddLyricist}
+                    onBackspacePressed={removeLastLyricist}
+                    minimal
+                    tabBehavesAsEnter
                     placeholder="add a lyricist"
                 />
             </div>
@@ -582,43 +678,44 @@
             </div>
             <div>
                 <p>key:</p>
-                <KeySelector value={songProjectClone.key ?? null} {onKeyUpdated}/>
+                <KeySelector
+                    value={songProjectClone.key ?? null}
+                    {onKeyUpdated}
+                />
             </div>
         </div>
         <div class="content-container">
-            <div class="content-header">
-                <div class="content-tabs">
-                    {#each tabs as tab}
-                        <div
-                            class="tab"
-                            class:selected={selectedTab === tab}
-                            on:click={() => {
-                                selectedTab = tab;
-                            }}
-                        >
-                            <p>{tab}</p>
-                        </div>
-                    {/each}
-                </div>
-                <div class="lyrics-options">
-                    <iconify-icon
-                        icon="mdi:format-font-size-decrease"
-                        on:click={decreaseFontSize}
-                    />
-                    <iconify-icon
-                        icon="mdi:format-font-size-increase"
-                        on:click={increaseFontSize}
-                    />
-                    <iconify-icon
-                        icon="icon-park-outline:full-screen-one"
-                        on:click={toggleFullScreenLyrics}
-                    />
-                </div>
-
-                {#if selectedTab !== "other"}
-                    <div class="bg-gradient" />
-                {/if}
+            <div class="content-tabs">
+                {#each tabs as tab}
+                    <div
+                        class="tab"
+                        class:selected={selectedTab === tab}
+                        on:click={() => {
+                            selectedTab = tab;
+                        }}
+                    >
+                        <p>{tab}</p>
+                    </div>
+                {/each}
             </div>
+            <div class="lyrics-options">
+                <iconify-icon
+                    icon="mdi:format-font-size-decrease"
+                    on:click={decreaseFontSize}
+                />
+                <iconify-icon
+                    icon="mdi:format-font-size-increase"
+                    on:click={increaseFontSize}
+                />
+                <iconify-icon
+                    icon="icon-park-outline:full-screen-one"
+                    on:click={toggleFullScreenLyrics}
+                />
+            </div>
+
+            {#if selectedTab !== "other"}
+                <div class="bg-gradient" />
+            {/if}
             <content class={selectedTab}>
                 {#if selectedTab === "music"}
                     <MusicTab
@@ -688,17 +785,21 @@
                 position: absolute;
                 top: 5px;
                 right: 0;
+                z-index: 5;
             }
             .delete-icon {
                 display: none;
             }
             .content-tabs {
                 margin-top: 6em;
+                z-index: 5;
             }
             content {
-                top: 7em;
+                top: 8.5em;
                 &.lyrics {
                     top: 0;
+                    margin: auto;
+                    z-index: 4;
                 }
             }
             .bg-gradient {
@@ -754,6 +855,21 @@
             }
         }
 
+        .members {
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 3px;
+            height: 100%;
+            .member {
+                p {
+                    padding: 0.3em;
+                    margin: 0;
+                }
+            }
+        }
+
         .music-info {
             padding: 0 2em 0 2em;
             display: flex;
@@ -799,14 +915,16 @@
                 align-items: center;
                 justify-content: space-between;
                 z-index: 3;
+                pointer-events: visiblePainted;
             }
 
             .bg-gradient {
                 height: 80px;
                 width: 100%;
                 top: 0;
+                width: 100%;
                 position: absolute;
-                z-index: -1;
+                z-index: 4;
                 background: linear-gradient(
                     to bottom,
                     #252126 0%,
@@ -818,7 +936,7 @@
 
         content {
             position: absolute;
-            top: 2em;
+            top: 2.5em;
             left: 0;
             right: 0;
             bottom: 0;
@@ -826,9 +944,14 @@
         }
 
         .content-tabs {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: fit-content;
             display: flex;
             justify-content: center;
             gap: 1em;
+            z-index: 5;
             padding: 0.3em 2em;
             > .tab {
                 padding: 0.5em 0;
@@ -854,6 +977,11 @@
         }
 
         .lyrics-options {
+            position: absolute;
+            top: 8px;
+            right: 0px;
+            z-index: 5;
+            width: fit-content;
             display: flex;
             flex-direction: row;
             gap: 3px;
@@ -885,6 +1013,25 @@
 
         &::placeholder {
             color: rgb(105, 105, 105);
+        }
+    }
+
+    .no-song-selected {
+        p,
+        h1,
+        h2,
+        h3 {
+            opacity: 0.5;
+            text-align: center;
+        }
+        h2 {
+            margin: 0.3em;
+        }
+        img {
+            width: 60%;
+            margin: 0 auto;
+            display: flex;
+            opacity: 0.7;
         }
     }
 </style>

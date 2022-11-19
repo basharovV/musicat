@@ -1,7 +1,10 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import type { ArtistProject, Song, SongProject } from "src/App";
-    import { isDraggingExternalFiles } from "../../data/store";
+    import {
+        isDraggingExternalFiles,
+        selectedArtistId
+    } from "../../data/store";
     import { db } from "../../data/db";
 
     import Library from "../Library.svelte";
@@ -10,27 +13,40 @@
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
     import YourArtists from "../your-music/YourArtists.svelte";
-    let selectedArtist: ArtistProject;
+    import ArtistInfo from "../your-music/ArtistInfo.svelte";
     let selectedSong: Song;
     let selectedSongProject: SongProject;
     let songProjectSelection;
+
+    // selectedArtistId.subscribe(async (artistId) => {
+    //     selectedArtist = await db.artistProjects.get(artistId);
+    // });
+
+    $: selectedArtist = liveQuery<ArtistProject>(async () => {
+        const selectedArtist = await db.artistProjects.get($selectedArtistId);
+        return selectedArtist;
+    });
+
     $: songs = liveQuery<Song[]>(async () => {
         let resultsArray = [];
-        if (selectedArtist) {
+        if ($selectedArtistId) {
             const results = await db.songs
                 .where("artist")
-                .equalsIgnoreCase(selectedArtist.name);
+                .equalsIgnoreCase($selectedArtistId);
             resultsArray = await results.toArray();
         }
+        isLoading = false;
         return resultsArray;
     });
 
+    let isLoading = true;
+
     $: songProjects = liveQuery<SongProject[]>(async () => {
         let resultsArray = [];
-        if (selectedArtist) {
+        if ($selectedArtistId) {
             const results = await db.songProjects
                 .where("artist")
-                .equalsIgnoreCase(selectedArtist.name);
+                .equalsIgnoreCase($selectedArtistId);
             resultsArray = await results.toArray();
         }
         return resultsArray;
@@ -107,7 +123,7 @@
     }
 
     $: {
-        if (selectedArtist?.name !== selectedSongProject?.artist) {
+        if ($selectedArtistId !== selectedSongProject?.artist) {
             selectedSongProject = null;
         }
     }
@@ -118,9 +134,11 @@
         <ContentDropzone songProject={selectedSongProject} />
     {/if}
     <header>
-        <h2>Artists</h2>
-        <YourArtists bind:selectedArtist />
+        <YourArtists />
     </header>
+    <section class="artist-info">
+        <ArtistInfo artist={$selectedArtist} />
+    </section>
     <section class="scrapbook">
         <div>
             <h2>Scrapbook</h2>
@@ -135,29 +153,35 @@
         </div>
         <SongProjects
             songProjects={$songProjects}
-            artist={selectedArtist}
+            artistId={$selectedArtist}
             {onSelectSongProject}
             bind:selectedSongProject={songProjectSelection}
         />
         <hr />
-        <div>
-            <h2>in library</h2>
-        </div>
-        <Library
-            theme="outline"
-            bind:songsHighlighted={librarySongsHighlighted}
-            {songs}
-            isSmartQueryEnabled={false}
-            fields={[
-                { name: "Title", value: "title" },
-                { name: "Album", value: "album" }
-            ]}
-            {onSongsHighlighted}
-        />
+        {#if $songs && $songs?.length}
+            <library>
+                <div>
+                    <h2>in library</h2>
+                </div>
+                <Library
+                    theme="outline"
+                    bind:songsHighlighted={librarySongsHighlighted}
+                    allSongs={songs}
+                    {isLoading}
+                    isSmartQueryEnabled={false}
+                    fields={[
+                        { name: "Title", value: "title" },
+                        { name: "Album", value: "album" }
+                    ]}
+                    {onSongsHighlighted}
+                />
+            </library>
+        {/if}
     </section>
     <section class="song-details">
         <SongDetails
             songProject={selectedSongProject}
+            artist={$selectedArtist}
             {onDeleteSongProject}
             song={selectedSong}
             {onSelectSong}
@@ -188,7 +212,7 @@
         text-align: left;
         display: grid;
         grid-template-columns: 350px 5fr 4fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto auto 1fr;
         height: 100vh;
         overflow: hidden;
         h2 {
@@ -234,9 +258,20 @@
             }
         }
 
+        .artist-info {
+            grid-row: 2;
+            grid-column: 1 / 3;
+            padding: 0.7em 2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.093);
+
+            p {
+                margin: 0;
+            }
+        }
+
         .scrapbook {
             background-color: transparent;
-            grid-row: 1 / 3;
+            grid-row: 1 / 4;
             grid-column: 3;
             height: 100%;
             border-left: 1px solid rgba(255, 255, 255, 0.093);
@@ -250,7 +285,7 @@
         }
 
         .songs {
-            grid-row: 2;
+            grid-row: 3;
             grid-column: 1;
             border-right: 1px solid rgba(255, 255, 255, 0.093);
             div {
@@ -259,7 +294,7 @@
         }
 
         .song-details {
-            grid-row: 2;
+            grid-row: 3;
             grid-column: 2;
             height: 100%;
             div {

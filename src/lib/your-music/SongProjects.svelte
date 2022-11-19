@@ -6,15 +6,15 @@
     export let songProjects: SongProject[];
     export let selectedSongProject;
     export let onSelectSongProject: Function;
-    export let artist: ArtistProject;
+    export let artistId: ArtistProject;
     let newSongProjectTitle = "";
 
     async function onCreateSongProject() {
         const createdProjectId = await db.songProjects.add({
             title: newSongProjectTitle,
-            artist: artist.name,
+            artist: artistId.name,
             album: "",
-            musicComposedBy: [artist.name], // Multiple people
+            musicComposedBy: [artistId.name], // Multiple people
             lyricsWrittenBy: [], // Multiple people,
             lyrics: "",
             recordings: [],
