@@ -3,16 +3,20 @@
 
     export let isDisabled = false;
     export let isDestructive = false;
-    export let text = "";
+    export let value = "";
     export let description = "";
     export let confirmText = "";
     export let isConfirming = false;
     export let isHighlighted = false;
     export let onClick = null;
-    export let onDelete = null;
     export let color: string | null = null;
-
+    export let onEnterPressed;
+    export let onEscPressed;
+    export let autoFocus = false;
+    export let placeholder = "";
+    export let autoCompleteValue = "";
     import { createEventDispatcher } from "svelte";
+    import Input from "../Input.svelte";
     const dispatch = createEventDispatcher();
 
     $: {
@@ -40,22 +44,23 @@
     <div class="bg" style={color ? `background-color: ${color}` : ""} />
     {#if isConfirming}
         {confirmText}
-    {:else if text}
+    {:else if value !== null}
         <span>
-            <p>{text}</p>
+            <Input
+                bind:value
+                {onEnterPressed}
+                {onEscPressed}
+                fullWidth
+                {autoFocus}
+                {placeholder}
+                {autoCompleteValue}
+            />
             {#if description}
                 <small>
                     {description}
                 </small>
             {/if}
         </span>
-
-        {#if onDelete}
-            <iconify-icon
-                icon="mingcute:close-circle-fill"
-                on:click={onDelete}
-            />
-        {/if}
     {:else}
         <slot />
     {/if}
@@ -96,8 +101,7 @@
 
         &:hover,
         &.highlighted {
-            color: rgb(37, 36, 36);
-            background-color: rgba(255, 255, 255, 0.796);
+            /* color: rgb(37, 36, 36); */
         }
         &.disabled {
             color: rgba(174, 174, 174, 0.4);
@@ -122,11 +126,15 @@
             display: block;
             padding: 0.2em 0 0.3em 0;
             z-index: 1;
-            width: 100%;
-            p {
+
+            input {
+                padding: 0.2em 0;
+                font-size: 14px;
+                outline: none;
+                background: none;
+                border: none;
                 white-space: nowrap;
                 margin: 0;
-                text-align: left;
                 line-height: 20px;
                 max-width: 250px;
                 overflow: hidden;

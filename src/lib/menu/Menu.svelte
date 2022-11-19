@@ -1,15 +1,9 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { fade } from "svelte/transition";
+    import type { MenuItem, MenuSection } from "../../App";
     import { clickOutside } from "../../utils/ClickOutside";
     import MenuOption from "./MenuOption.svelte";
-
-    interface MenuItem {
-        text: string;
-        description: string;
-        source: any;
-        color?: string;
-    }
 
     export let x;
     export let y;
@@ -18,14 +12,19 @@
     export let onItemSelected = null;
     export let onClickOutside = null;
     export let position: "auto" | "manual" = "auto";
+    export let maxHeight: number = null; // If this exists, we wrap the contents
     export let padding = 0;
+    export let sections: MenuSection[] = null;
+
+    export let hoveredSection = sections !== null ? 0 : null;
 
     let hoveredItemIdx = 0;
-    $: numberOfItems = items.length;
+    $: numberOfItems =
+        hoveredSection !== null
+            ? sections[hoveredSection].items.length
+            : items.length;
 
     function onKeyUp() {
-        console.log("keyup");
-
         if (hoveredItemIdx > 0) {
             hoveredItemIdx--;
         } else {
@@ -34,17 +33,48 @@
     }
 
     function onKeyDown() {
-        console.log("keydown");
-        console.log("items", numberOfItems);
         if (hoveredItemIdx < numberOfItems - 1) {
             hoveredItemIdx = hoveredItemIdx + 1;
-            console.log("idx:", hoveredItemIdx);
+        }
+    }
+
+    function onKeyLeft() {
+        if (sections && hoveredSection > 0) {
+            // Check if other sections has this index
+            const sectionToSelect = sections[hoveredSection - 1];
+            // length 14 < access 15 ok
+            // length 13 < acess 15 out of bounds
+            if (sectionToSelect.items.length < hoveredItemIdx - 1) {
+                // Fallback to last index
+                hoveredItemIdx = sections[hoveredSection - 1].items.length - 1;
+            }
+            hoveredSection = hoveredSection - 1;
+        } else if (sections) {
+            hoveredItemIdx = 0;
+        }
+    }
+
+    function onKeyRight() {
+        if (sections?.length && hoveredSection < sections.length) {
+            // Check if other sections has this index
+            const sectionToSelect = sections[hoveredSection + 1];
+            // length 14 < access 15 ok
+            // length 13 < acess 15 out of bounds
+            if (sectionToSelect.items.length < hoveredItemIdx - 1) {
+                // Fallback to last index
+                hoveredItemIdx = sections[hoveredSection - 1].items.length - 1;
+            }
+            hoveredSection = hoveredSection + 1;
         }
     }
 
     function onEnter() {
         // Select item callback
-        onItemSelected && onItemSelected(items[hoveredItemIdx].source);
+        if (sections?.length) {
+            onItemSelected && onItemSelected(sections[hoveredSection].items[hoveredItemIdx]);
+        } else {
+            onItemSelected && onItemSelected(items[hoveredItemIdx].source);
+        }
     }
 
     // whenever x and y is changed, restrict box to be within bounds
@@ -67,6 +97,14 @@
             // down
             event.preventDefault();
             onKeyDown();
+        } else if (event.keyCode === 37) {
+            // left
+            event.preventDefault();
+            onKeyLeft();
+        } else if (event.keyCode === 39) {
+            // right
+            event.preventDefault();
+            onKeyRight();
         } else if (event.keyCode === 13) {
             // 'Enter' to select
             event.preventDefault();
@@ -79,7 +117,7 @@
         }
     }
 
-    if (items.length > 0) {
+    if (items.length > 0 || sections?.length > 0) {
         /**
          * Keyboard navigation only works when passing in list of items, instead of using slot
          */
@@ -91,32 +129,61 @@
     });
 </script>
 
-<div
+<menu
     class:fixed
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
     use:clickOutside={() => {
         onClickOutside && onClickOutside();
     }}
-    style="top: {y}px; left: {x}px;gap: {padding}px;"
+    style="top: {y}px; left: {x}px;gap: {padding}px;{maxHeight
+        ? `max-height: ${maxHeight}px`
+        : ''}"
 >
-    {#each items as item, idx}
-        <MenuOption
-            text={item.text}
-            description={item.description}
-            isHighlighted={hoveredItemIdx === idx}
-            color={item.color}
-            onClick={() => {
-                onItemSelected && onItemSelected(item.source);
-            }}
-        />
+    {#if sections}
+        <div class="sections">
+            {#each sections as section, sectionIdx}
+                <div class="section">
+                    <p>{section.title}</p>
+                    <div class="items">
+                        {#each section.items as item, idx}
+                            <MenuOption
+                                text={item.text}
+                                description={item.description}
+                                isHighlighted={hoveredSection === sectionIdx &&
+                                    hoveredItemIdx === idx}
+                                color={item.color}
+                                onClick={() => {
+                                    onItemSelected &&
+                                        onItemSelected(item);
+                                }}
+                            />
+                        {/each}
+                    </div>
+                </div>
+            {/each}
+        </div>
     {:else}
-        <slot />
-    {/each}
-</div>
+        <div class="items">
+            {#each items as item, idx}
+                <MenuOption
+                    text={item.text}
+                    description={item.description}
+                    isHighlighted={hoveredItemIdx === idx}
+                    color={item.color}
+                    onClick={() => {
+                        onItemSelected && onItemSelected(item.source);
+                    }}
+                />
+            {:else}
+                <slot />
+            {/each}
+        </div>
+    {/if}
+</menu>
 
 <style lang="scss">
-    div {
+    menu {
         position: absolute;
         display: flex;
         flex-direction: column;
@@ -135,6 +202,25 @@
         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
         &.fixed {
             position: fixed;
+        }
+    }
+
+    .sections {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0.2em 0.3em;
+
+        .section {
+            > p {
+                opacity: 0.5;
+                margin: 0.2em 0;
+                text-align: center;
+                
+            }
+            .items {
+                min-width: 50px;
+            }
         }
     }
 </style>
