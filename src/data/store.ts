@@ -92,6 +92,15 @@ userSettings.subscribe((val) =>
     localStorage.setItem("settings", JSON.stringify(val))
 );
 
+export const libraryScrollPos: Writable<number> = writable(
+    localStorage.getItem("libraryScrollPos")
+        ? parseFloat(localStorage.getItem("libraryScrollPos"))
+        : 0
+);
+
+libraryScrollPos.subscribe((scrollPos) => {
+    localStorage.setItem("libraryScrollPos", String(scrollPos));
+});
 export const os: Writable<OsType> = writable("Darwin");
 
 export const importStatus: Writable<ImportStatus> = writable({

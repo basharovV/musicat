@@ -20,6 +20,7 @@
         isSmartQueryBuilderOpen,
         isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
+        libraryScrollPos,
         nextUpSong,
         os,
         playlist,
@@ -94,6 +95,21 @@
         songs.length === 0 ||
         ($isSmartQueryBuilderOpen && $smartQuery.isEmpty);
 
+    let container: HTMLElement;
+
+    $: {
+        if (container && !isLoading && songs?.length) {
+            // Restore scroll position if any
+            if ($libraryScrollPos && container) {
+                container.scrollTop = $libraryScrollPos;
+            }
+        }
+    }
+    
+    function onScroll(evt) {
+        console.log("scroll", evt);
+        $libraryScrollPos = evt.target.scrollTop;
+    }
     function updateOrderBy(newOrderBy) {
         if ($query.orderBy === newOrderBy) {
             $query.reverse = !$query.reverse;
@@ -437,6 +453,8 @@
     <ImportPlaceholder />
 {:else}
     <container
+        bind:this={container}
+        on:scroll={debounce(onScroll, 200)}
         class="theme-{theme}"
         in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
     >
