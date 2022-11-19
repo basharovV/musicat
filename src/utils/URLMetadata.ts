@@ -2,6 +2,7 @@ import type { ArtistLinkItem } from "src/App";
 
 async function getYouTubeTitle(videoId) {
     let title;
+    let thumbnail;
     await fetch(
         `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&feature=emb_logo&format=json`
     )
@@ -10,9 +11,10 @@ async function getYouTubeTitle(videoId) {
             console.log("response", response);
             if (response) {
                 title = response.title;
+                thumbnail = response.thumbnail_url;
             }
         });
-    return title;
+    return { title, thumbnail };
 }
 /**
  * Adds thumbnail URL, proper title from OpenGraph to link item and returns it
@@ -26,9 +28,16 @@ export async function getLinkItemWithData(url): Promise<ArtistLinkItem> {
     if (url.includes("youtube")) {
         const videoId = url.split("v=")[1].split("&")[0];
         if (videoId) {
-            imageUrl = `https://img.youtube.com/vi/${videoId}/sddefault.jpg`;
-            title = await getYouTubeTitle(videoId);
-            if (!title) title = url;
+            // imageUrl = `https://img.youtube.com/vi/${videoId}/sddefault.jpg`;
+
+            let response = await getYouTubeTitle(videoId);
+            if (!response) {
+                title = url;
+            } else {
+                title = response.title;
+                console.log('response', response);
+                imageUrl = response.thumbnail;
+            }
         }
     }
 

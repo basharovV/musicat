@@ -5,7 +5,7 @@
     "beforeDevCommand": "npm run dev",
     "devPath": "http://localhost:5173",
     "distDir": "../dist",
-    "withGlobalTauri": true
+    "withGlobalTauri": false
   },
   "package": {
     "productName": "Musicat",
@@ -18,6 +18,9 @@
       "fs": {
         "all": true,
         "scope": ["*"]
+      },
+      "globalShortcut": {
+        "all": true
       },
       "path": {
         "all": true
@@ -71,15 +74,16 @@
       {
         "theme":"Dark",
         "fullscreen": false,
-        "height": 700,
+        "height": 780,
         "resizable": true,
         "title": "Musicat",
-        "width": 1100,
+        "width": 1200,
         "minHeight": 210,
         "minWidth": 210,
         "transparent": true,
         "visible": true,
-        "fileDropEnabled": true
+        "fileDropEnabled": true,
+        "hiddenTitle": true
       }
     ]
   }
