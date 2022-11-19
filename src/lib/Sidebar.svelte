@@ -193,6 +193,9 @@
             event.preventDefault();
         } else if (event.keyCode === 13) {
             event.preventDefault();
+        } else if (event.keyCode === 27) {
+            event.preventDefault();
+            $isFindFocused = false;
         }
     }
 
@@ -202,6 +205,16 @@
             onResize();
         }, 200);
         onResize(); // run once
+
+        isFindFocused.subscribe((focused) => {
+            if (searchInput) {
+                if (focused) {
+                    searchInput.focus();
+                } else {
+                    searchInput.blur();
+                }
+            }
+        });
         searchInput.onfocus = (evt) => {
             $singleKeyShortcutsEnabled = false;
         };

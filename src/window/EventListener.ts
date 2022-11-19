@@ -1,6 +1,9 @@
 import type { Event } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
+import { get } from "svelte/store";
+
 import {
+    isFindFocused,
     isInfoPopupOpen,
     isSettingsOpen,
     isTrackInfoPopupOpen
@@ -9,6 +12,7 @@ import { db } from "../data/db";
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {
+        console.log('menu', event)
         switch (payload) {
             case "clear-db":
                 console.log("clear-db");
@@ -30,6 +34,10 @@ export function startMenuListener() {
                 isSettingsOpen.set(true);
                 isInfoPopupOpen.set(false);
                 isTrackInfoPopupOpen.set(false);
+                break;
+            case "find":
+                console.log("find");
+                isFindFocused.set(!get(isFindFocused))
                 break;
         }
     });

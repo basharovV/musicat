@@ -98,6 +98,10 @@ fn build_menu() -> Menu {
             Menu::new().add_item(CustomMenuItem::new("clear-db", "Clear DB")),
         ))
         .add_submenu(Submenu::new(
+            "Library",
+            Menu::new().add_item(CustomMenuItem::new("find", "Find").accelerator("CommandOrControl+F")),
+        ))
+        .add_submenu(Submenu::new(
             "Edit",
             Menu::new()
                 .add_native_item(MenuItem::Copy)
