@@ -2,22 +2,23 @@
     import { autoWidth } from "../../utils/AutoWidth";
     import Menu from "../menu/Menu.svelte";
     import isDarkColor from "is-dark-color";
+    import type { MenuItem, MenuSection } from "../../App";
 
     let matches: { name: string; color: string }[] = [];
-    let selectedItem: { name: string; color: string } = null;
+    let selectedItem: MenuItem = null;
     export let value = "";
     export let onKeyUpdated;
 
     $: firstMatch = (matches.length && matches[0]) ?? null;
     let textInputColor;
 
-
-    $: correctedTextInputColor = textInputColor !== null && isDarkColor(textInputColor)
-        ? "white"
-        : textInputColor ?? '#FFFFFF';
+    $: correctedTextInputColor =
+        textInputColor !== null && isDarkColor(textInputColor)
+            ? "white"
+            : textInputColor ?? "#FFFFFF";
     let options: { name: string; color: string }[] = [
         // Major#
-        { name: "C", color: "#006CFF" },
+        { name: "C", color: "#FFFFFF" },
         { name: "C#", color: "#E5C874" },
         { name: "D", color: "#FFD600" },
         { name: "D#", color: "#48BF8D" },
@@ -43,9 +44,42 @@
         { name: "A#m", color: "#422210" },
         { name: "Bm", color: "#723DEE" }
     ];
+
+    $: sections = matches.reduce(
+        (sections: MenuSection[], currentKey) => {
+            if (!currentKey.name.endsWith("m")) {
+                sections
+                    .find((s) => s.title === "Major")
+                    .items.push({
+                        text: currentKey.name,
+                        color: currentKey.color
+                    });
+            } else {
+                sections
+                    .find((s) => s.title === "Minor")
+                    .items.push({
+                        text: currentKey.name,
+                        color: currentKey.color
+                    });
+            }
+            return sections;
+        },
+        [
+            {
+                title: "Major",
+                items: []
+            },
+            {
+                title: "Minor",
+                items: []
+            }
+        ]
+    );
+
     $: {
         if (value) {
-            textInputColor = options.find((o) => o.name === value)?.color ?? '#FFFFFF';
+            textInputColor =
+                options.find((o) => o.name === value)?.color ?? "#FFFFFF";
         } else {
             textInputColor = "#FFFFFF";
         }
@@ -86,14 +120,13 @@
 
             matches = matched;
         } else {
-            matches = [];
+            matches = options;
         }
     }
 
-    function onSelectItem(item) {
-        value = item.name;
+    function onSelectItem(item: MenuItem) {
+        value = item.text;
         onKeyUpdated(value);
-        selectedItem = item;
         matches = [];
     }
 
@@ -133,12 +166,7 @@
         x={inputX}
         y={inputY}
         onClickOutside={closeAutoComplete}
-        items={matches.map((p) => ({
-            text: p.name,
-            description: "",
-            source: p,
-            color: p.color
-        }))}
+        {sections}
         padding={2}
         position="manual"
         onItemSelected={onSelectItem}
