@@ -31,6 +31,8 @@ export const currentSongIdx = writable(0);
 export const nextUpSong: Writable<Song> = writable(null);
 export const queriedSongs: Writable<Song[]> = writable([]);
 export const playlist: Writable<Song[]> = writable([]);
+export const albumPlaylist: Writable<Song[]> = writable([]);
+export const playlistIsAlbum = writable(false);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const rightClickedTrack: Writable<Song> = writable(null);
@@ -42,6 +44,8 @@ export const volume: Writable<number> = writable(
         ? parseFloat(localStorage.getItem("volume"))
         : 0.6
 );
+export const isFullScreenVisualiser = writable(false);
+
 
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
@@ -67,6 +71,10 @@ selectedArtistId.subscribe((val) =>
 );
 
 export const songDetailsUpdater = writable(0);
+export const isScrapbookShown = writable(true);
+
+// Library menu
+export const isFindFocused = writable(false);
 
 // Smart query
 export const isSmartQueryUiOpen = writable(false);
@@ -101,6 +109,7 @@ export const libraryScrollPos: Writable<number> = writable(
 libraryScrollPos.subscribe((scrollPos) => {
     localStorage.setItem("libraryScrollPos", String(scrollPos));
 });
+
 export const os: Writable<OsType> = writable("Darwin");
 
 export const importStatus: Writable<ImportStatus> = writable({
