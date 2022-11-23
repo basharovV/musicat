@@ -25,6 +25,7 @@
     import LibraryView from "./lib/views/LibraryView.svelte";
     import { startMenuListener } from "./window/EventListener";
     import { addFolder, addPaths } from "./data/LibraryImporter";
+    import AlbumView from "./lib/views/AlbumsView.svelte";
 
     startMenuListener();
 
@@ -144,6 +145,8 @@
 
     {#if $uiView === "library" || $uiView === "smart-query"}
         <LibraryView />
+    {:else if $uiView === "albums"}
+        <AlbumView />
     {:else if $uiView === "your-music"}
         <ArtistsToolkitView />
     {/if}

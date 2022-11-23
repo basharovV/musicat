@@ -108,7 +108,7 @@ type Comparison =
     | "is-between"
     | "contains";
 
-type SidebarItem = "library" | "smart-query" | "your-music";
+type SidebarItem = "library" | "smart-query" | "your-music" | "albums";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 

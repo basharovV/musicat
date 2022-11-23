@@ -219,7 +219,7 @@
         } else {
             // user selected a single directory
             // addFolder(selected)
-            const src = "asset://" + selected;
+            const src = "asset://localhost/" + selected;
             const response = await fetch(src);
             if (response.status === 200) {
                 const type = response.headers.get("Content-Type");
@@ -248,7 +248,7 @@
             const text = await readText();
             console.log("paste", text);
 
-            // const src = "asset://" + folder + artworkFilename;
+            // const src = "asset://localhost/" + folder + artworkFilename;
 
             if (!text) {
                 try {
@@ -343,7 +343,13 @@
 
     function onArtistAutocompleteSelected() {
         if (firstMatch?.length) {
-            artistInput = firstMatch;
+            console.log("firstMatch", firstMatch);
+            console.log("artistInput", artistInput);
+            const artistField = metadata.find((m) => m.genericId === "artist");
+            if (artistField) {
+                artistField.value = firstMatch;
+            }
+            metadata = metadata;
             firstMatch = null;
         }
     }
@@ -556,7 +562,10 @@
                     </p>
                 {:else}
                     {#if containsError === "err:null-chars"}
-                        <div transition:fly={{y: -20, duration: 100}} class="error-prompt">
+                        <div
+                            transition:fly={{ y: -20, duration: 100 }}
+                            class="error-prompt"
+                        >
                             <iconify-icon icon="ant-design:warning-outlined" />
                             <p>
                                 Some tags have a hidden character that prevents
@@ -604,7 +613,9 @@
                                             .join(","),
                                         placement: "bottom",
                                         theme: "error",
-                                        show: errors[tag.id]?.errors.length > 0
+                                        show:
+                                            errors[tag.id]?.errors.length > 0 ||
+                                            errors[tag.id]?.warnings.length > 0
                                     }}
                                     class="tag
                                         {errors[tag.id]?.warnings.length > 0
