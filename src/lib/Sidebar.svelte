@@ -18,11 +18,14 @@
         currentSong,
         currentSongArtworkSrc,
         currentSongIdx,
+        isFindFocused,
+        isFullScreenVisualiser,
         isInfoPopupOpen,
         isMiniPlayer,
         isPlaying,
         isTrackInfoPopupOpen,
         os,
+        playlist,
         queriedSongs,
         query,
         rightClickedTrack,
@@ -31,10 +34,12 @@
         userSettings,
         volume
     } from "../data/store";
+    import audioPlayer from "./AudioPlayer";
     import AudioPlayer from "./AudioPlayer";
     import Seekbar from "./Seekbar.svelte";
     import SpectrumAnalyzer from "./SpectrumAnalyzer.svelte";
     import "./tippy.css";
+    import Icon from "./ui/Icon.svelte";
 
     // Env
     let isArtistToolkitEnabled = true;
@@ -63,17 +68,6 @@
         event.preventDefault();
         AudioPlayer.togglePlay();
     });
-
-    // Shortcuts
-    if ($os === "Darwin") {
-        hotkeys("cmd+f", function (event, handler) {
-            searchInput.focus();
-        });
-    } else if ($os === "Windows_NT" || $os === "Linux") {
-        hotkeys("ctrl+f", function (event, handler) {
-            searchInput.focus();
-        });
-    }
 
     currentSong.subscribe(async (song) => {
         if (song) {
@@ -361,8 +355,8 @@
     <!-- <div class="knob">
     <Knob bind:value={volumeKnob} max={100} min={0} pixelRange={200} />
   </div> -->
-    <div class="top">
-        <div class="top-header">
+    <div class="top" data-tauri-drag-region>
+        <div class="top-header" data-tauri-drag-region>
             <h1
                 class="app-title"
                 style={process.env.NODE_ENV === "development"
@@ -403,6 +397,14 @@
                     <iconify-icon
                         icon="fluent:library-20-filled"
                     />Library</item
+                >
+                <item
+                    class:selected={$uiView === "albums"}
+                    on:click={() => {
+                        $uiView = "albums";
+                    }}
+                >
+                    <iconify-icon icon="ic:round-album" />Albums</item
                 >
                 <item
                     class:selected={$uiView === "smart-query"}
@@ -492,9 +494,7 @@
         {/if}
     </div>
 
-    <div class="spectrum">
-        <SpectrumAnalyzer />
-    </div>
+    <SpectrumAnalyzer />
     {#if $currentSong}
         <div class="artwork-container">
             <div class="artwork-frame">
@@ -524,7 +524,7 @@
             <iconify-icon
                 icon="fe:backward"
                 class:disabled={$currentSongIdx === 0}
-                on:click={playPrev}
+                on:click={() => audioPlayer.playPrevious()}
             />
             <iconify-icon
                 on:click={togglePlayPause}
@@ -532,21 +532,43 @@
             />
             <iconify-icon
                 icon="fe:forward"
-                class:disabled={$currentSongIdx === $queriedSongs.length - 1}
-                on:click={playNext}
+                class:disabled={$currentSongIdx === $playlist?.length - 1}
+                on:click={() => audioPlayer.playNext()}
             />
         </transport>
 
-        <div class="volume">
-            <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                bind:value={$volume}
-                class="slider"
-                id="myRange"
-            />
+        <div class="other-controls">
+            <div class="track-info-icon">
+                <Icon
+                    icon="mdi:information"
+                    onClick={() => {
+                        $rightClickedTrack = $currentSong;
+                        $isTrackInfoPopupOpen = true;
+                    }}
+                    color="#474747"
+                />
+            </div>
+
+            <div class="volume">
+                <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    bind:value={$volume}
+                    class="slider"
+                    id="myRange"
+                />
+            </div>
+
+            <div class="visualizer-icon">
+                <Icon
+                    icon="ph:wave-sine-duotone"
+                    onClick={() =>
+                        ($isFullScreenVisualiser = !$isFullScreenVisualiser)}
+                    color="#474747"
+                />
+            </div>
         </div>
     </div>
 </sidebar>
@@ -568,13 +590,13 @@
         min-width: 210px;
         border-right: 1px solid #ececec1c;
         background-color: $sidebar_primary_color;
-        overflow: hidden;
     }
     @media only screen and (max-width: 210px) {
         sidebar {
             /* max-width: 100% !important; */
         }
     }
+
     sidebar.hovered {
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,
@@ -699,10 +721,24 @@
                 display: none;
             }
 
+            .top {
+                display: none;
+            }
+
+            .cd-gif {
+                display: none;
+            }
+
+            .track-info {
+                position: sticky;
+                .track-info-content {
+                    top: 1.8em;
+                }
+            }
+
             .top,
             .track-info,
             .bottom {
-                position: relative;
                 top: 0;
             }
             .artwork-container {
@@ -905,6 +941,7 @@
         pointer-events: none;
         border-top: 0.7px solid #ffffff23;
         z-index: 2;
+        overflow: hidden;
     }
 
     .track-info-content {
@@ -1010,11 +1047,6 @@
         }
     }
     .spectrum {
-        z-index: 1;
-        position: absolute;
-        bottom: -5px;
-        pointer-events: none;
-        opacity: 0.2;
     }
 
     .cd-gif {
@@ -1092,15 +1124,36 @@
         z-index: 2;
     }
 
-    .volume {
-        padding: 0 2em 1em;
+    .other-controls {
+        padding: 0 1em 1em;
         width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .track-info-icon,
+        .visualizer-icon {
+            display: flex;
+        }
+        @media only screen and (max-height: 210px) and (max-width: 210px) {
+        padding: 0 2em 1em;
+            .track-info-icon,
+            .visualizer-icon {
+                display: none;
+            }
+        }
+    }
+
+    .volume {
+        width: 100%;
+        display: flex;
+        align-items: center;
 
         input {
             -webkit-appearance: none;
             width: 100%;
             height: 5px;
-            background: #474747;
+            background: #474747d4;
             outline: none;
             opacity: 1;
             border-radius: 3px;

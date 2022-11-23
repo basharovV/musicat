@@ -2,10 +2,10 @@
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import "iconify-icon";
+    import { debounce } from "lodash-es";
     import type { Song } from "src/App";
     import { onDestroy } from "svelte";
     import toast from "svelte-french-toast";
-    import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
     import { cubicInOut, quadOut } from "svelte/easing";
     import { get } from "svelte/store";
@@ -13,17 +13,16 @@
     import { db } from "../data/db";
     import { openTauriImportDialog } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
+
     import {
         currentSong,
         currentSongIdx,
         importStatus,
         isSmartQueryBuilderOpen,
-        isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
         nextUpSong,
         os,
-        playlist,
         query,
         rightClickedTrack,
         rightClickedTracks,
@@ -32,7 +31,6 @@
         songsJustAdded,
         uiView
     } from "../data/store";
-    import Albums from "./Albums.svelte";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
@@ -110,6 +108,7 @@
         console.log("scroll", evt);
         $libraryScrollPos = evt.target.scrollTop;
     }
+
     function updateOrderBy(newOrderBy) {
         if ($query.orderBy === newOrderBy) {
             $query.reverse = !$query.reverse;

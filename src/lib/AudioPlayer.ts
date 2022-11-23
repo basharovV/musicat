@@ -21,6 +21,8 @@ class AudioPlayer {
     }
 
     audioFile: HTMLAudioElement;
+    audioFile2: HTMLAudioElement; // for gapless playback
+    currentAudioFile: 1 | 2 = 1;
     // source: MediaElementAudioSourceNode;
     duration: number;
     // gainNode: GainNode;
@@ -31,6 +33,14 @@ class AudioPlayer {
     currentSongIdx: number;
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
     playlist: Song[];
+    isRunningTransition = false;
+    connectOtherAudioFile = (
+        toSwitchTo: number,
+        transitionPointInTime: number
+    ) => {};
+    doPlay = (number) => {};
+    doPause = (number) => {};
+
     private constructor() {
         // let AudioContext = window.AudioContext || window.webkitAudioContext;
         // const audioCtx: AudioContext = new AudioContext();
@@ -39,21 +49,52 @@ class AudioPlayer {
         // this.gainNode.connect(audioCtx.destination);
 
         this.audioFile = new Audio();
+        this.audioFile2 = new Audio();
+
         // this.source = audioCtx.createMediaElementSource(this.audioFile);
         // this.source.connect(this.gainNode);
 
         seekTime.subscribe((time) => {
-            if (this.audioFile) {
-                console.log("seeking to ", time);
-                this.audioFile.currentTime = time;
+            if (this.getCurrentAudioFile()) {
+                this.getCurrentAudioFile().currentTime = time;
                 playerTime.set(time);
-                console.log("seeked  ", this.audioFile.currentTime);
             }
         });
 
-        this.audioFile.addEventListener("pause", this.onPause.bind(this));
-        this.audioFile.addEventListener("play", this.onPlay.bind(this));
-        this.audioFile.addEventListener("ended", this.onEnded.bind(this));
+        this.audioFile.addEventListener(
+            "pause",
+            (() => this.onPause(1)).bind(this)
+        );
+        this.audioFile.addEventListener(
+            "play",
+            (() => this.onPlay(1)).bind(this)
+        );
+        this.audioFile.addEventListener(
+            "ended",
+            (async () => this.onEnded(1)).bind(this)
+        );
+        this.audioFile.addEventListener(
+            "timeupdate",
+            (() => this.onTimeUpdate(1)).bind(this)
+        );
+
+        this.audioFile2.addEventListener(
+            "pause",
+            (() => this.onPause(2)).bind(this)
+        );
+        this.audioFile2.addEventListener(
+            "play",
+            (() => this.onPlay(2)).bind(this)
+        );
+        this.audioFile2.addEventListener(
+            "ended",
+            (() => this.onEnded(2)).bind(this)
+        );
+        this.audioFile2.addEventListener(
+            "timeupdate",
+            (async () => this.onTimeUpdate(1)).bind(this)
+        );
+
         // volume.set(this.audioFile.volume);
 
         this.setupMediaSession();
@@ -79,42 +120,117 @@ class AudioPlayer {
         });
     }
 
+    getCurrentAudioFile() {
+        if (this.currentAudioFile === 1) return this.audioFile;
+        return this.audioFile2;
+    }
+
+    getOtherAudioFile() {
+        if (this.currentAudioFile === 1) return this.audioFile2;
+        return this.audioFile;
+    }
+
+    switchAudioFile() {
+        if (this.currentAudioFile === 1) {
+            this.currentAudioFile = 2;
+        } else {
+            this.currentAudioFile = 1;
+        }
+    }
+
     setVolume(vol) {
         // this.audioFile.volume = volume;
         volume.set(vol);
     }
 
-    onPlay() {
+    onPlay(player: number) {
         isPlaying.set(true);
         console.log("callback in play", this.isFinishedCallback);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "playing";
     }
 
-    onPause() {
+    onPause(player: number) {
         isPlaying.set(false);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "paused";
     }
 
-    onEnded() {
-        console.log("ENDED!");
-        if (this.isAlreadyLoadingSong) {
-            this.isAlreadyLoadingSong = false;
-            console.log("already loading song");
-        } else {
+    onEnded(player: number) {
+        if (player === this.currentAudioFile) {
+            console.log("ENDED!");
             isPlaying.set(false);
             console.log("callback", this.isFinishedCallback);
             this.isFinishedCallback && this.isFinishedCallback();
-            this.playNext();
+            if (!this.isRunningTransition) this.onTimeUpdate(1);
+        } else {
+            // The other player has finished playing
         }
     }
 
+    async onTimeUpdate(player: number) {
+        // console.log("player 1 time: " + this.audioFile.currentTime);
+        // console.log("player 2 time: " + this.audioFile2.currentTime);
+
+        const currentTime =
+            this.currentAudioFile === 1
+                ? this.audioFile.currentTime
+                : this.audioFile2.currentTime;
+        const duration =
+            this.currentAudioFile === 1
+                ? this.audioFile.duration
+                : this.audioFile2.duration;
+        if (currentTime > duration - 1.1 && !this.isRunningTransition) {
+            this.isRunningTransition = true;
+            console.log("2 SECS LEFT! STARTING TRANSITION...");
+
+            const chunk = 0.3;
+            const diff = duration - currentTime;
+
+            console.log("diff", diff);
+            console.log("duration", duration);
+            console.log("currentTime", currentTime);
+
+            // setTimeout(async () => {
+            //     this.getOtherAudioFile().volume = 0;
+            //     this.getCurrentAudioFile().volume = get(volume);
+            // }, (diff - 0.177) * 1000);
+
+            this.connectOtherAudioFile(
+                this.currentAudioFile === 1 ? 2 : 1,
+                diff
+            );
+            this.queueGapless(diff);
+        }
+    }
+
+    async queueGapless(diff) {
+        const playDelay = 0.1;
+        setTimeout(async () => {
+            this.play(true);
+            this.switchAudioFile();
+            currentSongIdx.set(get(currentSongIdx) + 1);
+            playerTime.set(0);
+            currentSong.set(get(nextUpSong));
+            this.currentSong = get(nextUpSong);
+            this.setNextUpSong();
+            this.setMediaSessionData();
+            this.isRunningTransition = false;
+        }, (diff - 0.41) * 1000);
+    }
+
     playNext() {
-        this.currentSongIdx++;
+        currentSongIdx.set(get(currentSongIdx) + 1);
+        this.playSong(this.playlist[this.currentSongIdx]);
+    }
+
+    playPrevious() {
+        currentSongIdx.set(get(currentSongIdx) - 1);
         this.playSong(this.playlist[this.currentSongIdx]);
         currentSongIdx.set(this.currentSongIdx);
     }
+
+    restart() {}
 
     setAudioFinishedCallback(callback) {
         this.isFinishedCallback = callback;
@@ -207,9 +323,17 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
-        if (this.audioFile.src) {
+        if (this.getCurrentAudioFile().src) {
             if (this.currentSongIdx + 1 < this.playlist.length) {
-                nextUpSong.set(this.playlist[this.currentSongIdx + 1]);
+                const nextSong = this.playlist[this.currentSongIdx + 1];
+                nextUpSong.set(nextSong);
+
+                // Set up gapless playback
+                this.getOtherAudioFile().src =
+                    "asset://localhost/" + nextSong.path.replace("?", "%3F");
+                this.getOtherAudioFile().preload = "auto";
+                this.getOtherAudioFile().load();
+                this.getOtherAudioFile().currentTime = 0.00001;
             } else {
                 nextUpSong.set(null);
             }
@@ -221,11 +345,12 @@ class AudioPlayer {
     // MEDIA
     async playSong(song: Song) {
         console.log("playSong", song);
-        if (this.audioFile && song) {
+        if (this.getCurrentAudioFile() && song) {
             this.pause();
-            this.audioFile.currentTime = 0;
-            playerTime.set(this.audioFile.currentTime);
-            this.audioFile.src = "asset://" + song.path.replace("?", "%3F");
+            this.getCurrentAudioFile().currentTime = 0;
+            playerTime.set(this.getCurrentAudioFile().currentTime);
+            this.getCurrentAudioFile().src =
+                "asset://localhost/" + song.path.replace("?", "%3F");
             this.play();
             currentSong.set(song);
             this.setNextUpSong();
@@ -234,19 +359,30 @@ class AudioPlayer {
         }
     }
 
-    play() {
-        if (this.audioFile) {
-            this.audioFile.play();
+    play(other: boolean = false) {
+        if (other) {
+            this.doPlay(this.currentAudioFile === 1 ? 2 : 1);
             this.ticker = setInterval(() => {
-                playerTime.set(this.audioFile.currentTime);
+                playerTime.set(this.getCurrentAudioFile().currentTime);
             }, 1000);
+        } else {
+            if (this.getCurrentAudioFile()) {
+                this.doPlay(this.currentAudioFile);
+
+                this.ticker = setInterval(() => {
+                    playerTime.set(this.getCurrentAudioFile().currentTime);
+                }, 1000);
+            }
         }
     }
 
-    pause() {
-        if (this.audioFile) {
-            this.audioFile.pause();
-            clearInterval(this.ticker);
+    pause(other: boolean = false) {
+        if (other && this.getOtherAudioFile()) {
+            this.doPause(this.currentAudioFile === 1 ? 2 : 1);
+        } else {
+            if (this.getCurrentAudioFile()) {
+                this.doPause(this.currentAudioFile);
+            }
         }
     }
 
