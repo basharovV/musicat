@@ -2,7 +2,7 @@
     import { liveQuery } from "dexie";
     import { text } from "svelte/internal";
     import { db } from "../../data/db";
-    import { selectedArtistId } from "../../data/store";
+    import { isScrapbookShown, selectedArtistId } from "../../data/store";
 
     import { autoWidth } from "../../utils/AutoWidth";
     import Menu from "../menu/Menu.svelte";
@@ -49,7 +49,9 @@
             await db.artistProjects.delete($selectedArtistId);
             isConfirmingArtistDelete = false;
             showMenu = false;
-            const filteredArtists= $artists.filter(a=>a.name !== $selectedArtistId);
+            const filteredArtists = $artists.filter(
+                (a) => a.name !== $selectedArtistId
+            );
             console.log("filteredArtists", filteredArtists);
             if (filteredArtists?.length) {
                 $selectedArtistId = filteredArtists[0].name;
@@ -185,6 +187,11 @@
                 }}
             />
         {/if}
+        <button
+            on:click={() => {
+                $isScrapbookShown = !$isScrapbookShown;
+            }}>{$isScrapbookShown ? "Hide" : "Show"} scrapbook</button
+        >
     </div>
 
     {#if matchingArtists.length > 0}
