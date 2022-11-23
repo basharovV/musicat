@@ -37,6 +37,9 @@
     import KeySelector from "../ui/KeySelector.svelte";
     import Input from "../Input.svelte";
     import ArtistInfo from "./ArtistInfo.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../menu/Menu.svelte";
+    import Icon from "../ui/Icon.svelte";
 
     export let songProject: SongProject;
     export let song: Song; // We might need to create a project based on this song
@@ -117,6 +120,24 @@
         if (songProjectClone) {
             db.songProjects.put(songProjectClone);
         }
+    }
+
+    let isConfirmingSongDelete = true;
+    let menuPos = { x: 0, y: 0 };
+    let showMenu = false;
+
+    function onDeleteSongConfirm(e: MouseEvent) {
+        showMenu = !showMenu;
+        menuPos = { x: e.clientX, y: e.clientY };
+    }
+
+    function deleteSong() {
+        const title = songProject.title;
+        onDeleteSongProject(songProject);
+        showMenu = false;
+        fullScreenLyrics = false;
+
+        toast.success(`Deleted ${title}`);
     }
 
     function onTitleUpdated(evt) {
@@ -312,7 +333,7 @@
         "font-48"
     ];
 
-    let currentFontSizeIdx = 1;
+    let currentFontSizeIdx = 3;
     $: currentFontSize = fontSizes[currentFontSizeIdx];
 
     function increaseFontSize() {
@@ -587,11 +608,10 @@
                 >
             </div>
             {#if isProject}
-                <iconify-icon
-                    class="delete-icon"
+                <Icon
                     icon="ant-design:delete-outlined"
-                    on:click={() => {
-                        onDeleteSongProject(songProject);
+                    onClick={(e) => {
+                        onDeleteSongConfirm(e);
                     }}
                 />
             {/if}
@@ -606,7 +626,24 @@
             </div>
         {/if}
     </header>
-
+    {#if showMenu}
+        <Menu
+            x={menuPos.x}
+            y={menuPos.y}
+            onClickOutside={() => {
+                showMenu = false;
+            }}
+            position="manual"
+        >
+            <MenuOption
+                text="Delete artist"
+                confirmText="Are you sure?"
+                isDestructive
+                isConfirming={isConfirmingSongDelete}
+                onClick={deleteSong}
+            />
+        </Menu>
+    {/if}
     {#if songProjectClone}
         <div class="details">
             <div>
@@ -779,6 +816,7 @@
             header {
                 padding: 2em;
                 position: absolute;
+                z-index: 5;
             }
 
             .lyrics-options {
