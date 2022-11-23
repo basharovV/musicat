@@ -2,9 +2,39 @@
     <h3>Release Notes</h3>
 
     <section>
+        <h3>📦 0.4.0 <i>"For the love of music!"</i></h3>
+        <li>
+            <b>Introducing the Artist's Toolkit</b> - helping you write songs
+            and organize musical ideas inside your music player. How cool is
+            that!
+            You can use the Scrapbook to keep your "messy" ideas, tag them and easily
+            find them later.
+            <br />
+            <br /> You can create new songs, attach audio, video, image files
+            (or just drag ideas from the scrapbook), and even write lyrics!
+            <br />
+        </li>
+        <li>
+            <b>Album View!</b> Browse and play albums in your library, with all the
+            artwork on display, and beautifully animated CD covers.
+        </li>
+        <li>
+            The default sort in the Library is now the 'discography' sort. As
+            you scroll, you see Artists in alphabetical order, albums in release
+            date order, and tracks in the right order
+        </li>
+        <li>
+            The default visualizer is now an oscilloscope, with a full screen
+            option. More visualizers will be added in later releases.
+        </li>
+    </section>
+
+    <section>
         <h3>📦 0.3.0 <i>"Enhance, enhance!"</i></h3>
         <li>
-            The new Smart Query section allows you to create powerful query chains, made up of condition blocks such as "where genre is x" and "released between year1 and year2". 
+            The new Smart Query section allows you to create powerful query
+            chains, made up of condition blocks such as "where genre is x" and
+            "released between year1 and year2".
         </li>
     </section>
 
@@ -23,9 +53,9 @@
     <section>
         <h3>📦 0.1.1 <i>"Search and you shall find, maybe"</i></h3>
         <li>
-            Search for tracks in the sidebar! Or press Cmd/Ctr + F. <br/>Note: this only works for
-            tracks/artists/albums that "start with" the query (words in the
-            middle don't match, yet)
+            Search for tracks in the sidebar! Or press Cmd/Ctr + F. <br />Note:
+            this only works for tracks/artists/albums that "start with" the
+            query (words in the middle don't match, yet)
         </li>
     </section>
     <section>
@@ -73,6 +103,7 @@
             li {
                 margin-inline-start: 1em;
                 text-align: left;
+                margin-top: 0.6em;
             }
         }
     }
