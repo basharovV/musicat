@@ -3,6 +3,7 @@
     import type { ArtistProject, Song, SongProject } from "src/App";
     import {
         isDraggingExternalFiles,
+        isScrapbookShown,
         selectedArtistId
     } from "../../data/store";
     import { db } from "../../data/db";
@@ -129,7 +130,7 @@
     }
 </script>
 
-<container>
+<container class:scrapbook-open={$isScrapbookShown}>
     {#if $isDraggingExternalFiles}
         <ContentDropzone songProject={selectedSongProject} />
     {/if}
@@ -139,14 +140,16 @@
     <section class="artist-info">
         <ArtistInfo artist={$selectedArtist} />
     </section>
-    <section class="scrapbook">
-        <div>
-            <h2>Scrapbook</h2>
-        </div>
-        <div class="content">
-            <Scrapbook />
-        </div>
-    </section>
+    {#if $isScrapbookShown}
+        <section class="scrapbook">
+            <div>
+                <h2>Scrapbook</h2>
+            </div>
+            <div class="content">
+                <Scrapbook />
+            </div>
+        </section>
+    {/if}
     <section class="songs">
         <div>
             <h2>my songs</h2>
@@ -211,10 +214,16 @@
     container {
         text-align: left;
         display: grid;
-        grid-template-columns: 350px 5fr 4fr;
+        grid-template-columns: 350px 5fr;
         grid-template-rows: auto auto 1fr;
         height: 100vh;
         overflow: hidden;
+
+        &.scrapbook-open {
+            grid-template-columns: 350px 5fr 4fr;
+            grid-template-rows: auto auto 1fr;
+        }
+
         h2 {
             margin: 0;
             font-family: "Snake";
@@ -248,9 +257,9 @@
             flex-direction: row;
             gap: 2em;
             align-items: center;
-            padding: 0.7em 2em;
+            padding: 0.7em 0 0.7em 2em;
             border-bottom: 1px solid rgba(255, 255, 255, 0.093);
-            border-left: 1px solid rgba(255, 255, 255, 0.093);
+            /* border-left: 1px solid rgba(255, 255, 255, 0.093); */
             background-color: rgba(0, 0, 0, 0.159);
 
             h2 {
