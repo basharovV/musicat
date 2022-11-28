@@ -11,7 +11,7 @@
 <br/>
 <small>🏷 with metadata tagging support (read and write ID3v2, Vorbis)</small>
 <br/>
-<small>💿 a nice little mini-player
+<small>💿 a neat mini-player
 </small>
 <br/>
 <small>🪕 Artist's toolkit for musicians
@@ -25,6 +25,22 @@
 
 Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback! 
 
+## Features
+- Music player with support for MP3, FLAC, WAV, AAC, OGG
+- Mini-player and oscilloscope visualizer
+- Sorting releases chronologically within artist sort (discography sort)
+- Toggle library view between lossy/lossless/both
+- Edit file metadata including embedded artwork
+- Use Smart Query to create smart auto-updating playlists based on rules eg. "tracks that contains 'love' released after 1950, longer than 4 mins"
+
+### For musicians
+- Keep your messy ideas in the Scrapbook - audio/video clips, text files, links, etc. Tag them and easily find them later.
+- Manage your music in the Artist's toolkit
+  - Manage your artists and musical projects
+  - Create song entries, add info and lyrics
+  - Attach files (or drag from the scrapbook), from cool riffs to final masters.
+- Look up chords/lyrics in DuckDuckGo, go to artist on Wikipedia
+
 ## Build locally
 Pre-requisites: Set up the [Tauri](https://tauri.app/) framework.
 
@@ -35,42 +51,6 @@ To generate a Universal build for macOS:
 
 ### Windows, Linux
 Windows and Linux builds have not been tested yet, but you can generate this using `npm run tauri build` on your system. 
-
-## Features:
-- File formats
-  - [x] Supports MP3, FLAC, AAC, OGG, WAV
-      - Metadata editing only for MP3 and FLAC
-- Library
-  - [x] Add track(s) and folders (also folders within folders)
-  - [x] Delete track(s) with multi-select
-  - [x] Look up tracks on YouTube / Wikipedia via right click
-  - [x] Look up chords and lyrics on DuckDuckGo
-  - [x] Basic search (matching by 'starts with' on title, album or artist)
-  - [x] Advanced search (Smart queries)
-- __Metadata / Track Info__
-  ![info](docs/info.jpeg)
-
-  - [x] Add or replace the track artwork
-  - [x] View and Edit existing tags
-  - [x] Add new tags (from common list), custom tags not supported yet
-- __Mini-player__
-  
-  Small and widget-like. Window controls dissappear when in mini player mode.
-  - [x] Save window position (four corners). Configurable in settings.
-<p align="center">
-<img height="200" src="docs/mini-cover.jpeg">
-<img height="200" src="docs/mini-ui.jpeg">
-</p>
-
-- Player
-  - [x] Current track info and artwork (fallback to album folder artwork)
-  - [x] Show format, bitrate, sample rate
-  - [x] EQ visualizer
-  - [x] Media keys support (also Space for play/pause)
-  - [ ] Shuffle
-  - [ ] Playlists
-- UI
-  - [ ] Custom themes
 
 ## Keyboard Shortcuts
 - <small><kbd>**`Cmd`**</kbd> + <kbd>**`F`**</kbd></small> : Search
