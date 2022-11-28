@@ -27,6 +27,7 @@ Note: musicat is currently in major version zero (0.x) active development, and f
 
 ## Features
 - Music player with support for MP3, FLAC, WAV, AAC, OGG
+- Albums view
 - Mini-player and oscilloscope visualizer
 - Sorting releases chronologically within artist sort (discography sort)
 - Toggle library view between lossy/lossless/both
