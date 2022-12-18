@@ -46,11 +46,14 @@ export const volume: Writable<number> = writable(
 );
 export const isFullScreenVisualiser = writable(false);
 
-
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
 export const uiView: Writable<SidebarItem> = writable("library");
 
+export const isWelcomeSeen: Writable<boolean> = writable(Boolean(localStorage.getItem("isWelcomeSeen") || false));
+isWelcomeSeen.subscribe((val) =>
+    localStorage.setItem("isWelcomeSeen", String(val))
+);
 // File drop
 export const droppedFiles: Writable<string[]> = writable([]);
 export const hoveredFiles: Writable<string[]> = writable([]);

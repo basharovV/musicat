@@ -10,6 +10,7 @@
         isMiniPlayer,
         isSettingsOpen,
         isTrackInfoPopupOpen,
+        isWelcomeSeen,
         uiView
     } from "./data/store";
 
@@ -26,6 +27,7 @@
     import { startMenuListener } from "./window/EventListener";
     import { addFolder, addPaths } from "./data/LibraryImporter";
     import AlbumView from "./lib/views/AlbumsView.svelte";
+    import WelcomeView from "./lib/views/WelcomeView.svelte";
 
     startMenuListener();
 
@@ -141,9 +143,12 @@
 {/if}
 
 <main class:mini-player={$isMiniPlayer}>
-    <Sidebar />
-
-    {#if $uiView === "library" || $uiView === "smart-query"}
+    {#if $isWelcomeSeen}
+        <Sidebar />
+    {/if}
+    {#if !$isWelcomeSeen}
+        <WelcomeView />
+    {:else if $uiView === "library" || $uiView === "smart-query"}
         <LibraryView />
     {:else if $uiView === "albums"}
         <AlbumView />

@@ -15,7 +15,6 @@
         <section class="info">
             <div>
                 <h1>Musicat</h1>
-                <p>🎹 for the love of music 🥁</p>
             </div>
             <div class="app-icon">
                 <img src="icon.png" />
@@ -25,7 +24,7 @@
                     >built by <a
                         href="https://vyacheslavbasharov.com"
                         target="_blank">Slav</a
-                    ></small
+                    > for artists and musicians</small
                 >
                 <!-- <br /> -->
                 {#await version then versionValue}<small
@@ -67,10 +66,14 @@
     .info {
         min-height: 100%;
         min-width: 300px;
-        display: grid;
-        grid-template-rows: auto 250px 1fr;
+        max-width: 350px;
+        display: flex;
+        flex-direction: column;
+        grid-template-rows: auto 1fr 1fr;
 
         .app-icon {
+            position: absolute;
+            opacity: 0.08;
             width: auto;
             height: 100%;
             img {

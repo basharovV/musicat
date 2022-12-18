@@ -13,6 +13,7 @@
     import * as musicMetadata from "music-metadata-browser";
     import { onMount } from "svelte";
     import tippy from "svelte-tippy";
+    import { fly } from "svelte/transition";
     import { lookForArt } from "../data/LibraryImporter";
     import {
         currentSong,
@@ -348,6 +349,7 @@
     class:has-current-song={$currentSong}
     class:empty={!$currentSong}
     class:hovered={isMiniPlayerHovered}
+    transition:fly={{duration: 200, x: -200}}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region

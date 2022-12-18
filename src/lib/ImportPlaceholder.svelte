@@ -12,7 +12,6 @@
             Track {$importStatus.importedTracks} / {$importStatus.totalTracks}
         </h3>
     {:else}
-        <h2>An app for those of us that still have a local music library</h2>
         <h3>Click "Import library" or just drag + drop a folder here</h3>
         <p>You can always add more music later</p>
         <button on:click={openTauriImportDialog}>Import library +</button>
