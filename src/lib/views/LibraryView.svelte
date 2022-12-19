@@ -7,6 +7,7 @@
     import {
         isSmartQueryBuilderOpen,
         playlist,
+        playlistIsAlbum,
         queriedSongs,
         query,
         selectedSmartQuery,
@@ -135,8 +136,9 @@
 
         isLoading = false;
         $playlist = resultsArray;
+        $playlistIsAlbum = false;
         return resultsArray;
     });
 </script>
 
-<Library allSongs={songs} showMyArtists={true} {isLoading}/>
+<Library allSongs={songs} showMyArtists={true} {isLoading} />

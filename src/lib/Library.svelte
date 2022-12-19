@@ -19,6 +19,7 @@
         currentSongIdx,
         importStatus,
         isSmartQueryBuilderOpen,
+        isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
         nextUpSong,
@@ -28,14 +29,21 @@
         rightClickedTracks,
         singleKeyShortcutsEnabled,
         smartQuery,
+        smartQueryInitiator,
         songsJustAdded,
         uiView
     } from "../data/store";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
+    import SmartQuery from "./smart-query/Query";
+    import {
+        BUILT_IN_QUERY_PARTS,
+        getQueryPart
+    } from "./smart-query/QueryParts";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
+    import { UserQueryPart } from "./smart-query/UserQueryPart";
     import TrackMenu from "./TrackMenu.svelte";
     import { optionalTippy } from "./ui/TippyAction";
     // TODO
@@ -103,7 +111,7 @@
             }
         }
     }
-    
+
     function onScroll(evt) {
         console.log("scroll", evt);
         $libraryScrollPos = evt.target.scrollTop;
@@ -542,6 +550,35 @@
                                 <td data-type={field.value}>
                                     <div class="field">
                                         <p
+                                            on:click|stopPropagation={() => {
+                                                $smartQuery.reset();
+                                                const queryPart =
+                                                    getQueryPart(
+                                                        "CONTAINS_GENRE"
+                                                    );
+                                                console.log(
+                                                    "built in query Part",
+                                                    queryPart
+                                                );
+                                                const userQueryPart =
+                                                    new UserQueryPart(
+                                                        queryPart
+                                                    );
+                                                console.log(
+                                                    "built in user query Part",
+                                                    userQueryPart
+                                                );
+                                                userQueryPart.userInputs[
+                                                    field.value
+                                                ].value = song[field.value];
+                                                $smartQuery.addPart(
+                                                    userQueryPart
+                                                );
+                                                $smartQueryInitiator =
+                                                    "genre-pill";
+                                                $isSmartQueryBuilderOpen = true;
+                                                $uiView = "smart-query";
+                                            }}
                                             class:my-artist={field.value ===
                                                 "artist" &&
                                                 $artists &&
@@ -565,6 +602,7 @@
                                                 {/if}
                                             </div>
                                         {/if}
+
                                         <div class="title-icons-right">
                                             {#if field.value === "title" && song.isFavourite}
                                                 <iconify-icon
@@ -953,6 +991,22 @@
             > td {
                 font-size: 13px;
                 text-overflow: clip;
+
+                &[data-type="genre"] {
+                    p {
+                        /* border: 1px solid rgb(63, 61, 61); */
+                        background-color: rgba(255, 255, 255, 0.04);
+                        border-radius: 3px;
+                        padding: 0 4px;
+
+                        &:hover {
+                            background-color: $highlight_color;
+                        }
+                        &:active {
+                            background-color: $selected_color;
+                        }
+                    }
+                }
             }
             &.highlight {
                 background-color: $highlight_color !important;

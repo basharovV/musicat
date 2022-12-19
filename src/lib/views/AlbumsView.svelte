@@ -2,7 +2,7 @@
     import { resolve } from "@tauri-apps/api/path";
     import { liveQuery, type IndexableTypeArray } from "dexie";
     import "iconify-icon";
-    import type { Song } from "../../App";
+    import type { Album, Song } from "../../App";
     import { db } from "../../data/db";
     import {
         albumPlaylist,
@@ -16,14 +16,17 @@
     import { convertFileSrc } from "@tauri-apps/api/tauri";
     import { lookForArt } from "../../data/LibraryImporter";
     import audioPlayer from "../AudioPlayer";
+    import { fade, fly } from "svelte/transition";
+    import { cubicInOut } from "svelte/easing";
+    import md5 from "md5";
 
     let isLoading = true;
 
-    let cachedAlbums: IndexableTypeArray = [];
+    let cachedAlbums: Album[] = [];
 
     $: albums = liveQuery(async () => {
-        let resultsArray: IndexableTypeArray = [];
-        resultsArray = await db.songs.orderBy("album").uniqueKeys();
+        let resultsArray: Album[] = [];
+        resultsArray = await db.albums.toArray();
 
         console.log("albums", resultsArray);
 
@@ -35,7 +38,7 @@
     $: queriedAlbums =
         $albums && $query.query.length
             ? $albums.filter((a) =>
-                  a
+                  a.title
                       .toString()
                       .trim()
                       .toLowerCase()
@@ -49,50 +52,67 @@
         }
     }
 
+    async function showCurrentlyPlayingAlbum() {
+        // Find the album currently playing
+        const currentAlbum = await db.albums.get(
+            md5(`${$currentSong.artist} - ${$currentSong.album}`)
+        );
+        let tracks = await db.songs
+            .where("id")
+            .anyOf(currentAlbum.tracksIds)
+            .sortBy('trackNumber')
+            
+        $albumPlaylist = tracks;
+        $playlistIsAlbum = true;
+    }
+
+    if ($playlist && !$playlistIsAlbum) {
+        showCurrentlyPlayingAlbum();
+    }
+
     let showSingles = false;
 
     async function loadData() {
-        await getAlbumTrack($albums);
+        // await getAlbumTrack($albums);
     }
 
     let albumsData: {
         [key: string]: {
+            album: Album;
             tracks: Song[];
             artworkFormat: string;
             artworkSrc: string;
         };
     } = null;
 
-    async function addArtwork(album, track) {
-        if (albumsData[album.toString()].tracks?.length) {
+    async function addArtwork(albumId: string, track) {
+        if (track) {
             const result = await getArtwork(track);
-            albumsData[album.toString()].artworkFormat = result.artworkFormat;
-            albumsData[album.toString()].artworkSrc = result.artworkSrc;
+            albumsData[albumId].artworkFormat = result.artworkFormat;
+            albumsData[albumId].artworkSrc = result.artworkSrc;
         }
     }
 
-    async function getAlbumTrack(albums: IndexableTypeArray) {
+    async function getAlbumTrack(albums: Album[]) {
         console.log("albumdata", albums);
         await Promise.all(
             albums.map(
                 (album) =>
                     new Promise<void>(async (resolve) => {
                         if (albumsData === null) albumsData = {};
-                        if (albumsData[album.toString()] === undefined) {
-                            albumsData[album.toString()] = {
+                        if (albumsData[album.id] === undefined) {
+                            albumsData[album.id] = {
+                                album,
                                 tracks: [],
                                 artworkFormat: null,
                                 artworkSrc: null
                             };
                         }
-                        albumsData[album.toString()].tracks = await db.songs
-                            .where("album")
-                            .equals(album)
-                            .sortBy("trackNumber");
-                        addArtwork(
-                            album,
-                            albumsData[album.toString()].tracks[0]
+                        const firstTrack = await db.songs.get(
+                            album.tracksIds[0]
                         );
+
+                        addArtwork(album.id, firstTrack);
                         resolve();
                     })
             )
@@ -153,7 +173,8 @@
     </div>
 
     {#if $playlist?.length && $playlistIsAlbum}
-        <div class="now-playing">
+        <div class="now-playing" in:fly={{ duration: 200, x: -200 }}>
+            <h1>Now playing</h1>
             <div class="album-info">
                 <p>{$currentSong.album}</p>
                 <p>{$currentSong.artist}</p>
@@ -178,53 +199,36 @@
         </div>
     {/if}
 
-    {#if $query.query?.length && queriedAlbums?.length}
+    {#if isLoading}
+        <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
+            <p>💿 one sec...</p>
+        </div>
+    {:else}
+        {#if $query.query?.length && queriedAlbums?.length}
+            <div
+                class="grid"
+                class:show={$query.query?.length}
+                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+            >
+                {#each queriedAlbums as album (album.id)}
+                    <AlbumItem {album} />
+                {/each}
+            </div>
+        {/if}
         <div
             class="grid"
-            class:show={$query.query?.length}
+            class:show={$albums && $query.query?.length === 0}
             style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
         >
-            {#each queriedAlbums as album (album)}
-                <AlbumItem
-                    {album}
-                    tracks={albumsData && albumsData[album]
-                        ? albumsData[album].tracks
-                        : null}
-                    artworkSrc={albumsData && albumsData[album]
-                        ? albumsData[album].artworkSrc
-                        : null}
-                    artworkFormat={albumsData && albumsData[album]
-                        ? albumsData[album].artworkFormat
-                        : null}
-                />
-            {/each}
+            {#if $albums}
+                {#each $albums as album (album.id)}
+                    {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
+                        <AlbumItem {album} {displayTracks} />
+                    {/if}
+                {/each}
+            {/if}
         </div>
     {/if}
-    <div
-        class="grid"
-        class:show={$albums && $query.query?.length === 0}
-        style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
-    >
-        {#if $albums}
-            {#each $albums as album (album)}
-                {#if !(albumsData && albumsData[album]?.tracks?.length) || (albumsData && showSingles && albumsData[album].tracks.length > 0) || (albumsData && !showSingles && albumsData[album].tracks.length > 1)}
-                    <AlbumItem
-                        {album}
-                        tracks={albumsData && albumsData[album]
-                            ? albumsData[album].tracks
-                            : null}
-                        artworkSrc={albumsData && albumsData[album]
-                            ? albumsData[album].artworkSrc
-                            : null}
-                        artworkFormat={albumsData && albumsData[album]
-                            ? albumsData[album].artworkFormat
-                            : null}
-                        {displayTracks}
-                    />
-                {/if}
-            {/each}
-        {/if}
-    </div>
 </div>
 
 <style lang="scss">
@@ -236,6 +240,7 @@
         grid-template-rows: auto 1fr;
         grid-template-columns: auto 1fr;
         background-color: #242026b3;
+        position: relative;
     }
 
     .header {
@@ -262,10 +267,12 @@
     .grid {
         grid-column: 2;
         grid-row: 2;
+        width: 100%;
         display: none;
         height: fit-content;
         padding: 1em;
         gap: 10px;
+        min-width: 0; // hack to make the grid respect wrap
         /* background-color: rgb(34, 33, 33); */
         /* background-image: url("images/textures/soft-wallpaper.png"); */
         /* background-repeat: repeat; */
@@ -315,32 +322,36 @@
         }
     }
     .now-playing {
+        h1 {
+            font-family: "Snake";
+            margin: 0 0.5em 0.5em;
+            text-align: left;
+        }
         display: flex;
         flex-direction: column;
         /* background: rgba(36, 34, 34, 0.943); */
         backdrop-filter: blur(8px);
         /* border: 1px solid rgba(128, 128, 128, 0.117); */
-        /* border: 1px solid rgba(128, 128, 128, 0.117); */
+        border-right: 1px solid rgba(128, 128, 128, 0.117);
         /* box-shadow: -40px 20px 30px 30px rgba(0, 0, 0, 0.159); */
         /* box-shadow: 2px 2px 50px 100px rgba(72, 16, 128, 0.181); */
 
         color: white;
-        right: 3em;
-        bottom: 1em;
+        bottom: 0;
         border-radius: 4px;
         z-index: 11;
         grid-column: 1;
         grid-row: 2;
         /* min-width: 180px;
         width: max-content; */
-        margin: 1em;
-        max-height: 80vh;
+        height: 100vh;
         max-width: 300px;
         width: 300px;
+        top: 0;
         overflow-y: auto;
         position: sticky;
+        padding-top: 2em;
         padding-bottom: 2em;
-        top: 1em;
 
         .album-info {
             display: flex;
@@ -400,6 +411,21 @@
             &:not(:nth-child(1)) {
                 border-top: 1px solid rgba(255, 255, 255, 0.05);
             }
+        }
+    }
+
+    .loading {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        position: absolute;
+        margin: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        p {
+            opacity: 0.6;
         }
     }
 </style>

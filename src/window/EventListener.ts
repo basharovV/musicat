@@ -17,6 +17,7 @@ export function startMenuListener() {
             case "clear-db":
                 console.log("clear-db");
                 await db.songs.clear();
+                await db.albums.clear();
                 await db.smartQueries.clear();
                 await db.songProjects.clear();
                 await db.artistProjects.clear();

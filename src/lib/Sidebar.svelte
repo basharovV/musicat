@@ -31,6 +31,7 @@
         query,
         rightClickedTrack,
         singleKeyShortcutsEnabled,
+        smartQueryInitiator,
         uiView,
         userSettings,
         volume
@@ -349,7 +350,7 @@
     class:has-current-song={$currentSong}
     class:empty={!$currentSong}
     class:hovered={isMiniPlayerHovered}
-    transition:fly={{duration: 200, x: -200}}
+    transition:fly={{ duration: 200, x: -200 }}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
@@ -411,6 +412,7 @@
                 <item
                     class:selected={$uiView === "smart-query"}
                     on:click={() => {
+                        $smartQueryInitiator = 'sidebar';
                         $uiView = "smart-query";
                     }}
                 >
@@ -1138,7 +1140,7 @@
             display: flex;
         }
         @media only screen and (max-height: 210px) and (max-width: 210px) {
-        padding: 0 2em 1em;
+            padding: 0 2em 1em;
             .track-info-icon,
             .visualizer-icon {
                 display: none;

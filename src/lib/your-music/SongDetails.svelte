@@ -1,14 +1,12 @@
 <script lang="ts">
     import hotkeys from "hotkeys-js";
-    import { cloneDeep, debounce, isEqual } from "lodash-es";
+    import { cloneDeep, debounce } from "lodash-es";
     import type {
         ArtistContentItem,
         ArtistFileItem,
         ArtistLinkItem,
         ArtistProject,
-        ContentFileType,
-        ContentItem,
-        Song,
+        ContentFileType, Song,
         SongProject
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
@@ -16,30 +14,27 @@
     import {
         draggedScrapbookItems,
         emptyDropEvent,
-        os,
-        songDetailsUpdater
+        os
     } from "../../data/store";
     import { autoWidth } from "../../utils/AutoWidth";
     import LyricsTab from "./LyricsTab.svelte";
     import MusicTab from "./MusicTab.svelte";
     import OtherTab from "./OtherTab.svelte";
 
-    import { getSongFromFile } from "../../data/LibraryImporter";
+    import { readTextFile } from "@tauri-apps/api/fs";
+    import toast from "svelte-french-toast";
+    import { getMetadataFromFile, getSongFromMetadata } from "../../data/LibraryImporter";
     import {
         droppedFiles,
         fileDropHandler,
         hoveredFiles
     } from "../../data/store";
     import { getContentFileType } from "../../utils/FileUtils";
-    import { readTextFile } from "@tauri-apps/api/fs";
-    import toast from "svelte-french-toast";
-    import DropdownInput from "../ui/KeySelector.svelte";
-    import KeySelector from "../ui/KeySelector.svelte";
     import Input from "../Input.svelte";
-    import ArtistInfo from "./ArtistInfo.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
     import Menu from "../menu/Menu.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
+    import KeySelector from "../ui/KeySelector.svelte";
 
     export let songProject: SongProject;
     export let song: Song; // We might need to create a project based on this song
@@ -263,7 +258,9 @@
             return;
         }
         console.log("filename", filename);
-        const song = await getSongFromFile(filePath, filename);
+        const metadata = await getMetadataFromFile(filePath, filename);
+        if (!metadata) return;
+        const song = await getSongFromMetadata(filePath, filename, metadata);
         console.log("song", song);
 
         if (!songProjectClone?.recordings) songProjectClone.recordings = [];

@@ -2,7 +2,7 @@ import { readTextFile } from "@tauri-apps/api/fs";
 import type { ContentFileType } from "src/App";
 
 export function isAudioFile(filename: string): boolean {
-    return filename.match(/\.(mp3|ogg|aac|flac|wav)$/) !== null;
+    return filename.match(/\.(mp3|ogg|aac|flac|wav|m4a)$/) !== null;
 }
 export function isVideoFile(filename: string): boolean {
     return filename.match(/\.(mov|mp4|webm|mkv|avi)$/) !== null;

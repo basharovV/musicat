@@ -2,7 +2,10 @@
     import { open } from "@tauri-apps/api/shell";
     import type { ArtistFileItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
-    import { getSongFromFile } from "../../data/LibraryImporter";
+    import {
+        getMetadataFromFile,
+        getSongFromMetadata
+    } from "../../data/LibraryImporter";
     import audioPlayer from "../AudioPlayer";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
 
@@ -12,7 +15,16 @@
     async function openFile() {
         if (item.fileType.type === "audio") {
             // Play it in this app
-            const song = await getSongFromFile(item.path, item.name);
+            const metadata = await getMetadataFromFile(item.path, item.name);
+            if (!metadata) {
+                open(item.path);
+                return;
+            }
+            const song = await getSongFromMetadata(
+                item.path,
+                item.name,
+                metadata
+            );
             audioPlayer.playSong(song);
         } else {
             // Play in default system app
@@ -40,7 +52,10 @@
         {:else if item.fileType.type === "video"}
             <!-- svelte-ignore a11y-media-has-caption -->
             <video preload="metadata" controls={false}>
-                <source src="{convertFileSrc(item.path)}#t=0.1" type="video/mp4" />
+                <source
+                    src="{convertFileSrc(item.path)}#t=0.1"
+                    type="video/mp4"
+                />
             </video>
         {:else}
             <div class="background">
@@ -64,7 +79,6 @@
             <p>{item.name}</p>
         </div>
     </div>
-
 </div>
 
 <style lang="scss">
@@ -135,7 +149,8 @@
                 }
             }
 
-            img, video {
+            img,
+            video {
                 width: 100%;
                 height: 100%;
                 min-height: 96px;

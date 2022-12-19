@@ -2,144 +2,41 @@
     import { UserQueryPart } from "./UserQueryPart";
 
     import { autoWidth } from "../../utils/AutoWidth";
-    import { isSmartQueryValid, smartQuery } from "../../data/store";
+    import {
+        isSmartQueryValid,
+        smartQuery,
+        smartQueryInitiator
+    } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import type { QueryPartStruct } from "./QueryPart";
     import SmartQueryPart from "./SmartQueryPart.svelte";
     import { onMount } from "svelte";
+    import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
 
     const fields = ["artist"];
 
     const keys = ["artist", "album", "year", "genre", "duration", "title"];
 
-    const availableQueryParts: QueryPartStruct[] = [
-        {
-            dataType: "song",
-            fieldKey: "artist",
-            comparison: "is-equal",
-            description: "by artist",
-            example: "by Charlie Parker",
-            prompt: "by {artist}",
-            name: "by {artist}",
-            inputRequired: {
-                "artist": {
-                    defaultVal: "",
-                    isFieldKey: true,
-                    isRequired: true,
-                    type: "string"
-                }
-            }
-        },
-        {
-            dataType: "song",
-            fieldKey: "year",
-            comparison: "is-between",
-            description: "released between",
-            example: "released between 1950 and 1967",
-            prompt: "released between {startYear} and {endYear}",
-            name: "released-between",
-            inputRequired: {
-                "startYear": {
-                    defaultVal: 1940,
-                    isFieldKey: false,
-                    isRequired: true,
-                    type: "number"
-                },
-                "endYear": {
-                    defaultVal: 1960,
-                    isFieldKey: false,
-                    isRequired: true,
-                    type: "number"
-                }
-            }
-        },
-        {
-            dataType: "song",
-            fieldKey: "year",
-            comparison: "is-greater-than",
-            description: "released after",
-            example: "released after 1950",
-            prompt: "released after {startYear}",
-            name: "released-after",
-            inputRequired: {
-                "startYear": {
-                    defaultVal: 1940,
-                    isFieldKey: false,
-                    isRequired: true,
-                    type: "number"
-                }
-            }
-        },
-        {
-            dataType: "song",
-            fieldKey: "title",
-            comparison: "contains",
-            description: "song title contains {text}",
-            example: "song title contains love",
-            prompt: "title contains {text}",
-            name: "released-between",
-            inputRequired: {
-                "text": {
-                    defaultVal: "",
-                    isFieldKey: true,
-                    isRequired: true,
-                    type: "string"
-                }
-            }
-        },
-        {
-            dataType: "song",
-            fieldKey: "duration",
-            comparison: "is-greater-than",
-            description: "longer than",
-            example: "longer than 04:00",
-            prompt: "longer than {minutes}",
-            name: "longer-than",
-            inputRequired: {
-                "minutes": {
-                    defaultVal: "",
-                    isFieldKey: true,
-                    isRequired: true,
-                    type: "number"
-                }
-            }
-        },
-        {
-            dataType: "song",
-            fieldKey: "genre",
-            comparison: "contains",
-            description: "contains genre",
-            example: "contains 'disco'",
-            prompt: "contains {genre}",
-            name: "contains-genre",
-            inputRequired: {
-                "genre": {
-                    defaultVal: "",
-                    isFieldKey: true,
-                    isRequired: true,
-                    type: "string"
-                }
-            }
-        }
-    ];
-
-    let matchingQueryParts: QueryPartStruct[] = availableQueryParts;
+    let matchingQueryParts: QueryPartStruct[] = [];
 
     let queryInput: HTMLInputElement;
     let isAutocompleteHidden = true;
 
     function onFocus() {
-        console.log("onfocus");
-        setTimeout(() => {
-            if ($smartQuery.userInput.trim().length === 0) {
-                // Show all options. Later can cap it if there's too many.
+        console.log("smartQueryInitiator", $smartQueryInitiator);
 
-                console.log("empty input");
-                updateQueryPartsAutocompletePos();
-                matchingQueryParts = availableQueryParts;
-                console.log("matching parts", matchingQueryParts);
-            }
-        }, 150);
+        if ($smartQueryInitiator !== "genre-pill") {
+            setTimeout(() => {
+                if ($smartQuery.userInput.trim().length === 0) {
+                    // Show all options. Later can cap it if there's too many.
+
+                    console.log("empty input");
+                    updateQueryPartsAutocompletePos();
+                    matchingQueryParts = BUILT_IN_QUERY_PARTS;
+                    console.log("matching parts", matchingQueryParts);
+                }
+            }, 150);
+        }
     }
 
     function onLostFocus() {
@@ -173,7 +70,7 @@
                         return matched;
                     }, []);
 
-                    const matchedQueryParts = availableQueryParts.reduce(
+                    const matchedQueryParts = BUILT_IN_QUERY_PARTS.reduce(
                         (matched, part) => {
                             if (
                                 part.fieldKey
@@ -269,10 +166,7 @@
             <iconify-icon class="valid" icon="charm:tick" />
         {:else}
             <p>query is not valid</p>
-            <iconify-icon
-                class="invalid"
-                icon="ant-design:warning-outlined"
-            />
+            <iconify-icon class="invalid" icon="ant-design:warning-outlined" />
         {/if}
     </div>
 
@@ -328,27 +222,26 @@
         min-width: 100px;
     }
 
-
     .validation {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 0.3em;
-            font-weight: normal;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.3em;
+        font-weight: normal;
 
-            p {
-                font-size: 13px;
-                opacity: 0.7;
-                margin: 0;
-            }
-            .valid {
-                color: green;
-            }
-
-            .invalid {
-                color: orange;
-            }
+        p {
+            font-size: 13px;
+            opacity: 0.7;
+            margin: 0;
         }
+        .valid {
+            color: green;
+        }
+
+        .invalid {
+            color: orange;
+        }
+    }
 
     .autocomplete {
         position: fixed;

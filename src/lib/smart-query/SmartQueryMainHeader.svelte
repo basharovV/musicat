@@ -10,7 +10,8 @@
         isSmartQueryValid,
         uiView,
         selectedSmartQuery,
-        smartQuery
+        smartQuery,
+        smartQueryInitiator
     } from "../../data/store";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
@@ -23,6 +24,9 @@
     }
 
     function hideSmartQueryBuilder() {
+        if ($smartQueryInitiator === 'genre-pill') {
+            $uiView = 'library';
+        }
         $isSmartQueryBuilderOpen = false;
     }
 

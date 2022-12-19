@@ -10,19 +10,27 @@ import * as musicMetadata from "music-metadata-browser";
 import { importStatus, songsJustAdded, userSettings } from "./store";
 import { getMapForTagType } from "./LabelMap";
 import { get } from "svelte/store";
-import type { MetadataEntry, Song } from "src/App";
+import type { Album, MetadataEntry, Song } from "src/App";
 import { isAudioFile } from "../utils/FileUtils";
 
 let addedSongs: Song[] = [];
 
-export async function getSongFromFile(filePath: string, fileName: string) {
+export async function getMetadataFromFile(filePath: string, fileName: string) {
     if (!isAudioFile(fileName)) {
         return null;
     }
-    const metadata = await musicMetadata.fetchFromUrl(
-        convertFileSrc(filePath),
-        { duration: false, skipCovers: true, skipPostHeaders: true }
-    );
+    return await musicMetadata.fetchFromUrl(convertFileSrc(filePath), {
+        duration: false,
+        skipCovers: false,
+        skipPostHeaders: true
+    });
+}
+
+export async function getSongFromMetadata(
+    filePath: string,
+    fileName: string,
+    metadata: musicMetadata.IAudioMetadata
+) {
     // console.log('metadata: ', metadata);
     const fileHash = md5(filePath);
     const tagType = metadata.format.tagTypes.length
@@ -72,6 +80,75 @@ export async function getSongFromFile(filePath: string, fileName: string) {
     }
 }
 
+async function addAlbumArtworkFromSong(
+    metadata: musicMetadata.IAudioMetadata,
+    song: Song,
+    newAlbum: Album
+) {
+    if (metadata.common.picture?.length) {
+        const artworkFormat = metadata.common.picture[0].format;
+        const artworkBuffer = metadata.common.picture[0].data;
+        const artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
+            "base64"
+        )}`;
+        // console.log("artworkSrc", artworkSrc);
+        newAlbum.artwork = {
+            src: artworkSrc,
+            format: artworkFormat,
+            size: {
+                width: metadata.common.picture[0]["width"],
+                height: metadata.common.picture[0]["height"]
+            }
+        };
+    } else {
+        const artwork = await lookForArt(song.path, song.file);
+        if (artwork) {
+            const artworkSrc = artwork.artworkSrc;
+            const artworkFormat = artwork.artworkFormat;
+            newAlbum.artwork = {
+                src: artworkSrc,
+                format: artworkFormat,
+                size: {
+                    width: 200,
+                    height: 200
+                }
+            };
+        }
+    }
+}
+
+async function getAlbumFromMetadata(
+    song: Song,
+    metadata: musicMetadata.IAudioMetadata
+) {
+    const existingAlbum = await db.albums.get(
+        md5(`${song.artist} - ${song.album}`)
+    );
+    if (existingAlbum) {
+        existingAlbum.tracksIds.push(song.id);
+        existingAlbum.trackCount++;
+        if (!existingAlbum.artwork) {
+            addAlbumArtworkFromSong(metadata, song, existingAlbum);
+        }
+        return existingAlbum;
+        // Re-order trackIds in album order?
+    } else {
+        const newAlbum: Album = {
+            id: md5(`${song.artist} - ${song.album}`),
+            title: song.album,
+            artist: song.artist,
+            genre: song.genre,
+            duration: song.duration,
+            path: song.path,
+            trackCount: 1,
+            year: song.year,
+            tracksIds: [song.id]
+        };
+        addAlbumArtworkFromSong(metadata, song, newAlbum);
+        return newAlbum;
+    }
+}
+
 export async function addSong(
     filePath: string,
     fileName: string,
@@ -80,12 +157,20 @@ export async function addSong(
     if (singleFile) {
         songsJustAdded.set([]);
     }
-    const songToAdd = await getSongFromFile(filePath, fileName);
+    const metadata = await getMetadataFromFile(filePath, fileName);
+    if (!metadata) return;
+    const songToAdd = await getSongFromMetadata(filePath, fileName, metadata);
+    const albumToSet = await getAlbumFromMetadata(songToAdd, metadata);
     try {
         if (!songToAdd) {
             return;
         }
         await db.songs.put(songToAdd);
+
+        if (!albumToSet) {
+            return;
+        }
+        await db.albums.put(albumToSet);
     } catch (err) {
         console.error(err);
         // Catch 'already exists' case

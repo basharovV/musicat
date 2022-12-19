@@ -9,7 +9,8 @@
     import {
         addFolder,
         addSong,
-        getSongFromFile
+        getMetadataFromFile,
+        getSongFromMetadata
     } from "../../data/LibraryImporter";
 
     import type { Event, UnlistenFn } from "@tauri-apps/api/event";
@@ -52,16 +53,24 @@
             ) {
                 switch (fileType.type) {
                     case "audio":
-                        const song = await getSongFromFile(entry, file);
-                        await db.songProjects.update(songProject, {
-                            recordings: [
-                                ...songProject.recordings,
-                                {
-                                    recordingType: "master",
-                                    song
-                                }
-                            ]
-                        });
+                        const metadata = await getMetadataFromFile(entry, file);
+                        if (metadata) {
+                            const song = await getSongFromMetadata(
+                                entry,
+                                file,
+                                metadata
+                            );
+                            await db.songProjects.update(songProject, {
+                                recordings: [
+                                    ...songProject.recordings,
+                                    {
+                                        recordingType: "master",
+                                        song
+                                    }
+                                ]
+                            });
+                        }
+
                         break;
                     case "video":
                         await db.songProjects.update(songProject, {

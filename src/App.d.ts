@@ -36,6 +36,19 @@ interface Song {
     isFavourite: boolean
 }
 
+interface Album {
+    id: string; // Hash of artist + album name 
+    title: string;
+    artist: string;
+    year: number;
+    genre: string[];
+    trackCount: number;
+    tracksIds: string[];
+    duration: string;
+    path: string;
+    artwork?: ArtworkSrc
+}
+
 /**
  * Represents a song/track that's in progress.
  */

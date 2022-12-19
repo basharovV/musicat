@@ -1,14 +1,11 @@
 <script lang="ts">
-    import { convertFileSrc } from "@tauri-apps/api/tauri";
-    import * as musicMetadata from "music-metadata-browser";
-    import { onMount } from "svelte";
-    import type { Song } from "../App";
+    import { fade, fly } from "svelte/transition";
+    import type { Album, Song } from "../App";
     import { db } from "../data/db";
-    import { lookForArt } from "../data/LibraryImporter";
     import { albumPlaylist, currentSong, isPlaying, playlist, playlistIsAlbum } from "../data/store";
     import audioPlayer from "./AudioPlayer";
 
-    export let album: string; // to display album data
+    export let album: Album; // to display album data
     export let tracks: Song[];
     export let artworkFormat;
     let artworkBuffer: Buffer;
@@ -18,14 +15,18 @@
     $: firstTrack = tracks && tracks[0];
 
     let isHovered = false;
-    function playPauseToggle() {
-        if ($currentSong?.album === album) {
+    async function playPauseToggle() {
+        if ($currentSong?.album === album.title) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
                 audioPlayer.play();
             }
         } else {
+            let tracks = await db.songs.where('id').anyOf(album.tracksIds).toArray();
+            tracks = tracks.sort((a, b) => {
+                return a.trackNumber - b.trackNumber
+            });
             if (tracks) audioPlayer.playSong(tracks[0]);
             $playlist = tracks;
             $albumPlaylist = tracks;
@@ -33,15 +34,16 @@
         }
     }
 
-    $: isPlayingCurrentAlbum = $currentSong?.album === album;
+    $: isPlayingCurrentAlbum = $currentSong?.album === album.title;
 </script>
 
 <div
+    in:fade={{ duration: 150 }}
     class="container"
-    class:hovered={isHovered && artworkSrc && artworkFormat}
+    class:hovered={isHovered && album.artwork}
     class:playing={isPlayingCurrentAlbum}
 >
-    {#if artworkSrc && artworkFormat}
+    {#if album.artwork}
         <div class="cd-img"><img async src="images/cd-hq.webp" /></div>
     {/if}
 
@@ -59,14 +61,18 @@
             <img
                 class="texture"
                 src="images/textures/soft-wallpaper.png"
+                loading="lazy"
+                async
             />
             <div class="artwork-frame">
-                {#if artworkSrc && artworkFormat}
+                {#if album.artwork}
                     <img
                         alt="Artwork"
-                        type={artworkFormat}
+                        type={album.artwork.format}
                         class="artwork"
-                        src={artworkSrc}
+                        src={album.artwork.src}
+                        loading="lazy"
+                        async
                     />
                 {:else}
                     <div class="artwork-placeholder">
@@ -74,6 +80,8 @@
                         <img
                             class="cd-placeholder"
                             src="images/cd-hq.png"
+                            loading="lazy"
+                            async
                         />
                         <!-- <small>No art</small> -->
                     </div>
@@ -94,12 +102,12 @@
             </div>
         </div>
     </div>
-    <p class="title">{album}</p>
-    <p class="artist">{firstTrack?.artist}</p>
+    <p class="title">{album.title}</p>
+    <p class="artist">{album?.artist}</p>
     <div class="info">
-        <small>{firstTrack?.year}</small>
+        <small>{album?.year}</small>
         <small>•</small>
-        <small>{tracks?.length} tracks</small>
+        <small>{album?.trackCount} tracks</small>
     </div>
 </div>
 
@@ -108,7 +116,7 @@
         .cd {
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
-            box-shadow: 2px 2px 50px 100px rgba(72, 16, 128, 0.181) !important;
+            box-shadow: 2px 2px 50px 40px rgba(72, 16, 128, 0.181) !important;
             .hinge {
                 background-color: rgba(167, 164, 173, 0.078);
             }
