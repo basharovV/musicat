@@ -19,6 +19,7 @@
         currentSongIdx,
         importStatus,
         isSmartQueryBuilderOpen,
+        isSmartQuerySaveUiOpen,
         isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
@@ -383,12 +384,15 @@
     function hideSmartQueryBuilder() {
         if (tableHeaders[0] === "smart-query-builder") {
             tableHeaders.splice(0, 1);
+            tableHeaders = tableHeaders;
+        } else if (tableHeaders[1] === "smart-query-builder") {
+            tableHeaders.splice(1, 1);
+            tableHeaders = tableHeaders;
         }
-        tableHeaders = tableHeaders;
     }
 
     function showSmartQueryBuilder() {
-        if (tableHeaders[0] === "smart-query") {
+        if (!tableHeaders.includes("smart-query-builder")) {
             tableHeaders.unshift("smart-query-builder");
             $isSmartQueryBuilderOpen = true;
         }
@@ -398,8 +402,15 @@
         console.log("headers showSmartQuery", tableHeaders);
 
         const found = tableHeaders.findIndex((h) => h === "smart-query");
+        const builderAlreadyShown = tableHeaders.includes(
+            "smart-query-builder"
+        );
         if (found === -1) {
-            tableHeaders.unshift("smart-query");
+            if (builderAlreadyShown) {
+                tableHeaders.splice(1, 0, "smart-query");
+            } else {
+                tableHeaders.unshift("smart-query");
+            }
         }
         tableHeaders = tableHeaders;
     };
@@ -424,7 +435,12 @@
      */
     let tableHeaders = ["track-fields"];
     $: {
-        if (isSmartQueryEnabled && $uiView === "smart-query") {
+        if (
+            isSmartQueryEnabled &&
+            $uiView === "smart-query" &&
+            (($isSmartQueryBuilderOpen && $isSmartQuerySaveUiOpen) ||
+                !$isSmartQueryBuilderOpen)
+        ) {
             showSmartQuery();
         } else {
             hideSmartQuery();
@@ -449,6 +465,31 @@
         await db.songs.update(song, {
             isFavourite: false
         });
+    }
+
+    function filterByField(fieldName: string, fieldValue: any) {
+        let queryPart;
+        switch (fieldName) {
+            case "genre":
+                queryPart = getQueryPart("CONTAINS_GENRE");
+                $smartQueryInitiator = "genre-pill";
+                break;
+            case "year":
+                queryPart = getQueryPart("RELEASED_IN");
+                $smartQueryInitiator = "genre-pill";
+        }
+        if ($uiView !== "smart-query") {
+            $smartQuery.reset();
+        }
+        // console.log("built in query Part", queryPart);
+        const userQueryPart = new UserQueryPart(queryPart);
+        // console.log("built in user query Part", userQueryPart);
+        userQueryPart.userInputs[fieldName].value = fieldValue;
+        $smartQuery.addPart(userQueryPart);
+        $smartQuery.parts = $smartQuery.parts;
+        $isSmartQueryBuilderOpen = true;
+        $isSmartQuerySaveUiOpen = false;
+        $uiView = "smart-query";
     }
 </script>
 
@@ -551,33 +592,10 @@
                                     <div class="field">
                                         <p
                                             on:click|stopPropagation={() => {
-                                                $smartQuery.reset();
-                                                const queryPart =
-                                                    getQueryPart(
-                                                        "CONTAINS_GENRE"
-                                                    );
-                                                console.log(
-                                                    "built in query Part",
-                                                    queryPart
+                                                filterByField(
+                                                    field.value,
+                                                    song[field.value]
                                                 );
-                                                const userQueryPart =
-                                                    new UserQueryPart(
-                                                        queryPart
-                                                    );
-                                                console.log(
-                                                    "built in user query Part",
-                                                    userQueryPart
-                                                );
-                                                userQueryPart.userInputs[
-                                                    field.value
-                                                ].value = song[field.value];
-                                                $smartQuery.addPart(
-                                                    userQueryPart
-                                                );
-                                                $smartQueryInitiator =
-                                                    "genre-pill";
-                                                $isSmartQueryBuilderOpen = true;
-                                                $uiView = "smart-query";
                                             }}
                                             class:my-artist={field.value ===
                                                 "artist" &&
@@ -991,11 +1009,15 @@
             > td {
                 font-size: 13px;
                 text-overflow: clip;
+                .theme-outline & {
+                    border-right: none;
+                }
 
-                &[data-type="genre"] {
+                &[data-type="genre"],
+                &[data-type="year"] {
                     p {
                         /* border: 1px solid rgb(63, 61, 61); */
-                        background-color: rgba(255, 255, 255, 0.04);
+                        background-color: rgba(255, 255, 255, 0.03);
                         border-radius: 3px;
                         padding: 0 4px;
 

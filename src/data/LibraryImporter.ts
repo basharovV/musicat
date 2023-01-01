@@ -128,7 +128,7 @@ async function getAlbumFromMetadata(
         existingAlbum.tracksIds.push(song.id);
         existingAlbum.trackCount++;
         if (!existingAlbum.artwork) {
-            addAlbumArtworkFromSong(metadata, song, existingAlbum);
+            await addAlbumArtworkFromSong(metadata, song, existingAlbum);
         }
         return existingAlbum;
         // Re-order trackIds in album order?
@@ -144,9 +144,18 @@ async function getAlbumFromMetadata(
             year: song.year,
             tracksIds: [song.id]
         };
-        addAlbumArtworkFromSong(metadata, song, newAlbum);
+        await addAlbumArtworkFromSong(metadata, song, newAlbum);
         return newAlbum;
     }
+}
+
+async function updateAlbum(song: Song, metadata: musicMetadata.IAudioMetadata) {
+    const albumToSet = await getAlbumFromMetadata(song, metadata);
+
+    if (!albumToSet) {
+        return;
+    }
+    await db.albums.put(albumToSet);
 }
 
 export async function addSong(
@@ -160,17 +169,13 @@ export async function addSong(
     const metadata = await getMetadataFromFile(filePath, fileName);
     if (!metadata) return;
     const songToAdd = await getSongFromMetadata(filePath, fileName, metadata);
-    const albumToSet = await getAlbumFromMetadata(songToAdd, metadata);
+
     try {
         if (!songToAdd) {
             return;
         }
         await db.songs.put(songToAdd);
-
-        if (!albumToSet) {
-            return;
-        }
-        await db.albums.put(albumToSet);
+        updateAlbum(songToAdd, metadata);
     } catch (err) {
         console.error(err);
         // Catch 'already exists' case

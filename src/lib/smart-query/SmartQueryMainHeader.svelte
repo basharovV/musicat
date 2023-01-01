@@ -11,27 +11,30 @@
         uiView,
         selectedSmartQuery,
         smartQuery,
-        smartQueryInitiator
+        smartQueryInitiator,
+        isSmartQuerySaveUiOpen
     } from "../../data/store";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import Icon from "../ui/Icon.svelte";
 
     $: savedSmartQueries = liveQuery(async () => {
         return db.smartQueries.toArray();
     });
 
     function hideSmartQuery() {
-        $uiView = 'library';
+        $uiView = "library";
     }
 
     function hideSmartQueryBuilder() {
-        if ($smartQueryInitiator === 'genre-pill') {
-            $uiView = 'library';
+        if ($smartQueryInitiator === "genre-pill") {
+            $uiView = "library";
         }
         $isSmartQueryBuilderOpen = false;
     }
 
     function showSmartQueryBuilder() {
         $isSmartQueryBuilderOpen = true;
+        $isSmartQuerySaveUiOpen = false;
     }
 
     function save() {
@@ -45,13 +48,7 @@
 
 {#if !$isSmartQueryBuilderOpen}
     <div class="query-browser">
-        <div>
-            <iconify-icon
-                class="close-icon"
-                icon="mingcute:close-circle-fill"
-                on:click={hideSmartQuery}
-            />
-        </div>
+            <Icon icon="mingcute:close-circle-fill" onClick={hideSmartQuery} />
         <div class="query-header">
             <p class="query-header-title">Showing results for</p>
             <select bind:value={$selectedSmartQuery}>
@@ -79,11 +76,11 @@
     </div>
 {:else}
     <div class="query-editor-info">
-        <ButtonWithIcon
+        <!-- <ButtonWithIcon
             icon="mingcute:close-circle-fill"
             onClick={hideSmartQueryBuilder}
             text="Hide builder"
-        />
+        /> -->
 
         <div class="smart-query-actions">
             <p>Name:</p>
@@ -154,7 +151,7 @@
         align-items: center;
         justify-content: space-between;
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: 1fr;
         gap: 1em;
 
         .exit-builder-mode {

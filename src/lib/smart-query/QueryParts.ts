@@ -6,7 +6,8 @@ export enum QUERY_PARTS {
     RELEASED_AFTER = "released-after",
     TITLE_CONTAINS = "title-contains",
     LONGER_THAN = "longer-than",
-    CONTAINS_GENRE = "contains-genre"
+    CONTAINS_GENRE = "contains-genre",
+    RELEASED_IN = "released-in"
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
@@ -117,6 +118,23 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         name: QUERY_PARTS.CONTAINS_GENRE,
         inputRequired: {
             "genre": {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string"
+            }
+        }
+    },
+    {
+        dataType: "song",
+        fieldKey: "year",
+        comparison: "is-equal",
+        description: "released in",
+        example: "released in 1976",
+        prompt: "released in {year}",
+        name: QUERY_PARTS.RELEASED_IN,
+        inputRequired: {
+            "year": {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,

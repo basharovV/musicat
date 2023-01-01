@@ -3,6 +3,8 @@
 
     import { autoWidth } from "../../utils/AutoWidth";
     import {
+        isSmartQueryBuilderOpen,
+        isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         smartQuery,
         smartQueryInitiator
@@ -12,6 +14,8 @@
     import SmartQueryPart from "./SmartQueryPart.svelte";
     import { onMount } from "svelte";
     import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
+    import Icon from "../ui/Icon.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     const fields = ["artist"];
 
@@ -21,22 +25,23 @@
 
     let queryInput: HTMLInputElement;
     let isAutocompleteHidden = true;
+    let isAutofocus = false;
 
     function onFocus() {
         console.log("smartQueryInitiator", $smartQueryInitiator);
 
-        if ($smartQueryInitiator !== "genre-pill") {
-            setTimeout(() => {
-                if ($smartQuery.userInput.trim().length === 0) {
-                    // Show all options. Later can cap it if there's too many.
+        setTimeout(() => {
+            if ($smartQuery.userInput.trim().length === 0) {
+                // Show all options. Later can cap it if there's too many.
 
-                    console.log("empty input");
-                    updateQueryPartsAutocompletePos();
-                    matchingQueryParts = BUILT_IN_QUERY_PARTS;
-                    console.log("matching parts", matchingQueryParts);
-                }
-            }, 150);
-        }
+                console.log("empty input");
+                updateQueryPartsAutocompletePos();
+                matchingQueryParts = BUILT_IN_QUERY_PARTS;
+                console.log("matching parts", matchingQueryParts);
+            }
+        }, 150);
+
+        isAutofocus = false;
     }
 
     function onLostFocus() {
@@ -45,7 +50,10 @@
 
     onMount(() => {
         setTimeout(() => {
-            queryInput.focus();
+            isAutofocus = true;
+            if ($smartQueryInitiator !== "genre-pill") {
+                queryInput.focus();
+            }
         }, 150);
     });
 
@@ -160,16 +168,39 @@
             /></span
         >
     </div>
-    <div class="validation">
-        {#if $isSmartQueryValid}
-            <p>query is valid</p>
-            <iconify-icon class="valid" icon="charm:tick" />
-        {:else}
-            <p>query is not valid</p>
-            <iconify-icon class="invalid" icon="ant-design:warning-outlined" />
-        {/if}
+    <div class="options">
+        <div class="validation">
+            {#if $isSmartQueryValid}
+                <p>query is valid</p>
+                <iconify-icon class="valid" icon="charm:tick" />
+            {:else}
+                <p>query is not valid</p>
+                <iconify-icon
+                    class="invalid"
+                    icon="ant-design:warning-outlined"
+                />
+            {/if}
+        </div>
+        <div class="save">
+            <ButtonWithIcon
+                icon="material-symbols:save-outline"
+                onClick={() => {
+                    $isSmartQuerySaveUiOpen = !$isSmartQuerySaveUiOpen;
+                }}
+                text="Save"
+            />
+        </div>
+        <div class="close">
+            <ButtonWithIcon
+                icon="material-symbols:close"
+                onClick={() => {
+                    $isSmartQueryBuilderOpen = false;
+                    $isSmartQuerySaveUiOpen = false;
+                }}
+                text="Close editor"
+            />
+        </div>
     </div>
-
     {#if matchingQueryParts.length > 0}
         <Menu
             x={inputX}
@@ -260,5 +291,15 @@
                 color: rgb(79, 76, 76);
             }
         }
+    }
+
+    .options {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5em;
+    }
+    .save {
+        display: flex;
     }
 </style>

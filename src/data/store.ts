@@ -50,7 +50,9 @@ export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
 export const uiView: Writable<SidebarItem> = writable("library");
 
-export const isWelcomeSeen: Writable<boolean> = writable(Boolean(localStorage.getItem("isWelcomeSeen") || false));
+export const isWelcomeSeen: Writable<boolean> = writable(
+    Boolean(localStorage.getItem("isWelcomeSeen") || false)
+);
 isWelcomeSeen.subscribe((val) =>
     localStorage.setItem("isWelcomeSeen", String(val))
 );
@@ -69,9 +71,13 @@ export const fileDropHandler: Writable<string> = writable(null);
 export const selectedArtistId: Writable<string> = writable(
     localStorage.getItem("selectedArtistId") || null
 );
-selectedArtistId.subscribe((val) =>
-    localStorage.setItem("selectedArtistId", val)
-);
+selectedArtistId.subscribe((val) => {
+    if (val) {
+        localStorage.setItem("selectedArtistId", val);
+    } else {
+        localStorage.removeItem("selectedArtistId");
+    }
+});
 
 export const songDetailsUpdater = writable(0);
 export const isScrapbookShown = writable(true);
@@ -84,7 +90,7 @@ export const isSmartQueryUiOpen = writable(false);
 export const isSmartQueryBuilderOpen = writable(false);
 export const isSmartQuerySaveUiOpen = writable(false);
 export const smartQuery: Writable<SmartQuery> = writable(new SmartQuery());
-export const smartQueryInitiator = writable('sidebar');
+export const smartQueryInitiator = writable("sidebar");
 export const selectedSmartQuery = writable(Query[0].value);
 export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);

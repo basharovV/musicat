@@ -15,7 +15,7 @@
         flex-direction: row;
         align-items: center;
         gap: 5px;
-        margin-left: 1em;
+        /* margin-left: 1em; */
         font-weight: normal;
         /* background-color: rgba(240, 248, 255, 0.088); */
         border: 1px solid rgba(255, 255, 255, 0.2);

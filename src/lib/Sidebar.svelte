@@ -24,6 +24,7 @@
         isInfoPopupOpen,
         isMiniPlayer,
         isPlaying,
+        isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         os,
         playlist,
@@ -31,6 +32,7 @@
         query,
         rightClickedTrack,
         singleKeyShortcutsEnabled,
+        smartQuery,
         smartQueryInitiator,
         uiView,
         userSettings,
@@ -168,13 +170,11 @@
         if (!$isMiniPlayer && height <= 220 && width <= 210) {
             $isMiniPlayer = true;
             console.log("setting to false");
-            // await tauriWindow.getCurrent().setDecorations(false);
-            emit("hide-toolbar");
+            await tauriWindow.getCurrent().setDecorations(false);
         } else if ($isMiniPlayer && (height > 220 || width > 210)) {
             $isMiniPlayer = false;
             console.log("setting to true");
-            emit("show-toolbar");
-            // await tauriWindow.getCurrent().setDecorations(true);
+            await tauriWindow.getCurrent().setDecorations(true);
         }
     }
 
@@ -248,7 +248,6 @@
             widthToRestore = window.innerWidth;
             heightToRestore = window.innerHeight;
 
-            emit("hide-toolbar");
             await tauriWindow.getCurrent().hide();
             await tauriWindow.getCurrent().setSize(new LogicalSize(210, 210));
             const monitor = await currentMonitor();
@@ -332,6 +331,7 @@
             await tauriWindow.getCurrent().center();
             await tauriWindow.getCurrent().show();
             await tauriWindow.getCurrent().setAlwaysOnTop(false);
+
         }
 
         isMiniToggleHovered = false;
@@ -394,6 +394,7 @@
                 <item
                     class:selected={$uiView === "library"}
                     on:click={() => {
+                        $isSmartQueryUiOpen = false;
                         $uiView = "library";
                     }}
                 >
