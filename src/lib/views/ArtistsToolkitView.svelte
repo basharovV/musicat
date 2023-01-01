@@ -1,196 +1,105 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import type { ArtistProject, Song, SongProject } from "src/App";
+    import { db } from "../../data/db";
     import {
         isDraggingExternalFiles,
         isScrapbookShown,
         selectedArtistId
     } from "../../data/store";
-    import { db } from "../../data/db";
 
-    import Library from "../Library.svelte";
-    import ContentDropzone from "../your-music/ContentDropzone.svelte";
-    import Scrapbook from "../your-music/Scrapbook.svelte";
-    import SongDetails from "../your-music/SongDetails.svelte";
-    import SongProjects from "../your-music/SongProjects.svelte";
-    import YourArtists from "../your-music/YourArtists.svelte";
+    import { blur } from "svelte/transition";
     import ArtistInfo from "../your-music/ArtistInfo.svelte";
+    import ContentDropzone from "../your-music/ContentDropzone.svelte";
+    import Music from "../your-music/Music.svelte";
+    import Scrapbook from "../your-music/Scrapbook.svelte";
+    import YourArtists from "../your-music/YourArtists.svelte";
     let selectedSong: Song;
     let selectedSongProject: SongProject;
     let songProjectSelection;
 
-    // selectedArtistId.subscribe(async (artistId) => {
-    //     selectedArtist = await db.artistProjects.get(artistId);
-    // });
+    let scrapbookSize = 350;
+    const SCRAPBOOK_MIN_SIZE = 300;
 
     $: selectedArtist = liveQuery<ArtistProject>(async () => {
         const selectedArtist = await db.artistProjects.get($selectedArtistId);
         return selectedArtist;
     });
+    let selectedTab;
 
-    $: songs = liveQuery<Song[]>(async () => {
-        let resultsArray = [];
-        if ($selectedArtistId) {
-            const results = await db.songs
-                .where("artist")
-                .equalsIgnoreCase($selectedArtistId);
-            resultsArray = await results.toArray();
-        }
-        isLoading = false;
-        return resultsArray;
-    });
-
-    let isLoading = true;
-
-    $: songProjects = liveQuery<SongProject[]>(async () => {
-        let resultsArray = [];
-        if ($selectedArtistId) {
-            const results = await db.songProjects
-                .where("artist")
-                .equalsIgnoreCase($selectedArtistId);
-            resultsArray = await results.toArray();
-        }
-        return resultsArray;
-    });
-
-    let librarySongsHighlighted = [];
-
-    function onSelectSong(song: Song) {
-        selectedSong = song;
-        const existingSongProject = $songProjects.find(
-            (s) => s.id === song?.songProjectId
-        );
-        if (existingSongProject) {
-            selectedSongProject = existingSongProject;
-            songProjectSelection = selectedSongProject;
-        } else {
-            selectedSongProject = {
-                title: song?.title ?? "",
-                artist: song?.artist ?? "",
-                album: song?.album ?? "",
-                musicComposedBy: [],
-                lyricsWrittenBy: [],
-                lyrics: "",
-                recordings: [
-                    {
-                        recordingType: "master",
-                        song: song
-                    }
-                ],
-                otherContentItems: []
-            };
-            songProjectSelection = null;
-            console.log("library songs", song);
+    let container: HTMLElement;
+    let isResizing = false;
+    let showCloseScrapbookPrompt = false;
+    function onResize(e: MouseEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+        const containerWidth = window.innerWidth;
+        console.log("container width", containerWidth);
+        console.log("clientX", e.pageX);
+        if (containerWidth - e.clientX > SCRAPBOOK_MIN_SIZE) {
+            showCloseScrapbookPrompt = false;
+            scrapbookSize = containerWidth - e.clientX;
+        } else if (containerWidth - e.clientX < SCRAPBOOK_MIN_SIZE - 10) {
+            showCloseScrapbookPrompt = true;
         }
     }
-
-    function onSelectSongProject(songProject: SongProject) {
-        selectedSongProject = songProject;
-        selectedSong = null;
-        if (selectedSongProject?.recordings) {
-            // Also highlighted the corresponding song if any
-            const foundSong = $songs?.find(
-                (s) => s?.songProjectId === selectedSongProject?.id
-            );
-            if (foundSong) {
-                librarySongsHighlighted = [foundSong];
-            } else {
-                librarySongsHighlighted = [];
-            }
-        } else {
-            librarySongsHighlighted = [];
-        }
+    function startResizeListener() {
+        isResizing = true;
+        container.addEventListener("mousemove", onResize);
+        document.addEventListener("mouseup", stopResizeListener);
     }
-
-    async function onDeleteSongProject(songProject: SongProject) {
-        console.log("deieting ", songProject);
-
-        const currentIndex = $songProjects?.findIndex(
-            (s) => s.id === songProject.id
-        );
-        await db.songProjects.delete(songProject.id);
-        if (currentIndex > 0 && currentIndex < $songProjects.length - 1) {
-            selectedSongProject = $songProjects[currentIndex - 1];
-        } else if (currentIndex === 1) {
-            selectedSongProject = $songProjects[0];
-        } else if (currentIndex === $songProjects.length - 1) {
-            selectedSongProject = $songProjects[$songProjects.length - 2];
-        }
-        songProjectSelection = selectedSongProject;
-    }
-
-    function onSongsHighlighted(songsHighlighted) {
-        songsHighlighted.length > 0 && onSelectSong(librarySongsHighlighted[0]);
-    }
-
-    $: {
-        if ($selectedArtistId !== selectedSongProject?.artist) {
-            selectedSongProject = null;
+    function stopResizeListener() {
+        isResizing = false;
+        container.removeEventListener("mousemove", onResize);
+        if (showCloseScrapbookPrompt) {
+            $isScrapbookShown = false;
+            showCloseScrapbookPrompt = false;
         }
     }
 </script>
 
-<container class:scrapbook-open={$isScrapbookShown}>
+<container
+    bind:this={container}
+    class:scrapbook-open={$isScrapbookShown}
+    style={$isScrapbookShown
+        ? `grid-template-columns: 1fr ${scrapbookSize}px;`
+        : "grid-template-columns: 1fr;"}
+>
     {#if $isDraggingExternalFiles}
         <ContentDropzone songProject={selectedSongProject} />
     {/if}
     <header>
-        <YourArtists />
+        <YourArtists bind:selectedTab selectedArtist={$selectedArtist} />
     </header>
-    <section class="artist-info">
-        <ArtistInfo artist={$selectedArtist} />
-    </section>
     {#if $isScrapbookShown}
         <section class="scrapbook">
+            <resize-handle
+                on:mousedown={startResizeListener}
+                class:resizing={isResizing}
+            />
             <div>
                 <h2>Scrapbook</h2>
             </div>
             <div class="content">
+                {#if showCloseScrapbookPrompt}
+                    <div
+                        class="close-scrapbook-prompt"
+                        transition:blur={{ duration: 100 }}
+                    >
+                        <h2>Close scrapbook</h2>
+                    </div>
+                {/if}
                 <Scrapbook />
             </div>
         </section>
     {/if}
-    <section class="songs">
-        <div>
-            <h2>my songs</h2>
-        </div>
-        <SongProjects
-            songProjects={$songProjects}
-            artistId={$selectedArtist}
-            {onSelectSongProject}
-            bind:selectedSongProject={songProjectSelection}
-        />
-        <hr />
-        {#if $songs && $songs?.length}
-            <library>
-                <div>
-                    <h2>in library</h2>
-                </div>
-                <Library
-                    theme="outline"
-                    bind:songsHighlighted={librarySongsHighlighted}
-                    allSongs={songs}
-                    {isLoading}
-                    isSmartQueryEnabled={false}
-                    fields={[
-                        { name: "Title", value: "title" },
-                        { name: "Album", value: "album" }
-                    ]}
-                    {onSongsHighlighted}
-                />
-            </library>
+    <section class="content">
+        {#if selectedTab === "Music"}
+            <Music {selectedArtist} />
+        {:else if selectedTab === "Info"}
+            <ArtistInfo artist={$selectedArtist} />
         {/if}
     </section>
-    <section class="song-details">
-        <SongDetails
-            songProject={selectedSongProject}
-            artist={$selectedArtist}
-            {onDeleteSongProject}
-            song={selectedSong}
-            {onSelectSong}
-        />
-    </section>
-
     <img class="bulb" src="images/bulby_bulb.png" alt="" />
 </container>
 
@@ -211,31 +120,24 @@
         position: relative;
     }
 
+    h2 {
+        margin: 0;
+        font-family: "Snake";
+        font-size: 3em;
+        color: #bbb9b9;
+    }
+
     container {
         text-align: left;
         display: grid;
-        grid-template-columns: 350px 5fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
         height: 100vh;
         overflow: hidden;
 
         &.scrapbook-open {
-            grid-template-columns: 350px 5fr 4fr;
-            grid-template-rows: auto auto 1fr;
-        }
-
-        h2 {
-            margin: 0;
-            font-family: "Snake";
-            font-size: 3em;
-            color: #bbb9b9;
-        }
-
-        p {
-            opacity: 0.5;
-        }
-        section {
-            background-color: #242026b3;
+            /* grid-template-columns: 1fr 350px; */ // INLINE STYLED
+            grid-template-rows: auto 1fr;
         }
 
         .title {
@@ -252,16 +154,27 @@
 
         header {
             grid-row: 1;
-            grid-column: 1 / 3;
+            grid-column: 1 / 2;
             display: flex;
             flex-direction: row;
             gap: 2em;
             align-items: center;
-            padding: 0.7em 0 0.7em 2em;
+            padding: 0 0.7em 0 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.093);
             /* border-left: 1px solid rgba(255, 255, 255, 0.093); */
-            background-color: rgba(0, 0, 0, 0.159);
+            background-color: rgba(0, 0, 0, 0.259);
 
+            .bg {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                top: 0;
+                width: 100%;
+                object-fit: cover;
+                object-position: -0px -320px;
+                z-index: -1;
+            }
             h2 {
                 margin: 0.2em 0;
             }
@@ -280,11 +193,41 @@
 
         .scrapbook {
             background-color: transparent;
-            grid-row: 1 / 4;
-            grid-column: 3;
+            grid-row: 1 / 3;
+            grid-column: 2;
             height: 100%;
             border-left: 1px solid rgba(255, 255, 255, 0.093);
-            overflow: auto;
+            overflow: visible;
+            position: relative;
+
+            .close-scrapbook-prompt {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                background-color: #33303ce2;
+                backdrop-filter: blur(5px);
+                z-index: 10;
+            }
+            resize-handle {
+                display: block;
+                position: absolute;
+                left: -2px;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                &:hover,
+                &.resizing {
+                    background-color: #5123dd;
+                }
+
+                cursor: ew-resize;
+            }
             div {
                 padding: 2em;
             }
@@ -292,24 +235,12 @@
                 padding-top: 0;
             }
         }
+    }
 
-        .songs {
-            grid-row: 3;
-            grid-column: 1;
-            border-right: 1px solid rgba(255, 255, 255, 0.093);
-            div {
-                padding: 2em;
-            }
-        }
-
-        .song-details {
-            grid-row: 3;
-            grid-column: 2;
-            height: 100%;
-            div {
-                padding: 2em;
-            }
-        }
+    .content {
+        width: 100%;
+        grid-column: 1 / 2;
+        grid-row: 2 / 4;
     }
     hr {
         border-top: 1px solid rgba(255, 255, 255, 0.093);

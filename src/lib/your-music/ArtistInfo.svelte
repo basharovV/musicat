@@ -36,57 +36,64 @@
 </script>
 
 <container>
-    <p class="label">project members:</p>
-    {#if members.length}
-        <div class="members">
-            {#each members as member (member)}
-                <div
-                    animate:flip={{ duration: 180, easing: quadInOut }}
-                    class="member"
-                    class:editable={isEditEnabled}
-                >
-                    <p>{member}</p>
-                    {#if isEditEnabled}
-                        <iconify-icon
-                            in:fly={{ duration: 150, x: -40 }}
-                            icon="mingcute:close-circle-fill"
-                            on:click={() => removeMember(member)}
-                        />
-                    {/if}
-                </div>
-            {/each}
+    <h2>Members:</h2>
+    <div class="content">
+        {#if members.length}
+            <p class="label">project members:</p>
+            <div class="members">
+                {#each members as member (member)}
+                    <div
+                        animate:flip={{ duration: 180, easing: quadInOut }}
+                        class="member"
+                        class:editable={isEditEnabled}
+                    >
+                        <p>{member}</p>
+                        {#if isEditEnabled}
+                            <iconify-icon
+                                in:fly={{ duration: 150, x: -40 }}
+                                icon="mingcute:close-circle-fill"
+                                on:click={() => removeMember(member)}
+                            />
+                        {/if}
+                    </div>
+                {/each}
+            </div>
+        {/if}
+        {#if isEditEnabled}
+            <form on:submit|preventDefault={addMember}>
+                <input
+                    use:autoWidth
+                    autofocus
+                    class="member-input"
+                    bind:value={newMember}
+                    placeholder="Add member"
+                />
+            </form>
+        {/if}
+        <div
+            class="edit-button"
+            on:click={() => {
+                isEditEnabled = !isEditEnabled;
+            }}
+        >
+            <iconify-icon icon="clarity:edit-solid" />
         </div>
-    {:else if !isEditEnabled}
-    {/if}
-    {#if isEditEnabled}
-        <form on:submit|preventDefault={addMember}>
-            <input
-                use:autoWidth
-                autofocus
-                class="member-input"
-                bind:value={newMember}
-                placeholder="Add member"
-            />
-        </form>
-    {/if}
-    <div
-        class="edit-button"
-        on:click={() => {
-            isEditEnabled = !isEditEnabled;
-        }}
-    >
-        <iconify-icon icon="clarity:edit-solid" />
     </div>
 </container>
 
 <style lang="scss">
-    container {
+    .content {
         display: flex;
         flex-direction: row;
         align-items: center;
         gap: 10px;
         justify-content: flex-start;
     }
+    container {
+        display: block;
+        padding: 2em;
+    }
+
     p {
         margin: 0;
     }

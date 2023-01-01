@@ -399,6 +399,7 @@
         x={rightClickedPos.x}
         y={rightClickedPos.y}
         onClickOutside={closeMenu}
+        fixed
     >
         <MenuOption isDisabled={true} text="Edit tags" />
         {#each contextItem.tags as tag}

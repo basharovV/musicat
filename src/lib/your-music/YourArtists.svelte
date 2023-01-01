@@ -1,6 +1,9 @@
 <script lang="ts">
+    import { open } from "@tauri-apps/api/dialog";
+    import { pictureDir } from "@tauri-apps/api/path";
     import { liveQuery } from "dexie";
-    import { text } from "svelte/internal";
+    import tippy from "tippy.js";
+    import type { ArtistProject } from "../../App";
     import { db } from "../../data/db";
     import { isScrapbookShown, selectedArtistId } from "../../data/store";
 
@@ -8,6 +11,12 @@
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
+
+    // const tabs = ["Music", "Media", "Gigs", "Info", "Analytics"]; EVENTUALLY
+    const tabs = ["Music", "Info"];
+
+    export let selectedTab = tabs[0];
+    export let selectedArtist: ArtistProject;
 
     $: artists = liveQuery(async () => {
         let results = await db.artistProjects.toArray();
@@ -47,6 +56,7 @@
             return;
         } else {
             await db.artistProjects.delete($selectedArtistId);
+            $selectedArtistId = null;
             isConfirmingArtistDelete = false;
             showMenu = false;
             const filteredArtists = $artists.filter(
@@ -117,33 +127,82 @@
         inputY = artistInput.offsetTop + 40;
         console.log("X", inputX, "Y", inputY);
     }
+
+    async function showProfilePicPicker() {
+        // Open a selection dialog for directories
+        const selected = await open({
+            directory: false,
+            multiple: false,
+            defaultPath: await pictureDir()
+        });
+        if (selected === null) {
+            // user cancelled the selection
+        } else {
+            console.log("selected", selected);
+            // user selected a single file, update artist info
+            if (typeof selected === "string") {
+                selectedArtist.profilePhoto = "asset://localhost/" + selected;
+            }
+            db.artistProjects.update(selectedArtist.name, selectedArtist);
+            // addFolder(selected);
+        }
+    }
 </script>
 
 <!-- <h3>Your artists and projects</h3> -->
-<div class="artists">
-    <div class="artist-info">
-        {#if $artists?.length && $selectedArtistId}
-            <select bind:value={$selectedArtistId}>
-                {#each $artists as artist (artist.name)}
-                    <option
-                        value={artist.name}
-                        class="artist"
-                        on:click={() => {
-                            $selectedArtistId = artist.name;
-                        }}
-                    >
-                        <p>{artist.name}</p>
-                    </option>
-                {/each}
-            </select>
+<div class="header">
+    {#if $artists?.length && $selectedArtistId}
+        <div
+            class="profile-pic"
+            use:tippy={{
+                theme: "slim",
+                content: "Add a profile pic",
+                placement: "bottom"
+            }}
+            on:click={showProfilePicPicker}
+        >
+            {#if selectedArtist?.profilePhoto}
+                <img src={selectedArtist.profilePhoto} />
+            {:else}
+                <Icon icon="fa-solid:cat" />
+            {/if}
+        </div>
+        <div class="artist-info">
+            {#if $artists?.length && $selectedArtistId}
+                <select bind:value={$selectedArtistId}>
+                    {#each $artists as artist (artist.name)}
+                        <option
+                            value={artist.name}
+                            class="artist"
+                            on:click={() => {
+                                $selectedArtistId = artist.name;
+                            }}
+                        >
+                            <p>{artist.name}</p>
+                        </option>
+                    {/each}
+                </select>
+            {/if}
 
-            <Icon
-                icon="charm:menu-kebab"
-                color="#898989"
-                onClick={(e) => onMenuClick(e)}
-            />
-        {/if}
-    </div>
+            {#if $artists?.length && $selectedArtistId}
+                <div class="tabs">
+                    {#each tabs as tab}
+                        <p
+                            class:active={tab === selectedTab}
+                            on:click={() => {
+                                selectedTab = tab;
+                            }}
+                        >
+                            {tab}
+                        </p>
+                    {/each}
+                </div>
+            {/if}
+        </div>
+    {:else}
+        <h3>Welcome to your Artist's Toolkit</h3>
+        <p class="arrow">→</p>
+    {/if}
     {#if showMenu}
         <Menu
             x={menuPos.x}
@@ -162,7 +221,13 @@
             />
         </Menu>
     {/if}
-    <div class="artist-options">
+
+    <div class="artist-options" class:onboarding={$artists?.length === 0}>
+        <Icon
+            icon="charm:menu-kebab"
+            color="#898989"
+            onClick={(e) => onMenuClick(e)}
+        />
         {#if $artists?.length === 0 || showArtistAddUi}
             <form on:submit|preventDefault={onCreateArtist}>
                 <input
@@ -187,11 +252,12 @@
                 }}
             />
         {/if}
-        <button
-            on:click={() => {
+        <Icon
+            icon="ant-design:bulb-outlined"
+            onClick={() => {
                 $isScrapbookShown = !$isScrapbookShown;
-            }}>{$isScrapbookShown ? "Hide" : "Show"} scrapbook</button
-        >
+            }}
+        />
     </div>
 
     {#if matchingArtists.length > 0}
@@ -212,31 +278,110 @@
 
 <style lang="scss">
     h3 {
-        color: rgb(137, 130, 130);
+        /* color: rgb(137, 130, 130); */
+        font-family: Snake;
+        font-size: 3em;
+        margin: 0;
+        margin-left: 1em;
     }
-    .artists {
+
+    .profile-pic {
+        width: 80px;
+        height: 80px;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(255, 255, 255, 0.093);
+        border-radius: 8px;
+        margin-right: 0.6em;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            box-shadow: 2px 2px 50px 40px rgba(72, 16, 128, 0.181);
+        }
+        &:hover {
+            background-color: #5150523a;
+            img {
+                opacity: 0.6;
+            }
+        }
+        &:active {
+            background-color: #51505216;
+            opacity: 0.4;
+        }
+    }
+
+    .tabs {
+        flex-grow: 2;
+        display: flex;
+        margin-left: 2px;
+        flex-direction: row;
+        /* background-color: #7c7b8023; */
+        border-radius: 5px;
+        text-shadow: 0px 2px 20px rgba(0, 0, 0, 0.2);
+        color: rgba(255, 255, 255, 0.303);
+        cursor: default;
+        margin-top: 8px;
+        gap: 10px;
+
+        .active {
+            color: white;
+            /* border: 1px solid #5123dd; */
+        }
+
+        p {
+            border: 1px solid transparent;
+            font-size: 1.1em;
+            vertical-align: middle;
+            /* border-radius: 8px; */
+            user-select: none;
+            margin: 0;
+            border-radius: 5px;
+
+            &:hover:not(.active) {
+                color: rgba(255, 255, 255, 0.503);
+            }
+        }
+    }
+
+    .arrow {
+        margin: 0 1em;
+    }
+    .header {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         align-items: center;
         gap: 4px;
-        margin-left: -10px;
+        padding: 8px;
         width: 100%;
+        min-height: 80px;
     }
 
     .artist-info {
-        flex-grow: 1;
+        flex-grow: 2;
         display: flex;
-        flex-direction: row;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .artist-options {
-        flex-grow: 2;
+        // In onboarding mode, the artist info isn't shown, so this should take up the whole space
+        &.onboarding {
+            flex-grow: 2;
+        }
         display: flex;
         flex-direction: row;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: flex-start;
+
+        form {
+            flex-grow: 1;
+        }
     }
 
     select {
@@ -250,7 +395,7 @@
         padding: 0.2em 0.5em;
         border: 1px solid transparent;
         transition: border 0.1s ease-in-out;
-        border-radius: 4px;
+        /* border-radius: 4px; */
         border-left: 1px solid rgba(255, 255, 255, 0.146);
         min-width: 180px;
         background: none;
