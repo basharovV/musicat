@@ -71,6 +71,7 @@ interface SongProject {
 interface ArtistProject {
     name: string;
     members: string[];
+    profilePhoto?: string;
 }
 
 type RecordingType = "master" | "live" | "demo" | "rehearsal";

@@ -412,6 +412,7 @@
      */
     async function handleFileDrop(files: string[]) {
         console.log("drop:", files);
+        isDragging = false;
         for (const droppedFile of files) {
             const fileType = getContentFileType(droppedFile);
             switch (fileType.type) {
@@ -614,8 +615,6 @@
             {/if}
         {:else}
             <div class="no-song-selected">
-                <p>Select a song on the left</p>
-                <br />
                 <h2>- organise your music and lyrics ideas</h2>
                 <h2>- track progress of songs</h2>
                 <h2>- for multiple artists and projects</h2>
