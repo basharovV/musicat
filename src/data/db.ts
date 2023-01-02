@@ -1,6 +1,6 @@
 // db.ts
 import Dexie, { type Table } from "dexie";
-import type { Album, ArtistProject, ContentItem, Song, SongProject } from "src/App";
+import type { Album, ArtistProject, ContentItem, Playlist, Song, SongProject } from "src/App";
 import type { SavedSmartQuery } from "src/lib/smart-query/QueryPart";
 
 export class MySubClassedDexie extends Dexie {
@@ -12,15 +12,17 @@ export class MySubClassedDexie extends Dexie {
     songProjects!: Table<SongProject>;
     artistProjects!: Table<ArtistProject>;
     scrapbook!: Table<ContentItem>;
+    playlists!: Table<Playlist>;
     constructor() {
         super("musicatdb");
-        this.version(5).stores({
+        this.version(8).stores({
             songs: "id, title, artist, album, genre, year, duration, isFavourite, [artist+year+album+trackNumber], [artist+album+trackNumber], [album+trackNumber], [artist+album]", // Primary key and indexed props
             albums: "id, title, artist, year",
             smartQueries: "name",
             artistProjects: "name",
             songProjects: "++id, title, artist, album",
-            scrapbook: "++id, name"
+            scrapbook: "++id, name",
+            playlists: "++id, title"
         });
     }
 }

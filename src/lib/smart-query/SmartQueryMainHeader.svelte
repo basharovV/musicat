@@ -69,8 +69,8 @@
         <div>
             <button on:click={showSmartQueryBuilder}
                 >{$isSmartQueryBuilderOpen
-                    ? "Save smart query"
-                    : "New smart query"}</button
+                    ? "Save smart playlist"
+                    : "New smart playlist"}</button
             >
         </div>
     </div>

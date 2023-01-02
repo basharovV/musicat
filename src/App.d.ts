@@ -33,7 +33,7 @@ interface Song {
     metadata: MetadataEntry[];
     fileInfo: any;
     songProjectId?: number; // Link to project id
-    isFavourite: boolean
+    isFavourite: boolean;
 }
 
 interface Album {
@@ -47,6 +47,12 @@ interface Album {
     duration: string;
     path: string;
     artwork?: ArtworkSrc
+}
+
+interface Playlist {
+    id?: number; // increments automatically
+    title: string;
+    tracks: string[]
 }
 
 /**
@@ -122,7 +128,7 @@ type Comparison =
     | "is-between"
     | "contains";
 
-type SidebarItem = "library" | "smart-query" | "your-music" | "albums";
+type SidebarItem = "library" | "smart-query" | "your-music" | "albums" | "playlists";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 

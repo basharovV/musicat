@@ -22,6 +22,7 @@ export function startMenuListener() {
                 await db.songProjects.clear();
                 await db.artistProjects.clear();
                 await db.scrapbook.clear();
+                await db.playlists.clear();
                 await db.delete();
                 break;
             case "about":

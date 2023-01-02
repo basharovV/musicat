@@ -2,6 +2,7 @@
     import { Toaster } from "svelte-french-toast";
     import {
         draggedScrapbookItems,
+        draggedSongs,
         droppedFiles,
         emptyDropEvent,
         hoveredFiles,
@@ -28,6 +29,7 @@
     import { addFolder, addPaths } from "./data/LibraryImporter";
     import AlbumView from "./lib/views/AlbumsView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
+    import CursorInfo from "./lib/ui/CursorInfo.svelte";
 
     startMenuListener();
 
@@ -112,13 +114,39 @@
         }
     });
 
+    function onMouseMove(evt: MouseEvent) {
+        mouseX = evt.clientX;
+        mouseY = evt.clientY;
+    }
+
+    function onMouseUp() {
+        $draggedSongs = [];
+        mouseX = 0;
+        mouseY = 0;
+    }
+
+    draggedSongs.subscribe((songs) => {
+        if (songs.length > 0) {
+            // Track mouse position to see where it gets dropped
+            document.addEventListener("mousemove", onMouseMove);
+            document.addEventListener("mouseup", onMouseUp);
+        } else {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+        }
+    });
+
     onDestroy(() => {
         unlistenFileDrop();
     });
+
+    $: showCursorInfo = $draggedSongs.length > 0;
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->
 <Toaster />
+
+<CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
 
 {#if $isSettingsOpen}
     <div class="info">

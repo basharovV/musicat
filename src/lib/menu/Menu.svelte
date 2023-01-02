@@ -5,8 +5,8 @@
     import { clickOutside } from "../../utils/ClickOutside";
     import MenuOption from "./MenuOption.svelte";
 
-    export let x;
-    export let y;
+    export let x = 0;
+    export let y = 0;
     export let fixed = false;
     export let items: MenuItem[] = [];
     export let onItemSelected = null;

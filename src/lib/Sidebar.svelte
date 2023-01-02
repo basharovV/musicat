@@ -8,17 +8,22 @@
         LogicalSize,
         PhysicalPosition
     } from "@tauri-apps/api/window";
+    import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
     import * as musicMetadata from "music-metadata-browser";
     import { onMount } from "svelte";
+    import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
-    import { fly } from "svelte/transition";
+    import { fade, fly } from "svelte/transition";
+    import type { Playlist } from "../App";
+    import { db } from "../data/db";
     import { lookForArt } from "../data/LibraryImporter";
     import {
         currentSong,
         currentSongArtworkSrc,
         currentSongIdx,
+        draggedSongs,
         isFindFocused,
         isFullScreenVisualiser,
         isInfoPopupOpen,
@@ -31,6 +36,7 @@
         queriedSongs,
         query,
         rightClickedTrack,
+        selectedPlaylistId,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
@@ -40,10 +46,14 @@
     } from "../data/store";
     import audioPlayer from "./AudioPlayer";
     import AudioPlayer from "./AudioPlayer";
+    import Input from "./Input.svelte";
+    import Menu from "./menu/Menu.svelte";
+    import MenuOption from "./menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
     import SpectrumAnalyzer from "./SpectrumAnalyzer.svelte";
     import "./tippy.css";
     import Icon from "./ui/Icon.svelte";
+    import { Svrollbar } from "svrollbar";
 
     // Env
     let isArtistToolkitEnabled = true;
@@ -164,6 +174,7 @@
     let hasDecorations = false;
 
     async function onResize() {
+        // Check if is miniplayer mode
         height = window.innerHeight;
         width = window.innerWidth;
         hasDecorations = await tauriWindow.getCurrent().isDecorated();
@@ -194,30 +205,6 @@
             $isFindFocused = false;
         }
     }
-
-    onMount(() => {
-        height = window.innerHeight;
-        window.onresize = throttle(() => {
-            onResize();
-        }, 200);
-        onResize(); // run once
-
-        isFindFocused.subscribe((focused) => {
-            if (searchInput) {
-                if (focused) {
-                    searchInput.focus();
-                } else {
-                    searchInput.blur();
-                }
-            }
-        });
-        searchInput.onfocus = (evt) => {
-            $singleKeyShortcutsEnabled = false;
-        };
-        searchInput.onblur = (evt) => {
-            $singleKeyShortcutsEnabled = true;
-        };
-    });
 
     let miniToggleBtn: HTMLElement;
     let widthToRestore = 0;
@@ -331,7 +318,6 @@
             await tauriWindow.getCurrent().center();
             await tauriWindow.getCurrent().show();
             await tauriWindow.getCurrent().setAlwaysOnTop(false);
-
         }
 
         isMiniToggleHovered = false;
@@ -342,6 +328,164 @@
     });
     appWindow.listen("tauri://blur", (evt) => {
         isMiniPlayerHovered = false;
+    });
+
+    // Menu
+    let menuScrollPos = 0;
+    let menuOuterContainer: HTMLDivElement;
+    let menuInnerScrollArea: HTMLDivElement;
+    let menu: HTMLElement;
+    let scrollbar: HTMLDivElement;
+    let isScrollbarVisible = false;
+    let showMenuTopScrollShadow = false;
+    let showMenuBottomScrollShadow = false;
+
+    function onMenuResize() {
+        console.log("scrollTop");
+        // Check scroll area size, add shadows if necessary
+        if (menuInnerScrollArea) {
+            showMenuTopScrollShadow =
+                menuInnerScrollArea.scrollTop > 0 &&
+                menuInnerScrollArea.scrollHeight >
+                    menuInnerScrollArea.clientHeight;
+            showMenuBottomScrollShadow =
+                menuInnerScrollArea.scrollHeight >
+                menuInnerScrollArea.clientHeight;
+        }
+    }
+
+    function onMenuScroll(e) {
+        if (!isScrollbarVisible) {
+            isScrollbarVisible = true;
+            setTimeout(() => {
+                isScrollbarVisible = false;
+            }, 2000);
+        }
+        const menuHeight = menuOuterContainer.clientHeight;
+        const scrollPercentage =
+            menuInnerScrollArea.scrollTop /
+            (menuInnerScrollArea.scrollHeight -
+                menuInnerScrollArea.clientHeight);
+        // console.log("percent", scrollPercentage);
+        menuScrollPos =
+            (menuHeight - scrollbar.clientHeight - 13) * scrollPercentage;
+
+        // Show top shadow
+        showMenuTopScrollShadow =
+            menuInnerScrollArea.scrollTop > 0 &&
+            menuInnerScrollArea.scrollHeight > menuInnerScrollArea.clientHeight;
+    }
+
+    // Playlists
+
+    $: playlists = liveQuery(async () => {
+        return db.playlists.toArray();
+    });
+
+    let newPlaylistTitle = "";
+    let updatedPlaylistName = ""; // also for renaming existing playlists
+    let isPlaylistsExpanded = false;
+    let showPlaylistMenu = false;
+    let menuX = 0;
+    let menuY = 0;
+    let isConfirmingPlaylistDelete = false;
+    let playlistToDelete: Playlist = null;
+    let draggingOverPlaylist: Playlist = null;
+    let isRenamingPlaylist = false;
+
+    function onCreatePlaylist() {
+        db.playlists.add({
+            title: newPlaylistTitle,
+            tracks: []
+        });
+        newPlaylistTitle = "";
+    }
+
+    function deletePlaylist() {
+        if (!isConfirmingPlaylistDelete) {
+            isConfirmingPlaylistDelete = true;
+            return;
+        }
+        db.playlists.delete(playlistToDelete.title);
+        showPlaylistMenu = false;
+    }
+
+    async function onRenamePlaylist(playlist: Playlist) {
+        playlist.title = updatedPlaylistName;
+        await db.playlists.put(playlist);
+        updatedPlaylistName = "";
+
+        isRenamingPlaylist = false;
+    }
+
+    function onDragOverPlaylist(playlist: Playlist) {
+        if (
+            $draggedSongs.length &&
+            draggingOverPlaylist?.title !== playlist?.title
+        ) {
+            draggingOverPlaylist = playlist;
+        }
+    }
+
+    function onDragOutPlaylist() {
+        draggingOverPlaylist = null;
+    }
+
+    // $: {
+    //     if ($draggedSongs.length === 0) {
+    //         draggingOverPlaylist = null;
+    //     }
+    // }
+
+    async function onDropSongsToPlaylist(playlistId: string) {
+        if ($draggedSongs.length) {
+            const playlist = await db.playlists.get(playlistId);
+            const songsToAdd = $draggedSongs.map((s) => s.id);
+            console.log("dragged songs", $draggedSongs);
+            console.log("playlist", songsToAdd);
+            playlist.tracks = [...playlist.tracks, ...songsToAdd];
+
+            console.log("playlist", playlist);
+            await db.playlists.put(playlist);
+            toast.success(
+                `${
+                    $draggedSongs.length > 1
+                        ? $draggedSongs.length + " songs"
+                        : $draggedSongs[0].title
+                } added to ${playlist.title}`,
+                {
+                    position: "bottom-center"
+                }
+            );
+            $draggedSongs = [];
+        }
+    }
+
+    onMount(() => {
+        height = window.innerHeight;
+        window.onresize = throttle(() => {
+            onResize();
+        }, 200);
+        onResize(); // run once
+
+        isFindFocused.subscribe((focused) => {
+            if (searchInput) {
+                if (focused) {
+                    searchInput.focus();
+                } else {
+                    searchInput.blur();
+                }
+            }
+        });
+        searchInput.onfocus = (evt) => {
+            $singleKeyShortcutsEnabled = false;
+        };
+        searchInput.onblur = (evt) => {
+            $singleKeyShortcutsEnabled = true;
+        };
+
+        // Detect size changes in scroll container for the menu
+        const resizeObserver = new ResizeObserver(onMenuResize).observe(menu);
     });
 </script>
 
@@ -389,59 +533,212 @@
             </div>
         </div>
 
-        <menu>
-            <items>
-                <item
-                    class:selected={$uiView === "library"}
-                    on:click={() => {
-                        $isSmartQueryUiOpen = false;
-                        $uiView = "library";
-                    }}
-                >
-                    <iconify-icon
-                        icon="fluent:library-20-filled"
-                    />Library</item
-                >
-                <item
-                    class:selected={$uiView === "albums"}
-                    on:click={() => {
-                        $uiView = "albums";
-                    }}
-                >
-                    <iconify-icon icon="ic:round-album" />Albums</item
-                >
-                <item
-                    class:selected={$uiView === "smart-query"}
-                    on:click={() => {
-                        $smartQueryInitiator = 'sidebar';
-                        $uiView = "smart-query";
-                    }}
-                >
-                    <iconify-icon icon="fluent:search-20-filled" />Smart Query</item
-                >
-                {#if isArtistToolkitEnabled}
-                    <item
-                        class:selected={$uiView === "your-music"}
-                        on:click={() => {
-                            $uiView = "your-music";
-                        }}
-                    >
-                        <iconify-icon icon="mdi:music-clef-treble" />Artist's
-                        toolkit</item
-                    >
-                {/if}
-                <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
+        <div
+            class="menu-outer"
+            class:top-border={showMenuTopScrollShadow}
+            bind:this={menuOuterContainer}
+        >
+            {#if showMenuTopScrollShadow}
+                <div transition:fade={{ duration: 150 }} class="top-shadow" />
+            {/if}
+            {#if showMenuBottomScrollShadow}
+                <div
+                    transition:fly={{ duration: 150, y: 20 }}
+                    class="bottom-shadow"
+                />
+            {/if}
+            <div
+                bind:this={menuInnerScrollArea}
+                class="menu-inner"
+                on:scroll={onMenuScroll}
+            >
+                <menu bind:this={menu}>
+                    <items>
+                        <item
+                            class:selected={$uiView === "library" &&
+                                !$selectedPlaylistId}
+                            on:click={() => {
+                                $isSmartQueryUiOpen = false;
+                                $selectedPlaylistId = null;
+                                $uiView = "library";
+                            }}
+                        >
+                            <iconify-icon
+                                icon="fluent:library-20-filled"
+                            />Library</item
+                        >
+                        <item
+                            class:selected={$uiView === "albums"}
+                            on:click={() => {
+                                $uiView = "albums";
+                            }}
+                        >
+                            <iconify-icon icon="ic:round-album" />Albums</item
+                        >
 
-                <!-- <hr />
-    <item>
-      <iconify-icon
-        icon="iconoir:album-carousel"
-      />Samples</item
-    > -->
-            </items>
-        </menu>
+                        <item
+                            on:click={() => {
+                                // expand playlists
+                                $uiView = "library";
+                                isPlaylistsExpanded = !isPlaylistsExpanded;
+                            }}
+                        >
+                            <iconify-icon
+                                icon="mdi:playlist-music"
+                            />Playlists</item
+                        >
+
+                        {#if isPlaylistsExpanded}
+                            <div class="playlists">
+                                {#if $playlists}
+                                    {#each $playlists as playlist (playlist.id)}
+                                        <div
+                                            class="playlist"
+                                            class:dragover={draggingOverPlaylist ===
+                                                playlist}
+                                            class:selected={$selectedPlaylistId ===
+                                                playlist.id}
+                                            on:click={() => {
+                                                $selectedPlaylistId =
+                                                    playlist.id;
+                                            }}
+                                            on:mouseleave|preventDefault|stopPropagation={onDragOutPlaylist}
+                                            on:mouseenter|preventDefault|stopPropagation={() =>
+                                                onDragOverPlaylist(playlist)}
+                                            on:mouseup|preventDefault|stopPropagation={() =>
+                                                onDropSongsToPlaylist(
+                                                    playlist.id
+                                                )}
+                                        >
+                                            {#if isRenamingPlaylist}
+                                                <Input
+                                                    bind:value={updatedPlaylistName}
+                                                    onEnterPressed={() => {
+                                                        onRenamePlaylist(
+                                                            playlist
+                                                        );
+                                                    }}
+                                                    fullWidth
+                                                    minimal
+                                                    autoFocus
+                                                />
+                                            {:else}
+                                                <p>{playlist.title}</p>
+                                            {/if}
+                                            {#if isRenamingPlaylist}
+                                                <Icon
+                                                    icon="mingcute:close-circle-fill"
+                                                    onClick={() => {
+                                                        isRenamingPlaylist = false;
+                                                    }}
+                                                />
+                                            {:else}
+                                                <div
+                                                    class="playlist-menu"
+                                                    class:visible={showPlaylistMenu &&
+                                                        playlistToDelete ===
+                                                            playlist}
+                                                >
+                                                    <Icon
+                                                        icon="charm:menu-kebab"
+                                                        color="#898989"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            menuX = e.clientX;
+                                                            menuY = e.clientY;
+                                                            playlistToDelete =
+                                                                playlist;
+                                                            showPlaylistMenu =
+                                                                !showPlaylistMenu;
+                                                        }}
+                                                    />
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    {/each}
+                                {/if}
+                                <div class="new-playlist">
+                                    <Input
+                                        bind:value={newPlaylistTitle}
+                                        placeholder="New playlist"
+                                        onEnterPressed={onCreatePlaylist}
+                                        fullWidth
+                                        minimal
+                                    />
+                                </div>
+                            </div>
+                        {/if}
+
+                        {#if showPlaylistMenu}
+                            <div class="menu">
+                                <Menu
+                                    x={menuX}
+                                    y={menuY}
+                                    onClickOutside={() => {
+                                        showPlaylistMenu = false;
+                                    }}
+                                    fixed
+                                >
+                                    <MenuOption
+                                        isDestructive={true}
+                                        isConfirming={isConfirmingPlaylistDelete}
+                                        onClick={deletePlaylist}
+                                        text="Delete playlist"
+                                        confirmText="Click again to confirm"
+                                    />
+                                    <MenuOption
+                                        onClick={() => {
+                                            updatedPlaylistName =
+                                                playlistToDelete.title;
+                                            isRenamingPlaylist = true;
+                                            showPlaylistMenu = false;
+                                        }}
+                                        text="Rename playlist"
+                                    />
+                                </Menu>
+                            </div>
+                        {/if}
+                        <item
+                            class:selected={$uiView === "smart-query"}
+                            on:click={() => {
+                                $smartQueryInitiator = "sidebar";
+                                $uiView = "smart-query";
+                            }}
+                        >
+                            <iconify-icon icon="fluent:search-20-filled" />Smart
+                            Playlists</item
+                        >
+                        {#if isArtistToolkitEnabled}
+                            <item
+                                class:selected={$uiView === "your-music"}
+                                on:click={() => {
+                                    $uiView = "your-music";
+                                }}
+                            >
+                                <iconify-icon
+                                    icon="mdi:music-clef-treble"
+                                />Artist's toolkit</item
+                            >
+                        {/if}
+                        <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
+
+                        <!-- <hr />
+<item>
+  <iconify-icon
+    icon="iconoir:album-carousel"
+  />Samples</item
+> -->
+                    </items>
+                </menu>
+            </div>
+            <div
+                bind:this={scrollbar}
+                class="scrollbar"
+                class:show={isScrollbarVisible}
+                style="transform: translateY({menuScrollPos}px);"
+            />
+        </div>
     </div>
-
     <div class="track-info">
         <!-- <hr /> -->
 
@@ -487,16 +784,16 @@
                 {:else}
                     <p class="is-placeholder">Take control of your library</p>
                 {/if}
+
+                {#if codec}
+                    <div class="file">
+                        <p>{codec}</p>
+                        {#if bitrate}<p>{bitrate} bit</p>{/if}
+                        <p>{sampleRate} smpls</p>
+                    </div>
+                {/if}
             </div>
         </div>
-
-        {#if codec}
-            <div class="file">
-                <p>{codec}</p>
-                {#if bitrate}<p>{bitrate} bit</p>{/if}
-                <p>{sampleRate} smpls</p>
-            </div>
-        {/if}
     </div>
 
     <SpectrumAnalyzer />
@@ -580,13 +877,14 @@
 
 <style lang="scss">
     $thumb_size: 22px;
-    $mini_y_breakpoint: 400px;
+    $mini_y_breakpoint: 460px;
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
     $sidebar_secondary_color: #242026;
     sidebar {
         position: relative;
-        display: flex;
+        display: grid;
+        grid-template-rows: minmax(198px, 1fr) auto 1fr; // top, menu, track info, empty space (bottom stuff is absolute)
         flex-direction: column;
         justify-content: flex-end;
         align-items: flex-end;
@@ -596,217 +894,126 @@
         border-right: 1px solid #ececec1c;
         background-color: $sidebar_primary_color;
     }
-    @media only screen and (max-width: 210px) {
-        sidebar {
-            /* max-width: 100% !important; */
-        }
-    }
-
-    sidebar.hovered {
-        @media only screen and (max-height: 210px) and (max-width: 210px) {
-            .track-info,
-            .bottom,
-            .mini-toggle {
-                opacity: 1 !important;
-            }
-
-            .artwork-container {
-                opacity: 0.1 !important;
-            }
-        }
-    }
-
-    .has-current-song {
-        @media only screen and (max-height: 210px) and (max-width: 210px) {
-            .track-info,
-            .bottom,
-            .mini-toggle {
-                opacity: 0;
-            }
-
-            .artwork-container {
-                opacity: 1 !important;
-            }
-        }
-
-        @media only screen and (max-height: 210px) and (min-width: 211px) {
-            .track-info,
-            .mini-toggle {
-                top: 20px !important;
-            }
-            .bottom {
-                height: 120px;
-            }
-            .artwork-container {
-                opacity: 0.2 !important;
-            }
-        }
-
-        @media only screen and (max-height: 210px) {
-            .cd-gif,
-            .search-container {
-                display: none;
-            }
-            .bottom {
-                top: 0px;
-            }
-
-            .track-info,
-            .info {
-                background-color: transparent;
-            }
-            .artwork-container {
-                display: flex !important;
-                top: 0;
-                bottom: 0;
-                position: absolute;
-                height: 100%;
-            }
-
-            .track-info,
-            .bottom,
-            .mini-toggle {
-                top: 10px;
-                transition: opacity 0.2s ease-in;
-            }
-
-            .add-metadata-btn {
-                display: none;
-            }
-        }
-        @media only screen and (max-height: 260px) {
-            .track-info {
-                justify-content: flex-start;
-                small {
-                    display: none;
-                }
-                .cd-gif {
-                    /* display: none; */
-                }
-            }
-
-            .add-metadata-btn {
-                display: none;
-            }
-        }
-
-        @media only screen and (max-height: 260px) and (max-width: 211px) {
-            .mini-toggle {
-                position: fixed;
-            }
-        }
-
-        @media only screen and (max-height: 280px) {
-            .track-info {
-                .artist {
-                    /* display: none; */
-                }
-            }
-        }
-        @media only screen and (max-height: 305px) {
-            .file {
-                display: none;
-            }
-            .track-info {
-                hr {
-                    opacity: 0;
-                }
-            }
-        }
-        @media only screen and (max-height: 380px) {
-            .top {
-                /* position: relative; */
-            }
-            .file {
-                /* top: 100px; */
-            }
-        }
-        @media only screen and (max-height: 391px) {
-            menu {
-                display: none;
-            }
-
-            .top {
-                display: none;
-            }
-
-            .cd-gif {
-                display: none;
-            }
-
-            .track-info {
-                position: sticky;
-                .track-info-content {
-                    top: 1.8em;
-                }
-            }
-
-            .top,
-            .track-info,
-            .bottom {
-                top: 0;
-            }
-            .artwork-container {
-                position: absolute;
-                border: none;
-                opacity: 0;
-            }
-        }
-        @media only screen and (max-height: 420px) and (min-height: 360px) {
-            .app-title {
-                opacity: 0;
-            }
-            menu {
-                display: none;
-            }
-            .track-info {
-                /* top: 40px !important; */
-            }
-        }
-    }
-
-    .empty {
-        @media only screen and (max-height: $mini_y_breakpoint) {
-            menu,
-            .app-title {
-                display: none;
-            }
-            .track-info {
-                top: 0px !important;
-                .track-info-content {
-                    height: 100%;
-                    justify-content: flex-start;
-                }
-            }
-        }
-        @media only screen and (max-height: $xsmall_y_breakpoint) {
-            .top {
-                display: none !important;
-            }
-
-            .track-info {
-                .is-placeholder {
-                    display: none;
-                }
-            }
-        }
-    }
 
     hr {
         width: 100%;
-        border-top: 1px solid rgba(141, 139, 139, 0.139);
+        border-top: 1px solid rgba(141, 139, 139, 0.077);
         border-bottom: none;
         border-left: none;
         border-right: none;
     }
+
+    .menu-outer {
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+
+        &.top-border {
+            border-top: 0.7px solid #ffffff12;
+        }
+
+        .top-shadow {
+            pointer-events: none;
+            background: linear-gradient(
+                to bottom,
+                hsl(320, 4.92%, 11.96%) 0%,
+                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+                hsla(320, 4.92%, 11.96%, 0.016) 90%,
+                hsla(320, 4.92%, 11.96%, 0) 100%
+            );
+            height: 40px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 4;
+        }
+        .bottom-shadow {
+            pointer-events: none;
+            background: linear-gradient(
+                to top,
+                hsl(320, 4.92%, 11.96%) 0%,
+                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+                hsla(320, 4.92%, 11.96%, 0.016) 90%,
+                hsla(320, 4.92%, 11.96%, 0) 100%
+            );
+            height: 40px;
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            z-index: 4;
+        }
+    }
+
+    .menu-inner {
+        height: 100%;
+        overflow: scroll;
+        position: relative;
+        box-sizing: border-box;
+        /* hide scrollbar */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        background-color: $sidebar_secondary_color;
+        &::-webkit-scrollbar {
+            /* hide scrollbar */
+            display: none;
+        }
+    }
+
+    .scrollbar {
+        position: absolute;
+        right: 2px;
+        top: 10px;
+        min-height: 70px;
+        width: 4px;
+        border-radius: 4px;
+        background-color: #474747;
+        transition: opacity 0.2s ease-in-out;
+        opacity: 0;
+
+        &.show {
+            opacity: 1;
+        }
+    }
+
     menu {
         width: 100%;
         margin: 0;
+        position: relative;
         user-select: none;
         padding: 1em;
+        &::-webkit-scrollbar {
+            /* hide scrollbar */
+            display: none;
+        }
         margin-block-start: 0;
-
-        background-color: $sidebar_secondary_color;
         items {
             display: flex;
             flex-direction: column;
@@ -855,13 +1062,16 @@
         width: 100%;
         height: 100%;
         position: sticky;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
         background-color: $sidebar_secondary_color;
         top: 0;
-        z-index: 1;
+        z-index: 3;
         transition: height 1s ease-in-out;
 
         .top-header {
-            height: 80px;
+            /* height: 80px; */
             position: sticky;
             top: 0;
         }
@@ -879,13 +1089,6 @@
                 opacity: 0.5;
             }
         }
-    }
-
-    .bottom {
-        width: 100%;
-        position: sticky;
-        top: 400px;
-        z-index: 3;
     }
 
     .search-container {
@@ -935,12 +1138,34 @@
     }
 
     .track-info {
-        /* height: 150px; */
-        min-height: 150px;
         width: 100%;
-        background-color: $sidebar_secondary_color;
+        height: 210px;
+        /* height: 150px; */
+        /* min-height: 150px; */
+        width: 100%;
+        background: linear-gradient(
+            to bottom,
+            hsla(240, 10.71%, 10.98%, 0.75) 0%,
+            hsla(240, 10.71%, 10.98%, 0.74) 8.3%,
+            hsla(240, 10.71%, 10.98%, 0.714) 16.5%,
+            hsla(240, 10.71%, 10.98%, 0.672) 24.4%,
+            hsla(240, 10.71%, 10.98%, 0.618) 32.2%,
+            hsla(240, 10.71%, 10.98%, 0.556) 39.7%,
+            hsla(240, 10.71%, 10.98%, 0.486) 47%,
+            hsla(240, 10.71%, 10.98%, 0.412) 54.1%,
+            hsla(240, 10.71%, 10.98%, 0.338) 60.9%,
+            hsla(240, 10.71%, 10.98%, 0.264) 67.4%,
+            hsla(240, 10.71%, 10.98%, 0.194) 73.6%,
+            hsla(240, 10.71%, 10.98%, 0.132) 79.6%,
+            hsla(240, 10.71%, 10.98%, 0.078) 85.2%,
+            hsla(240, 10.71%, 10.98%, 0.036) 90.5%,
+            hsla(240, 10.71%, 10.98%, 0.01) 95.4%,
+            hsla(240, 10.71%, 10.98%, 0) 100%
+        );
+
         position: sticky;
-        top: 110px;
+        /* top: 110px; */
+        top: 0px;
         cursor: default;
         user-select: none;
         pointer-events: none;
@@ -950,8 +1175,6 @@
     }
 
     .track-info-content {
-        top: 0;
-        max-height: 170px;
         width: 100%;
         height: fit-content;
         position: sticky;
@@ -992,6 +1215,8 @@
             font-size: 0.9em;
             opacity: 0.9;
             z-index: 1;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
         .title {
             white-space: nowrap;
@@ -1023,9 +1248,9 @@
     }
 
     .file {
-        position: absolute;
+        /* position: absolute; */
         bottom: 0px;
-        background-color: $sidebar_secondary_color;
+        /* background-color: $sidebar_secondary_color; */
 
         display: flex;
         align-items: center;
@@ -1067,13 +1292,15 @@
         padding: 0em;
         width: 100%;
         height: 210px;
+        position: sticky;
+        bottom: 140px;
         margin: auto;
         pointer-events: none;
         opacity: 1;
         box-sizing: content-box;
         border-top: 0.7px solid #ffffff23;
         border-bottom: 0.7px solid #ffffff23;
-        z-index: 0;
+        z-index: 1;
 
         .artwork-frame {
             width: 100%;
@@ -1102,6 +1329,14 @@
                 }
             }
         }
+    }
+
+    .bottom {
+        width: 100%;
+        position: absolute;
+        bottom: 0;
+        z-index: 3;
+        background-color: #242026bc;
     }
 
     @keyframes marquee {
@@ -1194,6 +1429,222 @@
         &:active {
             color: rgb(141, 47, 47);
             opacity: 1;
+        }
+    }
+
+    .playlists {
+        display: flex;
+        flex-direction: column;
+
+        .playlist {
+            display: flex;
+            flex-direction: row;
+            height: 28px;
+            align-items: center;
+            margin: 0 0 0 1.4em;
+            padding: 0.5em 0;
+            position: relative;
+
+            &.dragover {
+                background-color: #5123dd;
+                border-radius: 5px;
+            }
+
+            &:hover {
+                .playlist-menu {
+                    display: flex;
+                }
+            }
+
+            &.selected {
+                p {
+                    color: white;
+                    font-weight: bold;
+                }
+
+                &::before {
+                    content: "";
+                    width: 2px;
+                    left: -4px;
+                    position: absolute;
+                    height: 70%;
+                    background-color: #5123dd;
+                    border-radius: 4px;
+                }
+            }
+        }
+
+        .playlist-menu {
+            display: none;
+
+            &.visible {
+                display: flex;
+            }
+        }
+
+        p {
+            flex-grow: 3;
+            display: inline-block;
+            text-align: left;
+            text-align: left;
+            font-size: 0.9em;
+            padding: 0 0.5em;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            letter-spacing: 0.2px;
+            color: rgb(159, 160, 165);
+            margin: 0;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .new-playlist {
+            display: flex;
+            margin: 0 0 0 1.6em;
+        }
+    }
+
+    sidebar.hovered {
+        @media only screen and (max-height: 210px) and (max-width: 210px) {
+            .track-info,
+            .bottom,
+            .mini-toggle {
+                opacity: 1 !important;
+            }
+
+            .artwork-container {
+                opacity: 0.1 !important;
+            }
+        }
+    }
+
+    .empty {
+        grid-template-rows: 1fr auto 140px;
+        .track-info {
+            background: none;
+        }
+
+        // COVER INFO OVER ARTWORK
+        @media only screen and (max-height: 548px) {
+            .track-info {
+                backdrop-filter: blur(1px);
+            }
+        }
+
+        @media only screen and (max-height: 500px) {
+            grid-template-rows: 1fr auto 140px;
+            .top-header,
+            .file {
+                display: none;
+            }
+        }
+    }
+
+    .has-current-song {
+        @media only screen and (min-height: 821px) {
+            grid-template-rows: 1fr auto 310px;
+        }
+        @media only screen and (max-height: 870px) {
+            .app-title {
+                display: none;
+            }
+        }
+
+        @media only screen and (max-height: 804px) {
+            .top-header,
+            .file {
+                display: none;
+            }
+        }
+        @media only screen and (max-height: 660px) {
+            /* grid-template-rows: 1fr 210px 1fr; */
+        }
+
+        // COVER INFO OVER ARTWORK
+        @media only screen and (max-height: 548px) {
+            grid-template-rows: 1fr auto 140px;
+
+            .track-info {
+                border-top: none;
+                backdrop-filter: blur(1px);
+            }
+        }
+
+        @media only screen and (max-height: 220px) {
+            .cd-gif,
+            .search-container {
+                display: none;
+            }
+            .track-info,
+            .info {
+                background-color: transparent;
+            }
+            .artwork-container {
+                display: flex !important;
+                top: 0;
+                bottom: 0;
+                position: absolute;
+                height: 100%;
+            }
+            .track-info {
+                padding: 0 0.4em;
+            }
+            .track-info,
+            .bottom,
+            .mini-toggle {
+                /* top: 10px; */
+                transition: opacity 0.2s ease-in;
+            }
+
+            .add-metadata-btn {
+                display: none;
+            }
+        }
+        @media only screen and (max-height: 260px) {
+            .track-info {
+                width: 210px;
+                small {
+                    display: none;
+                }
+            }
+
+            .add-metadata-btn {
+                display: none;
+            }
+        }
+
+        @media only screen and (max-height: 210px) and (min-width: 211px) {
+        }
+
+        // MINI PLAYER ONLY
+        @media only screen and (max-height: 210px) and (max-width: 210px) {
+            .track-info,
+            .bottom,
+            .mini-toggle {
+                opacity: 0 !important;
+            }
+            .track-info-content {
+                margin-top: 1.5em;
+            }
+
+            .other-controls {
+                padding: 0.5em 2em 1em;
+            }
+
+            .seekbar {
+                padding: 0.5em 0;
+            }
+
+            .artwork-container {
+                opacity: 1 !important;
+            }
+        }
+
+        @media only screen and (max-height: 260px) and (max-width: 211px) {
+            .mini-toggle {
+                position: fixed;
+            }
         }
     }
 </style>

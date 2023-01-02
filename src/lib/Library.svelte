@@ -17,6 +17,7 @@
     import {
         currentSong,
         currentSongIdx,
+        draggedSongs,
         importStatus,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
@@ -477,6 +478,9 @@
             case "year":
                 queryPart = getQueryPart("RELEASED_IN");
                 $smartQueryInitiator = "genre-pill";
+                break;
+            default:
+                return;
         }
         if ($uiView !== "smart-query") {
             $smartQuery.reset();
@@ -490,6 +494,16 @@
         $isSmartQueryBuilderOpen = true;
         $isSmartQuerySaveUiOpen = false;
         $uiView = "smart-query";
+    }
+
+    function onSongDragStart(song: Song) {
+        console.log("dragstart", song);
+        console.log("songshighlighted", songsHighlighted);
+        if (songsHighlighted.length > 1) {
+            $draggedSongs = songsHighlighted;
+        } else {
+            $draggedSongs = [song];
+        }
     }
 </script>
 
@@ -586,6 +600,8 @@
                                 onRightClick(e, song, idx)}
                             on:click={() => toggleHighlight(song, idx)}
                             on:dblclick={() => onDoubleClickSong(song, idx)}
+                            on:mousedown|preventDefault={() =>
+                                onSongDragStart(song)}
                         >
                             {#each fields as field (field)}
                                 <td data-type={field.value}>
@@ -1011,6 +1027,12 @@
                 text-overflow: clip;
                 .theme-outline & {
                     border-right: none;
+                }
+
+                &[data-type="title"] {
+                    p {
+                        pointer-events: none;
+                    }
                 }
 
                 &[data-type="genre"],

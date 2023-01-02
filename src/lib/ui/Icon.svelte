@@ -1,7 +1,7 @@
 <script lang="ts">
     export let icon;
     export let color = "white";
-    export let onClick = (e) => {};
+    export let onClick = (e: MouseEvent) => {};
 </script>
 
 <iconify-icon {icon} style={`color:${color}`} on:click={onClick} />

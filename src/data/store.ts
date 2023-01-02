@@ -96,6 +96,10 @@ export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);
 export const smartQueryResults: Writable<Song[]> = writable([]);
 
+// Playlists
+export const selectedPlaylistId: Writable<String> = writable(null);
+export const draggedSongs: Writable<Song[]> = writable([]);
+
 // Settings
 export const isSettingsOpen = writable(false);
 const defaultSettings: UserSettings = {

@@ -2,6 +2,7 @@
     import { liveQuery } from "dexie";
     import "iconify-icon";
     import type { Song } from "src/App";
+    import { get } from "svelte/store";
     import { db } from "../../data/db";
     import BuiltInQueries from "../../data/SmartQueries";
     import {
@@ -10,6 +11,7 @@
         playlistIsAlbum,
         queriedSongs,
         query,
+        selectedPlaylistId,
         selectedSmartQuery,
         smartQuery,
         smartQueryResults,
@@ -25,7 +27,13 @@
         let results;
         let isSmartQueryResults = false;
         let isIndexed = true;
-        if ($uiView === "smart-query") {
+
+        if ($selectedPlaylistId !== null) {
+            const playlist = await db.playlists.get($selectedPlaylistId);
+            console.log('playlist to get', playlist);
+            results = await db.songs.bulkGet(playlist.tracks);
+            isIndexed = false;
+        } else if ($uiView === "smart-query") {
             /**
              * User-built smart queries don't support indexing
              */

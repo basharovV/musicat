@@ -10,7 +10,7 @@ import type { Song } from "src/App";
 function instanceOfQueryPartStructWithValues(
     object: any
 ): object is QueryPartStructWithValues {
-    return "values" in object;
+    return typeof object === 'object' && "values" in object;
 }
 
 export class UserQueryPart {

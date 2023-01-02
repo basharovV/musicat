@@ -6,7 +6,8 @@
     import {
         isTrackInfoPopupOpen,
         rightClickedTrack,
-        rightClickedTracks
+        rightClickedTracks,
+        selectedPlaylistId
     } from "../data/store";
     import Menu from "./menu/Menu.svelte";
     import MenuDivider from "./menu/MenuDivider.svelte";
@@ -70,6 +71,28 @@
         }
     }
 
+    async function removeFromPlaylist() {
+        const playlist = await db.playlists.get($selectedPlaylistId);
+        if ($rightClickedTracks.length) {
+            closeMenu();
+            $rightClickedTracks.forEach((t) => {
+                const trackIdx = playlist.tracks.findIndex((pt) => pt === t.id);
+                playlist.tracks.splice(trackIdx, 1);
+            });
+            $rightClickedTracks = [];
+            isConfirmingDelete = false;
+        } else if ($rightClickedTrack) {
+            closeMenu();
+            const trackIdx = playlist.tracks.findIndex(
+                (pt) => pt === $rightClickedTrack.id
+            );
+            playlist.tracks.splice(trackIdx, 1);
+            $rightClickedTrack = null;
+            isConfirmingDelete = false;
+        }
+        await db.playlists.put(playlist);
+    }
+
     function searchArtistOnYouTube() {
         closeMenu();
         const query = encodeURIComponent($rightClickedTrack.artist);
@@ -129,11 +152,22 @@
         />
         <MenuOption
             isDestructive={true}
-            isConfirming={isConfirmingDelete}
+            isConfirming={false}
             onClick={deleteTrack}
             text={$rightClickedTrack ? "Delete track" : "Delete tracks"}
             confirmText="Click again to confirm"
         />
+        {#if selectedPlaylistId}
+            <MenuOption
+                isDestructive={true}
+                isConfirming={isConfirmingDelete}
+                onClick={removeFromPlaylist}
+                text={$rightClickedTrack
+                    ? "Remove from playlist"
+                    : `Remove  ${$rightClickedTracks.length} tracks from playlist`}
+                confirmText="Click again to confirm"
+            />
+        {/if}
         {#if $rightClickedTrack}
             <MenuDivider />
             <MenuOption
