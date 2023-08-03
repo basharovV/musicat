@@ -53,7 +53,6 @@
     import SpectrumAnalyzer from "./SpectrumAnalyzer.svelte";
     import "./tippy.css";
     import Icon from "./ui/Icon.svelte";
-    import { Svrollbar } from "svrollbar";
 
     // Env
     let isArtistToolkitEnabled = true;
