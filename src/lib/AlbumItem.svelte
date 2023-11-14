@@ -6,13 +6,6 @@
     import audioPlayer from "./AudioPlayer";
 
     export let album: Album; // to display album data
-    export let tracks: Song[];
-    export let artworkFormat;
-    let artworkBuffer: Buffer;
-    export let artworkSrc;
-    export let displayTracks = false;
-
-    $: firstTrack = tracks && tracks[0];
 
     let isHovered = false;
     async function playPauseToggle() {
