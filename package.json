@@ -20,6 +20,7 @@
     "@tsconfig/svelte": "^3.0.0",
     "audiomotion-analyzer": "^3.6.0",
     "autoprefixer": "^10.4.8",
+    "better-cue-parser": "^0.3.1",
     "dexie": "^3.2.2",
     "hotkeys-js": "^3.9.5",
     "iconify-icon": "^1.0.0-beta.3",
@@ -44,6 +45,7 @@
     "@tauri-apps/api": "^1.2.0",
     "@tauri-apps/cli-darwin-arm64": "^1.2.0",
     "is-dark-color": "^1.2.0",
-    "music-metadata-browser": "^2.5.8"
+    "music-metadata-browser": "^2.5.8",
+    "svrollbar": "^0.12.0"
   }
 }
