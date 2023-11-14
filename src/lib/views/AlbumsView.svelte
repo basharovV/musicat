@@ -53,6 +53,7 @@
     }
 
     async function showCurrentlyPlayingAlbum() {
+        if (!$currentSong) return;
         // Find the album currently playing
         const currentAlbum = await db.albums.get(
             md5(`${$currentSong.artist} - ${$currentSong.album}`)
@@ -223,7 +224,7 @@
             {#if $albums}
                 {#each $albums as album (album.id)}
                     {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
-                        <AlbumItem {album} {displayTracks} />
+                        <AlbumItem {album}/>
                     {/if}
                 {/each}
             {/if}

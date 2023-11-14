@@ -1,11 +1,14 @@
 <script lang="ts">
-    import { importStatus } from "../data/store";
+    import { importStatus, selectedPlaylistId } from "../data/store";
 
     import { openTauriImportDialog } from "../data/LibraryImporter";
 </script>
 
 <div>
-    {#if $importStatus.isImporting}
+    {#if $selectedPlaylistId}
+        <h2>Empty playlist</h2>
+        <p>🪣</p>
+    {:else if $importStatus.isImporting}
         <h1>🥁Importing...</h1>
         <h2>{$importStatus.currentFolder}</h2>
         <h3>

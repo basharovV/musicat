@@ -24,6 +24,8 @@
 
     $: playheadPos = ($playerTime / duration) * 100;
 
+    $: console.log(playheadPos);
+    
     $: hoverheadPosPx = 0;
 
     let seekBar;

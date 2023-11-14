@@ -45,7 +45,6 @@
         volume
     } from "../data/store";
     import audioPlayer from "./AudioPlayer";
-    import AudioPlayer from "./AudioPlayer";
     import Input from "./Input.svelte";
     import Menu from "./menu/Menu.svelte";
     import MenuOption from "./menu/MenuOption.svelte";
@@ -54,6 +53,8 @@
     import "./tippy.css";
     import Icon from "./ui/Icon.svelte";
     import { Svrollbar } from "svrollbar";
+    import { flip } from "svelte/animate";
+    import { cubicInOut, quadOut } from "svelte/easing";
 
     // Env
     let isArtistToolkitEnabled = true;
@@ -114,8 +115,8 @@
             } else {
                 artworkSrc = null;
                 const artwork = await lookForArt(
-                    $currentSong.path,
-                    $currentSong.file
+                    song.path,
+                    song.file
                 );
                 if (artwork) {
                     artworkSrc = artwork.artworkSrc;
@@ -389,7 +390,7 @@
     let menuX = 0;
     let menuY = 0;
     let isConfirmingPlaylistDelete = false;
-    let playlistToDelete: Playlist = null;
+    let playlistToEdit: Playlist = null;
     let draggingOverPlaylist: Playlist = null;
     let isRenamingPlaylist = false;
 
@@ -401,13 +402,14 @@
         newPlaylistTitle = "";
     }
 
-    function deletePlaylist() {
+    async function deletePlaylist() {
         if (!isConfirmingPlaylistDelete) {
             isConfirmingPlaylistDelete = true;
             return;
         }
-        db.playlists.delete(playlistToDelete.title);
+        await db.playlists.delete(playlistToEdit.id);
         showPlaylistMenu = false;
+        isConfirmingPlaylistDelete = false;
     }
 
     async function onRenamePlaylist(playlist: Playlist) {
@@ -419,10 +421,7 @@
     }
 
     function onDragOverPlaylist(playlist: Playlist) {
-        if (
-            $draggedSongs.length &&
-            draggingOverPlaylist?.title !== playlist?.title
-        ) {
+        if ($draggedSongs.length && draggingOverPlaylist?.id !== playlist?.id) {
             draggingOverPlaylist = playlist;
         }
     }
@@ -472,8 +471,6 @@
             if (searchInput) {
                 if (focused) {
                     searchInput.focus();
-                } else {
-                    searchInput.blur();
                 }
             }
         });
@@ -482,6 +479,7 @@
         };
         searchInput.onblur = (evt) => {
             $singleKeyShortcutsEnabled = true;
+            $isFindFocused = false;
         };
 
         // Detect size changes in scroll container for the menu
@@ -579,7 +577,6 @@
                         <item
                             on:click={() => {
                                 // expand playlists
-                                $uiView = "library";
                                 isPlaylistsExpanded = !isPlaylistsExpanded;
                             }}
                         >
@@ -593,12 +590,17 @@
                                 {#if $playlists}
                                     {#each $playlists as playlist (playlist.id)}
                                         <div
+                                            animate:flip={{
+                                                duration: 300,
+                                                easing: cubicInOut
+                                            }}
                                             class="playlist"
                                             class:dragover={draggingOverPlaylist ===
                                                 playlist}
                                             class:selected={$selectedPlaylistId ===
                                                 playlist.id}
                                             on:click={() => {
+                                                $uiView = "library";
                                                 $selectedPlaylistId =
                                                     playlist.id;
                                             }}
@@ -610,7 +612,7 @@
                                                     playlist.id
                                                 )}
                                         >
-                                            {#if isRenamingPlaylist}
+                                            {#if isRenamingPlaylist && playlistToEdit.id === playlist.id}
                                                 <Input
                                                     bind:value={updatedPlaylistName}
                                                     onEnterPressed={() => {
@@ -625,10 +627,11 @@
                                             {:else}
                                                 <p>{playlist.title}</p>
                                             {/if}
-                                            {#if isRenamingPlaylist}
+                                            {#if isRenamingPlaylist && playlistToEdit.id === playlist.id}
                                                 <Icon
                                                     icon="mingcute:close-circle-fill"
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         isRenamingPlaylist = false;
                                                     }}
                                                 />
@@ -636,7 +639,7 @@
                                                 <div
                                                     class="playlist-menu"
                                                     class:visible={showPlaylistMenu &&
-                                                        playlistToDelete ===
+                                                        playlistToEdit ===
                                                             playlist}
                                                 >
                                                     <Icon
@@ -646,7 +649,7 @@
                                                             e.stopPropagation();
                                                             menuX = e.clientX;
                                                             menuY = e.clientY;
-                                                            playlistToDelete =
+                                                            playlistToEdit =
                                                                 playlist;
                                                             showPlaylistMenu =
                                                                 !showPlaylistMenu;
@@ -676,6 +679,7 @@
                                     y={menuY}
                                     onClickOutside={() => {
                                         showPlaylistMenu = false;
+                                        isConfirmingPlaylistDelete = false;
                                     }}
                                     fixed
                                 >
@@ -689,7 +693,7 @@
                                     <MenuOption
                                         onClick={() => {
                                             updatedPlaylistName =
-                                                playlistToDelete.title;
+                                                playlistToEdit.title;
                                             isRenamingPlaylist = true;
                                             showPlaylistMenu = false;
                                         }}
@@ -796,7 +800,7 @@
         </div>
     </div>
 
-    <SpectrumAnalyzer />
+    <!-- <SpectrumAnalyzer /> -->
     {#if $currentSong}
         <div class="artwork-container">
             <div class="artwork-frame">
@@ -1143,26 +1147,6 @@
         /* height: 150px; */
         /* min-height: 150px; */
         width: 100%;
-        background: linear-gradient(
-            to bottom,
-            hsla(240, 10.71%, 10.98%, 0.75) 0%,
-            hsla(240, 10.71%, 10.98%, 0.74) 8.3%,
-            hsla(240, 10.71%, 10.98%, 0.714) 16.5%,
-            hsla(240, 10.71%, 10.98%, 0.672) 24.4%,
-            hsla(240, 10.71%, 10.98%, 0.618) 32.2%,
-            hsla(240, 10.71%, 10.98%, 0.556) 39.7%,
-            hsla(240, 10.71%, 10.98%, 0.486) 47%,
-            hsla(240, 10.71%, 10.98%, 0.412) 54.1%,
-            hsla(240, 10.71%, 10.98%, 0.338) 60.9%,
-            hsla(240, 10.71%, 10.98%, 0.264) 67.4%,
-            hsla(240, 10.71%, 10.98%, 0.194) 73.6%,
-            hsla(240, 10.71%, 10.98%, 0.132) 79.6%,
-            hsla(240, 10.71%, 10.98%, 0.078) 85.2%,
-            hsla(240, 10.71%, 10.98%, 0.036) 90.5%,
-            hsla(240, 10.71%, 10.98%, 0.01) 95.4%,
-            hsla(240, 10.71%, 10.98%, 0) 100%
-        );
-
         position: sticky;
         /* top: 110px; */
         top: 0px;
@@ -1336,6 +1320,10 @@
         position: absolute;
         bottom: 0;
         z-index: 3;
+        height: 140px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
         background-color: #242026bc;
     }
 
@@ -1559,6 +1547,27 @@
         }
         @media only screen and (max-height: 660px) {
             /* grid-template-rows: 1fr 210px 1fr; */
+            .track-info {
+                background: linear-gradient(
+                    to bottom,
+                    hsla(240, 10.71%, 10.98%, 0.75) 0%,
+                    hsla(240, 10.71%, 10.98%, 0.74) 8.3%,
+                    hsla(240, 10.71%, 10.98%, 0.714) 16.5%,
+                    hsla(240, 10.71%, 10.98%, 0.672) 24.4%,
+                    hsla(240, 10.71%, 10.98%, 0.618) 32.2%,
+                    hsla(240, 10.71%, 10.98%, 0.556) 39.7%,
+                    hsla(240, 10.71%, 10.98%, 0.486) 47%,
+                    hsla(240, 10.71%, 10.98%, 0.412) 54.1%,
+                    hsla(240, 10.71%, 10.98%, 0.338) 60.9%,
+                    hsla(240, 10.71%, 10.98%, 0.264) 67.4%,
+                    hsla(240, 10.71%, 10.98%, 0.194) 73.6%,
+                    hsla(240, 10.71%, 10.98%, 0.132) 79.6%,
+                    hsla(240, 10.71%, 10.98%, 0.078) 85.2%,
+                    hsla(240, 10.71%, 10.98%, 0.036) 90.5%,
+                    hsla(240, 10.71%, 10.98%, 0.01) 95.4%,
+                    hsla(240, 10.71%, 10.98%, 0) 100%
+                );
+            }
         }
 
         // COVER INFO OVER ARTWORK

@@ -30,9 +30,24 @@
 
         if ($selectedPlaylistId !== null) {
             const playlist = await db.playlists.get($selectedPlaylistId);
-            console.log('playlist to get', playlist);
+            console.log("playlist to get", playlist);
             results = await db.songs.bulkGet(playlist.tracks);
             isIndexed = false;
+            // Filter within playlist
+            if ($query.query.length) {
+                results = results.filter(
+                    (song) =>
+                        song.title
+                            .toLowerCase()
+                            .includes($query.query.toLowerCase()) ||
+                        song.artist
+                            .toLowerCase()
+                            .includes($query.query.toLowerCase()) ||
+                        song.album
+                            .toLowerCase()
+                            .includes($query.query.toLowerCase())
+                );
+            }
         } else if ($uiView === "smart-query") {
             /**
              * User-built smart queries don't support indexing

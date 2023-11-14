@@ -37,7 +37,7 @@ interface Song {
 }
 
 interface Album {
-    id: string; // Hash of artist + album name 
+    id: string; // Hash of artist + album name
     title: string;
     artist: string;
     year: number;
@@ -46,13 +46,13 @@ interface Album {
     tracksIds: string[];
     duration: string;
     path: string;
-    artwork?: ArtworkSrc
+    artwork?: ArtworkSrc;
 }
 
 interface Playlist {
     id?: number; // increments automatically
     title: string;
-    tracks: string[]
+    tracks: string[];
 }
 
 /**
@@ -128,7 +128,12 @@ type Comparison =
     | "is-between"
     | "contains";
 
-type SidebarItem = "library" | "smart-query" | "your-music" | "albums" | "playlists";
+type SidebarItem =
+    | "library"
+    | "smart-query"
+    | "your-music"
+    | "albums"
+    | "playlists";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 

@@ -157,7 +157,7 @@
             text={$rightClickedTrack ? "Delete track" : "Delete tracks"}
             confirmText="Click again to confirm"
         />
-        {#if selectedPlaylistId}
+        {#if $selectedPlaylistId}
             <MenuOption
                 isDestructive={true}
                 isConfirming={isConfirmingDelete}

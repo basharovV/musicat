@@ -382,6 +382,7 @@
         x={rightClickedPos.x}
         y={rightClickedPos.y}
         onClickOutside={closeMenu}
+        fixed
     >
         <MenuOption isDisabled={true} text={contextItem.name} />
         <MenuOption
