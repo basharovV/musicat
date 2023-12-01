@@ -24,7 +24,7 @@
 
     $: playheadPos = ($playerTime / duration) * 100;
 
-    $: console.log(playheadPos);
+    // $: console.log(playheadPos);
     
     $: hoverheadPosPx = 0;
 

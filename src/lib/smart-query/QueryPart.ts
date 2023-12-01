@@ -4,7 +4,7 @@ import type { Comparison, DataType } from "src/App";
  * At the moment we just create query parts per field.
  * This can expand to more complex queries
  */
-type FieldKey = "title" | "artist" | "album" | "year" | "genre" | "duration";
+type FieldKey = "title" | "artist" | "album" | "year" | "genre" | "duration" | "originCountry";
 
 export type InputType = string | number | boolean;
 export type InputTypeStr = "string" | "number" | "boolean";

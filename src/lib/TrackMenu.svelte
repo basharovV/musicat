@@ -12,6 +12,7 @@
     import Menu from "./menu/Menu.svelte";
     import MenuDivider from "./menu/MenuDivider.svelte";
     import MenuOption from "./menu/MenuOption.svelte";
+    import { findCountryByArtist } from "./data/LibraryEnrichers";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -140,6 +141,30 @@
         closeMenu();
         $isTrackInfoPopupOpen = true;
     }
+    // Enrichers
+
+    let isFetchingOriginCountry = false;
+
+    async function enrichArtistCountry() {
+        isFetchingOriginCountry = true;
+        const country = await findCountryByArtist($rightClickedTrack.artist);
+        console.log("country", country);
+        if (country) {
+
+            $rightClickedTrack.originCountry = country;
+            
+            // Find all songs with this artist
+            const artistSongs = await db.songs
+                .where("artist")
+                .equals($rightClickedTrack.artist)
+                .toArray();
+            artistSongs.forEach((s) => {
+                s.originCountry = country;
+                db.songs.update(s.id, s);
+            });
+        }
+        isFetchingOriginCountry = false;
+    }
 </script>
 
 {#if showMenu}
@@ -152,7 +177,7 @@
         />
         <MenuOption
             isDestructive={true}
-            isConfirming={false}
+            isConfirming={isConfirmingDelete}
             onClick={deleteTrack}
             text={$rightClickedTrack ? "Delete track" : "Delete tracks"}
             confirmText="Click again to confirm"
@@ -169,6 +194,13 @@
             />
         {/if}
         {#if $rightClickedTrack}
+            <MenuDivider />
+            <MenuOption text="Enrich" isDisabled />
+            <MenuOption
+                onClick={enrichArtistCountry}
+                text="{!$rightClickedTrack.originCountry ? isFetchingOriginCountry ? "Looking online..." : "Origin country" : "Origin country ✅"}"
+                description="from Wikipedia"
+            />
             <MenuDivider />
             <MenuOption
                 onClick={searchSongOnYouTube}

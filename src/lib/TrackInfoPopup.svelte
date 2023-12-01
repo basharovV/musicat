@@ -28,6 +28,8 @@
     import hotkeys from "hotkeys-js";
     import { fly } from "svelte/transition";
 
+    import { WBK } from "wikibase-sdk";
+    import { findCountryByArtist } from "./data/LibraryEnrichers";
     // optional
 
     function onClose() {
@@ -40,6 +42,7 @@
         // Add empty default fields
         const defaults: MetadataEntry[] = [];
         const others: MetadataEntry[] = [];
+        if (!map) return { defaults, others };
         for (const field of Object.entries(map)) {
             // Check if this default field already exists in the file
             const existingField = metadata.find(
@@ -458,6 +461,35 @@
             ).length > 0
         );
     }
+
+    let originCountry = $rightClickedTrack.originCountry;
+    let isFetchingOriginCountry = false;
+    function onOriginCountryUpdated(event) {
+        const country = event.target.value;
+        originCountry = country;
+    }
+
+    async function saveTrack() {
+        $rightClickedTrack.originCountry = originCountry;
+
+        // Find all songs with this artist
+        const artistSongs = await db.songs.where('artist').equals($rightClickedTrack.artist).toArray();
+        artistSongs.forEach((s => {
+            s.originCountry = originCountry;
+            db.songs.update(s.id, s);
+        }))
+    }
+
+    async function fetchFromWikipedia() {
+        originCountry = null;
+        isFetchingOriginCountry = true;
+        const country = await findCountryByArtist($rightClickedTrack.artist);
+        console.log("country", country);
+        if (country) {
+            originCountry = country;
+        }
+        isFetchingOriginCountry = false;
+    }
 </script>
 
 <container use:focusTrap>
@@ -485,11 +517,6 @@
     <div class="top">
         <section class="file-section">
             {#if $rightClickedTrack}
-                <p>
-                    Edit any metadata below, then click "Overwrite file" to
-                    save.
-                </p>
-
                 <p class="file-path">File path: {$rightClickedTrack.path}</p>
 
                 <div class="file-info">
@@ -500,6 +527,22 @@
                             {$rightClickedTrack.fileInfo.bitsPerSample} bit audio
                         </p>
                     {/if}
+                </div>
+
+                <div class="country">
+                    <p>Country of origin</p>
+                    <Input
+                        value={originCountry}
+                        placeholder={isFetchingOriginCountry ? 'Looking online...' : ''}
+                        onChange={onOriginCountryUpdated}
+                    />
+                    <button
+                        on:click={saveTrack}>Save</button
+                    >
+                    <button
+                        on:click={fetchFromWikipedia}
+                        >Fetch from Wikipedia</button
+                    >
                 </div>
             {:else}
                 <p>Song has no metadata</p>
@@ -880,6 +923,16 @@
             &:active {
                 opacity: 0.5;
             }
+        }
+    }
+
+    .country {
+        display: flex;
+        margin-top: 2em;
+        justify-content: left;
+        align-items: center;
+        p {
+            margin-right: 1em;
         }
     }
     .metadata-section {

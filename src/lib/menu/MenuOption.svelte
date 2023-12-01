@@ -138,6 +138,7 @@
                 line-height: 14px;
                 display: block;
                 opacity: 0.7;
+                text-align: left;
             }
         }
     }

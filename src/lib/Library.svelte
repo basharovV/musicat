@@ -10,9 +10,9 @@
     import { cubicInOut, quadOut } from "svelte/easing";
     import { get } from "svelte/store";
     import { fade } from "svelte/transition";
-    import { db } from "../data/db";
     import { openTauriImportDialog } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
+    import { db } from "../data/db";
 
     import {
         currentSong,
@@ -21,7 +21,6 @@
         importStatus,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
-        isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
         nextUpSong,
@@ -35,19 +34,20 @@
         songsJustAdded,
         uiView
     } from "../data/store";
+    import { getFlagEmoji } from "../utils/EmojiUtils";
     import AudioPlayer from "./AudioPlayer";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
-    import SmartQuery from "./smart-query/Query";
+    import TrackMenu from "./TrackMenu.svelte";
+    import { codes } from "./data/CountryCodes";
     import {
-        BUILT_IN_QUERY_PARTS,
         getQueryPart
     } from "./smart-query/QueryParts";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
     import { UserQueryPart } from "./smart-query/UserQueryPart";
-    import TrackMenu from "./TrackMenu.svelte";
     import { optionalTippy } from "./ui/TippyAction";
+
     // TODO
     async function calculateSize(songs: Song[]) {}
 
@@ -70,6 +70,7 @@
         { name: "Track", value: "trackNumber" },
         { name: "Year", value: "year" },
         { name: "Genre", value: "genre" },
+        { name: "Origin", value: "originCountry" },
         { name: "Duration", value: "duration" }
     ];
 
@@ -470,6 +471,7 @@
 
     function filterByField(fieldName: string, fieldValue: any) {
         let queryPart;
+        console.log("filter", fieldName, fieldValue);
         switch (fieldName) {
             case "genre":
                 queryPart = getQueryPart("CONTAINS_GENRE");
@@ -477,6 +479,10 @@
                 break;
             case "year":
                 queryPart = getQueryPart("RELEASED_IN");
+                $smartQueryInitiator = "genre-pill";
+                break;
+            case "originCountry":
+                queryPart = getQueryPart("FROM_COUNTRY");
                 $smartQueryInitiator = "genre-pill";
                 break;
             default:
@@ -546,6 +552,8 @@
                             {#if header === "track-fields"}
                                 {#each fields as field (field.value)}
                                     <td
+                                        class:active={$query.orderBy ===
+                                            field.value}
                                         data-type={field.value}
                                         on:click={() =>
                                             updateOrderBy(field.value)}
@@ -620,10 +628,18 @@
                                                     song[field.value]
                                                 )}
                                         >
+                                            {#if field.value === "originCountry"}
+                                                <span>
+                                                    {getFlagEmoji(
+                                                        codes[song[field.value]]
+                                                    )}
+                                                </span>
+                                            {/if}
                                             {song[field.value] === "" ||
                                             song[field.value] === -1 ||
                                             song[field.value] === 0 ||
-                                            song[field.value] === null
+                                            song[field.value] === null ||
+                                            song[field.value] === undefined
                                                 ? "-"
                                                 : song[field.value]}
                                         </p>
@@ -897,6 +913,9 @@
                     cursor: ns-resize;
                     background-color: #604d8d;
                 }
+                &.active {
+                    background-color: #604d8d;
+                }
             }
         }
 
@@ -1011,6 +1030,9 @@
         }
 
         > tr {
+            contain: strict;
+            content-visibility: auto;
+            contain-intrinsic-height: auto 26px;
             white-space: nowrap;
             user-select: none;
             color: $text_color;
@@ -1021,22 +1043,31 @@
                     color: white;
                 }
             }
+            &:hover {
+                background-color: #1f1f1f;
+            }
 
             > td {
                 font-size: 13px;
                 text-overflow: clip;
+
                 .theme-outline & {
                     border-right: none;
                 }
+                background-color: $odd_color;
 
-                &[data-type="title"] {
+                &[data-type="title"],
+                &[data-type="artist"],
+                &[data-type="album"],
+                &[data-type="trackNumber"] {
                     p {
                         pointer-events: none;
                     }
                 }
 
                 &[data-type="genre"],
-                &[data-type="year"] {
+                &[data-type="year"],
+                &[data-type="originCountry"] {
                     p {
                         /* border: 1px solid rgb(63, 61, 61); */
                         background-color: rgba(255, 255, 255, 0.03);
@@ -1054,6 +1085,10 @@
             }
             &.highlight {
                 background-color: $highlight_color !important;
+
+                .favourite-outline {
+                    display: block !important;
+                }
             }
             &.playing {
                 background: $selected_color !important;
@@ -1063,17 +1098,10 @@
                 background-color: $added_color !important;
                 color: white;
             }
-            &:nth-child(odd) {
-                background-color: $odd_color;
-
-                &:hover {
-                    background-color: #1f1f1f;
-                    .favourite-outline {
-                        display: block;
-                    }
-                }
-            }
-            &:nth-child(even) {
+            /* &:nth-child(odd) {
+                
+            } */
+            /* &:nth-child(even) {
                 background-color: $even_color;
 
                 &:hover {
@@ -1083,7 +1111,7 @@
                         display: block;
                     }
                 }
-            }
+            } */
         }
     }
 

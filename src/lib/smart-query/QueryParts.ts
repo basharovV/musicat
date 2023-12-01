@@ -7,7 +7,8 @@ export enum QUERY_PARTS {
     TITLE_CONTAINS = "title-contains",
     LONGER_THAN = "longer-than",
     CONTAINS_GENRE = "contains-genre",
-    RELEASED_IN = "released-in"
+    RELEASED_IN = "released-in",
+    FROM_COUNTRY = "from-country"
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
@@ -135,6 +136,23 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         name: QUERY_PARTS.RELEASED_IN,
         inputRequired: {
             "year": {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string"
+            }
+        }
+    },
+    {
+        dataType: "song",
+        fieldKey: "originCountry",
+        comparison: "is-equal",
+        description: "from country",
+        example: "from Australia",
+        prompt: "from {originCountry}",
+        name: QUERY_PARTS.FROM_COUNTRY,
+        inputRequired: {
+            "originCountry": {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,

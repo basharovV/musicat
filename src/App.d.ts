@@ -28,6 +28,7 @@ interface Song {
     album: string;
     year: number;
     genre: string[];
+    originCountry?: string;
     trackNumber: number;
     duration: string;
     metadata: MetadataEntry[];
@@ -133,7 +134,8 @@ type SidebarItem =
     | "smart-query"
     | "your-music"
     | "albums"
-    | "playlists";
+    | "playlists"
+    | "map";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 
