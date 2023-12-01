@@ -34,11 +34,15 @@
     "svelte-focus-trap": "^1.2.0",
     "svelte-french-toast": "^1.0.3",
     "svelte-input-auto-width": "^2.1.0",
+    "svelte-particles": "^2.12.0",
     "svelte-preprocess": "^4.10.7",
     "svelte-tippy": "^1.3.2",
     "tippy.js": "^6.3.7",
     "tslib": "^2.4.0",
+    "tsparticles-preset-stars": "^2.12.0",
+    "tsparticles-slim": "^2.12.0",
     "typescript": "^4.6.4",
+    "vite": "^3.0.7",
     "wikibase-sdk": "^9.2.4"
   },
   "dependencies": {

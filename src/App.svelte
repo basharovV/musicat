@@ -30,6 +30,7 @@
     import AlbumView from "./lib/views/AlbumsView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import CursorInfo from "./lib/ui/CursorInfo.svelte";
+    import MapView from "./lib/views/MapView.svelte";
 
     startMenuListener();
 
@@ -182,6 +183,8 @@
         <AlbumView />
     {:else if $uiView === "your-music"}
         <ArtistsToolkitView />
+    {:else if $uiView === "map"}
+        <MapView />
     {/if}
 </main>
 
