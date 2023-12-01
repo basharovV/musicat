@@ -1,90 +1,95 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "build": {
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:5173",
-    "distDir": "../dist",
-    "withGlobalTauri": false
-  },
-  "package": {
-    "productName": "Musicat",
-    "version": "0.4.0"
-  },
-  "tauri": {
-    "macOSPrivateApi": true,
-    "allowlist": {
-      "all": true,
-      "fs": {
-        "all": true,
-        "scope": ["*"]
-      },
-      "globalShortcut": {
-        "all": true
-      },
-      "path": {
-        "all": true
-      },
-      "protocol": {
-        "all": true,
-        "asset": true,
-        "assetScope": ["**"]
-      }
+    "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+    "build": {
+        "beforeBuildCommand": "npm run build",
+        "beforeDevCommand": "npm run dev",
+        "devPath": "http://localhost:5173",
+        "distDir": "../dist",
+        "withGlobalTauri": false
     },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "com.vbapps.musicat",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
+    "package": {
+        "productName": "Musicat",
+        "version": "0.4.0"
     },
-    "security": {
-      "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com asset: https://asset.localhost; img-src 'self' asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'"
-    },
-    "updater": {
-      "active": false
-    },
-    "windows": [
-      {
-        "theme":"Dark",
-        "fullscreen": false,
-        "height": 780,
-        "resizable": true,
-        "title": "Musicat",
-        "width": 1200,
-        "minHeight": 210,
-        "minWidth": 210,
-        "transparent": true,
-        "visible": true,
-        "fileDropEnabled": true,
-        "hiddenTitle": true
-      }
-    ]
-  }
+    "tauri": {
+        "macOSPrivateApi": true,
+        "allowlist": {
+            "all": true,
+            "fs": {
+                "all": true,
+                "scope": {
+                    "allow": ["**"],
+                    "requireLiteralLeadingDot": false
+                }
+            },
+            "globalShortcut": {
+                "all": true
+            },
+            "path": {
+                "all": true
+            },
+            "protocol": {
+                "all": true,
+                "asset": true,
+                "assetScope": ["**"]
+            }
+        },
+        "bundle": {
+            "active": true,
+            "category": "DeveloperTool",
+            "copyright": "",
+            "deb": {
+                "depends": []
+            },
+            "externalBin": [],
+            "icon": [
+                "icons/32x32.png",
+                "icons/128x128.png",
+                "icons/128x128@2x.png",
+                "icons/icon.icns",
+                "icons/icon.ico"
+            ],
+            "identifier": "com.vbapps.musicat",
+            "longDescription": "",
+            "macOS": {
+                "entitlements": null,
+                "exceptionDomain": "",
+                "frameworks": [],
+                "providerShortName": null,
+                "signingIdentity": null
+            },
+            "resources": [],
+            "shortDescription": "",
+            "targets": "all",
+            "windows": {
+                "certificateThumbprint": null,
+                "digestAlgorithm": "sha256",
+                "timestampUrl": ""
+            }
+        },
+        "security": {
+            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com asset: http://asset.localhost; img-src 'self' asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'"
+        },
+        "updater": {
+            "active": false
+        },
+        "windows": [
+            {
+                "theme": "Dark",
+                "fullscreen": false,
+                "height": 780,
+                "resizable": true,
+                "title": "Musicat",
+                "width": 1200,
+                "minHeight": 210,
+                "minWidth": 210,
+                "transparent": true,
+                "visible": true,
+                "fileDropEnabled": true,
+                "hiddenTitle": true,
+                "decorations": true,
+                "titleBarStyle": "Overlay"
+            }
+        ]
+    }
 }

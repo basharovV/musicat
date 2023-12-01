@@ -274,23 +274,25 @@ interface LookForArtResult {
 }
 
 async function checkFolderArtworkByFilename(folder, artworkFilename) {
-    const src = "asset://localhost/" + folder + artworkFilename;
-
+    const src = folder + artworkFilename;
+    let fileExists = false;
     try {
-        await exists(src);
+        fileExists = await exists(src);
+
+        console.log("fileExists", fileExists);
+        
+        if (fileExists) {
+            return {
+                artworkSrc: convertFileSrc(src),
+                artworkFormat: "image/jpeg",
+                artworkFilenameMatch: artworkFilename
+            };
+        }
+        return null;
     } catch (err) {
+        console.error(err);
         return null;
     }
-
-    const response = await fetch(src);
-    if (response.status === 200) {
-        return {
-            artworkSrc: src,
-            artworkFormat: "image/jpeg",
-            artworkFilenameMatch: artworkFilename
-        };
-    }
-    return null;
 }
 
 export async function lookForArt(
@@ -300,7 +302,6 @@ export async function lookForArt(
     const folder = songPath.replace(songFileName, "");
     const filenamesToSearch = get(userSettings).albumArtworkFilenames;
     let foundResult: LookForArtResult | null = null;
-
     // Check are there any images in the folder?
     try {
         for (const filename of filenamesToSearch) {

@@ -16,7 +16,7 @@
     "@iconify/json": "^2.1.110",
     "@iconify/utils": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^1.0.1",
-    "@tauri-apps/cli": "^1.2.0",
+    "@tauri-apps/cli": "^1.5.5",
     "@tsconfig/svelte": "^3.0.0",
     "audiomotion-analyzer": "^3.6.0",
     "autoprefixer": "^10.4.8",
@@ -42,8 +42,8 @@
     "vite": "^3.0.7"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.2.0",
-    "@tauri-apps/cli-darwin-arm64": "^1.2.0",
+    "@tauri-apps/api": "^1.5.1",
+    "@tauri-apps/cli-darwin-arm64": "^1.5.5",
     "is-dark-color": "^1.2.0",
     "music-metadata-browser": "^2.5.8",
     "svrollbar": "^0.12.0"
