@@ -5,12 +5,15 @@ import {
     currentSongArtworkSrc,
     currentSongIdx,
     isPlaying,
+    isShuffleEnabled,
     nextUpSong,
     playerTime,
     playlist,
     seekTime,
+    shuffledPlaylist,
     volume
 } from "../data/store";
+import { shuffleArray } from "../utils/ArrayUtils";
 
 class AudioPlayer {
     private static _instance: AudioPlayer;
@@ -102,14 +105,60 @@ class AudioPlayer {
             this.artworkSrc = artwork;
             this.setMediaSessionData();
         });
-        playlist.subscribe(async (playlist) => {
-            this.playlist = playlist;
-            let newCurrentSongIdx = playlist.findIndex(
-                (s) => s.id === this.currentSong?.id
-            );
-            if (newCurrentSongIdx === -1) {
-                newCurrentSongIdx = 0;
+
+        isShuffleEnabled.subscribe((enabled) => {
+            const shuffledPlylist = get(shuffledPlaylist);
+            let newCurrentSongIdx = 0;
+            // If shuffle is enabled but not yet shuffled
+            if (enabled && shuffledPlylist.length === 0) {
+                this.shuffle();
+                // If shuffle is disabled, need to unshuffle
+            } else if (!enabled && shuffledPlylist.length > 0) {
+                this.unshuffle();
+                // Restore position
+                newCurrentSongIdx = this.playlist.findIndex(
+                    (s) => s.id === this.currentSong?.id
+                );
+                if (newCurrentSongIdx === -1) {
+                    newCurrentSongIdx = 0;
+                }
             }
+
+            this.currentSongIdx = newCurrentSongIdx;
+            currentSongIdx.set(newCurrentSongIdx);
+
+            this.setNextUpSong();
+        });
+
+        playlist.subscribe(async (playlist) => {
+            const shuffleEnabled = get(isShuffleEnabled);
+            const shuffledPlylist = get(shuffledPlaylist);
+            let newCurrentSongIdx = 0;
+            // If shuffle is enabled but not yet shuffled
+            if (shuffleEnabled && shuffledPlylist.length === 0) {
+                this.shuffle();
+                // If shuffle is disabled, need to unshuffle
+            } else if (!shuffleEnabled && shuffledPlylist.length > 0) {
+                this.unshuffle();
+                // Restore position
+                let newCurrentSongIdx = playlist.findIndex(
+                    (s) => s.id === this.currentSong?.id
+                );
+                if (newCurrentSongIdx === -1) {
+                    newCurrentSongIdx = 0;
+                }
+            } else {
+                // Shuffle was disabled already
+                this.playlist = playlist;
+
+                let newCurrentSongIdx = playlist.findIndex(
+                    (s) => s.id === this.currentSong?.id
+                );
+                if (newCurrentSongIdx === -1) {
+                    newCurrentSongIdx = 0;
+                }
+            }
+
             this.currentSongIdx = newCurrentSongIdx;
             currentSongIdx.set(newCurrentSongIdx);
 
@@ -118,6 +167,19 @@ class AudioPlayer {
         currentSongIdx.subscribe((idx) => {
             this.currentSongIdx = idx;
         });
+    }
+
+    shuffle() {
+        const shuffled = shuffleArray(this.playlist);
+        shuffledPlaylist.set(shuffled);
+        this.playlist = shuffled;
+        isShuffleEnabled.set(true);
+    }
+
+    unshuffle() {
+        this.playlist = get(playlist);
+        shuffledPlaylist.set([]);
+        isShuffleEnabled.set(false);
     }
 
     getCurrentAudioFile() {

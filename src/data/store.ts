@@ -31,6 +31,7 @@ export const currentSongIdx = writable(0);
 export const nextUpSong: Writable<Song> = writable(null);
 export const queriedSongs: Writable<Song[]> = writable([]);
 export const playlist: Writable<Song[]> = writable([]);
+export const shuffledPlaylist: Writable<Song[]> = writable([]);
 export const albumPlaylist: Writable<Song[]> = writable([]);
 export const playlistIsAlbum = writable(false);
 export const playlistIsCountry = writable(null); // ISO Country code

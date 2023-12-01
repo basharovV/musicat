@@ -29,6 +29,7 @@
         isInfoPopupOpen,
         isMiniPlayer,
         isPlaying,
+        isShuffleEnabled,
         isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         os,
@@ -81,7 +82,7 @@
     hotkeys("space", function (event, handler) {
         // Prevent the default refresh event under WINDOWS system
         event.preventDefault();
-        AudioPlayer.togglePlay();
+        audioPlayer.togglePlay();
     });
 
     currentSong.subscribe(async (song) => {
@@ -103,7 +104,7 @@
                 artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                     "base64"
                 )}`;
-                // console.log("artworkSrc", artworkSrc);
+                console.log("artworkSrc", artworkSrc);
                 $currentSongArtworkSrc = {
                     src: artworkSrc,
                     format: artworkFormat,
@@ -114,10 +115,7 @@
                 };
             } else {
                 artworkSrc = null;
-                const artwork = await lookForArt(
-                    song.path,
-                    song.file
-                );
+                const artwork = await lookForArt(song.path, song.file);
                 if (artwork) {
                     artworkSrc = artwork.artworkSrc;
                     artworkFormat = artwork.artworkFormat;
@@ -135,22 +133,22 @@
     });
 
     function togglePlayPause() {
-        if (!AudioPlayer.audioFile.src) {
-            AudioPlayer.playSong($queriedSongs[$currentSongIdx]);
+        if (!audioPlayer.audioFile.src) {
+            audioPlayer.playSong($queriedSongs[$currentSongIdx]);
         } else {
-            AudioPlayer.togglePlay();
+            audioPlayer.togglePlay();
         }
     }
 
     function playNext() {
-        AudioPlayer.playSong($queriedSongs[++$currentSongIdx]);
+        audioPlayer.playSong($queriedSongs[++$currentSongIdx]);
     }
 
     function playPrev() {
         if ($currentSongIdx === 1) {
             return;
         }
-        AudioPlayer.playSong($queriedSongs[--$currentSongIdx]);
+        audioPlayer.playSong($queriedSongs[--$currentSongIdx]);
     }
 
     function openTrackInfo() {
@@ -724,14 +722,14 @@
                                 />Artist's toolkit</item
                             >
                         {/if}
-                        <!-- <item> <iconify-icon icon="mdi:playlist-music" />Playlists</item> -->
-
-                        <!-- <hr />
-<item>
-  <iconify-icon
-    icon="iconoir:album-carousel"
-  />Samples</item
-> -->
+                        <item
+                            class:selected={$uiView === "map"}
+                            on:click={() => {
+                                $uiView = "map";
+                            }}
+                        >
+                            <iconify-icon icon="mdi:map" />Map</item
+                        >
                     </items>
                 </menu>
             </div>
@@ -800,7 +798,7 @@
         </div>
     </div>
 
-    <!-- <SpectrumAnalyzer /> -->
+    <SpectrumAnalyzer />
     {#if $currentSong}
         <div class="artwork-container">
             <div class="artwork-frame">
@@ -828,18 +826,38 @@
         </div>
         <transport>
             <iconify-icon
+                class="transport-side"
+                icon="ph:shuffle-bold"
+                class:off={!$isShuffleEnabled}
+                on:click={() => {
+                    $isShuffleEnabled = !$isShuffleEnabled;
+                }}
+            />
+            <iconify-icon
+                class="transport-middle"
                 icon="fe:backward"
                 class:disabled={$currentSongIdx === 0}
                 on:click={() => audioPlayer.playPrevious()}
             />
             <iconify-icon
+                class="transport-middle"
                 on:click={togglePlayPause}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
             />
             <iconify-icon
+                class="transport-middle"
                 icon="fe:forward"
                 class:disabled={$currentSongIdx === $playlist?.length - 1}
                 on:click={() => audioPlayer.playNext()}
+            />
+            <iconify-icon
+                class="transport-side"
+                icon="ph:shuffle-bold"
+                style="visibility:hidden"
+                class:off={!$isShuffleEnabled}
+                on:click={() => {
+                    $isShuffleEnabled = !$isShuffleEnabled;
+                }}
             />
         </transport>
 
@@ -1047,6 +1065,10 @@
                 }
             }
 
+            &:hover {
+                opacity: 0.5;
+            }
+
             &:not(.selected) {
                 &:active {
                     color: rgb(130, 130, 130);
@@ -1067,6 +1089,7 @@
         height: 100%;
         position: sticky;
         overflow: hidden;
+        padding-top: 2em;
         display: flex;
         flex-direction: column;
         background-color: $sidebar_secondary_color;
@@ -1346,10 +1369,26 @@
     }
     transport {
         /* background-color: rgb(255, 255, 255); */
-        padding: 0em 1em 0 1em;
+        padding: 0.5em 1em;
         width: 100%;
         color: white;
         z-index: 2;
+        display: flex;
+        justify-content: space-between;
+
+        .transport-middle {
+            align-self: center;
+            font-size: 42px;
+        }
+
+        :not(.off)[icon='ph:shuffle-bold'] {
+            color: rgb(225, 255, 0);
+        }
+
+        .transport-side {
+            align-self: center;
+            font-size: 25px;
+        }
     }
 
     .other-controls {
@@ -1410,6 +1449,12 @@
             pointer-events: none;
             color: #474747;
         }
+
+        // Like disabled but clickable
+        &.off {
+            color: #474747;
+        }
+
         &:hover {
             opacity: 0.5;
         }
@@ -1540,8 +1585,13 @@
         }
 
         @media only screen and (max-height: 804px) {
-            .top-header,
             .file {
+                display: none;
+            }
+        }
+
+        @media only screen and (max-height: 700px) {
+            .top-header {
                 display: none;
             }
         }
