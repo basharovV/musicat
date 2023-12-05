@@ -36,6 +36,7 @@ class AudioPlayer {
     currentSongIdx: number;
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
     playlist: Song[];
+    shouldPlay = false; // Whether to play immediately after loading playlist
     isRunningTransition = false;
     connectOtherAudioFile = (
         toSwitchTo: number,
@@ -131,11 +132,13 @@ class AudioPlayer {
         });
 
         playlist.subscribe(async (playlist) => {
+            this.playlist = playlist;
             const shuffleEnabled = get(isShuffleEnabled);
             const shuffledPlylist = get(shuffledPlaylist);
             let newCurrentSongIdx = 0;
+            console.log('shuffled', shuffledPlylist);
             // If shuffle is enabled but not yet shuffled
-            if (shuffleEnabled && shuffledPlylist.length === 0) {
+            if (shuffleEnabled) {
                 this.shuffle();
                 // If shuffle is disabled, need to unshuffle
             } else if (!shuffleEnabled && shuffledPlylist.length > 0) {
@@ -163,6 +166,10 @@ class AudioPlayer {
             currentSongIdx.set(newCurrentSongIdx);
 
             this.setNextUpSong();
+            if (this.shouldPlay) {
+                this.playCurrent();
+                this.shouldPlay = false;
+            }
         });
         currentSongIdx.subscribe((idx) => {
             this.currentSongIdx = idx;
@@ -279,6 +286,10 @@ class AudioPlayer {
             this.setMediaSessionData();
             this.isRunningTransition = false;
         }, (diff - 0.41) * 1000);
+    }
+
+    playCurrent() {
+        this.playSong(this.playlist[this.currentSongIdx]);
     }
 
     playNext() {

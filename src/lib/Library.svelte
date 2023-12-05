@@ -9,7 +9,7 @@
     import { flip } from "svelte/animate";
     import { cubicInOut, quadOut } from "svelte/easing";
     import { get } from "svelte/store";
-    import { fade } from "svelte/transition";
+    import { fade, fly } from "svelte/transition";
     import { openTauriImportDialog } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
     import { db } from "../data/db";
@@ -19,6 +19,7 @@
         currentSongIdx,
         draggedSongs,
         importStatus,
+        isPlaying,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
@@ -39,9 +40,7 @@
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
     import { codes } from "./data/CountryCodes";
-    import {
-        getQueryPart
-    } from "./smart-query/QueryParts";
+    import { getQueryPart } from "./smart-query/QueryParts";
     import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
@@ -118,6 +117,21 @@
     function onScroll(evt) {
         console.log("scroll", evt);
         $libraryScrollPos = evt.target.scrollTop;
+    }
+
+    function scrollToCurrentSong() {
+        if (isPlaying && $currentSong) {
+            const foundRow = document.querySelector(
+                `[data-song='${$currentSong.id}']`
+            );
+            console.log("foundRow", foundRow.offsetTop);
+            if (foundRow) {
+                foundRow.scrollIntoView({
+                    block: "center",
+                    behavior: "smooth"
+                });
+            }
+        }
     }
 
     function updateOrderBy(newOrderBy) {
@@ -520,212 +534,245 @@
 {:else if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
     <ImportPlaceholder />
 {:else}
-    <container
-        bind:this={container}
-        on:scroll={debounce(onScroll, 200)}
-        class="theme-{theme}"
-        in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
-    >
-        <library>
-            <table>
-                <thead class:smart-query={$uiView === "smart-query"}>
-                    {#each tableHeaders as header (header)}
-                        <tr animate:flip={{ duration: 220, easing: quadOut }}>
-                            {#if header === "smart-query-builder"}
-                                <td
-                                    class="query-header-cell builder"
-                                    colspan={fields.length}
-                                >
-                                    <SmartQueryBuilder />
-                                </td>
-                            {/if}
-
-                            {#if header === "smart-query"}
-                                <td
-                                    class="query-header-cell query"
-                                    colspan={fields.length}
-                                >
-                                    <SmartQueryMainHeader />
-                                </td>
-                            {/if}
-
-                            {#if header === "track-fields"}
-                                {#each fields as field (field.value)}
+    <div class="library-container">
+        <container
+            bind:this={container}
+            on:scroll={debounce(onScroll, 200)}
+            class="theme-{theme}"
+            in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
+        >
+            <library>
+                <table>
+                    <thead class:smart-query={$uiView === "smart-query"}>
+                        {#each tableHeaders as header (header)}
+                            <tr
+                                animate:flip={{
+                                    duration: 220,
+                                    easing: quadOut
+                                }}
+                            >
+                                {#if header === "smart-query-builder"}
                                     <td
-                                        class:active={$query.orderBy ===
-                                            field.value}
-                                        data-type={field.value}
-                                        on:click={() =>
-                                            updateOrderBy(field.value)}
-                                        use:optionalTippy={{
-                                            allowHTML: true,
-                                            content:
-                                                "Sorting by artist = viewing the discography<br/><br/> 🕺 Artists shown in alphabetical order <br/> 💿 Albums in chronological order <br/> 🎵 Tracks in album order <br/>",
-                                            placement: "bottom",
-                                            show: field.value === "artist"
-                                        }}
-                                        ><div>
-                                            <p>
-                                                {field.name}
-                                            </p>
-
-                                            <iconify-icon
-                                                class="icon-clock"
-                                                icon="akar-icons:clock"
-                                            />
-
-                                            {#if $query.orderBy === field.value}
-                                                {#if $query.reverse}
-                                                    <iconify-icon
-                                                        class="icon-order"
-                                                        icon="heroicons-solid:sort-ascending"
-                                                    />
-                                                {:else}
-                                                    <iconify-icon
-                                                        class="icon-order"
-                                                        icon="heroicons-solid:sort-descending"
-                                                    />
-                                                {/if}
-                                            {/if}
-                                        </div></td
+                                        class="query-header-cell builder"
+                                        colspan={fields.length}
                                     >
-                                {/each}
-                            {/if}
-                        </tr>
-                    {/each}
-                </thead>
+                                        <SmartQueryBuilder />
+                                    </td>
+                                {/if}
 
-                {#if songs}
-                    {#each songs as song, idx (song.id)}
-                        <tr
-                            class:playing={get(currentSong) &&
-                                song.id === $currentSong.id}
-                            class:just-added={$songsJustAdded.length < 50 &&
-                                isSongJustAdded(song.id)}
-                            class:highlight={songsHighlighted &&
-                                isSongHighlighted(song)}
-                            on:contextmenu|preventDefault={(e) =>
-                                onRightClick(e, song, idx)}
-                            on:click={() => toggleHighlight(song, idx)}
-                            on:dblclick={() => onDoubleClickSong(song, idx)}
-                            on:mousedown|preventDefault={() =>
-                                onSongDragStart(song)}
-                        >
-                            {#each fields as field (field)}
-                                <td data-type={field.value}>
-                                    <div class="field">
-                                        <p
-                                            on:click|stopPropagation={() => {
-                                                filterByField(
-                                                    field.value,
-                                                    song[field.value]
-                                                );
+                                {#if header === "smart-query"}
+                                    <td
+                                        class="query-header-cell query"
+                                        colspan={fields.length}
+                                    >
+                                        <SmartQueryMainHeader />
+                                    </td>
+                                {/if}
+
+                                {#if header === "track-fields"}
+                                    {#each fields as field (field.value)}
+                                        <td
+                                            class:active={$query.orderBy ===
+                                                field.value}
+                                            data-type={field.value}
+                                            on:click={() =>
+                                                updateOrderBy(field.value)}
+                                            use:optionalTippy={{
+                                                allowHTML: true,
+                                                content:
+                                                    "Sorting by artist = viewing the discography<br/><br/> 🕺 Artists shown in alphabetical order <br/> 💿 Albums in chronological order <br/> 🎵 Tracks in album order <br/>",
+                                                placement: "bottom",
+                                                show: field.value === "artist"
                                             }}
-                                            class:my-artist={field.value ===
-                                                "artist" &&
-                                                $artists &&
-                                                $artists.includes(
-                                                    song[field.value]
-                                                )}
+                                            ><div>
+                                                <p>
+                                                    {field.name}
+                                                </p>
+
+                                                <iconify-icon
+                                                    class="icon-clock"
+                                                    icon="akar-icons:clock"
+                                                />
+
+                                                {#if $query.orderBy === field.value}
+                                                    {#if $query.reverse}
+                                                        <iconify-icon
+                                                            class="icon-order"
+                                                            icon="heroicons-solid:sort-ascending"
+                                                        />
+                                                    {:else}
+                                                        <iconify-icon
+                                                            class="icon-order"
+                                                            icon="heroicons-solid:sort-descending"
+                                                        />
+                                                    {/if}
+                                                {/if}
+                                            </div></td
                                         >
-                                            {#if field.value === "originCountry"}
-                                                <span>
-                                                    {getFlagEmoji(
-                                                        codes[song[field.value]]
+                                    {/each}
+                                {/if}
+                            </tr>
+                        {/each}
+                    </thead>
+
+                    {#if songs}
+                        {#each songs as song, idx (song.id)}
+                            <tr
+                                data-song={song.id}
+                                class:playing={get(currentSong) &&
+                                    song.id === $currentSong.id}
+                                class:just-added={$songsJustAdded.length < 50 &&
+                                    isSongJustAdded(song.id)}
+                                class:highlight={songsHighlighted &&
+                                    isSongHighlighted(song)}
+                                on:contextmenu|preventDefault={(e) =>
+                                    onRightClick(e, song, idx)}
+                                on:click={() => toggleHighlight(song, idx)}
+                                on:dblclick={() => onDoubleClickSong(song, idx)}
+                                on:mousedown|preventDefault={() =>
+                                    onSongDragStart(song)}
+                            >
+                                {#each fields as field (field)}
+                                    <td data-type={field.value}>
+                                        <div class="field">
+                                            <p
+                                                on:click|stopPropagation={() => {
+                                                    filterByField(
+                                                        field.value,
+                                                        song[field.value]
+                                                    );
+                                                }}
+                                                class:my-artist={field.value ===
+                                                    "artist" &&
+                                                    $artists &&
+                                                    $artists.includes(
+                                                        song[field.value]
                                                     )}
-                                                </span>
+                                            >
+                                                {#if field.value === "originCountry"}
+                                                    <span>
+                                                        {getFlagEmoji(
+                                                            codes[
+                                                                song[
+                                                                    field.value
+                                                                ]
+                                                            ]
+                                                        )}
+                                                    </span>
+                                                {/if}
+                                                {song[field.value] === "" ||
+                                                song[field.value] === -1 ||
+                                                song[field.value] === 0 ||
+                                                song[field.value] === null ||
+                                                song[field.value] === undefined
+                                                    ? "-"
+                                                    : song[field.value]}
+                                            </p>
+                                            {#if field.value === "title"}
+                                                <div class="title-icons-left">
+                                                    {#if get(currentSong) && song.id === $currentSong.id}
+                                                        <iconify-icon
+                                                            icon="heroicons-solid:volume-up"
+                                                        />
+                                                    {/if}
+                                                </div>
                                             {/if}
-                                            {song[field.value] === "" ||
-                                            song[field.value] === -1 ||
-                                            song[field.value] === 0 ||
-                                            song[field.value] === null ||
-                                            song[field.value] === undefined
-                                                ? "-"
-                                                : song[field.value]}
-                                        </p>
-                                        {#if field.value === "title"}
-                                            <div class="title-icons-left">
-                                                {#if get(currentSong) && song.id === $currentSong.id}
+
+                                            <div class="title-icons-right">
+                                                {#if field.value === "title" && song.isFavourite}
                                                     <iconify-icon
-                                                        icon="heroicons-solid:volume-up"
+                                                        class="favourite-solid"
+                                                        icon="clarity:heart-solid"
+                                                        on:click|stopPropagation={() =>
+                                                            unfavouriteSong(
+                                                                song
+                                                            )}
+                                                    />
+                                                {:else if field.value === "title"}
+                                                    <iconify-icon
+                                                        class="favourite-outline"
+                                                        icon="clarity:heart-line"
+                                                        on:click|stopPropagation={() =>
+                                                            favouriteSong(song)}
                                                     />
                                                 {/if}
                                             </div>
-                                        {/if}
-
-                                        <div class="title-icons-right">
-                                            {#if field.value === "title" && song.isFavourite}
-                                                <iconify-icon
-                                                    class="favourite-solid"
-                                                    icon="clarity:heart-solid"
-                                                    on:click|stopPropagation={() =>
-                                                        unfavouriteSong(song)}
-                                                />
-                                            {:else if field.value === "title"}
-                                                <iconify-icon
-                                                    class="favourite-outline"
-                                                    icon="clarity:heart-line"
-                                                    on:click|stopPropagation={() =>
-                                                        favouriteSong(song)}
-                                                />
-                                            {/if}
                                         </div>
-                                    </div>
-                                </td>
-                            {/each}
-                        </tr>
-                    {/each}
-                {/if}
-            </table>
+                                    </td>
+                                {/each}
+                            </tr>
+                        {/each}
+                    {/if}
+                </table>
 
-            {#if $isSmartQueryBuilderOpen && noSongs}
-                <SmartQueryResultsPlaceholder />
-            {/if}
-            {#if theme === "default"}
-                <div>
-                    <button
-                        style="margin-top:2em"
-                        on:click={openTauriImportDialog}>Add music +</button
-                    >
-                </div>
-                <bottom-bar>
-                    <div class="left">
-                        <div class="lossy-selector">
-                            <div
-                                class:selected={compressionSelected === "lossy"}
-                                on:click={() => (compressionSelected = "lossy")}
-                            >
-                                <p>Lossy</p>
-                            </div>
-                            <div
-                                class:selected={compressionSelected ===
-                                    "lossless"}
-                                on:click={() =>
-                                    (compressionSelected = "lossless")}
-                            >
-                                <p>Lossless</p>
-                            </div>
-                            <div
-                                class:selected={compressionSelected === "both"}
-                                on:click={() => (compressionSelected = "both")}
-                            >
-                                <p>both</p>
-                            </div>
-                        </div>
-                        {#if $nextUpSong}
-                            <div class="next-up">
-                                <p class="label">Next up:</p>
-                                <p>{$nextUpSong.title}</p>
-                            </div>
-                        {/if}
+                {#if $isSmartQueryBuilderOpen && noSongs}
+                    <SmartQueryResultsPlaceholder />
+                {/if}
+                {#if theme === "default"}
+                    <div>
+                        <button
+                            style="margin-top:2em"
+                            on:click={openTauriImportDialog}>Add music +</button
+                        >
                     </div>
-                    <p>{$count} songs</p>
-                    <p>{$artistCount} artists</p>
-                    <p>{$albumCount} albums</p>
-                </bottom-bar>
-            {/if}
-        </library>
-    </container>
+                    <bottom-bar>
+                        <div class="left">
+                            <div class="lossy-selector">
+                                <div
+                                    class:selected={compressionSelected ===
+                                        "lossy"}
+                                    on:click={() =>
+                                        (compressionSelected = "lossy")}
+                                >
+                                    <p>Lossy</p>
+                                </div>
+                                <div
+                                    class:selected={compressionSelected ===
+                                        "lossless"}
+                                    on:click={() =>
+                                        (compressionSelected = "lossless")}
+                                >
+                                    <p>Lossless</p>
+                                </div>
+                                <div
+                                    class:selected={compressionSelected ===
+                                        "both"}
+                                    on:click={() =>
+                                        (compressionSelected = "both")}
+                                >
+                                    <p>both</p>
+                                </div>
+                            </div>
+                            {#if $nextUpSong}
+                                <div class="next-up">
+                                    <p class="label">Next up:</p>
+                                    <p>{$nextUpSong.title}</p>
+                                </div>
+                            {/if}
+                        </div>
+                        <p>{$count} songs</p>
+                        <p>{$artistCount} artists</p>
+                        <p>{$albumCount} albums</p>
+                    </bottom-bar>
+                {/if}
+            </library>
+        </container>
+        {#if $isPlaying && $currentSong}
+            <div
+                in:fly={{ duration: 150, y: 30 }}
+                out:fly={{ duration: 150, y: 30 }}
+                class="scroll-now-playing"
+                on:click={scrollToCurrentSong}
+            >
+                <div class="eq">
+                    <span class="eq1" />
+                    <span class="eq2" />
+                    <span class="eq3" />
+                </div>
+                <p>Scroll to Now playing</p>
+            </div>
+        {/if}
+    </div>
 {/if}
 
 <TrackMenu bind:showMenu={showTrackMenu} bind:pos />
@@ -740,6 +787,9 @@
     $added_color: rgb(44, 147, 44);
     $mini_y_breakpoint: 300px;
 
+    .library-container {
+        position: relative;
+    }
     container {
         height: 100vh;
         background-color: rgba(36, 33, 34, 0.688);
@@ -880,6 +930,116 @@
         }
     }
 
+    .scroll-now-playing {
+        position: absolute;
+        bottom: 3em;
+        left: 0;
+        right: 0;
+        padding: 0.5em 1em;
+        border-radius: 10px;
+        background-color: #1b1b1c;
+        border: 1px solid rgb(58, 56, 56);
+        box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.834);
+        color: white;
+        margin: auto;
+        width: fit-content;
+        z-index: 10;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        cursor: default;
+        user-select: none;
+
+        &:hover {
+            background-color: #1f1f21;
+            border: 1px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+        &:active {
+            background-color: #2a2a2d;
+            border: 2px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+
+        .eq {
+            width: 15px;
+            padding: 0.5em;
+            position: relative;
+
+            span {
+                display: inline-block;
+                width: 3px;
+                background-color: #ddd;
+                position: absolute;
+                bottom: 0;
+            }
+
+            .eq1 {
+                height: 13px;
+                left: 0;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0s;
+                -webkit-animation-name: shorteq;
+                -webkit-animation-duration: 0.5s;
+                -webkit-animation-iteration-count: infinite;
+                animation-delay: 0s;
+            }
+
+            .eq2 {
+                height: 15px;
+                left: 6px;
+                animation-name: talleq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.17s;
+                -webkit-animation-name: talleq;
+                -webkit-animation-duration: 0.5s;
+                -webkit-animation-iteration-count: infinite;
+                animation-delay: 0.17s;
+            }
+
+            .eq3 {
+                height: 13px;
+                left: 12px;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.34s;
+                -webkit-animation-name: shorteq;
+                -webkit-animation-duration: 0.5s;
+                -webkit-animation-iteration-count: infinite;
+                animation-delay: 0.34s;
+            }
+        }
+        p {
+            margin: 0;
+        }
+    }
+
+    @keyframes shorteq {
+        0% {
+            height: 10px;
+        }
+        50% {
+            height: 5px;
+        }
+        100% {
+            height: 10px;
+        }
+    }
+    @keyframes talleq {
+        0% {
+            height: 15px;
+        }
+        50% {
+            height: 8px;
+        }
+        100% {
+            height: 15px;
+        }
+    }
     table {
         -webkit-border-horizontal-spacing: 0px;
         -webkit-border-vertical-spacing: 0px;
@@ -1093,6 +1253,15 @@
             &.playing {
                 background: $selected_color !important;
                 color: $playing_text_color;
+                .title-icons-right {
+                    .favourite-outline {
+                        display: none;
+                        color: #784bff;
+                    }
+                    .favourite-solid {
+                        color: $playing_text_color;
+                    }
+                }
             }
             &.just-added {
                 background-color: $added_color !important;

@@ -14,6 +14,7 @@
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
+        currentSong,
         isSmartQueryBuilderOpen,
         playlist,
         playlistIsAlbum,
@@ -188,6 +189,7 @@
     let selectedCountry = null;
     let selectedCountryPos = null;
     let dataSetCountryValue = null;
+    let initialized = false;
 
     $: {
         if ($songs !== null) {
@@ -214,8 +216,11 @@
                     },
                     map
                 );
-                map.updateSize();
-                onResize();
+                if (!initialized) {
+                    map.updateSize();
+                    onResize();
+                    initialized = true;
+                }
 
                 $playlistIsCountry && setSelectedCountry($playlistIsCountry);
             }
@@ -234,6 +239,30 @@
         const path: SVGPathElement = document.querySelector(
             `[data-code=${countryCode}]`
         );
+        let width = path.getBBox().width;
+        let height = path.getBBox().height;
+        let x = path.getBBox().x + width / 2;
+        let y = path.getBBox().y + height / 2;
+
+        console.log("xy", x, y);
+
+        if (particleContainer) {
+            console.log(particleContainer);
+            // particleContainer._engine.actualOptions.particles.move.center.radius = 100;
+            // particleContainer._engine.actualOptions.particles.move.center.x =
+            //     x;
+            // particleContainer._engine.actualOptions.particles.move.center.y =
+            //     y;
+            particleContainer._engine.plugins.presets.get(
+                "stars"
+            ).particles.move.center.x = x;
+            particleContainer._engine.plugins.presets.get(
+                "stars"
+            ).particles.move.center.y = y;
+            particleContainer._engine.load("stars");
+        }
+
+        console.log("x", x, "y", y);
         // path.style.animation =
         //     "playing-outer 2s ease-in-out infinite alternate-reverse";
         path.classList.add("country-playing");
@@ -265,7 +294,7 @@
     function resetMap() {
         map = new JsVectorMap({
             onLoaded(map) {
-                onResize();
+                map.updateSize();
             },
             draggable: true,
             zoomButtons: false,
@@ -315,7 +344,7 @@
                 initial: {
                     fill: "#645479",
                     stroke: "#4F4464",
-                    strokeWidth: 1,
+                    strokeWidth: 0.5,
                     fillOpacity: 1
                 },
                 selected: {
@@ -341,13 +370,15 @@
             map.height = height;
             map.width = width;
             map.reset();
+            map.updateSize();
         }
     }
 
     function onCountryClicked() {
+        // Should play immediately after setting playlist (and shuffling if necessary)
+        audioPlayer.shouldPlay = true;
         $playlist = dataSetCountryValue.data;
         console.log(dataSetCountryValue.data[0]);
-        audioPlayer.playSong(dataSetCountryValue.data[0]);
         $playlistIsCountry = selectedCountry;
     }
 
@@ -356,7 +387,7 @@
         .length;
 
     // Particles
-
+    let particleContainer;
     let particlesOptions = {
         preset: "stars",
         fullScreen: false,
@@ -372,8 +403,14 @@
                     value: 100
                 },
                 move: {
+                    center: {
+                        radius: 50,
+                        x: 800,
+                        y: 500,
+                        mode: "precise"
+                    },
                     bounce: true,
-                    direction: "none",
+                    direction: "outside",
                     enable: true,
                     outModes: {
                         default: "out"
@@ -399,23 +436,27 @@
         await loadSlim(engine, false);
         await engine.addPreset("stars", options, true);
     };
+
+    function onParticlesLoaded(evt) {
+        particleContainer = evt.detail.particles;
+    }
 </script>
 
 <svelte:window on:resize={onResize} />
 
 <container bind:this={container}>
     <div class="bg" />
-
-    <Particles id="tsparticles" options={particlesOptions} {particlesInit} />
+    <!-- 
+    <Particles
+        id="tsparticles"
+        options={particlesOptions}
+        {particlesInit}
+        on:particlesLoaded={onParticlesLoaded}
+    /> -->
     <content>
         {#if $playlistIsCountry}
             <div class="header">
-                <div class="options">
-                    <div class="shuffle">
-                        <iconify-icon icon="ph:shuffle-bold" />
-                        <div>Shuffle</div>
-                    </div>
-                </div>
+                <div class="options"></div>
                 <div id="info">
                     <p>Listening to music from</p>
                     <h2>
@@ -480,6 +521,27 @@
         z-index: -1;
         height: 100%;
         width: 100%;
+        opacity: 0.8;
+        /* background-size: 35px 35px;
+        background-image: repeating-linear-gradient(
+            0deg,
+            #d6d7e9,
+            #d6d7e9 1px,
+            transparent 1px,
+            transparent
+        ); */
+        /* box-shadow: 0 0 180px 180px #242026c2 inset; */
+        /* animation: bg-move 2s linear infinite forwards; */
+        opacity: 0.4;
+    }
+
+    @keyframes bg-move {
+        from {
+            transform: translateY(0px);
+        }
+        to {
+           transform: translateY(-35px);
+        }
     }
 
     .now-playing {

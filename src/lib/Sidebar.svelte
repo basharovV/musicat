@@ -458,6 +458,14 @@
         }
     }
 
+
+    async function favouriteCurrentSong() {
+        if (!$currentSong) return;
+        await db.songs.update($currentSong, {
+            isFavourite: $currentSong.isFavourite
+        });
+    }
+
     onMount(() => {
         height = window.innerHeight;
         window.onresize = throttle(() => {
@@ -852,11 +860,9 @@
             />
             <iconify-icon
                 class="transport-side"
-                icon="ph:shuffle-bold"
-                style="visibility:hidden"
-                class:off={!$isShuffleEnabled}
+                icon={$currentSong?.isFavourite ? "clarity:heart-solid" : "clarity:heart-line"}
                 on:click={() => {
-                    $isShuffleEnabled = !$isShuffleEnabled;
+                    favouriteCurrentSong()
                 }}
             />
         </transport>
@@ -1387,7 +1393,7 @@
 
         .transport-side {
             align-self: center;
-            font-size: 25px;
+            font-size: 20px;
         }
     }
 
