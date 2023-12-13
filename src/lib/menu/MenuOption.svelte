@@ -11,6 +11,8 @@
     export let onClick = null;
     export let onDelete = null;
     export let color: string | null = null;
+    export let borderHighlight = false;
+    export let checked = null;
 
     import { createEventDispatcher } from "svelte";
     const dispatch = createEventDispatcher();
@@ -25,6 +27,7 @@
     class:destructive={isDestructive}
     class:confirming={isConfirming}
     class:highlighted={isHighlighted}
+    class:border-highlight={borderHighlight}
     class:with-bg={color !== null && color !== undefined}
     style={isHighlighted
         ? color
@@ -49,6 +52,10 @@
                 </small>
             {/if}
         </span>
+
+        {#if checked !== null}
+            <iconify-icon icon="charm:tick" class:checked />
+        {/if}
 
         {#if onDelete}
             <iconify-icon
@@ -98,6 +105,12 @@
         &.highlighted {
             color: rgb(37, 36, 36);
             background-color: rgba(255, 255, 255, 0.796);
+            &.border-highlight {
+                color: white;
+                background-color: rgba(255, 255, 255, 0.196);
+
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
         }
         &.disabled {
             color: rgba(174, 174, 174, 0.4);
@@ -139,6 +152,14 @@
                 display: block;
                 opacity: 0.7;
                 text-align: left;
+            }
+        }
+
+        iconify-icon[icon="charm:tick"] {
+            color: grey;
+
+            &.checked {
+                color: white;
             }
         }
     }

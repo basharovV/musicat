@@ -458,12 +458,12 @@
         }
     }
 
-
     async function favouriteCurrentSong() {
         if (!$currentSong) return;
         await db.songs.update($currentSong, {
-            isFavourite: $currentSong.isFavourite
+            isFavourite: !$currentSong.isFavourite
         });
+        $currentSong = $currentSong;
     }
 
     onMount(() => {
@@ -859,10 +859,14 @@
                 on:click={() => audioPlayer.playNext()}
             />
             <iconify-icon
-                class="transport-side"
-                icon={$currentSong?.isFavourite ? "clarity:heart-solid" : "clarity:heart-line"}
+                class="transport-side favourite {$currentSong?.isFavourite
+                    ? 'active'
+                    : 'inactive'}"
+                icon={$currentSong?.isFavourite
+                    ? "clarity:heart-solid"
+                    : "clarity:heart-line"}
                 on:click={() => {
-                    favouriteCurrentSong()
+                    favouriteCurrentSong();
                 }}
             />
         </transport>
@@ -1387,13 +1391,19 @@
             font-size: 42px;
         }
 
-        :not(.off)[icon='ph:shuffle-bold'] {
+        :not(.off)[icon="ph:shuffle-bold"] {
             color: rgb(225, 255, 0);
         }
 
         .transport-side {
             align-self: center;
             font-size: 20px;
+            &.favourite.active {
+                color: #59cd7a;
+            }
+            &.favourite.inactive {
+                color: grey;
+            }
         }
     }
 

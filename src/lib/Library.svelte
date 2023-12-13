@@ -46,31 +46,87 @@
     import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
     import { UserQueryPart } from "./smart-query/UserQueryPart";
     import { optionalTippy } from "./ui/TippyAction";
+    import ColumnPicker from "./ColumnPicker.svelte";
 
     // TODO
     async function calculateSize(songs: Song[]) {}
 
     export let allSongs = null;
 
-    $: songs = $allSongs?.filter((song: Song) => {
-        if (compressionSelected === "lossless") {
-            return song.fileInfo.lossless;
-        } else if (compressionSelected === "lossy") {
-            return song.fileInfo.lossless === false;
-        } else return true;
-    });
+    $: songs = $allSongs
+        ?.filter((song: Song) => {
+            if (compressionSelected === "lossless") {
+                return song.fileInfo.lossless;
+            } else if (compressionSelected === "lossy") {
+                return song.fileInfo.lossless === false;
+            } else return true;
+        })
+        .reduce(
+            (status, s, idx, songsArray) => {
+                if (s.album !== status.state.previousAlbum) {
+                    if (status.state.firstSongInPreviousAlbum) {
+                        // Set the view model property here
+                        const song =
+                            songsArray[status.state.firstSongInPreviousAlbum];
+                        if (song.viewModel) {
+                            song.viewModel.isFirstAlbum = true;
+                        } else {
+                            song.viewModel = {
+                                isFirstAlbum: true,
+                                isFirstArtist: false
+                            };
+                        }
+                    }
+                    status.state.firstSongInPreviousAlbum = idx;
+                } else {
+                    status.state.tracksInAlbum++;
+                }
+                if (s.artist !== status.state.previousArtist) {
+                    if (status.state.firstSongInPreviousArtist) {
+                        // Set the view model property here
+                        const song =
+                            songsArray[status.state.firstSongInPreviousArtist];
+                        if (song.viewModel) {
+                            song.viewModel.isFirstArtist = true;
+                        } else {
+                            song.viewModel = {
+                                isFirstAlbum: false,
+                                isFirstArtist: true
+                            };
+                        }
+                    }
+                    status.state.firstSongInPreviousArtist = idx;
+                } else {
+                    status.state.albumsInArtist++;
+                }
+                status.state.previousAlbum = s.album;
+                status.state.previousArtist = s.artist;
+                return {
+                    songs: songsArray,
+                    state: status.state
+                };
+            },
+            {
+                state: {
+                    previousAlbum: null,
+                    previousArtist: null,
+                    firstSongInPreviousAlbum: null,
+                    firstSongInPreviousArtist: null
+                }
+            }
+        ).songs;
 
     export let isLoading = true;
 
     export let fields = [
-        { name: "Title", value: "title" },
-        { name: "Artist", value: "artist" },
-        { name: "Album", value: "album" },
-        { name: "Track", value: "trackNumber" },
-        { name: "Year", value: "year" },
-        { name: "Genre", value: "genre" },
-        { name: "Origin", value: "originCountry" },
-        { name: "Duration", value: "duration" }
+        { name: "Title", value: "title", show: true },
+        { name: "Artist", value: "artist", show: true },
+        { name: "Album", value: "album", show: true },
+        { name: "Track", value: "trackNumber", show: true },
+        { name: "Year", value: "year", show: true },
+        { name: "Genre", value: "genre", show: true },
+        { name: "Origin", value: "originCountry", show: true },
+        { name: "Duration", value: "duration", show: true }
     ];
 
     export let showMyArtists = false;
@@ -78,6 +134,9 @@
     export let theme = "default";
     export let isSmartQueryEnabled = true; // Only for main view
     export let onSongsHighlighted = null;
+
+    let showColumnPicker = false;
+    let columnPickerPos;
 
     $: artists = liveQuery(async () => {
         let results = await db.artistProjects.toArray();
@@ -542,8 +601,17 @@
             in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
         >
             <library>
-                <table>
-                    <thead class:smart-query={$uiView === "smart-query"}>
+                <table
+                    class:discography-sort={$query.orderBy === "artist"}
+                    class:smart-query={$uiView === "smart-query"}
+                >
+                    <thead
+                        class:smart-query={$uiView === "smart-query"}
+                        on:contextmenu|preventDefault={(e) => {
+                            columnPickerPos = { x: e.clientX, y: e.clientY };
+                            showColumnPicker = !showColumnPicker;
+                        }}
+                    >
                         {#each tableHeaders as header (header)}
                             <tr
                                 animate:flip={{
@@ -570,7 +638,7 @@
                                 {/if}
 
                                 {#if header === "track-fields"}
-                                    {#each fields as field (field.value)}
+                                    {#each fields.filter((f) => f.show) as field (field.value)}
                                         <td
                                             class:active={$query.orderBy ===
                                                 field.value}
@@ -629,11 +697,18 @@
                                     onRightClick(e, song, idx)}
                                 on:click={() => toggleHighlight(song, idx)}
                                 on:dblclick={() => onDoubleClickSong(song, idx)}
-                                on:mousedown|preventDefault={() =>
-                                    onSongDragStart(song)}
+                                on:mousedown|preventDefault={(e) =>
+                                    e.button === 0 && onSongDragStart(song)}
                             >
-                                {#each fields as field (field)}
-                                    <td data-type={field.value}>
+                                {#each fields.filter((f) => f.show) as field (field)}
+                                    <td
+                                        data-type={field.value}
+                                        class:is-first={(field.value ===
+                                            "artist" &&
+                                            song.viewModel?.isFirstArtist) ||
+                                            (field.value === "album" &&
+                                                song.viewModel?.isFirstAlbum)}
+                                    >
                                         <div class="field">
                                             <p
                                                 on:click|stopPropagation={() => {
@@ -776,6 +851,11 @@
 {/if}
 
 <TrackMenu bind:showMenu={showTrackMenu} bind:pos />
+<ColumnPicker
+    bind:showMenu={showColumnPicker}
+    bind:pos={columnPickerPos}
+    bind:fields
+/>
 
 <style lang="scss">
     $odd_color: transparent;
@@ -1045,6 +1125,52 @@
         -webkit-border-vertical-spacing: 0px;
         width: 100%;
         overflow: auto;
+            &.discography-sort:not(.smart-query) {
+                > tr > td[data-type="album"] {
+                    color: $text_color;
+                    &.is-first {
+                        color: white;
+                        border-bottom: 0.5px solid rgba(128, 128, 128, 0.422);
+                        position: sticky;
+                        top: 2em;
+                        background-color: rgb(36, 33, 34);
+                        pointer-events: none;
+                    }
+                }
+                > tr > td[data-type="artist"] {
+                    color: $text_color;
+                    &.is-first {
+                        color: white;
+                        border-bottom: 0.5px solid rgba(128, 128, 128, 0.422);
+                        position: sticky;
+                        top: 2em;
+                        background-color: rgb(36, 33, 34);
+                        pointer-events: none;
+                    }
+                }
+                > tr.highlight > td[data-type="artist"],
+                > tr.highlight > td[data-type="album"] {
+                    color: $text_color;
+                    &.is-first {
+                        color: white;
+                        /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
+                        position: sticky;
+                        top: 2em;
+                        background: none;
+                    }
+                }
+                > tr.playing > td[data-type="artist"],
+                > tr.playing > td[data-type="album"] {
+                    color: $playing_text_color;
+                    &.is-first {
+                        color: white;
+                        /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
+                        position: sticky;
+                        top: 2em;
+                        background: none;
+                    }
+                }
+            }
 
         thead {
             font-weight: bold;
@@ -1142,14 +1268,14 @@
                 &[data-type="album"] {
                     max-width: 120px;
                 }
-                &[data-type="track"] {
-                    max-width: 55px;
+                &[data-type="trackNumber"] {
+                    max-width: 52px;
                 }
                 &[data-type="genre"] {
                     max-width: 55px;
                 }
                 &[data-type="year"] {
-                    max-width: 50px;
+                    max-width: 51px;
                 }
                 &[data-type="duration"] {
                     max-width: 60px;

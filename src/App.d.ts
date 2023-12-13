@@ -35,6 +35,10 @@ interface Song {
     fileInfo: any;
     songProjectId?: number; // Link to project id
     isFavourite: boolean;
+    viewModel?: {
+        isFirstArtist: boolean;
+        isFirstAlbum: boolean;
+    }
 }
 
 interface Album {

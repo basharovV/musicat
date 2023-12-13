@@ -10,7 +10,7 @@ export function clickOutside(element, callbackFunction) {
     // so we need to wait before adding a listener. 
     setTimeout(() => {
         document.body.addEventListener('click', onClick);
-    }, 100);
+    }, 0);
     
     return {
         update(newCallbackFunction) {
