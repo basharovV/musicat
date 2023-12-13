@@ -50,10 +50,12 @@ export default function setupElementEvents() {
       data.element.hover(true)
 
       if (showTooltip) {
-        map._tooltip.text(data.tooltipText)
+        // map._tooltip.text(data.tooltipText)
         map._tooltip.show()
-        map._emit(data.event, [event, map._tooltip, data.code])
       }
+      // Emit hover event regardless
+      map._emit(data.event, [event, map._tooltip, data.code])
+
     } else {
       data.element.hover(false)
 

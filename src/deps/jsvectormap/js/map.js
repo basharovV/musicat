@@ -96,9 +96,7 @@ class Map {
     }
 
     // Create toolip
-    if (options.showTooltip) {
-      this._tooltip = new Tooltip(this)
-    }
+    this._tooltip = new Tooltip(this)
 
     // Set selected regions if any
     if (options.selectedRegions) {

@@ -14,10 +14,10 @@ class Tooltip extends BaseComponent {
   constructor(map) {
     super()
 
-    const tooltip = createElement('div', 'jvm-tooltip')
+    this._tooltip = document.querySelector('#map-tooltip');
 
     this._map = map
-    this._tooltip = document.body.appendChild(tooltip)
+    // this._tooltip = document.body.appendChild(tooltip)
 
     this._bindEventListeners()
 
@@ -47,7 +47,7 @@ class Tooltip extends BaseComponent {
         left -= space * 2
       }
 
-      if (event.clientX < (container.left + width + space)) { // Left:
+      if (event.clientX < (container.left + width)) { // Left:
         left = event.pageX + space + 2
 
         if (topIsPassed) {

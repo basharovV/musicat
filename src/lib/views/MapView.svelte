@@ -10,7 +10,7 @@
     import { onMount } from "svelte";
 
     import "iconify-icon";
-    import type { Song } from "src/App";
+    import type { MapTooltipData, Song } from "src/App";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -35,6 +35,7 @@
     import Particles from "svelte-particles";
     import { loadSlim } from "tsparticles-slim";
     import { shuffleArray } from "../../utils/ArrayUtils";
+    import MapTooltip from "../map/MapTooltip.svelte";
     let isLoading = true;
 
     let container: HTMLElement;
@@ -191,6 +192,10 @@
     let dataSetCountryValue = null;
     let initialized = false;
 
+    // Tooltip
+
+    let tooltipData: MapTooltipData = null;
+
     $: {
         if ($songs !== null) {
             updateData();
@@ -328,13 +333,56 @@
                 if (!data) return;
                 if (data[countries[code]]) {
                     const countryValue = data[countries[code]] || null;
+                    // countryValue.data.length  = number artists
+                    console.log("tooltip", tooltip);
 
-                    tooltip.text(
-                        `<h5 style="margin:0">${tooltip.text()}</h5>
-                        
-                        <p>${countryValue.data.length} artists</p>`,
-                        true // Enables HTML
-                    );
+                    // Hovered country
+
+                    let hoveredCountryPlaylist: Song[] = countryValue.data;
+                    let hoveredCountryArtists: string[] = [
+                        ...new Set(
+                            hoveredCountryPlaylist.map((item) => item.artist)
+                        )
+                    ];
+                    let hoveredCountryNumArtists = hoveredCountryArtists.length;
+                    let hoveredCountryFirstFewArtists =
+                        hoveredCountryArtists.slice(
+                            0,
+                            Math.min(3, artists.length)
+                        );
+
+                    let hoveredCountryFirstFewAlbums: {
+                        artist: string;
+                        album: string;
+                    }[] = hoveredCountryPlaylist.map((item) => ({
+                        artist: item.artist,
+                        album: item.album
+                    }));
+
+                    // distinct albums
+                    hoveredCountryFirstFewAlbums =
+                        hoveredCountryFirstFewAlbums.filter(
+                            (e, i) =>
+                                hoveredCountryFirstFewAlbums.findIndex(
+                                    (a) => a["album"] === e["album"]
+                                ) === i
+                        );
+
+                    tooltipData = {
+                        countryName: countries[code],
+                        emoji: getFlagEmoji(code),
+                        numberOfArtists: hoveredCountryNumArtists,
+                        artists: hoveredCountryFirstFewArtists,
+                        albums: hoveredCountryFirstFewAlbums
+                    };
+                } else {
+                    tooltipData = {
+                        countryName: countries[code],
+                        emoji: getFlagEmoji(code),
+                        numberOfArtists: 0,
+                        artists: [],
+                        albums: []
+                    };
                 }
             },
             map: "world",
@@ -352,8 +400,17 @@
                     stroke: "#4F4464",
                     strokeWidth: 1,
                     fillOpacity: 1
+                },
+                selectedHover: {
+                    fill: "#59CD70",
+                    stroke: "#4F4464",
+                    strokeWidth: 1,
+                    fillOpacity: 1
+                },
+                hover: {
+                    stroke: "#C1B1F3",
+                    strokeWidth: 1
                 }
-                // hover: { fill: "#E9E6EE" }
             }
         });
     }
@@ -382,9 +439,11 @@
         $playlistIsCountry = selectedCountry;
     }
 
+    // Selected country
     $: numberOfTracks = $playlist.length;
-    $: numberOfArtists = [...new Set($playlist.map((item) => item.artist))]
-        .length;
+    $: artists = [...new Set($playlist.map((item) => item.artist))];
+    $: numberOfArtists = artists.length;
+    $: firstFewArtists = artists.slice(0, Math.min(3, artists.length));
 
     // Particles
     let particleContainer;
@@ -502,14 +561,22 @@
                 </svg>
             {/if} -->
         </div>
+        <div id="map-tooltip">
+            <MapTooltip data={tooltipData} />
+        </div>
     {/if}
 </container>
 
 <style lang="scss">
+    * {
+        user-select: none;
+    }
+
     container {
         height: 100vh;
         width: 100%;
         position: relative;
+        cursor: grab;
     }
 
     .bg {
@@ -540,7 +607,7 @@
             transform: translateY(0px);
         }
         to {
-           transform: translateY(-35px);
+            transform: translateY(-35px);
         }
     }
 
@@ -562,8 +629,6 @@
 
     :global(.country-playing) {
         transform-origin: center;
-        paint-order: stroke;
-        stroke: rgba(255, 255, 255, 0.1);
         /* animation: playing-shake 2s ease-in-out infinite alternate-reverse; */
     }
 
@@ -602,7 +667,15 @@
             stroke-dashoffset: 0;
         }
     }
-    .map-container {
+    #map-tooltip {
+        position: fixed;
+        pointer-events: none;
+        margin-top: 1em;
+        display: none;
+
+        &:global(.active) {
+            display: flex;
+        }
     }
 
     content {
@@ -664,6 +737,10 @@
         margin: auto;
         display: flex;
         height: fit-content;
+
+        &:active {
+            cursor: grab;
+        }
     }
 
     #info {

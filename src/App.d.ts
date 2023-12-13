@@ -176,3 +176,12 @@ export interface MenuSection {
     items: MenuItem[];
     title: string;
 }
+
+
+interface MapTooltipData {
+    countryName: string;
+    emoji: string;
+    numberOfArtists: number,
+    artists: string[], // first few,
+    albums: {album: string, artist: string}[] // first few as well
+}
