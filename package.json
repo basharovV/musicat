@@ -48,7 +48,6 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.1",
-    "@tauri-apps/cli-darwin-arm64": "^1.5.5",
     "is-dark-color": "^1.2.0",
     "music-metadata-browser": "^2.5.8",
     "svrollbar": "^0.12.0"
