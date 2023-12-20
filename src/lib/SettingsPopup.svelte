@@ -18,7 +18,7 @@
         "top-right"
     ];
 
-    let llms: LLM[] = ["gpt3.5-turbo", "gpt4", "ollama"];
+    let llms: LLM[] = ["gpt-3.5-turbo", "gpt-4", "ollama"];
 
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);

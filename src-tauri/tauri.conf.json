@@ -36,7 +36,7 @@
             "http": {
                 "all": true, 
                 "request": true,
-                "scope": ["http://localhost:11434/**"]
+                "scope": ["http://**", "https://**"]
             }
         },
         "bundle": {
@@ -73,7 +73,7 @@
             }
         },
         "security": {
-            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org asset: http://asset.localhost; img-src 'self' asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'"
+            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://api.openai.com asset: http://asset.localhost; img-src 'self' asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'"
         },
         "updater": {
             "active": false

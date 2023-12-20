@@ -239,8 +239,7 @@
             }
             openai = new OpenAI({
                 apiKey: $userSettings.openAIApiKey,
-                dangerouslyAllowBrowser: true, // This is the default and can be omitted,
-                fetch: fetch
+                dangerouslyAllowBrowser: true, // This is the default and can be omitted
             });
         }
         const params: OpenAI.Chat.ChatCompletionCreateParams = {
@@ -252,7 +251,7 @@
                         prompt
                 }
             ],
-            model: "gpt-3.5-turbo",
+            model: $userSettings.llm,
             temperature: 1.08,
             max_tokens: 256,
             top_p: 1,
@@ -265,9 +264,10 @@
     }
 
     async function getModelResponse(prompt) {
+        console.log($userSettings.llm)
         switch ($userSettings.llm) {
-            case "gpt3.5-turbo":
-            case "gpt4":
+            case "gpt-3.5-turbo":
+            case "gpt-4":
                 return await getChatGPTResponse(prompt);
             case "ollama":
                 return await getOllamaResponse(prompt);

@@ -197,6 +197,6 @@ interface MapTooltipData {
 
 
 type LLM =
-    | "gpt3.5-turbo"
-    | "gpt4"
+    | "gpt-3.5-turbo"
+    | "gpt-4"
     | "ollama"
