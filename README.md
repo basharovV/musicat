@@ -29,12 +29,13 @@
   -
 </p>
 
-![screenshot](docs/musicat-dec-2023.webp)
+![screenshot](docs/musicat-dec-2023.jpg)
 
 Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
 
 ## Screenshots
 ![screenshot](docs/albums.jpg)
+![screenshot](docs/track-info.jpg)
 ![screenshot](docs/smart-query.webp)
 ![screenshot](docs/map.webp)
 ![screenshot](docs/stats.webp)
