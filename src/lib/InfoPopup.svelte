@@ -24,7 +24,7 @@
                     >built by <a
                         href="https://vyacheslavbasharov.com"
                         target="_blank">Slav</a
-                    > for artists and musicians</small
+                    ></small
                 >
                 <!-- <br /> -->
                 {#await version then versionValue}<small
@@ -76,6 +76,7 @@
             opacity: 0.08;
             width: auto;
             height: 100%;
+            pointer-events: none;
             img {
                 width: auto;
                 height: 100%;
