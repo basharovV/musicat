@@ -34,7 +34,7 @@
     import { getFlagEmoji } from "../../utils/EmojiUtils";
     import Particles from "svelte-particles";
     import { loadSlim } from "tsparticles-slim";
-    import { shuffleArray } from "../../utils/ArrayUtils";
+    import { groupBy, shuffleArray } from "../../utils/ArrayUtils";
     import MapTooltip from "../map/MapTooltip.svelte";
     let isLoading = true;
 
@@ -274,18 +274,6 @@
     }
 
     let nOfCountries = 0;
-
-    const groupBy = function (xs, key) {
-        return xs.reduce(function (rv, x) {
-            if (rv[x[key]] === undefined) {
-                rv[x[key]] = {
-                    data: []
-                };
-            }
-            (rv[x[key]].data = rv[x[key]].data || []).push(x);
-            return rv;
-        }, {});
-    };
 
     async function updateData() {
         if ($songs) {

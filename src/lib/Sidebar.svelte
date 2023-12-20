@@ -738,6 +738,14 @@
                         >
                             <iconify-icon icon="mdi:map" />Map</item
                         >
+                        <item
+                        class:selected={$uiView === "analytics"}
+                        on:click={() => {
+                            $uiView = "analytics";
+                        }}
+                    >
+                        <iconify-icon icon="gridicons:line-graph" />Stats</item
+                    >
                     </items>
                 </menu>
             </div>

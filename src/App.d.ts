@@ -38,7 +38,8 @@ interface Song {
     viewModel?: {
         isFirstArtist: boolean;
         isFirstAlbum: boolean;
-    }
+    },
+    playCount: number
 }
 
 interface Album {
@@ -116,6 +117,9 @@ interface ArtworkSrc {
 interface UserSettings {
     albumArtworkFilenames: string[];
     miniPlayerLocation: MiniPlayerLocation;
+    aiFeaturesEnabled: boolean;
+    llm: LLM;
+    openAIApiKey?: string;
 }
 
 type MiniPlayerLocation =
@@ -139,7 +143,8 @@ type SidebarItem =
     | "your-music"
     | "albums"
     | "playlists"
-    | "map";
+    | "map"
+    | "analytics";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 
@@ -189,3 +194,9 @@ interface MapTooltipData {
     artists: string[], // first few,
     albums: {album: string, artist: string}[] // first few as well
 }
+
+
+type LLM =
+    | "gpt3.5-turbo"
+    | "gpt4"
+    | "ollama"

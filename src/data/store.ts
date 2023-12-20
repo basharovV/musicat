@@ -107,10 +107,14 @@ export const draggedSongs: Writable<Song[]> = writable([]);
 export const isSettingsOpen = writable(false);
 const defaultSettings: UserSettings = {
     albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"],
-    miniPlayerLocation: "bottom-left"
+    miniPlayerLocation: "bottom-left",
+    llm: 'ollama',
+    openAIApiKey: null,
+    aiFeaturesEnabled: false
 };
+
 export const userSettings: Writable<UserSettings> = writable(
-    JSON.parse(localStorage.getItem("settings")) || defaultSettings
+    {...defaultSettings, ...JSON.parse(localStorage.getItem("settings"))} || defaultSettings
 );
 // Auto-persist settings
 userSettings.subscribe((val) =>

@@ -2,7 +2,7 @@
     import { getVersion } from "@tauri-apps/api/app";
 
     import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
-    import type { MiniPlayerLocation } from "src/App";
+    import type { LLM, MiniPlayerLocation } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
     import { isSettingsOpen, userSettings } from "../data/store";
@@ -17,6 +17,8 @@
         "top-left",
         "top-right"
     ];
+
+    let llms: LLM[] = ["gpt3.5-turbo", "gpt4", "ollama"];
 
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
@@ -52,7 +54,7 @@
             </div>
             <div class="title-container">
                 <h2>Settings</h2>
-                <small>Not sure what to put here</small>
+                <small>Configure stuff</small>
             </div>
         </header>
 
@@ -76,6 +78,35 @@
                                 <option value={location}>{location}</option>
                             {/each}
                         </select></td
+                    >
+                </tr>
+                <br />
+                <tr>
+                    <td>Enable AI features</td>
+                    <td
+                        ><input
+                            type="checkbox"
+                            bind:checked={$userSettings.aiFeaturesEnabled}
+                        /></td
+                    >
+                </tr>
+                <tr>
+                    <td>AI Model (LLM)</td>
+                    <td>
+                        <select bind:value={$userSettings.llm}>
+                            {#each llms as llm}
+                                <option value={llm}>{llm}</option>
+                            {/each}
+                        </select></td
+                    >
+                </tr>
+                <tr>
+                    <td>OpenAI API Key</td>
+                    <td
+                        ><Input
+                            bind:value={$userSettings.openAIApiKey}
+                            fullWidth
+                        /></td
                     >
                 </tr>
             </table>
@@ -197,7 +228,6 @@
         table {
             width: 100%;
             tr {
-                
                 td:nth-child(1) {
                     padding-right: 10px;
                     text-align: right;

@@ -6,3 +6,16 @@ export function shuffleArray(array) {
     }
     return copy;
 }
+
+
+export const groupBy = function (xs, key) {
+    return xs.reduce(function (rv, x) {
+        if (rv[x[key]] === undefined) {
+            rv[x[key]] = {
+                data: []
+            };
+        }
+        (rv[x[key]].data = rv[x[key]].data || []).push(x);
+        return rv;
+    }, {});
+};

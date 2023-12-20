@@ -120,7 +120,7 @@ export class AudioVisualiser {
      */
     setupAnalyserAudio() {
         let AudioContext = window.AudioContext || window.webkitAudioContext;
-        this._audioContext = new AudioContext();
+        this._audioContext = new AudioContext({sampleRate: 96000});
         this._audioSource = this._audioContext.createMediaElementSource(
             this.audioElement
         );

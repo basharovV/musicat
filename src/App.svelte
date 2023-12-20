@@ -31,6 +31,7 @@
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import CursorInfo from "./lib/ui/CursorInfo.svelte";
     import MapView from "./lib/views/MapView.svelte";
+    import AnalyticsView from "./lib/views/AnalyticsView.svelte";
 
     startMenuListener();
 
@@ -185,6 +186,8 @@
         <ArtistsToolkitView />
     {:else if $uiView === "map"}
         <MapView />
+    {:else if $uiView === "analytics"}
+        <AnalyticsView />
     {/if}
 </main>
 

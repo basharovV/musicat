@@ -32,6 +32,11 @@
                 "all": true,
                 "asset": true,
                 "assetScope": ["**"]
+            },
+            "http": {
+                "all": true, 
+                "request": true,
+                "scope": ["http://localhost:11434/**"]
             }
         },
         "bundle": {

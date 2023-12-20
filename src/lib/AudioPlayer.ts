@@ -14,6 +14,7 @@ import {
     volume
 } from "../data/store";
 import { shuffleArray } from "../utils/ArrayUtils";
+import { db } from "../data/db";
 
 class AudioPlayer {
     private static _instance: AudioPlayer;
@@ -415,6 +416,12 @@ class AudioPlayer {
         }
     }
 
+    async incrementPlayCounter(song: Song) {
+        await db.songs.update(song, {
+            playCount: song.playCount ? song.playCount + 1 : 1
+        });
+    }
+
     // MEDIA
     async playSong(song: Song) {
         console.log("playSong", song);
@@ -429,6 +436,7 @@ class AudioPlayer {
             this.setNextUpSong();
             this.currentSong = song;
             this.setMediaSessionData();
+            this.incrementPlayCounter(song);
         }
     }
 
