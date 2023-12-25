@@ -15,6 +15,7 @@ import {
 } from "../data/store";
 import { shuffleArray } from "../utils/ArrayUtils";
 import { db } from "../data/db";
+import { convertFileSrc } from "@tauri-apps/api/tauri";
 
 class AudioPlayer {
     private static _instance: AudioPlayer;
@@ -55,6 +56,9 @@ class AudioPlayer {
 
         this.audioFile = new Audio();
         this.audioFile2 = new Audio();
+        this.audioFile.crossOrigin = "anonymous";
+        this.audioFile2.crossOrigin = "anonymous";
+
 
         // this.source = audioCtx.createMediaElementSource(this.audioFile);
         // this.source.connect(this.gainNode);
@@ -404,7 +408,7 @@ class AudioPlayer {
 
                 // Set up gapless playback
                 this.getOtherAudioFile().src =
-                    "asset://localhost/" + nextSong.path.replace("?", "%3F");
+                    convertFileSrc(nextSong.path.replace("?", "%3F"));
                 this.getOtherAudioFile().preload = "auto";
                 this.getOtherAudioFile().load();
                 this.getOtherAudioFile().currentTime = 0.00001;
@@ -430,7 +434,7 @@ class AudioPlayer {
             this.getCurrentAudioFile().currentTime = 0;
             playerTime.set(this.getCurrentAudioFile().currentTime);
             this.getCurrentAudioFile().src =
-                "asset://localhost/" + song.path.replace("?", "%3F");
+                convertFileSrc(song.path.replace("?", "%3F"));
             this.play();
             currentSong.set(song);
             this.setNextUpSong();
