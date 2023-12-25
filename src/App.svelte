@@ -219,6 +219,6 @@
         bottom: 0;
         z-index: 30;
         display: flex;
-        background-color: #242026b9;
+        background-color: rgba(30, 26, 31, 0.824);
     }
 </style>

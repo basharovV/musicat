@@ -9,7 +9,8 @@
         currentSong,
         playlist,
         playlistIsAlbum,
-        query
+        query,
+        rightClickedAlbum
     } from "../../data/store";
     import AlbumItem from "../AlbumItem.svelte";
     import * as musicMetadata from "music-metadata-browser";
@@ -19,6 +20,7 @@
     import { fade, fly } from "svelte/transition";
     import { cubicInOut } from "svelte/easing";
     import md5 from "md5";
+    import AlbumMenu from "../AlbumMenu.svelte";
 
     let isLoading = true;
 
@@ -26,7 +28,7 @@
 
     $: albums = liveQuery(async () => {
         let resultsArray: Album[] = [];
-        resultsArray = await db.albums.toArray();
+        resultsArray = await db.albums.orderBy("title").toArray();
 
         console.log("albums", resultsArray);
 
@@ -61,8 +63,8 @@
         let tracks = await db.songs
             .where("id")
             .anyOf(currentAlbum.tracksIds)
-            .sortBy('trackNumber')
-            
+            .sortBy("trackNumber");
+
         $albumPlaylist = tracks;
         $playlistIsAlbum = true;
     }
@@ -152,8 +154,26 @@
     $: count = $query.query?.length ? queriedAlbums?.length : $albums?.length;
 
     $: displayTracks = minWidth > 300;
+
+    let showAlbumMenu = false;
+    let pos;
+    let highlightedAlbum;
+
+    function onRightClick(e, album, idx) {
+        highlightedAlbum = album.id;
+        $rightClickedAlbum = album;
+        showAlbumMenu = true;
+        pos = { x: e.clientX, y: e.clientY };
+    }
 </script>
 
+<AlbumMenu
+    bind:showMenu={showAlbumMenu}
+    bind:pos
+    onClose={() => {
+        highlightedAlbum = null;
+    }}
+/>
 <div class="grid-container">
     <div class="header">
         <h1>Albums</h1>
@@ -211,8 +231,16 @@
                 class:show={$query.query?.length}
                 style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
             >
-                {#each queriedAlbums as album (album.id)}
-                    <AlbumItem {album} />
+                {#each queriedAlbums as album, idx (album.id)}
+                    <div
+                        on:contextmenu|preventDefault={(e) =>
+                            onRightClick(e, album, idx)}
+                    >
+                        <AlbumItem
+                            {album}
+                            highlighted={highlightedAlbum === album.id}
+                        />
+                    </div>
                 {/each}
             </div>
         {/if}
@@ -222,9 +250,17 @@
             style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
         >
             {#if $albums}
-                {#each $albums as album (album.id)}
+                {#each $albums as album, idx (album.id)}
                     {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
-                        <AlbumItem {album}/>
+                        <div
+                            on:contextmenu|preventDefault={(e) =>
+                                onRightClick(e, album, idx)}
+                        >
+                            <AlbumItem
+                                {album}
+                                highlighted={highlightedAlbum === album.id}
+                            />
+                        </div>
                     {/if}
                 {/each}
             {/if}
@@ -277,6 +313,10 @@
         /* background-color: rgb(34, 33, 33); */
         /* background-image: url("images/textures/soft-wallpaper.png"); */
         /* background-repeat: repeat; */
+        > div {
+            position: relative;
+            width: 100%;
+        }
 
         &.show {
             display: grid;

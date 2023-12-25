@@ -13,6 +13,7 @@
     export let color: string | null = null;
     export let borderHighlight = false;
     export let checked = null;
+    export let isLoading = false;
 
     import { createEventDispatcher } from "svelte";
     const dispatch = createEventDispatcher();
@@ -29,6 +30,7 @@
     class:highlighted={isHighlighted}
     class:border-highlight={borderHighlight}
     class:with-bg={color !== null && color !== undefined}
+    class:loading={isLoading}
     style={isHighlighted
         ? color
             ? `border: 1px solid ${
@@ -52,6 +54,13 @@
                 </small>
             {/if}
         </span>
+
+        {#if isLoading}
+            <iconify-icon
+                icon="line-md:loading-loop"
+                class:loading={isLoading}
+            />
+        {/if}
 
         {#if checked !== null}
             <iconify-icon icon="charm:tick" class:checked />
@@ -131,6 +140,10 @@
             }
         }
 
+        &.loading {
+            animation: loading 2s ease-in-out infinite alternate-reverse;
+        }
+
         span {
             display: block;
             padding: 0.2em 0 0.3em 0;
@@ -161,6 +174,15 @@
             &.checked {
                 color: white;
             }
+        }
+    }
+
+    @keyframes loading {
+        from {
+            background-color: inherit;
+        }
+        to {
+            background-color: #dba4fac1;
         }
     }
 </style>

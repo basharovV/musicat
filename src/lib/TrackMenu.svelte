@@ -150,9 +150,8 @@
         const country = await findCountryByArtist($rightClickedTrack.artist);
         console.log("country", country);
         if (country) {
-
             $rightClickedTrack.originCountry = country;
-            
+
             // Find all songs with this artist
             const artistSongs = await db.songs
                 .where("artist")
@@ -198,7 +197,11 @@
             <MenuOption text="Enrich" isDisabled />
             <MenuOption
                 onClick={enrichArtistCountry}
-                text="{!$rightClickedTrack.originCountry ? isFetchingOriginCountry ? "Looking online..." : "Origin country" : "Origin country ✅"}"
+                text={!$rightClickedTrack.originCountry
+                    ? isFetchingOriginCountry
+                        ? "Looking online..."
+                        : "Origin country"
+                    : "Origin country ✅"}
                 description="from Wikipedia"
             />
             <MenuDivider />
@@ -220,7 +223,8 @@
             <MenuDivider />
 
             <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
-            <MenuOption onClick={openInfo} text="Info & metadata" />
         {/if}
+
+        <MenuOption onClick={openInfo} text="Info & metadata" />
     </Menu>
 {/if}

@@ -1,36 +1,55 @@
 <script lang="ts">
     import { readText } from "@tauri-apps/api/clipboard";
     import { open } from "@tauri-apps/api/dialog";
+    import { open as fileOpen } from "@tauri-apps/api/shell";
+
     import { emit, listen } from "@tauri-apps/api/event";
-    import {
-        register,
-        unregister,
-        unregisterAll
-    } from "@tauri-apps/api/globalShortcut";
-    import { join, pictureDir } from "@tauri-apps/api/path";
+    import { pictureDir } from "@tauri-apps/api/path";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
 
+    import hotkeys from "hotkeys-js";
     import "iconify-icon";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
     import * as musicMetadata from "music-metadata-browser";
+    import type { MetadataEntry, Song, TagType } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
-    import { addSong, lookForArt } from "../data/LibraryImporter";
-    import { isTrackInfoPopupOpen, os, rightClickedTrack } from "../data/store";
+    import { fade, fly } from "svelte/transition";
     import { getMapForTagType, getTagTypeFromCodec } from "../data/LabelMap";
-    import "./tippy.css";
-    import Input from "./Input.svelte";
-    import { focusTrap } from "../utils/FocusTrap";
-    import type { MetadataEntry, TagType } from "src/App";
+    import {
+        addSong,
+        lookForArt,
+        readMappedMetadataFromSong
+    } from "../data/LibraryImporter";
     import { db } from "../data/db";
+    import {
+        isTrackInfoPopupOpen,
+        os,
+        rightClickedTrack,
+        rightClickedTracks
+    } from "../data/store";
+    import { focusTrap } from "../utils/FocusTrap";
+    import Input from "./Input.svelte";
+    import "./tippy.css";
     import { optionalTippy } from "./ui/TippyAction";
-    import hotkeys from "hotkeys-js";
-    import { fly } from "svelte/transition";
 
-    import { WBK } from "wikibase-sdk";
-    import { findCountryByArtist } from "./data/LibraryEnrichers";
+    import {
+        fetchAlbumArt,
+        findCountryByArtist
+    } from "./data/LibraryEnrichers";
+    import { invoke } from "@tauri-apps/api";
+    import { each, text } from "svelte/internal";
+    import Icon from "./ui/Icon.svelte";
+    import ButtonWithIcon from "./ui/ButtonWithIcon.svelte";
+    import {
+        ENCODINGS,
+        decodeLegacy,
+        encodeUtf8
+    } from "../utils/EncodingUtils";
     // optional
+
+    const ALBUM_FIELDS = ["album", "artist", "date"];
 
     function onClose() {
         $isTrackInfoPopupOpen = false;
@@ -72,11 +91,15 @@
     }
 
     let isUnsupportedFormat = false;
+
     function mergeDefault(
         metadata: MetadataEntry[],
         format: TagType
     ): MetadataEntry[] {
-        if ($rightClickedTrack.fileInfo.codec === "PCM") {
+        if (
+            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
+            "PCM"
+        ) {
             isUnsupportedFormat = true;
             return []; // UNSUPPORTED FORMAT, for now...
         }
@@ -92,40 +115,45 @@
         );
     }
 
-    // console.log("track", $rightClickedTrack);
-    let metadata: MetadataEntry[] = mergeDefault(
-        $rightClickedTrack.metadata,
-        $rightClickedTrack.fileInfo.tagTypes[0]
-    );
+    // console.log("track", ($rightClickedTrack || $rightClickedTracks[0]));
+    let metadata: MetadataEntry[] = [];
+    let metadataFromFile: MetadataEntry[] = [];
+    // let metadata: MetadataEntry[] = cloneDeep(($rightClickedTrack || $rightClickedTracks[0]).metadata);
 
-    // let metadata: MetadataEntry[] = cloneDeep($rightClickedTrack.metadata);
-
-    $: durationText = `${(~~($rightClickedTrack.fileInfo.duration / 60))
+    $: durationText = `${(~~(
+        ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration / 60
+    ))
         .toString()
-        .padStart(2, "0")}:${(~~($rightClickedTrack.fileInfo.duration % 60))
+        .padStart(2, "0")}:${(~~(
+        ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration % 60
+    ))
         .toString()
         .padStart(2, "0")}`;
 
     let artworkFormat;
     let artworkBuffer: Buffer;
     let artworkSrc;
+    let previousArtworkFormat;
+    let previousArtworkSrc;
 
-    $: tagType = $rightClickedTrack.fileInfo?.tagTypes?.length
-        ? $rightClickedTrack.fileInfo.tagTypes[0]
-        : getTagTypeFromCodec($rightClickedTrack.fileInfo.codec);
+    function getTagType(song: Song) {
+        return song.fileInfo?.tagTypes?.length
+            ? song.fileInfo.tagTypes[0]
+            : getTagTypeFromCodec(song.fileInfo.codec);
+    }
+
+    $: tagType = getTagType($rightClickedTrack || $rightClickedTracks[0]);
 
     let foundArtwork;
     let isArtworkSet = false;
     let artworkFileToSet = null;
 
-    $: hasChanges =
-        isArtworkSet ||
-        !isEqual(metadata, mergeDefault($rightClickedTrack.metadata, tagType));
+    $: hasChanges = isArtworkSet || !isEqual(metadata, metadataFromFile);
 
     let artworkFocused = false;
 
     async function getArtwork() {
-        let path = $rightClickedTrack.path;
+        let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const metadata = await musicMetadata.fetchFromUrl(
                 convertFileSrc(path)
@@ -138,13 +166,28 @@
                 )}`;
             } else {
                 foundArtwork = await lookForArt(
-                    $rightClickedTrack.path,
-                    $rightClickedTrack.file
+                    ($rightClickedTrack || $rightClickedTracks[0]).path,
+                    ($rightClickedTrack || $rightClickedTracks[0]).file
                 );
                 if (foundArtwork) {
                     artworkSrc = foundArtwork.artworkSrc;
                     artworkFormat = foundArtwork.artworkFormat;
+
+                    previousArtworkFormat = artworkFormat;
+                    previousArtworkSrc = artworkSrc;
                 }
+            }
+
+            // Avoid a 'flash' while scrolling through same album (with same art from same source)
+            if (
+                previousAlbum ===
+                ($rightClickedTrack || $rightClickedTracks[0]).album
+            ) {
+                previousArtworkFormat = artworkFormat;
+                previousArtworkSrc = artworkSrc;
+            } else {
+                previousArtworkFormat = null;
+                previousArtworkSrc = null;
             }
         } else {
             // artworkSrc = null;
@@ -155,16 +198,50 @@
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
     function writeMetadata() {
-        const toWrite = metadata
-            .filter((m) => m.value !== null)
-            .map((t) => ({ id: t.id, value: t.value }));
-        console.log("Writing: ", toWrite);
-        emit("write-metadata", {
-            metadata: toWrite,
-            "tag_type": tagType,
-            "file_path": $rightClickedTrack.path,
-            "artwork_file_to_set": artworkFileToSet ? artworkFileToSet : ""
-        });
+        if ($rightClickedTrack) {
+            const toWrite = metadata
+                .filter((m) => m.value !== null)
+                .map((t) => ({ id: t.id, value: t.value }));
+            console.log("Writing: ", toWrite);
+            invoke("write_metadata", {
+                event: {
+                    "song_id": $rightClickedTrack.id,
+                    metadata: toWrite,
+                    "tag_type": tagType,
+                    "file_path": $rightClickedTrack.path,
+                    "artwork_file_to_set": artworkFileToSet
+                        ? artworkFileToSet
+                        : ""
+                }
+            });
+        } else if ($rightClickedTracks?.length) {
+            console.log("Writing album");
+            invoke("write_metadatas", {
+                event: {
+                    tracks: $rightClickedTracks.map((track) => ({
+                        "song_id": track.id,
+                        metadata: [
+                            ...mergeDefault(
+                                track.metadata,
+                                track.fileInfo.tagTypes[0]
+                            ),
+                            ...metadata
+                                .filter(
+                                    (m) =>
+                                        m.value !== null &&
+                                        ALBUM_FIELDS.includes(m.genericId)
+                                )
+                                .map((t) => ({ id: t.id, value: t.value }))
+                        ],
+                        "tag_type": getTagType(track),
+                        "file_path": track.path,
+                        "artwork_file_to_set": artworkFileToSet
+                            ? artworkFileToSet
+                            : ""
+                    }))
+                }
+            });
+        }
         artworkFileToSet = null;
         isArtworkSet = false;
     }
@@ -243,62 +320,44 @@
         }
     }
 
-    onMount(async () => {
-        document.addEventListener("paste", async (event: ClipboardEvent) => {
-            // event.stopPropagation();
-            // event.preventDefault();
+    /**
+     * Grabs the existing tags from the file, and adds in the defaults for that file format
+     */
+    async function getMetadataFromFile(song: Song): Promise<MetadataEntry[]> {
+        // Get metadata from file
+        const mappedMetadata = await readMappedMetadataFromSong(song);
 
-            const text = await readText();
-            console.log("paste", text);
-
-            // const src = "asset://localhost/" + folder + artworkFilename;
-
-            if (!text) {
-                try {
-                } catch (err) {
-                    console.error(err);
-                }
-            }
-        });
-
-        unlisten = await listen("write-success", async (event) => {
-            // console.log("Successfully written metadata!");
-            toast.success("Successfully written metadata!", {
-                position: "top-right"
-            });
-            // Re-import track
-            const updatedSong = await addSong(
-                $rightClickedTrack.path,
-                $rightClickedTrack.file,
-                true
-            );
-            $rightClickedTrack = updatedSong;
-            await getArtwork();
-            metadata = mergeDefault($rightClickedTrack.metadata, tagType);
-        });
-    });
-
-    let previousAlbum = $rightClickedTrack.album;
-
-    function reset() {
-        if ($rightClickedTrack.album === previousAlbum && artworkSrc) {
-            // Don't update artwork if same as previous album
-        } else {
-            artworkFormat = null;
-            artworkSrc = null;
-            foundArtwork = null;
-            isArtworkSet = false;
-            artworkFileToSet = null;
-
-            getArtwork();
-        }
-        containsError = null;
-        previousAlbum = $rightClickedTrack.album;
-        metadata = mergeDefault($rightClickedTrack.metadata, tagType);
-        hasChanges = !isEqual(
-            metadata,
-            mergeDefault($rightClickedTrack.metadata, tagType)
+        const result = mergeDefault(
+            mappedMetadata,
+            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.tagTypes[0]
         );
+        metadataFromFile = cloneDeep(result);
+        return result;
+    }
+
+    let previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
+
+    async function updateArtwork() {
+        artworkFormat = null;
+        artworkSrc = null;
+        foundArtwork = null;
+        isArtworkSet = false;
+        artworkFileToSet = null;
+
+        await getArtwork();
+    }
+
+    async function reset() {
+        updateArtwork();
+        containsError = null;
+        previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
+        metadata = await getMetadataFromFile(
+            $rightClickedTrack || $rightClickedTracks[0]
+        );
+        originCountry =
+            ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
+        originCountryEdited = originCountry;
+        hasChanges = !isEqual(metadata, metadataFromFile);
         console.log("metadata", metadata);
     }
 
@@ -322,7 +381,7 @@
     });
 
     $: {
-        if ($rightClickedTrack) {
+        if ($rightClickedTrack || $rightClickedTracks[0]) {
             reset();
         }
     }
@@ -391,7 +450,7 @@
     };
 
     type ValidationErrors = "err:invalid-chars" | "err:null-chars";
-    type ValidationWarnings = "warn:custom-tag";
+    type ValidationWarnings = "warn:custom-tag" | "warn:cyrillic-encoding";
 
     type Validation = {
         [key: string]: {
@@ -402,7 +461,7 @@
 
     /**
      * Some tags have a \u0000 character dangling at the end.
-     * This prevents the metadata from being ready properly, so we can
+     * This prevents the metadata from being read properly, so we can
      * show a prompt to fix this with the user's permission.
      */
     let containsError: ValidationErrors = null;
@@ -414,6 +473,20 @@
         }));
         console.log("stripped ascii: ", metadata);
         writeMetadata();
+    }
+
+    // Encodings
+    let selectedEncoding = "placeholder";
+
+    async function fixEncoding() {
+        for (let item of metadata) {
+            if (!item?.value) continue;
+            const decoded = decodeLegacy(item.value, selectedEncoding);
+            const encoded = new TextDecoder().decode(encodeUtf8(decoded));
+            console.log("transformed: ", encoded);
+            item.value = encoded;
+            metadata = metadata;
+        }
     }
 
     /**
@@ -449,6 +522,24 @@
                 errors[currentTag.id].warnings.push("warn:custom-tag");
             }
 
+            // TODO Detect encodings
+            // Tried jschardet but it didn't give good results. 
+            // Maybe scrap this entirely?
+
+            // const windows_encodings = ["windows-1251"];
+            // const encoding = jschardet.detect(currentTag.value || "", {
+            //     detectEncodings: ENCODINGS,
+            // });
+            // console.log('encoding detect', encoding);
+            // { encoding: "UTF-8", confidence: 0.9690625 }
+
+            // if (
+            //     windows_encodings.includes(encoding.encoding) &&
+            //     encoding.confidence > 0.5
+            // ) {
+            //     errors[currentTag.id].warnings.push("warn:cyrillic-encoding");
+            // }
+
             console.log("hasErrors", hasError("err:null-chars"));
             return errors;
         }, {}) ?? {};
@@ -462,91 +553,303 @@
         );
     }
 
-    let originCountry = $rightClickedTrack.originCountry;
+    let originCountry =
+        ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
+    let originCountryEdited = originCountry;
     let isFetchingOriginCountry = false;
     function onOriginCountryUpdated(event) {
         const country = event.target.value;
-        originCountry = country;
+        originCountryEdited = country;
     }
 
     async function saveTrack() {
-        $rightClickedTrack.originCountry = originCountry;
+        ($rightClickedTrack || $rightClickedTracks[0]).originCountry =
+            originCountryEdited;
 
         // Find all songs with this artist
-        const artistSongs = await db.songs.where('artist').equals($rightClickedTrack.artist).toArray();
-        artistSongs.forEach((s => {
-            s.originCountry = originCountry;
+        const artistSongs = await db.songs
+            .where("artist")
+            .equals(($rightClickedTrack || $rightClickedTracks[0]).artist)
+            .toArray();
+        artistSongs.forEach((s) => {
+            s.originCountry = originCountryEdited;
             db.songs.update(s.id, s);
-        }))
+        });
     }
 
     async function fetchFromWikipedia() {
-        originCountry = null;
+        originCountryEdited = null;
         isFetchingOriginCountry = true;
-        const country = await findCountryByArtist($rightClickedTrack.artist);
+        const country = await findCountryByArtist(
+            ($rightClickedTrack || $rightClickedTracks[0]).artist
+        );
         console.log("country", country);
         if (country) {
-            originCountry = country;
+            originCountryEdited = country;
         }
         isFetchingOriginCountry = false;
+    }
+
+    $: isMultiMode = $rightClickedTracks.length;
+
+    // File(s) table
+    let tableOuterContainer;
+    let tableInnerScrollArea;
+    let showTableTopScrollShadow = false;
+    let showTableBottomScrollShadow = false;
+
+    function onTableResize() {
+        console.log("scrollTop");
+        // Check scroll area size, add shadows if necessary
+        if (tableInnerScrollArea) {
+            showTableTopScrollShadow =
+                tableInnerScrollArea.scrollTop > 0 &&
+                tableInnerScrollArea.scrollHeight >
+                    tableInnerScrollArea.clientHeight;
+            showTableBottomScrollShadow =
+                tableInnerScrollArea.scrollHeight >
+                tableInnerScrollArea.clientHeight;
+        }
+    }
+
+    function onTableScroll(e) {
+        const tableHeight = tableOuterContainer.clientHeight;
+        const scrollPercentage =
+            tableInnerScrollArea.scrollTop /
+            (tableInnerScrollArea.scrollHeight -
+                tableInnerScrollArea.clientHeight);
+        // Show top shadow
+        showTableTopScrollShadow =
+            tableInnerScrollArea.scrollTop > 0 &&
+            tableInnerScrollArea.scrollHeight >
+                tableInnerScrollArea.clientHeight;
+    }
+
+    onMount(async () => {
+        metadata = await getMetadataFromFile(
+            $rightClickedTrack || $rightClickedTracks[0]
+        );
+
+        document.addEventListener("paste", async (event: ClipboardEvent) => {
+            // event.stopPropagation();
+            // event.preventDefault();
+
+            const text = await readText();
+            console.log("paste", text);
+
+            // const src = "asset://localhost/" + folder + artworkFilename;
+
+            if (!text) {
+                try {
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+
+        unlisten = await listen("write-success", async (event) => {
+            // console.log("Successfully written metadata!");
+            toast.success("Successfully written metadata!", {
+                position: "top-right"
+            });
+            // Re-import track(s)
+            if ($rightClickedTrack) {
+                const updatedSong = await addSong(
+                    $rightClickedTrack.path,
+                    $rightClickedTrack.file,
+                    true
+                );
+                $rightClickedTrack = updatedSong;
+                await getArtwork();
+                metadata = await getMetadataFromFile($rightClickedTrack);
+            } else if ($rightClickedTracks) {
+                $rightClickedTracks.forEach(async (track) => {
+                    const updatedSong = await addSong(
+                        track.path,
+                        track.file,
+                        true
+                    );
+                    track = updatedSong;
+                    await getArtwork();
+                });
+                metadata = await getMetadataFromFile($rightClickedTracks[0]);
+            }
+        });
+
+        onTableResize();
+    });
+
+    let isFetchingArtwork = false;
+    let artworkResult: { success?: string; error?: string };
+    async function fetchArtwork() {
+        isFetchingArtwork = true;
+        artworkResult = await fetchAlbumArt(
+            null,
+            $rightClickedTrack || $rightClickedTracks[0]
+        );
+        if (artworkResult.success) {
+            toast.success("Found album art and written to album!", {
+                position: "top-right"
+            });
+            updateArtwork();
+        } else if (artworkResult.error) {
+            toast.error("Couldn't find album art", {
+                position: "top-right"
+            });
+        }
+        isFetchingArtwork = false;
     }
 </script>
 
 <container use:focusTrap>
     <header>
         <div class="close">
-            <iconify-icon
-                icon="mingcute:close-circle-fill"
-                on:click={onClose}
-            />
+            <Icon icon="mingcute:close-circle-fill" onClick={onClose} />
             <small>ESC</small>
         </div>
         <div class="button-container">
             <button disabled={!hasChanges} on:click={writeMetadata}
-                >Overwrite file</button
+                >Overwrite file{isMultiMode ? "s" : ""}</button
             >
             <small>Cmd + ENTER</small>
         </div>
 
         <div class="title-container">
-            <h2>Track info</h2>
+            <h2>
+                {$rightClickedTracks.length
+                    ? `${$rightClickedTracks.length} tracks selected`
+                    : "Track info"}
+            </h2>
             <small class="subtitle">Use UP and DOWN keys to change tracks</small
             >
         </div>
     </header>
     <div class="top">
-        <section class="file-section">
-            {#if $rightClickedTrack}
-                <p class="file-path">File path: {$rightClickedTrack.path}</p>
+        <section class="info-section" bind:this={tableOuterContainer}>
+            <div class="file-outer" bind:this={tableOuterContainer}>
+                <h5 class="section-title">
+                    <iconify-icon icon="bi:file-earmark-play" />File info
+                </h5>
 
-                <div class="file-info">
-                    <p>Codec: {$rightClickedTrack.fileInfo.codec}</p>
-                    <p>Duration: {durationText}</p>
-                    <p>Sample rate: {$rightClickedTrack.fileInfo.sampleRate}</p>
-                    {#if $rightClickedTrack.fileInfo.bitsPerSample}<p>
-                            {$rightClickedTrack.fileInfo.bitsPerSample} bit audio
-                        </p>
+                {#if $rightClickedTrack || $rightClickedTracks.length}
+                    {#if showTableTopScrollShadow}
+                        <div in:fade={{ duration: 150 }} class="top-shadow" />
                     {/if}
-                </div>
+                    {#if showTableBottomScrollShadow}
+                        <div
+                            in:fly={{ duration: 150, y: 20 }}
+                            class="bottom-shadow"
+                        />
+                    {/if}
+                    <div
+                        class="file-info-container"
+                        bind:this={tableInnerScrollArea}
+                        on:scroll={onTableScroll}
+                    >
+                        <table class="file-info">
+                            <thead>
+                                <tr>
+                                    <td>File</td>
+                                    <td>Codec</td>
+                                    <td>Tag type</td>
+                                    <td>Duration</td>
+                                    <td>Sample rate</td>
+                                    <td>Bit rate</td>
+                                </tr>
+                            </thead>
+                            {#each $rightClickedTrack ? [$rightClickedTrack] : $rightClickedTracks as track}
+                                <tr>
+                                    <td class="file-path">
+                                        <p
+                                            on:click={() =>
+                                                fileOpen(
+                                                    track.path.replace(
+                                                        track.file,
+                                                        ""
+                                                    )
+                                                )}
+                                        >
+                                            <span
+                                                ><iconify-icon
+                                                    icon="bi:file-earmark-play"
+                                                /></span
+                                            >
+                                            {track.file}
+                                        </p></td
+                                    >
+                                    <td>
+                                        <p>
+                                            {track.fileInfo.codec}
+                                        </p></td
+                                    >
+                                    <td>
+                                        <p>
+                                            {track.fileInfo.tagTypes[0]}
+                                        </p></td
+                                    >
+                                    <td>
+                                        <p>{durationText}</p>
+                                    </td>
+                                    <td>
+                                        <p>
+                                            {track.fileInfo.sampleRate}
+                                        </p></td
+                                    >
+                                    <td>
+                                        {#if track.fileInfo.bitsPerSample}
+                                            <p>
+                                                {track.fileInfo.bitsPerSample} bit
+                                            </p>
+                                        {/if}
+                                    </td>
+                                </tr>
+                            {/each}
+                        </table>
+                    </div>
+                {:else}
+                    <p>Song has no metadata</p>
+                {/if}
+            </div>
 
+            <div class="enrichment">
+                <h5 class="section-title">
+                    <iconify-icon icon="iconoir:atom" />Enrichment center
+                </h5>
+                <div class="label">
+                    <h4>Country of origin</h4>
+                    <iconify-icon
+                        icon="mdi:information"
+                        use:tippy={{
+                            content:
+                                "Set this to use the Map view, and to be able to filter by country in Smart Playlists",
+                            placement: "right"
+                        }}
+                    />
+                </div>
                 <div class="country">
-                    <p>Country of origin</p>
                     <Input
-                        value={originCountry}
-                        placeholder={isFetchingOriginCountry ? 'Looking online...' : ''}
+                        fullWidth
+                        value={originCountryEdited}
+                        placeholder={isFetchingOriginCountry
+                            ? "Looking online..."
+                            : ""}
                         onChange={onOriginCountryUpdated}
                     />
-                    <button
-                        on:click={saveTrack}>Save</button
-                    >
-                    <button
-                        on:click={fetchFromWikipedia}
-                        >Fetch from Wikipedia</button
-                    >
+                    <ButtonWithIcon
+                        onClick={saveTrack}
+                        text="Save"
+                        icon="material-symbols:save"
+                        disabled={originCountry === originCountryEdited}
+                    />
+                    <ButtonWithIcon
+                        onClick={fetchFromWikipedia}
+                        isLoading={isFetchingOriginCountry}
+                        text="Fetch from Wikipedia"
+                        icon="tabler:world-download"
+                        theme="transparent"
+                    />
                 </div>
-            {:else}
-                <p>Song has no metadata</p>
-            {/if}
+            </div>
         </section>
 
         <section class="user-section">
@@ -557,12 +860,12 @@
                 on:click={onImageClick}
             >
                 <div class="artwork-frame">
-                    {#if artworkSrc && artworkFormat}
+                    {#if (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
                         <img
                             alt="Artwork"
-                            type={artworkFormat}
+                            type={previousArtworkFormat || artworkFormat}
                             class="artwork"
-                            src={artworkSrc}
+                            src={previousArtworkSrc || artworkSrc}
                         />
                     {:else}
                         <div class="artwork-placeholder">
@@ -579,25 +882,35 @@
             {:else if artworkSrc}
                 <small>Encoded in file</small>
             {:else}
-                <small>&nbsp;</small>
+                <small style="color: grey">No artwork</small>
             {/if}
             <span
                 use:tippy={{
                     allowHTML: true,
                     content:
-                        "Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>Otherwise, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i> (you can change this list of filenames in Settings).",
+                        "<h3 style='margin:0'>🎨 Artwork priority</h3><br/>First, Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>If there is none, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i> (you can change this list of filenames in Settings).<br/><br/>Otherwise, it will look for any image in the album folder and use that.",
                     placement: "left"
                 }}
                 ><iconify-icon icon="ic:round-info" /><small
                     >About artwork</small
                 ></span
             >
+            <div class="find-art-btn">
+                <ButtonWithIcon
+                    icon="ic:twotone-downloading"
+                    text="Fetch art"
+                    theme="transparent"
+                    onClick={fetchArtwork}
+                />
+            </div>
         </section>
     </div>
     <div class="bottom">
         <section class="metadata-section">
-            <h4>Metadata</h4>
-            {#if $rightClickedTrack}
+            <h5 class="section-title">
+                <iconify-icon icon="fe:music" />Metadata
+            </h5>
+            {#if $rightClickedTrack || $rightClickedTracks[0]}
                 {#if isUnsupportedFormat}
                     <p>
                         This file type is not yet supported for metadata
@@ -618,7 +931,7 @@
                         </div>
                     {/if}
                     <form>
-                        {#each metadata as tag, idx}
+                        {#each metadata.filter((m) => $rightClickedTrack || ($rightClickedTracks.length && ALBUM_FIELDS.includes(m.genericId))) as tag, idx}
                             {#if tag.genericId === "artist"}
                                 <div class="tag">
                                     <p class="label">artist</p>
@@ -635,6 +948,7 @@
                                         }}
                                     >
                                         <Input
+                                            small
                                             value={artistInput}
                                             autoCompleteValue={firstMatch}
                                             onChange={onArtistUpdated}
@@ -672,11 +986,53 @@
                                         {tag.genericId ? tag.genericId : tag.id}
                                     </p>
                                     <div class="line" />
-                                    <Input bind:value={tag.value} fullWidth />
+                                    <Input
+                                        bind:value={tag.value}
+                                        fullWidth
+                                        small
+                                    />
                                 </div>
                             {/if}
                         {/each}
                     </form>
+                    <div class="tools">
+                        <h5 class="section-title">
+                            <iconify-icon icon="ri:tools-fill" />Tools
+                        </h5>
+                        <div class="tool">
+                            <div class="description">
+                                <p>Fix legacy encodings</p>
+                                <small
+                                    >If you have ID3 tags encoded with legacy
+                                    encodings, you should update them to the
+                                    universal UTF-8 so they display properly.
+                                    Select an encoding and click Fix.</small
+                                >
+                            </div>
+                            <select bind:value={selectedEncoding}>
+                                <option value="placeholder"
+                                    >Select encoding...</option
+                                >
+                                {#each ENCODINGS as encoding}
+                                    <option
+                                        value={encoding}
+                                        class="encoding"
+                                        on:click={() => {
+                                            selectedEncoding = encoding;
+                                        }}
+                                    >
+                                        <p>{encoding}</p>
+                                    </option>
+                                {/each}
+                            </select>
+                            <ButtonWithIcon
+                                text="Fix encoding"
+                                theme="transparent"
+                                onClick={fixEncoding}
+                                disabled={selectedEncoding === "placeholder"}
+                            />
+                        </div>
+                    </div>
                 {/if}
             {:else}
                 <p>Song has no metadata</p>
@@ -689,10 +1045,14 @@
     :global([data-tippy-root]) {
         white-space: pre-line;
     }
+    * {
+        user-select: none;
+    }
     container {
         width: fit-content;
         max-height: 85%;
-        max-width: 740px;
+        max-width: 750px;
+        min-width: 750px;
         margin: auto;
         display: flex;
         flex-direction: column;
@@ -702,11 +1062,16 @@
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(53, 51, 51);
         background: rgba(60, 60, 63, 0.2);
-        backdrop-filter: blur(8px);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        backdrop-filter: blur(8px);
         overflow-y: auto;
         overflow-x: hidden;
-        font-family: system-ui, -apple-system, Avenir, Helvetica, Arial,
+        font-family:
+            system-ui,
+            -apple-system,
+            Avenir,
+            Helvetica,
+            Arial,
             sans-serif;
 
         @media only screen and (max-width: 400px) {
@@ -732,7 +1097,12 @@
                 opacity: 0.5;
                 display: block;
                 margin: 0;
-                font-family: system-ui, -apple-system, Avenir, Helvetica, Arial,
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    Avenir,
+                    Helvetica,
+                    Arial,
                     sans-serif;
             }
         }
@@ -842,8 +1212,8 @@
 
     .close {
         position: absolute;
-        top: 1.7em;
-        left: 2em;
+        top: 1.5em;
+        left: 1em;
         z-index: 20;
         display: flex;
         flex-direction: row;
@@ -857,7 +1227,7 @@
     .top {
         padding: 1em 1em 0;
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: 1fr 130px;
         width: 100%;
     }
 
@@ -866,46 +1236,173 @@
         width: 100%;
     }
 
-    .file-section {
-        width: 100%;
-        padding: 0em 1em;
-        border-right: 1px solid rgba(255, 255, 255, 0.099);
+    .info-section {
+    }
+    .file-outer {
+        border: 1px solid rgba(255, 255, 255, 0.099);
+        border-radius: 5px;
+        padding: 4px;
+        min-width: 575px;
+        position: relative;
 
-        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
-        .file-path {
-            opacity: 0.5;
-            font-size: 13px;
-            max-width: 400px;
-            margin: auto;
-            font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
+        .section-title {
+            top: -10px;
+            margin: 0;
+            color: white;
+            border: 1px solid rgba(128, 128, 128, 0.16);
+
+            iconify-icon {
+                font-size: 2.4em;
+            }
         }
+
+        .top-shadow {
+            font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
+            pointer-events: none;
+            background: linear-gradient(
+                to bottom,
+                hsl(320, 4.92%, 11.96%) 0%,
+                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+                hsla(320, 4.92%, 11.96%, 0.016) 90%,
+                hsla(320, 4.92%, 11.96%, 0) 100%
+            );
+            height: 40px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 4;
+            opacity: 0.5;
+        }
+        .bottom-shadow {
+            font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
+            pointer-events: none;
+            background: linear-gradient(
+                to top,
+                hsl(320, 4.92%, 11.96%) 0%,
+                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+                hsla(320, 4.92%, 11.96%, 0.016) 90%,
+                hsla(320, 4.92%, 11.96%, 0) 100%
+            );
+            height: 40px;
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            z-index: 4;
+            opacity: 0.5;
+        }
+        .file-info-container {
+            max-height: 200px;
+            overflow-y: auto;
+            position: relative;
+            padding-bottom: 1em;
+            padding-top: 0.5em;
+        }
+
         .file-info {
-            display: flex;
+            table-layout: auto;
+            display: table;
             justify-content: center;
             flex-wrap: wrap;
             gap: 1em;
             text-align: left;
-            margin-top: 1em;
             width: 100%;
             font-size: 13px;
+            -webkit-border-horizontal-spacing: 0px;
+            -webkit-border-vertical-spacing: 0px;
+            border-collapse: collapse;
             /* border: 1px solid rgb(97, 92, 92); */
 
-            p {
-                background-color: rgba(0, 0, 0, 0.118);
-                padding: 0.2em 0.5em;
-                width: fit-content;
-                color: rgb(175, 187, 197);
-                user-select: none;
-                cursor: default;
-                margin: 0;
+            > thead {
+                > tr {
+                }
+                td {
+                    opacity: 0.5;
+                }
+            }
+            tr {
+                > td {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    border-right: 5px solid transparent;
+
+                    p {
+                        background-color: rgba(0, 0, 0, 0.118);
+                        padding: 0.2em 0.5em;
+                        width: fit-content;
+                        border-radius: 4px;
+                        color: rgb(175, 187, 197);
+                        user-select: none;
+                        cursor: default;
+                        margin: 0;
+                    }
+                }
+
+                .file-path {
+                    margin: auto;
+                    font-family: -apple-system, Avenir, Helvetica, Arial,
+                        sans-serif;
+                    cursor: default;
+                    min-width: 170px;
+                    max-width: 170px;
+
+                    span {
+                        vertical-align: middle;
+                    }
+
+                    p {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        font-size: 13px;
+                        width: 100%;
+                        vertical-align: middle;
+                    }
+
+                    &:hover {
+                        text-decoration: underline;
+                    }
+                }
             }
         }
     }
 
     .user-section {
-        padding: 1em;
+        padding: 0 0 0 1em;
         > small {
             color: rgb(68, 161, 94);
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            display: block;
         }
         span {
             cursor: default;
@@ -924,17 +1421,87 @@
                 opacity: 0.5;
             }
         }
-    }
-
-    .country {
-        display: flex;
-        margin-top: 2em;
-        justify-content: left;
-        align-items: center;
-        p {
-            margin-right: 1em;
+        .find-art-btn {
+            margin-top: 1em;
         }
     }
+
+    .section-title {
+        position: absolute;
+        border-radius: 4px;
+        max-height: 2em;
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+        align-items: center;
+        background: #32323a;
+        z-index: 11;
+        border: 1px solid rgba(28, 163, 201, 0.29);
+        top: -15px;
+        padding: 0 10px;
+        letter-spacing: 1px;
+        font-weight: 400;
+        left: 3em;
+        right: 0;
+        width: fit-content;
+        margin: 0.5em 0;
+        text-align: start;
+        color: #7dffee;
+        text-transform: uppercase;
+
+        iconify-icon {
+            font-size: 3em;
+        }
+    }
+
+    .enrichment {
+        margin-top: 1.5em;
+        border: 1px solid rgba(28, 163, 201, 0.29);
+        border-radius: 5px;
+        padding: 2em 1em 1em 1em;
+        grid-column: 1 / 3;
+        background: rgba(22, 61, 76, 0.069);
+        position: relative;
+
+        .section-title {
+            border: 1px solid rgba(28, 163, 201, 0.19);
+
+            color: #7dffee;
+        }
+
+        .label {
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+            align-items: center;
+            margin: 0 0 5px 0;
+
+            h4 {
+                margin: 0;
+                color: rgba(255, 255, 255, 0.768);
+                text-align: left;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-size: 0.9em;
+            }
+
+            p {
+                margin: 0;
+                color: rgba(255, 255, 255, 0.768);
+            }
+        }
+        .country {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: fit-content;
+            gap: 5px;
+            p {
+                margin-right: 1em;
+            }
+        }
+    }
+
     .metadata-section {
         margin-top: 2em;
         /* border-top: 1px solid rgb(76, 74, 74); */
@@ -944,10 +1511,24 @@
         color: white;
         position: relative;
         width: 100%;
-        /* border: 1px solid rgb(78, 73, 73); */
-        background: rgba(56, 54, 60, 0.842);
-        font-family: system-ui, -apple-system, Avenir, Helvetica, Arial,
+        border: 1px solid rgb(78, 73, 73);
+        background: rgba(56, 54, 60, 0.442);
+        font-family:
+            system-ui,
+            -apple-system,
+            Avenir,
+            Helvetica,
+            Arial,
             sans-serif;
+
+        .section-title {
+            color: #ffe6ac;
+            border: 1px solid rgba(255, 203, 158, 0.145);
+
+            iconify-icon {
+                color: rgb(255, 223, 178);
+            }
+        }
         h4 {
             user-select: none;
             position: absolute;
@@ -1039,6 +1620,45 @@
             /* overflow: hidden; */
         }
     }
+
+    .tools {
+        border: 1px solid rgba(255, 255, 255, 0.099);
+        padding: 2em;
+        margin: 2em;
+        position: relative;
+
+        .section-title {
+            color: rgb(170, 170, 170);
+            border: transparent;
+            iconify-icon {
+                color: rgb(170, 170, 170);
+            }
+        }
+
+        .tool {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+
+            .description {
+                text-align: left;
+                p {
+                    margin: 0;
+                }
+                small {
+                    opacity: 0.7;
+                    line-height: 0.5em;
+                }
+            }
+
+            select {
+                font-size: 20px;
+                padding: 0.2em 1em 0.3em 1em;
+            }
+        }
+    }
+
     .error-prompt {
         padding: 0.2em;
         border-radius: 8px;

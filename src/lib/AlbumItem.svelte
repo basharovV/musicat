@@ -2,11 +2,18 @@
     import { fade, fly } from "svelte/transition";
     import type { Album, Song } from "../App";
     import { db } from "../data/db";
-    import { albumPlaylist, currentSong, isPlaying, playlist, playlistIsAlbum } from "../data/store";
+    import {
+        albumPlaylist,
+        currentSong,
+        isPlaying,
+        playlist,
+        playlistIsAlbum
+    } from "../data/store";
     import audioPlayer from "./AudioPlayer";
 
     export let album: Album; // to display album data
-
+    export let highlighted = false;
+    console.log('highlight', highlighted);
     let isHovered = false;
     async function playPauseToggle() {
         if ($currentSong?.album === album.title) {
@@ -16,9 +23,12 @@
                 audioPlayer.play();
             }
         } else {
-            let tracks = await db.songs.where('id').anyOf(album.tracksIds).toArray();
+            let tracks = await db.songs
+                .where("id")
+                .anyOf(album.tracksIds)
+                .toArray();
             tracks = tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber
+                return a.trackNumber - b.trackNumber;
             });
             if (tracks) audioPlayer.playSong(tracks[0]);
             $playlist = tracks;
@@ -35,6 +45,7 @@
     class="container"
     class:hovered={isHovered && album.artwork}
     class:playing={isPlayingCurrentAlbum}
+    class:highlighted={highlighted}
 >
     {#if album.artwork}
         <div class="cd-img"><img async src="images/cd-hq.webp" /></div>
@@ -154,6 +165,12 @@
         top: -10px;
     }
 
+    .highlighted {
+        .cd {
+            border: 1px solid rgb(233, 185, 255);
+        }
+    }
+
     .playing {
         /* border: 1px solid #5123dd; */
     }
@@ -252,7 +269,6 @@
         box-sizing: border-box;
         .hinge {
             border-left: 1px solid rgba(255, 255, 255, 0.066);
-            height: 100%;
             width: 5%;
             background-color: rgba(255, 255, 255, 0.032);
         }

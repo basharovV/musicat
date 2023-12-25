@@ -3,6 +3,7 @@ import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
 import { writable, type Writable } from "svelte/store";
 import type {
+    Album,
     ArtistContentItem,
     ArtworkSrc,
     ImportStatus,
@@ -38,6 +39,7 @@ export const playlistIsCountry = writable(null); // ISO Country code
 export const isShuffleEnabled = writable(false);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
+export const rightClickedAlbum: Writable<Album> = writable(null);
 export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);

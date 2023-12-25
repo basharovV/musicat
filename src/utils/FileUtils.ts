@@ -19,6 +19,20 @@ export function isTextFile(filename: string): boolean {
     return filename.match(/\.(txt|rtf|md)$/i) !== null;
 }
 
+export function getImageFormat(extension: string): string {
+    switch (extension) {
+        case "jpg":
+        case "jpeg":
+            return "image/jpeg";
+        case "png":
+            return "image/png";
+        case "webp":
+            return "image/webp";
+        default:
+            return null;
+    }
+}
+
 export function getContentFileType(filename: string): ContentFileType {
     const extensionMatches = filename.match(/\.[0-9a-z]+$/i);
     const extension = extensionMatches ? extensionMatches[0] : "unsupported";

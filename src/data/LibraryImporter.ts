@@ -11,7 +11,7 @@ import { importStatus, songsJustAdded, userSettings } from "./store";
 import { getMapForTagType } from "./LabelMap";
 import { get } from "svelte/store";
 import type { Album, MetadataEntry, Song } from "src/App";
-import { isAudioFile } from "../utils/FileUtils";
+import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
 
 let addedSongs: Song[] = [];
 
@@ -24,6 +24,32 @@ export async function getMetadataFromFile(filePath: string, fileName: string) {
         skipCovers: false,
         skipPostHeaders: true
     });
+}
+
+/**
+ * When we need to get the metadata directly from the file on disk.
+ * @param song
+ * @returns
+ */
+export async function readMappedMetadataFromSong(
+    song: Song
+): Promise<MetadataEntry[]> {
+    const metadata = await getMetadataFromFile(song.path, song.file);
+    console.log('meta', metadata);
+    const tagType = metadata.format.tagTypes.length
+        ? metadata.format.tagTypes[0]
+        : null;
+    const map = getMapForTagType(tagType, false);
+    const metadataMapped: MetadataEntry[] = tagType
+        ? metadata.native[tagType]
+              .map((tag) => ({
+                  genericId: map && tag ? map[tag.id] : "unknown",
+                  id: tag.id,
+                  value: tag.value
+              }))
+              .filter((tag) => typeof tag.value === "string")
+        : [];
+    return metadataMapped;
 }
 
 export async function getSongFromMetadata(
@@ -140,7 +166,7 @@ async function getAlbumFromMetadata(
             artist: song.artist,
             genre: song.genre,
             duration: song.duration,
-            path: song.path,
+            path: song.path.replace(`/${song.file}`, ""),
             trackCount: 1,
             year: song.year,
             tracksIds: [song.id]
@@ -281,7 +307,7 @@ async function checkFolderArtworkByFilename(folder, artworkFilename) {
         fileExists = await exists(src);
 
         console.log("fileExists", fileExists);
-        
+
         if (fileExists) {
             return {
                 artworkSrc: convertFileSrc(src),
@@ -303,6 +329,7 @@ export async function lookForArt(
     const folder = songPath.replace(songFileName, "");
     const filenamesToSearch = get(userSettings).albumArtworkFilenames;
     let foundResult: LookForArtResult | null = null;
+
     // Check are there any images in the folder?
     try {
         for (const filename of filenamesToSearch) {
@@ -316,6 +343,26 @@ export async function lookForArt(
         }
     } catch (err) {
         console.error("Couldn't find artwork " + err);
+    }
+
+    if (!foundResult) {
+        // Otherwise just use the first image that's in the folder
+        try {
+            const files = await readDir(folder);
+            for (const filename of files) {
+                const extension = filename.name.split(".").pop();
+                let format = getImageFormat(extension);
+                if (isImageFile(filename.name) && format) {
+                    foundResult = {
+                        artworkSrc: convertFileSrc(filename.path),
+                        artworkFormat: format,
+                        artworkFilenameMatch: filename.name
+                    };
+                }
+            }
+        } catch (err) {
+            console.error("Couldn't find artwork " + err);
+        }
     }
     console.log("found result", foundResult);
     return foundResult;

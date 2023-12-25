@@ -334,7 +334,11 @@
             // Check if there an input in focus currently
             if (!$isTrackInfoPopupOpen && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
-                $rightClickedTrack = songsHighlighted[0];
+                if (songsHighlighted.length > 1) {
+                    $rightClickedTracks = songsHighlighted;
+                } else {
+                    $rightClickedTrack = songsHighlighted[0];
+                }
                 $isTrackInfoPopupOpen = true;
             }
         } else if (
@@ -402,6 +406,7 @@
         ) {
             songsHighlighted.push(song);
             rangeStartSongIdx = idx;
+            $rightClickedTrack = null;
         } else {
             // Highlight single song, via a good old click
             songsHighlighted = [song];
@@ -862,7 +867,7 @@
     $even_color: transparent;
     $selected_color: #5123dd;
     $playing_text_color: #00ddff;
-    $highlight_color: #4b61dd45;
+    $highlight_color: #2E3357;
     $text_color: rgb(211, 211, 211);
     $added_color: rgb(44, 147, 44);
     $mini_y_breakpoint: 300px;
@@ -1130,22 +1135,20 @@
                     color: $text_color;
                     &.is-first {
                         color: white;
-                        border-bottom: 0.5px solid rgba(128, 128, 128, 0.422);
+                        border-top: 0.5px solid rgba(128, 128, 128, 0.422);
                         position: sticky;
                         top: 2em;
                         background-color: rgb(36, 33, 34);
-                        pointer-events: none;
                     }
                 }
                 > tr > td[data-type="artist"] {
                     color: $text_color;
                     &.is-first {
                         color: white;
-                        border-bottom: 0.5px solid rgba(128, 128, 128, 0.422);
+                        border-top: 0.5px solid rgba(128, 128, 128, 0.422);
                         position: sticky;
                         top: 2em;
                         background-color: rgb(36, 33, 34);
-                        pointer-events: none;
                     }
                 }
                 > tr.highlight > td[data-type="artist"],
@@ -1156,7 +1159,7 @@
                         /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
                         position: sticky;
                         top: 2em;
-                        background: none;
+                        background: $highlight_color;
                     }
                 }
                 > tr.playing > td[data-type="artist"],
@@ -1167,7 +1170,7 @@
                         /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
                         position: sticky;
                         top: 2em;
-                        background: none;
+                        background: #5123dd;
                     }
                 }
             }

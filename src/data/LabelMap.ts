@@ -12,18 +12,18 @@ interface TagFieldMap {
     title: string;
     artist: string;
     album: string;
-    albumArtist: string;
-    composer: string;
+    albumArtist?: string;
+    composer?: string;
     performer?: string;
     genre: string;
     date: string;
-    copyright: string;
-    publisher: string;
+    copyright?: string;
+    publisher?: string;
     trackNumber: string;
     license?: string;
     location?: string;
-    isrc: string;
-    bpm: string;
+    isrc?: string;
+    bpm?: string;
 }
 
 const genericToVorbisMap: TagFieldMap = {
@@ -45,6 +45,22 @@ const genericToVorbisMap: TagFieldMap = {
 };
 
 const vorbisToGenericMap = inverse(genericToVorbisMap);
+
+/*
+ID3v1
+-------
+
+*/
+const genericToId3v1Map: TagFieldMap = {
+    title: "title",
+    artist: "artist",
+    album: "album",
+    genre: "genre",
+    date: "year",
+    trackNumber: "track"
+};
+
+const id3v1ToGenericMap = inverse(genericToId3v1Map);
 
 /*
 ID3v2.2
@@ -109,6 +125,8 @@ function getMapForTagType(
     switch (tagType) {
         case "vorbis":
             return fromGeneric ? genericToVorbisMap : vorbisToGenericMap;
+        case "ID3v1":
+            return fromGeneric ? genericToId3v1Map : id3v1ToGenericMap;
         case "ID3v2.2":
             return fromGeneric ? genericToId3v22Map : id3v22ToGenericMap;
         case "ID3v2.3":

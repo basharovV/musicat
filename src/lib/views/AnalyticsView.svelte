@@ -167,14 +167,14 @@
                 .forEach((g: [string, any]) => {
                     if (
                         !mostPlayedCountry ||
-                        g[1].data.length > mostPlayedCountry.length
+                        g[1].data.length > mostPlayedCountry?.length
                     ) {
                         mostPlayedCountry = g[1].data;
                         mostPlayedCountryTitle = g[0];
                     }
                 });
             stats.country.mostPlayed = mostPlayedCountryTitle;
-            stats.country.playCount = mostPlayedCountry.length;
+            stats.country.playCount = mostPlayedCountry?.length;
             stats.country.count = Object.keys(groupedByCountry).length;
 
             // Derived stats

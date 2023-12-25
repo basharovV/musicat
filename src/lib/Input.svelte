@@ -12,6 +12,7 @@
     export let autoFocus = false;
     export let placeholder = "";
     export let minimal = false;
+    export let small = false;
 
     function onKeyDown(evt) {
         if (evt.keyCode === 13) {
@@ -58,6 +59,7 @@
         on:input={onChange}
         class:full-width={fullWidth}
         class:minimal
+        class:small={small}
         on:keydown={onKeyDown}
         spellcheck="false"
         autocomplete="off"
@@ -73,7 +75,7 @@
         position: relative;
     }
     input {
-        line-height: 0.9em;
+        line-height: inherit;
         padding: 0.3em;
         background-color: rgba(53, 48, 48, 0.349);
         border: 1px solid rgb(81, 76, 76);
@@ -91,6 +93,9 @@
             border: none;
             outline: none;
         }
+        &.small {
+            line-height: 0.9em;
+        }
         &::placeholder {
             opacity: 0.5;
         }
@@ -102,7 +107,7 @@
         left: 6px;
         right: 0px;
         bottom: 0px;
-        top: 2px;
+        top: 1px;
         max-width: 100%;
         text-overflow: ellipsis;
         white-space: nowrap;
