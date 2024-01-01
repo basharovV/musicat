@@ -86,7 +86,7 @@
                 case "hover":
                     $hoveredFiles = evt.payload.paths;
                     console.log("files:", $hoveredFiles);
-                    if ($uiView === "library") {
+                    if ($uiView === "library" && $hoveredFiles.length) {
                         showDropzone = true;
                     }
                     break;

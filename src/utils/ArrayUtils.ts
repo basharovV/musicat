@@ -7,7 +7,6 @@ export function shuffleArray(array) {
     return copy;
 }
 
-
 export const groupBy = function (xs, key) {
     return xs.reduce(function (rv, x) {
         if (rv[x[key]] === undefined) {
@@ -19,3 +18,19 @@ export const groupBy = function (xs, key) {
         return rv;
     }, {});
 };
+
+export function swapArrayElements(array, indexA, indexB) {
+    const newArray = [...array]; // Create a shallow copy to avoid modifying the original array
+    const temp = newArray[indexA];
+    newArray[indexA] = newArray[indexB];
+    newArray[indexB] = temp;
+    console.log("newArray", newArray);
+    return newArray;
+}
+
+export function moveArrayElement(array, fromIndex, toIndex) {
+    const newArray = [...array];
+    const [removedElement] = newArray.splice(fromIndex, 1);
+    newArray.splice(toIndex, 0, removedElement);
+    return newArray;
+}

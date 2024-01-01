@@ -28,6 +28,7 @@ interface Song {
     album: string;
     year: number;
     genre: string[];
+    composer: string[];
     originCountry?: string;
     trackNumber: number;
     duration: string;

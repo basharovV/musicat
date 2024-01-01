@@ -55,6 +55,8 @@ export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
 export const uiView: Writable<SidebarItem> = writable("library");
 
+export const draggedColumnIdx: Writable<number | null> = writable(null);
+
 export const isWelcomeSeen: Writable<boolean> = writable(
     Boolean(localStorage.getItem("isWelcomeSeen") || false)
 );

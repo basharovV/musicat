@@ -82,6 +82,7 @@ export async function getSongFromMetadata(
             album: metadata.common.album || "",
             year: metadata.common.year || 0,
             genre: metadata.common.genre || [],
+            composer: metadata.common.composer || [],
             trackNumber: metadata.common.track.no || -1,
             duration: `${(~~(metadata.format.duration / 60))
                 .toString()

@@ -5,6 +5,8 @@
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
     export let fields;
+    export let onResetOrder;
+    export let isOrderChanged = false;
 
     function closeMenu() {
         showMenu = false;
@@ -24,5 +26,7 @@
         {#each fields as field}
             <MenuOption text={field.name} checked={field.show} onClick={() => toggleField(field)} borderHighlight/>
         {/each}
+
+        <MenuOption text="Reset order" onClick={onResetOrder} isDisabled={!isOrderChanged}/>
     </Menu>
 {/if}

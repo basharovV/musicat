@@ -18,6 +18,7 @@
         currentSong,
         currentSongIdx,
         draggedSongs,
+        fileDropHandler,
         importStatus,
         isPlaying,
         isSmartQueryBuilderOpen,
@@ -33,7 +34,10 @@
         smartQuery,
         smartQueryInitiator,
         songsJustAdded,
-        uiView
+        uiView,
+        draggedColumnIdx,
+        emptyDropEvent,
+        droppedFiles
     } from "../data/store";
     import { getFlagEmoji } from "../utils/EmojiUtils";
     import AudioPlayer from "./AudioPlayer";
@@ -47,6 +51,8 @@
     import { UserQueryPart } from "./smart-query/UserQueryPart";
     import { optionalTippy } from "./ui/TippyAction";
     import ColumnPicker from "./ColumnPicker.svelte";
+    import { element } from "svelte/internal";
+    import { moveArrayElement, swapArrayElements } from "../utils/ArrayUtils";
 
     // TODO
     async function calculateSize(songs: Song[]) {}
@@ -118,9 +124,10 @@
 
     export let isLoading = true;
 
-    export let fields = [
+    const DEFAULT_FIELDS = [
         { name: "Title", value: "title", show: true },
         { name: "Artist", value: "artist", show: true },
+        { name: "Composer", value: "composer", show: false },
         { name: "Album", value: "album", show: true },
         { name: "Track", value: "trackNumber", show: true },
         { name: "Year", value: "year", show: true },
@@ -128,6 +135,8 @@
         { name: "Origin", value: "originCountry", show: true },
         { name: "Duration", value: "duration", show: true }
     ];
+
+    export let fields = DEFAULT_FIELDS;
 
     export let showMyArtists = false;
 
@@ -589,6 +598,114 @@
             $draggedSongs = [song];
         }
     }
+
+    // Re-order columns
+
+    function handleDragStart(event: DragEvent, index) {
+        event.dataTransfer.setData("text", index);
+        event.dataTransfer.effectAllowed = "move";
+        $draggedColumnIdx = index;
+        $fileDropHandler = "library-header";
+    }
+
+    function handleDragEnter(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        dropColumnIdx = index;
+    }
+
+    let hoveredColumnIdx = null;
+    let columnToInsertIdx = null;
+    let columnToInsertXPos = 0;
+    $: numColumns = fields.filter((f) => f.show).length;
+
+    function handleDragOver(event: DragEvent, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        const headerColumn = document.querySelector(`[data-index='${index}']`);
+        const elementRect = headerColumn.getBoundingClientRect();
+        const elementWidth = elementRect.width;
+        const dragZoneWidth = 6; // 5% of the element's width
+
+        const mouseX = event.clientX - elementRect.left;
+        if (
+            index !== $draggedColumnIdx &&
+            index !== $draggedColumnIdx + 1 &&
+            mouseX < dragZoneWidth
+        ) {
+            // User is dragging over the sides (5% of width) of the element
+            columnToInsertIdx = index;
+            columnToInsertXPos = elementRect.left;
+            // Add your logic here
+        } else if (
+            index !== $draggedColumnIdx - 1 &&
+            index !== $draggedColumnIdx &&
+            index < numColumns - 1 &&
+            mouseX > elementWidth - dragZoneWidth
+        ) {
+            columnToInsertIdx = index + 1;
+            columnToInsertXPos = elementRect.right;
+        } else {
+            columnToInsertIdx = null;
+            columnToInsertXPos = 0;
+        }
+    }
+
+    $: {
+        console.log(
+            "start",
+            $draggedColumnIdx,
+            "end",
+            dropColumnIdx,
+            "columninsert",
+            columnToInsertIdx
+        );
+    }
+
+    let dropColumnIdx = null;
+
+    $: {
+        if ($fileDropHandler === "library-header" && $emptyDropEvent) {
+            if (columnToInsertIdx !== null) {
+                insertColumn($draggedColumnIdx, columnToInsertIdx);
+            } else {
+                swapColumns($draggedColumnIdx, dropColumnIdx);
+            }
+        }
+    }
+
+    function insertColumn(oldIndex, newIndex) {
+        fields = moveArrayElement(
+            fields.filter((f) => f.show),
+            oldIndex,
+            newIndex
+        );
+        resetColumnOrderUi();
+    }
+
+    function swapColumns(oldIndex, newIndex) {
+        console.log(oldIndex, newIndex);
+        fields = swapArrayElements(
+            fields.filter((f) => f.show),
+            oldIndex,
+            newIndex
+        );
+        resetColumnOrderUi();
+    }
+
+    function resetColumnOrderUi() {
+        $fileDropHandler = null;
+        $emptyDropEvent = null;
+        dropColumnIdx = null;
+        $draggedColumnIdx = null;
+        columnToInsertIdx = null;
+        columnToInsertXPos = 0;
+    }
+
+    // Sets back to default
+    function resetColumnOrder() {
+        fields = DEFAULT_FIELDS;
+    }
 </script>
 
 {#if isLoading}
@@ -643,13 +760,36 @@
                                 {/if}
 
                                 {#if header === "track-fields"}
-                                    {#each fields.filter((f) => f.show) as field (field.value)}
+                                    {#each fields.filter((f) => f.show) as field, idx (field.value)}
                                         <td
+                                            data-index={idx}
+                                            draggable="true"
+                                            on:dragstart={(e) =>
+                                                handleDragStart(e, idx)}
+                                            on:dragenter={(e) =>
+                                                handleDragEnter(e, idx)}
+                                            on:dragover={(e) => {
+                                                handleDragOver(e, idx);
+                                            }}
+                                            on:dragend={resetColumnOrderUi}
                                             class:active={$query.orderBy ===
                                                 field.value}
+                                            class:dragging={$draggedColumnIdx ===
+                                                idx}
                                             data-type={field.value}
+                                            class:drop-highlight={columnToInsertIdx ===
+                                                null &&
+                                                dropColumnIdx === idx &&
+                                                dropColumnIdx !==
+                                                    $draggedColumnIdx}
                                             on:click={() =>
                                                 updateOrderBy(field.value)}
+                                            on:mouseenter={() => {
+                                                hoveredColumnIdx = idx;
+                                            }}
+                                            on:mouseleave={() => {
+                                                hoveredColumnIdx = null;
+                                            }}
                                             use:optionalTippy={{
                                                 allowHTML: true,
                                                 content:
@@ -658,6 +798,11 @@
                                                 show: field.value === "artist"
                                             }}
                                             ><div>
+                                                {#if hoveredColumnIdx === idx}
+                                                    <iconify-icon
+                                                        icon="nimbus:drag-dots"
+                                                    />
+                                                {/if}
                                                 <p>
                                                     {field.name}
                                                 </p>
@@ -860,14 +1005,20 @@
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
     bind:fields
+    onResetOrder={resetColumnOrder}
+    isOrderChanged={fields !== DEFAULT_FIELDS}
 />
+
+{#if columnToInsertIdx !== null && columnToInsertXPos}
+    <div class="column-insert-hint" style="left: {columnToInsertXPos}px" />
+{/if}
 
 <style lang="scss">
     $odd_color: transparent;
     $even_color: transparent;
     $selected_color: #5123dd;
     $playing_text_color: #00ddff;
-    $highlight_color: #2E3357;
+    $highlight_color: #2e3357;
     $text_color: rgb(211, 211, 211);
     $added_color: rgb(44, 147, 44);
     $mini_y_breakpoint: 300px;
@@ -1130,50 +1281,50 @@
         -webkit-border-vertical-spacing: 0px;
         width: 100%;
         overflow: auto;
-            &.discography-sort:not(.smart-query) {
-                > tr > td[data-type="album"] {
-                    color: $text_color;
-                    &.is-first {
-                        color: white;
-                        border-top: 0.5px solid rgba(128, 128, 128, 0.422);
-                        position: sticky;
-                        top: 2em;
-                        background-color: rgb(36, 33, 34);
-                    }
-                }
-                > tr > td[data-type="artist"] {
-                    color: $text_color;
-                    &.is-first {
-                        color: white;
-                        border-top: 0.5px solid rgba(128, 128, 128, 0.422);
-                        position: sticky;
-                        top: 2em;
-                        background-color: rgb(36, 33, 34);
-                    }
-                }
-                > tr.highlight > td[data-type="artist"],
-                > tr.highlight > td[data-type="album"] {
-                    color: $text_color;
-                    &.is-first {
-                        color: white;
-                        /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
-                        position: sticky;
-                        top: 2em;
-                        background: $highlight_color;
-                    }
-                }
-                > tr.playing > td[data-type="artist"],
-                > tr.playing > td[data-type="album"] {
-                    color: $playing_text_color;
-                    &.is-first {
-                        color: white;
-                        /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
-                        position: sticky;
-                        top: 2em;
-                        background: #5123dd;
-                    }
+        &.discography-sort:not(.smart-query) {
+            > tr > td[data-type="album"] {
+                color: $text_color;
+                &.is-first {
+                    color: white;
+                    border-top: 0.5px solid rgba(128, 128, 128, 0.422);
+                    position: sticky;
+                    top: 2em;
+                    background-color: rgb(36, 33, 34);
                 }
             }
+            > tr > td[data-type="artist"] {
+                color: $text_color;
+                &.is-first {
+                    color: white;
+                    border-top: 0.5px solid rgba(128, 128, 128, 0.422);
+                    position: sticky;
+                    top: 2em;
+                    background-color: rgb(36, 33, 34);
+                }
+            }
+            > tr.highlight > td[data-type="artist"],
+            > tr.highlight > td[data-type="album"] {
+                color: $text_color;
+                &.is-first {
+                    color: white;
+                    /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
+                    position: sticky;
+                    top: 2em;
+                    background: $highlight_color;
+                }
+            }
+            > tr.playing > td[data-type="artist"],
+            > tr.playing > td[data-type="album"] {
+                color: $playing_text_color;
+                &.is-first {
+                    color: white;
+                    /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
+                    position: sticky;
+                    top: 2em;
+                    background: #5123dd;
+                }
+            }
+        }
 
         thead {
             font-weight: bold;
@@ -1193,17 +1344,32 @@
                 border-right: none;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                position: relative;
                 div {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                 }
                 &:hover {
-                    cursor: ns-resize;
                     background-color: #604d8d;
                 }
                 &.active {
                     background-color: #604d8d;
+                }
+
+                &.drop-highlight {
+                    background-color: #b399ffca;
+                }
+
+                iconify-icon[icon="nimbus:drag-dots"] {
+                    left: 0;
+                    position: absolute;
+                    z-index: 2;
+                    color: grey;
+                }
+
+                &:active {
+                    cursor: grabbing;
                 }
             }
         }
@@ -1282,7 +1448,7 @@
                 }
                 &[data-type="duration"] {
                     max-width: 60px;
-                    iconify-icon {
+                    .icon-clock {
                         display: none;
                     }
                 }
@@ -1348,6 +1514,7 @@
                 &[data-type="title"],
                 &[data-type="artist"],
                 &[data-type="album"],
+                &[data-type="composer"],
                 &[data-type="trackNumber"] {
                     p {
                         pointer-events: none;
@@ -1411,6 +1578,15 @@
                 }
             } */
         }
+    }
+
+    .column-insert-hint {
+        position: fixed;
+        width: 2px;
+        background-color: #b399ffca;
+        height: 100vh;
+        left: 0;
+        pointer-events: none;
     }
 
     .loading {
