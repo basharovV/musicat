@@ -1424,8 +1424,9 @@
     }
 
     .cd-gif {
-        margin-top: 1em;
-        width: 30px;
+        margin-top: 1.3em;
+        margin-bottom: 0.5em;
+        width: 25px;
         height: auto;
         margin-left: 10px;
         align-self: center;

@@ -209,7 +209,23 @@ export async function addSong(
         if (!songToAdd) {
             return;
         }
-        await db.songs.put(songToAdd);
+        const existingSong = await db.songs.get(songToAdd.id);
+        if (existingSong) {
+            await db.songs.put({
+                ...songToAdd,
+                // Migrate user generated data
+                originCountry: existingSong.originCountry,
+                songProjectId: existingSong.songProjectId,
+                isFavourite: existingSong.isFavourite,
+                viewModel: {
+                    isFirstArtist: existingSong.viewModel?.isFirstArtist,
+                    isFirstAlbum: existingSong.viewModel?.isFirstAlbum
+                },
+                playCount: existingSong.playCount
+            });
+        } else {
+            await db.songs.put(songToAdd);
+        }
         updateAlbum(songToAdd, metadata);
     } catch (err) {
         console.error(err);
@@ -266,6 +282,7 @@ export async function addFolder(folderPath) {
         totalTracks: 0,
         importedTracks: 0,
         isImporting: false,
+        backgroundImport: false,
         currentFolder: ""
     }));
 

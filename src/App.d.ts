@@ -30,11 +30,11 @@ interface Song {
     year: number;
     genre: string[];
     composer: string[];
-    originCountry?: string;
     trackNumber: number;
     duration: string;
     metadata: MetadataEntry[];
     fileInfo: any;
+    originCountry?: string;
     songProjectId?: number; // Link to project id
     isFavourite: boolean;
     viewModel?: {

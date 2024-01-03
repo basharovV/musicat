@@ -74,7 +74,8 @@
             // Add this folder!
             $importStatus = {
                 ...$importStatus,
-                backgroundImport: false
+                backgroundImport: false,
+                isImporting: false
             };
         }
     }
