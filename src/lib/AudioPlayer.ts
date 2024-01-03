@@ -59,7 +59,6 @@ class AudioPlayer {
         this.audioFile.crossOrigin = "anonymous";
         this.audioFile2.crossOrigin = "anonymous";
 
-
         // this.source = audioCtx.createMediaElementSource(this.audioFile);
         // this.source.connect(this.gainNode);
 
@@ -141,7 +140,7 @@ class AudioPlayer {
             const shuffleEnabled = get(isShuffleEnabled);
             const shuffledPlylist = get(shuffledPlaylist);
             let newCurrentSongIdx = 0;
-            console.log('shuffled', shuffledPlylist);
+            console.log("shuffled", shuffledPlylist);
             // If shuffle is enabled but not yet shuffled
             if (shuffleEnabled) {
                 this.shuffle();
@@ -149,7 +148,7 @@ class AudioPlayer {
             } else if (!shuffleEnabled && shuffledPlylist.length > 0) {
                 this.unshuffle();
                 // Restore position
-                let newCurrentSongIdx = playlist.findIndex(
+                newCurrentSongIdx = playlist.findIndex(
                     (s) => s.id === this.currentSong?.id
                 );
                 if (newCurrentSongIdx === -1) {
@@ -159,7 +158,7 @@ class AudioPlayer {
                 // Shuffle was disabled already
                 this.playlist = playlist;
 
-                let newCurrentSongIdx = playlist.findIndex(
+                newCurrentSongIdx = playlist.findIndex(
                     (s) => s.id === this.currentSong?.id
                 );
                 if (newCurrentSongIdx === -1) {
@@ -298,7 +297,9 @@ class AudioPlayer {
     }
 
     playNext() {
+        console.log("currentidx", this.currentSongIdx);
         currentSongIdx.set(get(currentSongIdx) + 1);
+        console.log("currentidx", this.currentSongIdx);
         this.playSong(this.playlist[this.currentSongIdx]);
     }
 
@@ -407,8 +408,9 @@ class AudioPlayer {
                 nextUpSong.set(nextSong);
 
                 // Set up gapless playback
-                this.getOtherAudioFile().src =
-                    convertFileSrc(nextSong.path.replace("?", "%3F"));
+                this.getOtherAudioFile().src = convertFileSrc(
+                    nextSong.path.replace("?", "%3F")
+                );
                 this.getOtherAudioFile().preload = "auto";
                 this.getOtherAudioFile().load();
                 this.getOtherAudioFile().currentTime = 0.00001;
@@ -430,15 +432,24 @@ class AudioPlayer {
     async playSong(song: Song) {
         console.log("playSong", song);
         if (this.getCurrentAudioFile() && song) {
+            
             this.pause();
             this.getCurrentAudioFile().currentTime = 0;
             playerTime.set(this.getCurrentAudioFile().currentTime);
-            this.getCurrentAudioFile().src =
-                convertFileSrc(song.path.replace("?", "%3F"));
+            this.getCurrentAudioFile().src = convertFileSrc(
+                song.path.replace("?", "%3F")
+            );
             this.play();
             currentSong.set(song);
             this.setNextUpSong();
             this.currentSong = song;
+            let newCurrentSongIdx = this.playlist.findIndex(
+                (s) => s.id === this.currentSong?.id
+            );
+            if (newCurrentSongIdx === -1) {
+                newCurrentSongIdx = 0;
+            }
+            currentSongIdx.set(newCurrentSongIdx);
             this.setMediaSessionData();
             this.incrementPlayCounter(song);
         }

@@ -217,10 +217,6 @@ export async function addSong(
                 originCountry: existingSong.originCountry,
                 songProjectId: existingSong.songProjectId,
                 isFavourite: existingSong.isFavourite,
-                viewModel: {
-                    isFirstArtist: existingSong.viewModel?.isFirstArtist,
-                    isFirstAlbum: existingSong.viewModel?.isFirstAlbum
-                },
                 playCount: existingSong.playCount
             });
         } else {

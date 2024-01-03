@@ -158,8 +158,6 @@
         }
 
         isLoading = false;
-        $playlist = resultsArray;
-        $playlistIsAlbum = false;
         return resultsArray;
     });
 </script>

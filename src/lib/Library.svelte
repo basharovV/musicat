@@ -41,9 +41,10 @@
         droppedFiles,
         bottomBarNotification,
         isFolderWatchUpdate,
-
-        shouldShowToast
-
+        shouldShowToast,
+        playlist,
+        playlistIsAlbum,
+        queriedSongs
     } from "../data/store";
     import { getFlagEmoji } from "../utils/EmojiUtils";
     import AudioPlayer from "./AudioPlayer";
@@ -219,20 +220,21 @@
             );
             if (foundRow) {
                 currentSongRow = foundRow;
-            }
-            let rect = currentSongRow.getBoundingClientRect();
 
-            currentSongInView =
-                rect.top >= 0 &&
-                rect.left >= 0 &&
-                rect.bottom <=
-                    (window.innerHeight ||
-                        document.documentElement
-                            .clientHeight) /* or $(window).height() */ &&
-                rect.right <=
-                    (window.innerWidth ||
-                        document.documentElement
-                            .clientWidth) /* or $(window).width() */;
+                let rect = currentSongRow.getBoundingClientRect();
+
+                currentSongInView =
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <=
+                        (window.innerHeight ||
+                            document.documentElement
+                                .clientHeight) /* or $(window).height() */ &&
+                    rect.right <=
+                        (window.innerWidth ||
+                            document.documentElement
+                                .clientWidth) /* or $(window).width() */;
+            }
         }
     }
 
@@ -405,6 +407,8 @@
             // 'Enter' to play highlighted track
             event.preventDefault();
             if (!$isTrackInfoPopupOpen) {
+                $playlist = $queriedSongs;
+                $playlistIsAlbum = false;
                 $currentSongIdx = highlightedSongIdx;
                 AudioPlayer.playSong(songsHighlighted[0]);
             }
@@ -505,6 +509,8 @@
 
     function onDoubleClickSong(song, idx) {
         $currentSongIdx = idx;
+        $playlist = $queriedSongs;
+        $playlistIsAlbum = false;
         AudioPlayer.playSong(song);
     }
 
