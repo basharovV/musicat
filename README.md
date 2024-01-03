@@ -7,17 +7,24 @@
 <br/>
 -
 <br/>
-<small>🔗 linked music library, using original files on disk</small>
+<small>🎵 supports MP3, FLAC, WAV, AAC, OGG</small>
+<br/>
+<small>🔗 linked library, using original files on disk</small>
+<br/>
+<small>👀 auto-watch and re-scan folders</small>
 <br/>
 <small>🏷 with metadata tagging support (read and write ID3v2, Vorbis)</small>
+<br/>
+<small>🖼 download album art, origin country from Wikipedia
+</small>
+<br/>
+<small>🗺 World Map view - see your library on a map
+</small>
 <br/>
 <small>💿 a neat mini-player
 </small>
 <br/>
 <small>🪕 Artist's toolkit for musicians
-</small>
-<br/>
-<small>🗺 World Map view - see your library on a map
 </small>
 <br/>
 <small>📊 Stats, album timeline
@@ -29,7 +36,7 @@
   -
 </p>
 
-![screenshot](docs/musicat-dec-2023.jpg)
+![screenshot](docs/musicat-jan-2024.jpg)
 
 Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
 
@@ -41,21 +48,8 @@ Note: musicat is currently in major version zero (0.x) active development, and f
 ![screenshot](docs/stats.webp)
 ![screenshot](docs/artist.webp)
 
-## Features
-
--   Music player with support for MP3, FLAC, WAV, AAC, OGG
--   Albums view
--   Playlists
--   Use Smart Query to create smart auto-updating playlists based on rules eg. "tracks that contains 'love' released after 1950, longer than 4 mins"
--   World Map view - you can enrich your library with artist origin country data from Wikipedia
--   Stats view - get insights into your library.
--   Integrated with ChatGPT (requires OpenAI API key), or local Ollama model for additional insights.
--   Mini-player and oscilloscope visualizer
--   Sorting by artist = viewing the discography. Artists shown in alphabetical order. Albums in chronological order. Tracks in album order.,
--   Toggle library view between lossy/lossless/both
--   Edit file metadata including embedded artwork
-
 ### For musicians
+This app has some experimental features for artists to manage their own music. 
 
 -   Keep your messy ideas in the Scrapbook - audio/video clips, text files, links, etc. Tag them and easily find them later.
 -   Manage your music in the Artist's toolkit
