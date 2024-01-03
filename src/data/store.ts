@@ -39,6 +39,7 @@ export const playlistIsCountry = writable(null); // ISO Country code
 export const isShuffleEnabled = writable(false);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
+export const shouldShowToast = writable(true);
 export const rightClickedAlbum: Writable<Album> = writable(null);
 export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
@@ -110,6 +111,7 @@ export const draggedSongs: Writable<Song[]> = writable([]);
 // Settings
 export const isSettingsOpen = writable(false);
 const defaultSettings: UserSettings = {
+    foldersToWatch: [],
     albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"],
     miniPlayerLocation: "bottom-left",
     llm: 'ollama',
@@ -141,12 +143,15 @@ export const importStatus: Writable<ImportStatus> = writable({
     totalTracks: 0,
     importedTracks: 0,
     isImporting: false,
-    currentFolder: ""
+    currentFolder: "",
+    backgroundImport: false
 });
-
+export const isFolderWatchUpdate = writable(false);
+export const bottomBarNotification: Writable<string> = writable(null);
 export const singleKeyShortcutsEnabled = writable(true);
 export const currentSongArtworkSrc: Writable<ArtworkSrc> = writable(null);
 export const isMiniPlayer = writable(false);
+
 async function getOs() {
     const os = await type();
     let explorerName;

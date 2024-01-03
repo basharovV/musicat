@@ -64,7 +64,6 @@ export class AudioVisualiser {
         };
 
         volume.subscribe((vol) => {
-            console.log("vol", vol);
             this._gainNode.gain.value = vol;
             this._gainNode2.gain.value = vol;
             localStorage.setItem("volume", String(vol));

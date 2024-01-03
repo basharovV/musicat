@@ -10,9 +10,10 @@
     import { cubicInOut, quadOut } from "svelte/easing";
     import { get } from "svelte/store";
     import { fade, fly } from "svelte/transition";
-    import { openTauriImportDialog } from "../data/LibraryImporter";
+    import { openTauriImportDialog, runScan } from "../data/LibraryImporter";
     import BuiltInQueries from "../data/SmartQueries";
     import { db } from "../data/db";
+    import tippy from "svelte-tippy";
 
     import {
         currentSong,
@@ -37,7 +38,12 @@
         uiView,
         draggedColumnIdx,
         emptyDropEvent,
-        droppedFiles
+        droppedFiles,
+        bottomBarNotification,
+        isFolderWatchUpdate,
+
+        shouldShowToast
+
     } from "../data/store";
     import { getFlagEmoji } from "../utils/EmojiUtils";
     import AudioPlayer from "./AudioPlayer";
@@ -51,8 +57,9 @@
     import { UserQueryPart } from "./smart-query/UserQueryPart";
     import { optionalTippy } from "./ui/TippyAction";
     import ColumnPicker from "./ColumnPicker.svelte";
-    import { element } from "svelte/internal";
     import { moveArrayElement, swapArrayElements } from "../utils/ArrayUtils";
+    import CompressionSelector from "./ui/CompressionSelector.svelte";
+    import Icon from "./ui/Icon.svelte";
 
     // TODO
     async function calculateSize(songs: Song[]) {}
@@ -61,9 +68,9 @@
 
     $: songs = $allSongs
         ?.filter((song: Song) => {
-            if (compressionSelected === "lossless") {
+            if (compressionSelected.value === "lossless") {
                 return song.fileInfo.lossless;
-            } else if (compressionSelected === "lossy") {
+            } else if (compressionSelected.value === "lossy") {
                 return song.fileInfo.lossless === false;
             } else return true;
         })
@@ -185,20 +192,56 @@
     function onScroll(evt) {
         console.log("scroll", evt);
         $libraryScrollPos = evt.target.scrollTop;
+        if (currentSongRow) {
+            let rect = currentSongRow.getBoundingClientRect();
+
+            currentSongInView =
+                rect.top >= 0 &&
+                rect.left >= 0 &&
+                rect.bottom <=
+                    (window.innerHeight ||
+                        document.documentElement
+                            .clientHeight) /* or $(window).height() */ &&
+                rect.right <=
+                    (window.innerWidth ||
+                        document.documentElement
+                            .clientWidth) /* or $(window).width() */;
+        }
     }
 
-    function scrollToCurrentSong() {
-        if (isPlaying && $currentSong) {
+    let currentSongRow;
+    let currentSongInView = false;
+
+    $: {
+        if ($currentSong) {
             const foundRow = document.querySelector(
                 `[data-song='${$currentSong.id}']`
             );
-            console.log("foundRow", foundRow.offsetTop);
             if (foundRow) {
-                foundRow.scrollIntoView({
-                    block: "center",
-                    behavior: "smooth"
-                });
+                currentSongRow = foundRow;
             }
+            let rect = currentSongRow.getBoundingClientRect();
+
+            currentSongInView =
+                rect.top >= 0 &&
+                rect.left >= 0 &&
+                rect.bottom <=
+                    (window.innerHeight ||
+                        document.documentElement
+                            .clientHeight) /* or $(window).height() */ &&
+                rect.right <=
+                    (window.innerWidth ||
+                        document.documentElement
+                            .clientWidth) /* or $(window).width() */;
+        }
+    }
+
+    function scrollToCurrentSong() {
+        if (isPlaying && $currentSong && currentSongRow) {
+            currentSongRow.scrollIntoView({
+                block: "center",
+                behavior: "smooth"
+            });
         }
     }
 
@@ -217,7 +260,7 @@
     }
 
     $: {
-        if ($songsJustAdded.length) {
+        if ($songsJustAdded.length && $shouldShowToast) {
             toast.success(
                 $songsJustAdded.length +
                     ($songsJustAdded.length === 1 ? " song" : " songs") +
@@ -541,8 +584,21 @@
             hideSmartQueryBuilder();
         }
     }
-
-    let compressionSelected: "lossy" | "lossless" | "both" = "both";
+    let COMPRESSION_OPTIONS = [
+        {
+            value: "lossy",
+            label: "lossy"
+        },
+        {
+            value: "lossless",
+            label: "lossless"
+        },
+        {
+            value: "both",
+            label: "lossy + lossless"
+        }
+    ];
+    let compressionSelected = COMPRESSION_OPTIONS[2];
 
     async function favouriteSong(song: Song) {
         await db.songs.update(song, {
@@ -672,6 +728,12 @@
                 swapColumns($draggedColumnIdx, dropColumnIdx);
             }
         }
+
+        if ($bottomBarNotification) {
+            setTimeout(() => {
+                $bottomBarNotification = null;
+            }, 3000);
+        }
     }
 
     function insertColumn(oldIndex, newIndex) {
@@ -706,13 +768,17 @@
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
     }
+
+    $: scanningStatusText = $importStatus.isImporting
+        ? `Scanning: ${$importStatus.currentFolder}.${$importStatus.importedTracks} / ${$importStatus.totalTracks}`
+        : "Click to re-scan folders.";
 </script>
 
 {#if isLoading}
     <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
         <p>💿 one sec...</p>
     </div>
-{:else if theme === "default" && ($importStatus.isImporting || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
+{:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
     <ImportPlaceholder />
 {:else}
     <div class="library-container">
@@ -943,46 +1009,59 @@
                     <bottom-bar>
                         <div class="left">
                             <div class="lossy-selector">
-                                <div
-                                    class:selected={compressionSelected ===
-                                        "lossy"}
-                                    on:click={() =>
-                                        (compressionSelected = "lossy")}
-                                >
-                                    <p>Lossy</p>
-                                </div>
-                                <div
-                                    class:selected={compressionSelected ===
-                                        "lossless"}
-                                    on:click={() =>
-                                        (compressionSelected = "lossless")}
-                                >
-                                    <p>Lossless</p>
-                                </div>
-                                <div
-                                    class:selected={compressionSelected ===
-                                        "both"}
-                                    on:click={() =>
-                                        (compressionSelected = "both")}
-                                >
-                                    <p>both</p>
-                                </div>
+                                <CompressionSelector
+                                    bind:compressionSelected
+                                    options={COMPRESSION_OPTIONS}
+                                />
                             </div>
                             {#if $nextUpSong}
                                 <div class="next-up">
                                     <p class="label">Next up:</p>
-                                    <p>{$nextUpSong.title}</p>
+                                    <p class="song">{$nextUpSong.title}</p>
                                 </div>
                             {/if}
                         </div>
-                        <p>{$count} songs</p>
-                        <p>{$artistCount} artists</p>
-                        <p>{$albumCount} albums</p>
+                        {#if $bottomBarNotification}
+                            <div class="notification">
+                                <p>
+                                    {$bottomBarNotification}
+                                </p>
+                            </div>
+                        {/if}
+                        <p></p>
+                        <iconify-icon
+                            icon="tabler:refresh"
+                            class:scanning={$importStatus.isImporting ||
+                                $isFolderWatchUpdate}
+                            on:click={() => {
+                                runScan();
+                            }}
+                            use:tippy={{
+                                content: scanningStatusText,
+                                placement: "top"
+                            }}
+                        />
+                        {#if $count !== undefined && $artistCount !== undefined && $albumCount !== undefined}
+                            <div
+                                class="stats"
+                                in:fly={{
+                                    y: 30,
+                                    duration: 150,
+                                    easing: cubicInOut
+                                }}
+                            >
+                                <p>{$count} songs</p>
+                                <p>{$artistCount} artists</p>
+                                <p>{$albumCount} albums</p>
+                            </div>
+                        {:else}
+                            <p>...</p>
+                        {/if}
                     </bottom-bar>
                 {/if}
             </library>
         </container>
-        {#if $isPlaying && $currentSong}
+        {#if $isPlaying && $currentSong && !currentSongInView}
             <div
                 in:fly={{ duration: 150, y: 30 }}
                 out:fly={{ duration: 150, y: 30 }}
@@ -1123,12 +1202,20 @@
                 display: flex;
                 flex-direction: row;
                 gap: 5px;
+                max-width: 250px;
                 .label {
                     opacity: 0.5;
                 }
                 padding: 0 1.5em;
+
+                .song {
+                    overflow: hidden;
+                    text-align: start;
+                    text-overflow: ellipsis;
+                }
                 p {
                     margin: 0;
+                    white-space: nowrap;
                     font-size: 0.9em;
                 }
             }
@@ -1139,7 +1226,6 @@
                 background-color: #24232332;
                 /* border: 1px solid rgba(128, 128, 128, 0.29); */
                 border-radius: 3px;
-                overflow: hidden;
                 > div {
                     padding: 1px 10px;
                     cursor: default;
@@ -1164,6 +1250,59 @@
                 }
             }
         }
+
+        iconify-icon[icon="tabler:refresh"] {
+            display: flex;
+            transform: rotate(0deg);
+            &:hover {
+                opacity: 0.5;
+            }
+
+            &.scanning {
+                animation: rotate 1.5s linear infinite normal forwards;
+            }
+        }
+
+        .notification {
+            padding: 0 1em;
+            margin: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(0, 0, 0, 0) 0%,
+                rgba(28, 26, 26, 0.25) 10%,
+                rgba(54, 22, 56, 0.65) 50%,
+                rgba(0, 0, 0, 0) 100%
+            );
+            height: 100%;
+            display: flex;
+            align-items: center;
+            p {
+                color: rgb(203, 182, 208);
+                font-size: 13px;
+                margin: 0;
+            }
+        }
+
+        .stats {
+            display: inline-flex;
+            gap: 10px;
+        }
+    }
+
+    @keyframes rotate {
+        0% {
+            transform: rotate(0deg);
+            opacity: 1;
+        }
+        50% {
+            transform: rotate(180deg);
+            opacity: 0.7;
+            color: cyan;
+        }
+        100% {
+            transform: rotate(360deg);
+            opacity: 1;
+        }
     }
 
     .scroll-now-playing {
@@ -1186,6 +1325,9 @@
         cursor: default;
         user-select: none;
 
+        @media only screen and (max-width: 522px) {
+            display: none;
+        }
         &:hover {
             background-color: #1f1f21;
             border: 1px solid rgb(101, 98, 98);

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { importStatus, selectedPlaylistId } from "../data/store";
+    import { importStatus, isSettingsOpen, selectedPlaylistId } from "../data/store";
 
     import { openTauriImportDialog } from "../data/LibraryImporter";
 </script>
@@ -19,6 +19,9 @@
         <p>You can always add more music later</p>
         <button on:click={openTauriImportDialog}>Import library +</button>
         <small>Supports MP3, FLAC, OGG, AAC and WAV</small>
+        <small>or</small>
+        <p>add folders to watch</p>
+        <button on:click={() => $isSettingsOpen = true}>Add folders</button>
     {/if}
 </div>
 

@@ -28,11 +28,11 @@
 .tippy-box {
     position: relative;
     background-color: #181718;
-    /* border: 1px solid rgba(255, 255, 255, 0.22); */
+    border: 1px solid rgba(124, 124, 124, 0.168);
     color: #fff;
     border-radius: 4px;
-    font-size: 15px;
-    padding: 0.5em 1em;
+    font-size: 14px;
+    padding: 0.3em 0.8em;
     line-height: 1.4;
     white-space: normal;
     outline: 0;

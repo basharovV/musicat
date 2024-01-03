@@ -87,6 +87,7 @@
                 "title": "Musicat",
                 "width": 1200,
                 "minHeight": 210,
+                "acceptFirstMouse": true,
                 "minWidth": 210,
                 "transparent": true,
                 "visible": true,

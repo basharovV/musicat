@@ -32,11 +32,12 @@
     import CursorInfo from "./lib/ui/CursorInfo.svelte";
     import MapView from "./lib/views/MapView.svelte";
     import AnalyticsView from "./lib/views/AnalyticsView.svelte";
+    import { startWatching } from "./data/FolderWatcher";
 
     startMenuListener();
 
     let unlistenFileDrop: UnlistenFn;
-
+    let unlistenFolderWatch: UnlistenFn;
     // function onDragEnter(e) {
     //     e.preventDefault();
 
@@ -100,6 +101,8 @@
                     break;
             }
         });
+
+        unlistenFolderWatch = await startWatching();
     });
 
     function onDragMove(evt: MouseEvent) {
@@ -140,6 +143,7 @@
 
     onDestroy(() => {
         unlistenFileDrop();
+        unlistenFolderWatch();
     });
 
     $: showCursorInfo = $draggedSongs.length > 0;

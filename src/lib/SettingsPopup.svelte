@@ -5,9 +5,15 @@
     import type { LLM, MiniPlayerLocation } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
-    import { isSettingsOpen, userSettings } from "../data/store";
+    import { importStatus, isSettingsOpen, userSettings } from "../data/store";
     import { clickOutside } from "../utils/ClickOutside";
     import Input from "./Input.svelte";
+    import Icon from "./ui/Icon.svelte";
+    import ButtonWithIcon from "./ui/ButtonWithIcon.svelte";
+    import { open } from "@tauri-apps/api/dialog";
+    import { audioDir } from "@tauri-apps/api/path";
+    import { addFolder } from "../data/LibraryImporter";
+    import tippy from "svelte-tippy";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
@@ -27,8 +33,57 @@
             .map((t) => t.trim());
     }
 
+    $: commaSeparatedFolders = $userSettings.foldersToWatch.join(",");
+
+    function onUpdateFolders() {
+        $userSettings.foldersToWatch = commaSeparatedFolders
+            .split(",")
+            .map((t) => t.trim());
+    }
+
     function onClose() {
         $isSettingsOpen = false;
+    }
+
+    async function openFolderSelector() {
+        // Open a selection dialog for directories
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            defaultPath: await audioDir()
+        });
+        if (Array.isArray(selected)) {
+            // user selected multiple directories
+        } else if (selected === null) {
+            // user cancelled the selection
+        } else {
+            console.log("selected", selected);
+            // user selected a single directory
+
+            $userSettings.foldersToWatch.push(selected);
+            $userSettings = $userSettings;
+
+            // Add this folder!
+            $importStatus = {
+                ...$importStatus,
+                backgroundImport: true
+            };
+
+            await addFolder(selected);
+
+            // Add this folder!
+            $importStatus = {
+                ...$importStatus,
+                backgroundImport: false
+            };
+        }
+    }
+
+    function removeFolder(folder) {
+        $userSettings.foldersToWatch = commaSeparatedFolders
+            .split(",")
+            .map((t) => t.trim())
+            .filter((f) => f !== folder);
     }
 
     onMount(async () => {
@@ -46,9 +101,9 @@
     <div class="popup" use:clickOutside={onClose} use:focusTrap>
         <header>
             <div class="close">
-                <iconify-icon
+                <Icon
                     icon="mingcute:close-circle-fill"
-                    on:click={onClose}
+                    onClick={() => onClose()}
                 />
                 <small>ESC</small>
             </div>
@@ -60,6 +115,50 @@
 
         <section>
             <table>
+                <tr>
+                    <td>
+                        <p>Folders to watch</p>
+                        {#if $userSettings.foldersToWatch.length}
+                            <small>
+                                {$userSettings.foldersToWatch.length} folder{$userSettings
+                                    .foldersToWatch.length > 1
+                                    ? "s"
+                                    : ""}
+                            </small>
+                        {/if}
+                        {#if $importStatus.isImporting}
+                            <small>Importing..</small>
+                        {/if}
+                    </td>
+                    <td>
+                        {#each $userSettings.foldersToWatch as folder}
+                            <div class="folder-item">
+                                <p>{folder}</p>
+                                <div
+                                    use:tippy={{
+                                        content:
+                                            "Removing a folder will not remove the tracks from your library.",
+                                        placement: "right"
+                                    }}
+                                >
+                                    <Icon
+                                        icon="mingcute:close-circle-fill"
+                                        onClick={() => {
+                                            removeFolder(folder);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        {/each}
+                        <ButtonWithIcon
+                            theme="transparent"
+                            icon="mdi:folder-outline"
+                            text="Add folder"
+                            onClick={openFolderSelector}
+                            size="small"
+                        />
+                    </td>
+                </tr>
                 <tr>
                     <td>Cover art file names</td>
                     <td
@@ -228,6 +327,11 @@
         table {
             width: 100%;
             tr {
+                td {
+                    p {
+                        margin: 0;
+                    }
+                }
                 td:nth-child(1) {
                     padding-right: 10px;
                     text-align: right;
@@ -236,6 +340,31 @@
                     text-align: left;
                 }
             }
+        }
+    }
+
+    .folder-item {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid grey;
+        border-radius: 20px;
+        padding: 1px 10px;
+        margin-bottom: 5px;
+        position: relative;
+
+        > div {
+            display: flex;
+        }
+
+        p {
+            margin: 0;
+            font-size: 0.9em;
+            color: rgb(196, 195, 195);
+            white-space: wrap;
+            max-width: 200px;
+            line-height: initial;
         }
     }
 </style>

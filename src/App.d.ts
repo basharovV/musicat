@@ -14,6 +14,7 @@ interface ImportStatus {
     importedTracks: number;
     isImporting: boolean;
     currentFolder: string;
+    backgroundImport: boolean;
 }
 
 interface Song {
@@ -116,6 +117,7 @@ interface ArtworkSrc {
 }
 
 interface UserSettings {
+    foldersToWatch: string[];
     albumArtworkFilenames: string[];
     miniPlayerLocation: MiniPlayerLocation;
     aiFeaturesEnabled: boolean;

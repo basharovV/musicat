@@ -7,7 +7,12 @@ import { db } from "./db";
 
 import { convertFileSrc } from "@tauri-apps/api/tauri";
 import * as musicMetadata from "music-metadata-browser";
-import { importStatus, songsJustAdded, userSettings } from "./store";
+import {
+    importStatus,
+    shouldShowToast,
+    songsJustAdded,
+    userSettings
+} from "./store";
 import { getMapForTagType } from "./LabelMap";
 import { get } from "svelte/store";
 import type { Album, MetadataEntry, Song } from "src/App";
@@ -35,7 +40,7 @@ export async function readMappedMetadataFromSong(
     song: Song
 ): Promise<MetadataEntry[]> {
     const metadata = await getMetadataFromFile(song.path, song.file);
-    console.log('meta', metadata);
+    console.log("meta", metadata);
     const tagType = metadata.format.tagTypes.length
         ? metadata.format.tagTypes[0]
         : null;
@@ -189,8 +194,10 @@ async function updateAlbum(song: Song, metadata: musicMetadata.IAudioMetadata) {
 export async function addSong(
     filePath: string,
     fileName: string,
-    singleFile = false
+    singleFile = false,
+    showToast = true
 ): Promise<Song | null> {
+    shouldShowToast.set(showToast);
     if (singleFile) {
         songsJustAdded.set([]);
     }
@@ -246,6 +253,7 @@ export async function addFolder(folderPath) {
         ...importStatus,
         isImporting: true
     }));
+    console.log("importStatus", importStatus);
     const entries = await readDir(folderPath, {
         dir: BaseDirectory.App,
         recursive: true
@@ -253,12 +261,13 @@ export async function addFolder(folderPath) {
 
     console.log("entries", entries);
     await processEntries(entries.filter((e) => !e.name.startsWith(".")));
-    importStatus.set({
+    importStatus.update((importStatus) => ({
+        ...importStatus,
         totalTracks: 0,
         importedTracks: 0,
         isImporting: false,
         currentFolder: ""
-    });
+    }));
 
     songsJustAdded.set(addedSongs);
     addedSongs = [];
@@ -367,4 +376,23 @@ export async function lookForArt(
     }
     console.log("found result", foundResult);
     return foundResult;
+}
+
+export async function runScan() {
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        backgroundImport: true
+    }));
+
+    const settings = get(userSettings);
+
+    for (const folder of settings.foldersToWatch) {
+        await addFolder(folder);
+    }
+
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        backgroundImport: false,
+        isImporting: false
+    }));
 }

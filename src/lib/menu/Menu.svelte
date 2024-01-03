@@ -11,11 +11,11 @@
     export let items: MenuItem[] = [];
     export let onItemSelected = null;
     export let onClickOutside = null;
-    export let position: "auto" | "manual" = "auto";
+    export let position: "auto" | "manual" | "relative" = "auto";
     export let maxHeight: number = null; // If this exists, we wrap the contents
     export let padding = 0;
     export let sections: MenuSection[] = null;
-
+    
     export let hoveredSection = sections !== null ? 0 : null;
 
     let hoveredItemIdx = 0;
@@ -71,7 +71,8 @@
     function onEnter() {
         // Select item callback
         if (sections?.length) {
-            onItemSelected && onItemSelected(sections[hoveredSection].items[hoveredItemIdx]);
+            onItemSelected &&
+                onItemSelected(sections[hoveredSection].items[hoveredItemIdx]);
         } else {
             onItemSelected && onItemSelected(items[hoveredItemIdx].source);
         }
@@ -131,6 +132,7 @@
 
 <menu
     class:fixed
+    class:relative={position === "relative"}
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
     use:clickOutside={() => {
@@ -154,8 +156,7 @@
                                     hoveredItemIdx === idx}
                                 color={item.color}
                                 onClick={() => {
-                                    onItemSelected &&
-                                        onItemSelected(item);
+                                    onItemSelected && onItemSelected(item);
                                 }}
                             />
                         {/each}
@@ -203,6 +204,9 @@
         &.fixed {
             position: fixed;
         }
+        &.relative {
+            position: relative;
+        }
     }
 
     .sections {
@@ -216,7 +220,6 @@
                 opacity: 0.5;
                 margin: 0.2em 0;
                 text-align: center;
-                
             }
             .items {
                 min-width: 50px;

@@ -4,7 +4,7 @@
     export let onClick = (e: MouseEvent) => {};
 </script>
 
-<iconify-icon {icon} style={`color:${color}`} on:click={onClick} />
+<iconify-icon {icon} style={`color:${color}`} on:click|stopPropagation={onClick} />
 
 <style lang="scss">
     iconify-icon {

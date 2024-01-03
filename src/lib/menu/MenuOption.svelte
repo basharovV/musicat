@@ -14,6 +14,7 @@
     export let borderHighlight = false;
     export let checked = null;
     export let isLoading = false;
+    export let singleSelection = false;
 
     import { createEventDispatcher } from "svelte";
     const dispatch = createEventDispatcher();
@@ -30,6 +31,7 @@
     class:highlighted={isHighlighted}
     class:border-highlight={borderHighlight}
     class:with-bg={color !== null && color !== undefined}
+    class:single-selection={singleSelection}
     class:loading={isLoading}
     style={isHighlighted
         ? color
@@ -165,6 +167,12 @@
                 display: block;
                 opacity: 0.7;
                 text-align: left;
+            }
+        }
+
+        &.single-selection {
+            iconify-icon[icon="charm:tick"] {
+                color: transparent;
             }
         }
 
