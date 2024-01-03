@@ -59,6 +59,8 @@
 
     // What to show in the sidebar
     let title;
+    let fileName;
+    $: displayTitle = title ?? fileName;
     let artist;
     let album;
     let artworkFormat;
@@ -88,7 +90,8 @@
                 convertFileSrc(song.path)
             );
             console.log("metadata", metadata);
-            title = metadata.common?.title ?? song.file;
+            title = metadata.common?.title?.length ? metadata.common.title : null;
+            fileName = song.file;
             artist = metadata.common.artist;
             album = metadata.common.album;
             codec = metadata.format.codec;
@@ -497,7 +500,7 @@
 
     let canvas: HTMLCanvasElement;
 
-    $: if ($currentSong && canvas && sidebarWidth && title) {
+    $: if ($currentSong && canvas && sidebarWidth && displayTitle) {
         console.log("title", title);
         // Too early - song is changed, but not the title
         isTitleOverflowing =
@@ -514,7 +517,7 @@
     let animation;
     function resetMarquee() {
         if (animation !== undefined) cancelAnimationFrame(animation);
-
+        
         const context = canvas.getContext("2d");
         if (!context) return;
         const speed = 2; // Adjust the speed as needed
@@ -523,31 +526,31 @@
             "bold 36px -apple-system, Avenir, Helvetica, Arial, sans-serif";
         context.fillStyle = "white";
         let gap = 100;
-        let textWidth = context.measureText(title).width;
+        let textWidth = context.measureText(displayTitle).width;
 
         let x = (canvas.width - textWidth) / 2; // Initial x-coordinate for the text
-        let x2 = x + context.measureText(title).width + gap;
+        let x2 = x + context.measureText(displayTitle).width + gap;
         console.log("x", x, "x2", x2);
         let started = false;
 
         function animate() {
             context.clearRect(0, 0, canvas.width, canvas.height);
-            let textWidth = context.measureText(title).width;
+            let textWidth = context.measureText(displayTitle).width;
             let isOverflowing = textWidth > canvas.width;
 
             if (isOverflowing) {
-                context.fillText(title, x, 25);
-                context.fillText(title, x2, 25);
+                context.fillText(displayTitle, x, 25);
+                context.fillText(displayTitle, x2, 25);
 
                 x -= speed;
                 x2 -= speed;
 
                 // Reset x-coordinate when the text goes off the left side of the canvas
-                if (x < -context.measureText(title).width) {
-                    x = x2 + context.measureText(title).width + gap;
+                if (x < -context.measureText(displayTitle).width) {
+                    x = x2 + context.measureText(displayTitle).width + gap;
                 }
-                if (x2 < -context.measureText(title).width) {
-                    x2 = x + context.measureText(title).width + gap;
+                if (x2 < -context.measureText(displayTitle).width) {
+                    x2 = x + context.measureText(displayTitle).width + gap;
                 }
 
                 if (!started) {
@@ -559,7 +562,7 @@
                     animation = requestAnimationFrame(animate);
                 }
             } else {
-                context.fillText(title, (canvas.width - textWidth) / 2, 25);
+                context.fillText(displayTitle, (canvas.width - textWidth) / 2, 25);
             }
         }
         animate();
@@ -859,7 +862,7 @@
 
             <div class="info">
                 {#if $currentSong}
-                    {#if sidebarWidth && title}
+                    {#if sidebarWidth && displayTitle}
                         <div class="marquee-container">
                             <canvas
                                 class="show"
@@ -872,7 +875,7 @@
                     {#if artist}
                         <p class="artist">{artist}</p>
                     {/if}
-                    {#if !$currentSong.title && !album && !artist}
+                    {#if !title && !album && !artist}
                         <button
                             class="add-metadata-btn"
                             on:click={openTrackInfo}>Add metadata</button
