@@ -1,6 +1,5 @@
 <script lang="ts">
     import { window as tauriWindow } from "@tauri-apps/api";
-    import { emit } from "@tauri-apps/api/event";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
     import {
         appWindow,
@@ -15,6 +14,8 @@
     import { onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
+    import { flip } from "svelte/animate";
+    import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
     import type { Playlist } from "../App";
     import { db } from "../data/db";
@@ -39,7 +40,6 @@
         rightClickedTrack,
         selectedPlaylistId,
         singleKeyShortcutsEnabled,
-        smartQuery,
         smartQueryInitiator,
         uiView,
         userSettings,
@@ -53,9 +53,6 @@
     import SpectrumAnalyzer from "./SpectrumAnalyzer.svelte";
     import "./tippy.css";
     import Icon from "./ui/Icon.svelte";
-    import { Svrollbar } from "svrollbar";
-    import { flip } from "svelte/animate";
-    import { cubicInOut, quadOut } from "svelte/easing";
 
     // Env
     let isArtistToolkitEnabled = true;
@@ -91,7 +88,7 @@
                 convertFileSrc(song.path)
             );
             console.log("metadata", metadata);
-            title = metadata.common.title;
+            title = metadata.common?.title ?? song.file;
             artist = metadata.common.artist;
             album = metadata.common.album;
             codec = metadata.format.codec;
@@ -465,12 +462,18 @@
         });
         $currentSong = $currentSong;
     }
+    let sidebar;
+    let sidebarWidth = 0;
+
+    let titleElement: HTMLParagraphElement;
+    let isTitleOverflowing = false; // to show marquee
 
     onMount(() => {
         height = window.innerHeight;
         window.onresize = throttle(() => {
             onResize();
         }, 200);
+        sidebarWidth = sidebar?.clientWidth;
         onResize(); // run once
 
         isFindFocused.subscribe((focused) => {
@@ -491,14 +494,86 @@
         // Detect size changes in scroll container for the menu
         const resizeObserver = new ResizeObserver(onMenuResize).observe(menu);
     });
+
+    let canvas: HTMLCanvasElement;
+
+    $: if ($currentSong && canvas && sidebarWidth && title) {
+        console.log("title", title);
+        // Too early - song is changed, but not the title
+        isTitleOverflowing =
+            titleElement?.scrollWidth > titleElement?.clientWidth;
+
+        resetMarquee();
+    }
+
+    function clearMarquee() {
+        const context = canvas.getContext("2d");
+        if (!context) return;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    let animation;
+    function resetMarquee() {
+        if (animation !== undefined) cancelAnimationFrame(animation);
+
+        const context = canvas.getContext("2d");
+        if (!context) return;
+        const speed = 2; // Adjust the speed as needed
+
+        context.font =
+            "bold 36px -apple-system, Avenir, Helvetica, Arial, sans-serif";
+        context.fillStyle = "white";
+        let gap = 100;
+        let textWidth = context.measureText(title).width;
+
+        let x = (canvas.width - textWidth) / 2; // Initial x-coordinate for the text
+        let x2 = x + context.measureText(title).width + gap;
+        console.log("x", x, "x2", x2);
+        let started = false;
+
+        function animate() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            let textWidth = context.measureText(title).width;
+            let isOverflowing = textWidth > canvas.width;
+
+            if (isOverflowing) {
+                context.fillText(title, x, 25);
+                context.fillText(title, x2, 25);
+
+                x -= speed;
+                x2 -= speed;
+
+                // Reset x-coordinate when the text goes off the left side of the canvas
+                if (x < -context.measureText(title).width) {
+                    x = x2 + context.measureText(title).width + gap;
+                }
+                if (x2 < -context.measureText(title).width) {
+                    x2 = x + context.measureText(title).width + gap;
+                }
+
+                if (!started) {
+                    started = true;
+                    setTimeout(() => {
+                        animation = requestAnimationFrame(animate);
+                    }, 200);
+                } else {
+                    animation = requestAnimationFrame(animate);
+                }
+            } else {
+                context.fillText(title, (canvas.width - textWidth) / 2, 25);
+            }
+        }
+        animate();
+    }
 </script>
 
-<!-- svelte-ignore a11y-mouse-events-have-key-events -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <sidebar
     class:has-current-song={$currentSong}
     class:empty={!$currentSong}
     class:hovered={isMiniPlayerHovered}
     transition:fly={{ duration: 200, x: -200 }}
+    bind:this={sidebar}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
@@ -739,13 +814,15 @@
                             <iconify-icon icon="mdi:map" />Map</item
                         >
                         <item
-                        class:selected={$uiView === "analytics"}
-                        on:click={() => {
-                            $uiView = "analytics";
-                        }}
-                    >
-                        <iconify-icon icon="gridicons:line-graph" />Stats</item
-                    >
+                            class:selected={$uiView === "analytics"}
+                            on:click={() => {
+                                $uiView = "analytics";
+                            }}
+                        >
+                            <iconify-icon
+                                icon="gridicons:line-graph"
+                            />Stats</item
+                        >
                     </items>
                 </menu>
             </div>
@@ -782,15 +859,20 @@
 
             <div class="info">
                 {#if $currentSong}
-                    {#if title}
-                        <p class="title">{title}</p>
-                    {:else}
-                        <p class="title">{$currentSong?.file}</p>
+                    {#if sidebarWidth && title}
+                        <div class="marquee-container">
+                            <canvas
+                                class="show"
+                                bind:this={canvas}
+                                width={sidebarWidth * 2.5}
+                                height="50"
+                            ></canvas>
+                        </div>
                     {/if}
                     {#if artist}
                         <p class="artist">{artist}</p>
                     {/if}
-                    {#if !title && !album && !artist}
+                    {#if !$currentSong.title && !album && !artist}
                         <button
                             class="add-metadata-btn"
                             on:click={openTrackInfo}>Add metadata</button
@@ -1234,6 +1316,28 @@
         width: 100%;
         padding: 0.8em 0.3em;
 
+        .marquee-container {
+            height: 20px;
+            width: 100%;
+            mask-image: linear-gradient(
+                to right,
+                transparent 0%,
+                $sidebar_secondary_color 15%,
+                $sidebar_secondary_color 85%,
+                transparent 100%
+            );
+
+            canvas {
+                width: 100%;
+                height: 100%;
+                visibility: hidden;
+
+                &.show {
+                    visibility: visible;
+                }
+            }
+        }
+
         .artist {
             white-space: nowrap;
             font-weight: 500;
@@ -1246,6 +1350,18 @@
         .title {
             white-space: nowrap;
             font-weight: bold;
+            visibility: hidden;
+
+            mask-image: linear-gradient(
+                to right,
+                transparent 0%,
+                $sidebar_secondary_color 10%,
+                $sidebar_secondary_color 90%,
+                transparent 100%
+            );
+            &.show {
+                visibility: visible;
+            }
         }
         small {
             white-space: nowrap;
@@ -1596,6 +1712,18 @@
                 display: none;
             }
         }
+
+        @media only screen and (max-height: 210px) and (max-width: 210px) {
+            .top {
+                padding-top: 0em;
+            }
+            .is-placeholder {
+                display: none;
+            }
+            .track-info {
+                width: 100vw;
+            }
+        }
     }
 
     .has-current-song {
@@ -1608,7 +1736,7 @@
             }
         }
 
-        @media only screen and (max-height: 804px) {
+        @media only screen and (max-height: 790px) {
             .file {
                 display: none;
             }
@@ -1702,6 +1830,9 @@
 
         // MINI PLAYER ONLY
         @media only screen and (max-height: 210px) and (max-width: 210px) {
+            .top {
+                padding-top: 0em;
+            }
             .track-info,
             .bottom,
             .mini-toggle {
