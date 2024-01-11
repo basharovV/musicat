@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Menu from "./menu/Menu.svelte";
-    import MenuOption from "./menu/MenuOption.svelte";
+    import Menu from "../menu/Menu.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;

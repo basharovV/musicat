@@ -1,6 +1,6 @@
 import { get } from "svelte/store";
-import { volume } from "../../data/store";
-import audioPlayer from "../AudioPlayer";
+import { isPlaying, volume } from "../../data/store";
+import audioPlayer from "./AudioPlayer";
 
 export interface IAnimation {
     draw: (
@@ -28,7 +28,7 @@ export class AudioVisualiser {
 
     private _canvasContext: CanvasRenderingContext2D;
     private _activeAnimations: IAnimation[] = [];
-
+    private shouldStopAnimation = false;
     timeDomain: Uint8Array;
     freqDomain: Uint8Array;
 
@@ -38,7 +38,6 @@ export class AudioVisualiser {
         this.canvas = canvas;
         this._canvasContext = this.canvas.getContext("2d");
         this.setupAnalyserAudio();
-        this.setupAnalyserAnimation();
 
         audioPlayer.connectOtherAudioFile = (
             toConnect,
@@ -67,6 +66,13 @@ export class AudioVisualiser {
             this._gainNode.gain.value = vol;
             this._gainNode2.gain.value = vol;
             localStorage.setItem("volume", String(vol));
+        });
+
+        isPlaying.subscribe((playing) => {
+            if (playing) {
+                this.setupAnalyserAnimation();
+            }
+            this.shouldStopAnimation = !playing;
         });
     }
 
@@ -119,7 +125,7 @@ export class AudioVisualiser {
      */
     setupAnalyserAudio() {
         let AudioContext = window.AudioContext || window.webkitAudioContext;
-        this._audioContext = new AudioContext({sampleRate: 48000});
+        this._audioContext = new AudioContext({ sampleRate: 48000 });
         this._audioSource = this._audioContext.createMediaElementSource(
             this.audioElement
         );
@@ -160,8 +166,10 @@ export class AudioVisualiser {
                 this._canvasContext.canvas.clientWidth,
                 this._canvasContext.canvas.clientHeight
             );
-            this.drawOscilloscope();
-            window.requestAnimationFrame(tick);
+            if (!this.shouldStopAnimation) {
+                this.drawOscilloscope();
+                window.requestAnimationFrame(tick);
+            }
         };
         tick();
     }

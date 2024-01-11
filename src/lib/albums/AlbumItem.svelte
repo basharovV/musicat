@@ -1,19 +1,22 @@
 <script lang="ts">
     import { fade, fly } from "svelte/transition";
-    import type { Album, Song } from "../App";
-    import { db } from "../data/db";
+    import type { Album, Song } from "../../App";
+    import { db } from "../../data/db";
     import {
         albumPlaylist,
         currentSong,
         isPlaying,
         playlist,
         playlistIsAlbum
-    } from "../data/store";
-    import audioPlayer from "./AudioPlayer";
+    } from "../../data/store";
+    import audioPlayer from "../player/AudioPlayer";
+    import Icon from "../ui/Icon.svelte";
 
     export let album: Album; // to display album data
     export let highlighted = false;
-    console.log('highlight', highlighted);
+    export let showInfo = true;
+
+    console.log("highlight", highlighted);
     let isHovered = false;
     async function playPauseToggle() {
         if ($currentSong?.album === album.title) {
@@ -45,12 +48,13 @@
     class="container"
     class:hovered={isHovered && album.artwork}
     class:playing={isPlayingCurrentAlbum}
-    class:highlighted={highlighted}
+    class:highlighted
 >
     {#if album.artwork}
         <div class="cd-img"><img async src="images/cd-hq.webp" /></div>
     {/if}
 
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
         class="cd"
         on:mouseenter={() => {
@@ -62,6 +66,7 @@
     >
         <div class="hinge" />
         <div class="artwork-container">
+            <!-- svelte-ignore a11y-missing-attribute -->
             <img
                 class="texture"
                 src="images/textures/soft-wallpaper.png"
@@ -79,8 +84,10 @@
                         async
                     />
                 {:else}
+                    <!-- svelte-ignore a11y-missing-attribute -->
                     <div class="artwork-placeholder">
-                        <iconify-icon icon="mdi:music-clef-treble" />
+                        <Icon icon="mdi:music-clef-treble" />
+                        <!-- svelte-ignore a11y-missing-attribute -->
                         <img
                             class="cd-placeholder"
                             src="images/cd-hq.png"
@@ -106,13 +113,15 @@
             </div>
         </div>
     </div>
-    <p class="title">{album.title}</p>
-    <p class="artist">{album?.artist}</p>
-    <div class="info">
-        <small>{album?.year}</small>
-        <small>•</small>
-        <small>{album?.trackCount} tracks</small>
-    </div>
+    {#if showInfo}
+        <p class="title">{album.title}</p>
+        <p class="artist">{album?.artist}</p>
+        <div class="info">
+            <small>{album?.year}</small>
+            <small>•</small>
+            <small>{album?.trackCount} tracks</small>
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -143,7 +152,7 @@
         }
 
         .cd-img {
-            transform: translate(12%, -10px) rotate(130deg) !important;
+            transform: translate(12%, -5px) rotate(130deg) !important;
         }
         z-index: 8;
     }
@@ -221,6 +230,7 @@
             font-weight: bold;
             font-size: 12px;
             letter-spacing: 0.2px;
+            line-height: initial;
         }
 
         .cd-img {
@@ -230,9 +240,9 @@
             /* transition: left 0.2s cubic-bezier(0.075, 0.82, 0.165, 1); */
             transition: all 0.8s cubic-bezier(0.075, 0.82, 0.165, 1);
             > img {
-                width: 100%;
+                width: 95%;
             }
-            transform: translateX(5px) translateY(-4px) rotate(0deg);
+            transform: translateX(5%) translateY(2%) rotate(0deg);
             /* transform-origin: 5px 5px; */
         }
 

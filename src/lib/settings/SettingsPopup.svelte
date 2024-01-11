@@ -5,14 +5,14 @@
     import type { LLM, MiniPlayerLocation } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
-    import { importStatus, isSettingsOpen, userSettings } from "../data/store";
-    import { clickOutside } from "../utils/ClickOutside";
-    import Input from "./Input.svelte";
-    import Icon from "./ui/Icon.svelte";
-    import ButtonWithIcon from "./ui/ButtonWithIcon.svelte";
+    import { importStatus, isSettingsOpen, userSettings } from "../../data/store";
+    import { clickOutside } from "../../utils/ClickOutside";
+    import Input from "../ui/Input.svelte";
+    import Icon from "../ui/Icon.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import { open } from "@tauri-apps/api/dialog";
     import { audioDir } from "@tauri-apps/api/path";
-    import { addFolder } from "../data/LibraryImporter";
+    import { addFolder } from "../../data/LibraryImporter";
     import tippy from "svelte-tippy";
 
     let version = getVersion();

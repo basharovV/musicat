@@ -17,6 +17,7 @@
     export let singleSelection = false;
 
     import { createEventDispatcher } from "svelte";
+    import Icon from "../ui/Icon.svelte";
     const dispatch = createEventDispatcher();
 
     $: {
@@ -65,7 +66,15 @@
         {/if}
 
         {#if checked !== null}
-            <iconify-icon icon="charm:tick" class:checked />
+            <Icon
+                icon="charm:tick"
+                size={12}
+                color={checked
+                    ? "white"
+                    : singleSelection
+                      ? "transparent"
+                      : "grey"}
+            />
         {/if}
 
         {#if onDelete}

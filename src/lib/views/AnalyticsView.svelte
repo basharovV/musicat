@@ -374,7 +374,7 @@
                         singleWordSummaryLoading}
                 >
                     <h3>
-                        <iconify-icon icon="mdi:thunder"></iconify-icon>The
+                        <Icon icon="mdi:thunder"></Icon>The
                         sentiment of your library is
                     </h3>
                     <h2 id="gpt-summary">
@@ -388,7 +388,7 @@
                     class:loading={!gptSummary && gptSummaryLoading}
                 >
                     <h3>
-                        <iconify-icon icon="mdi:thunder"></iconify-icon>GPT
+                        <Icon icon="mdi:thunder"></Icon>GPT
                         summary of your library
                     </h3>
                     <h2 id="gpt-summary">
@@ -400,7 +400,7 @@
                     class:loading={!gptDidYouKnow && gptDidYouKnowLoading}
                 >
                     <h3>
-                        <iconify-icon icon="mdi:thunder"></iconify-icon>Did you
+                        <Icon icon="mdi:thunder"></Icon>Did you
                         know?
                     </h3>
                     <h2 id="gpt-summary">

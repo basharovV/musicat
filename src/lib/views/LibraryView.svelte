@@ -2,13 +2,13 @@
     import { liveQuery } from "dexie";
     import "iconify-icon";
     import type { Song } from "src/App";
-    import { get } from "svelte/store";
-    import { db } from "../../data/db";
     import BuiltInQueries from "../../data/SmartQueries";
+    import { db } from "../../data/db";
     import {
+        isInit,
         isSmartQueryBuilderOpen,
+        lastPlayedInfo,
         playlist,
-        playlistIsAlbum,
         queriedSongs,
         query,
         selectedPlaylistId,
@@ -18,8 +18,10 @@
         smartQueryUpdater,
         uiView
     } from "../../data/store";
-    import Library from "../Library.svelte";
+    import Library from "../library/Library.svelte";
     import SmartQuery from "../smart-query/Query";
+    import { get } from "svelte/store";
+    import audioPlayer from "../player/AudioPlayer";
 
     let isLoading = true;
 
@@ -91,8 +93,8 @@
                     $query.orderBy === "artist"
                         ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
-                        ? "[album+trackNumber]"
-                        : $query.orderBy
+                          ? "[album+trackNumber]"
+                          : $query.orderBy
                 )
                 .and(
                     (song) =>
@@ -111,8 +113,8 @@
                 $query.orderBy === "artist"
                     ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
-                    ? "[album+trackNumber]"
-                    : $query.orderBy
+                      ? "[album+trackNumber]"
+                      : $query.orderBy
             );
         }
         let resultsArray: Song[] = [];
@@ -156,7 +158,16 @@
         } else {
             queriedSongs.set(resultsArray);
         }
-
+        if (get(isInit)) {
+            console.log("init");
+            const lastPlayed = get(lastPlayedInfo);
+            if (lastPlayed.songId) {
+                audioPlayer.shouldRestoreLastPlayed = lastPlayed;
+                audioPlayer.currentSong = await db.songs.get(lastPlayed.songId);
+                playlist.set(resultsArray);
+            }
+            isInit.set(false);
+        }
         isLoading = false;
         return resultsArray;
     });

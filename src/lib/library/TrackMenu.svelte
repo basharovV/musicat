@@ -2,17 +2,17 @@
     import { type } from "@tauri-apps/api/os";
     import { open } from "@tauri-apps/api/shell";
     import { onMount } from "svelte";
-    import { db } from "../data/db";
+    import { db } from "../../data/db";
     import {
         isTrackInfoPopupOpen,
         rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistId
-    } from "../data/store";
-    import Menu from "./menu/Menu.svelte";
-    import MenuDivider from "./menu/MenuDivider.svelte";
-    import MenuOption from "./menu/MenuOption.svelte";
-    import { findCountryByArtist } from "./data/LibraryEnrichers";
+    } from "../../data/store";
+    import Menu from "../menu/Menu.svelte";
+    import MenuDivider from "../menu/MenuDivider.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
+    import { findCountryByArtist } from "../data/LibraryEnrichers";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;

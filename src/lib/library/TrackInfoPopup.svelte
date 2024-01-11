@@ -3,7 +3,7 @@
     import { open } from "@tauri-apps/api/dialog";
     import { open as fileOpen } from "@tauri-apps/api/shell";
 
-    import { emit, listen } from "@tauri-apps/api/event";
+    import { listen } from "@tauri-apps/api/event";
     import { pictureDir } from "@tauri-apps/api/path";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
 
@@ -11,42 +11,41 @@
     import "iconify-icon";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
     import * as musicMetadata from "music-metadata-browser";
-    import type { MetadataEntry, Song, TagType } from "src/App";
+    import type { MetadataEntry, Song, TagType, ToImport } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { fade, fly } from "svelte/transition";
-    import { getMapForTagType, getTagTypeFromCodec } from "../data/LabelMap";
+    import { getMapForTagType } from "../../data/LabelMap";
     import {
-        addSong,
+        importSong,
         lookForArt,
         readMappedMetadataFromSong
-    } from "../data/LibraryImporter";
-    import { db } from "../data/db";
+    } from "../../data/LibraryImporter";
+    import { db } from "../../data/db";
     import {
         isTrackInfoPopupOpen,
         os,
         rightClickedTrack,
         rightClickedTracks
-    } from "../data/store";
-    import { focusTrap } from "../utils/FocusTrap";
-    import Input from "./Input.svelte";
-    import "./tippy.css";
-    import { optionalTippy } from "./ui/TippyAction";
+    } from "../../data/store";
+    import { focusTrap } from "../../utils/FocusTrap";
+    import Input from "../ui/Input.svelte";
+    import { optionalTippy } from "../ui/TippyAction";
+    import "../tippy.css";
 
-    import {
-        fetchAlbumArt,
-        findCountryByArtist
-    } from "./data/LibraryEnrichers";
     import { invoke } from "@tauri-apps/api";
-    import { each, text } from "svelte/internal";
-    import Icon from "./ui/Icon.svelte";
-    import ButtonWithIcon from "./ui/ButtonWithIcon.svelte";
     import {
         ENCODINGS,
         decodeLegacy,
         encodeUtf8
-    } from "../utils/EncodingUtils";
+    } from "../../utils/EncodingUtils";
+    import {
+        fetchAlbumArt,
+        findCountryByArtist
+    } from "../data/LibraryEnrichers";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import Icon from "../ui/Icon.svelte";
     // optional
 
     const ALBUM_FIELDS = ["album", "artist", "date"];
@@ -98,7 +97,7 @@
     ): MetadataEntry[] {
         if (
             ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
-            "PCM"
+            "WAV"
         ) {
             isUnsupportedFormat = true;
             return []; // UNSUPPORTED FORMAT, for now...
@@ -116,43 +115,45 @@
     }
 
     // console.log("track", ($rightClickedTrack || $rightClickedTracks[0]));
-    let metadata: MetadataEntry[] = [];
+    let metadata: { mappedMetadata: MetadataEntry[]; tagType: TagType } = {
+        mappedMetadata: [],
+        tagType: null
+    };
     let metadataFromFile: MetadataEntry[] = [];
     // let metadata: MetadataEntry[] = cloneDeep(($rightClickedTrack || $rightClickedTracks[0]).metadata);
 
-    $: durationText = `${(~~(
-        ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration / 60
-    ))
-        .toString()
-        .padStart(2, "0")}:${(~~(
-        ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration % 60
-    ))
-        .toString()
-        .padStart(2, "0")}`;
-
+    function getDurationText(durationInSeconds: number) {
+        return `${(~~(
+            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration /
+            60
+        ))
+            .toString()
+            .padStart(2, "0")}:${(~~(
+            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration %
+            60
+        ))
+            .toString()
+            .padStart(2, "0")}`;
+    }
     let artworkFormat;
     let artworkBuffer: Buffer;
     let artworkSrc;
     let previousArtworkFormat;
     let previousArtworkSrc;
 
-    function getTagType(song: Song) {
-        return song.fileInfo?.tagTypes?.length
-            ? song.fileInfo.tagTypes[0]
-            : getTagTypeFromCodec(song.fileInfo.codec);
-    }
-
-    $: tagType = getTagType($rightClickedTrack || $rightClickedTracks[0]);
-
     let foundArtwork;
     let isArtworkSet = false;
     let artworkFileToSet = null;
 
-    $: hasChanges = isArtworkSet || !isEqual(metadata, metadataFromFile);
+    $: hasChanges =
+        isArtworkSet || !isEqual(metadata?.mappedMetadata, metadataFromFile);
 
     let artworkFocused = false;
 
     async function getArtwork() {
+        if (!$rightClickedTrack || !$rightClickedTracks[0]) {
+            return;
+        }
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const metadata = await musicMetadata.fetchFromUrl(
@@ -197,17 +198,19 @@
     /**
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
-    function writeMetadata() {
+    async function writeMetadata() {
+        let toImport: ToImport;
         if ($rightClickedTrack) {
-            const toWrite = metadata
+            const toWrite = metadata?.mappedMetadata
                 .filter((m) => m.value !== null)
                 .map((t) => ({ id: t.id, value: t.value }));
             console.log("Writing: ", toWrite);
-            invoke("write_metadata", {
+
+            toImport = await invoke<ToImport>("write_metadata", {
                 event: {
                     "song_id": $rightClickedTrack.id,
                     metadata: toWrite,
-                    "tag_type": tagType,
+                    "tag_type": metadata.tagType,
                     "file_path": $rightClickedTrack.path,
                     "artwork_file_to_set": artworkFileToSet
                         ? artworkFileToSet
@@ -216,34 +219,68 @@
             });
         } else if ($rightClickedTracks?.length) {
             console.log("Writing album");
-            invoke("write_metadatas", {
+            toImport = await invoke<ToImport>("write_metadatas", {
                 event: {
-                    tracks: $rightClickedTracks.map((track) => ({
-                        "song_id": track.id,
-                        metadata: [
-                            ...mergeDefault(
-                                track.metadata,
-                                track.fileInfo.tagTypes[0]
-                            ),
-                            ...metadata
-                                .filter(
-                                    (m) =>
-                                        m.value !== null &&
-                                        ALBUM_FIELDS.includes(m.genericId)
-                                )
-                                .map((t) => ({ id: t.id, value: t.value }))
-                        ],
-                        "tag_type": getTagType(track),
-                        "file_path": track.path,
-                        "artwork_file_to_set": artworkFileToSet
-                            ? artworkFileToSet
-                            : ""
-                    }))
+                    tracks: await Promise.all(
+                        $rightClickedTracks.map(async (track) => {
+                            const fileMetadata =
+                                await readMappedMetadataFromSong(track);
+                            return {
+                                "song_id": track.id,
+                                metadata: [
+                                    ...fileMetadata?.mappedMetadata,
+                                    ...metadata?.mappedMetadata
+                                        .filter(
+                                            (m) =>
+                                                m.value !== null &&
+                                                ALBUM_FIELDS.includes(
+                                                    m.genericId
+                                                )
+                                        )
+                                        .map((t) => ({
+                                            id: t.id,
+                                            value: t.value
+                                        }))
+                                ],
+                                "tag_type": fileMetadata.tagType,
+                                "file_path": track.path,
+                                "artwork_file_to_set": artworkFileToSet
+                                    ? artworkFileToSet
+                                    : ""
+                            };
+                        })
+                    )
                 }
             });
         }
+        console.log($rightClickedTrack || $rightClickedTracks[0]);
+
+        if (toImport)
+            await reImportTracks(toImport);
+
         artworkFileToSet = null;
         isArtworkSet = false;
+    }
+    rightClickedTrack.subscribe((track) => {
+        console.log('TRACK UPDATED', track)
+    })
+    rightClickedTracks.subscribe((tracks) => {
+        console.log('TRACKS UPDATED', tracks)
+    })
+    async function reImportTracks(toImport: ToImport) {
+        console.log("toImport", toImport);
+        toast.success("Successfully written metadata!", {
+            position: "top-right"
+        });
+        console.log('right clicked ok?', $rightClickedTrack)
+
+        const songs = await Promise.all(
+            toImport.songs.map((s) => importSong(s, true))
+        );
+        console.log('right clicked ok?', $rightClickedTrack)
+        console.log('songs imported', songs);
+
+        await reset();
     }
 
     /**
@@ -311,6 +348,8 @@
                 // console.log("body", imageData)
                 artworkSrc = src;
                 artworkFileToSet = selected;
+                previousArtworkSrc = src;
+                previousArtworkFormat = type;
                 // return {
                 //     artworkSrc: src,
                 //     artworkFormat: "image/jpeg",
@@ -325,12 +364,10 @@
      */
     async function getMetadataFromFile(song: Song): Promise<MetadataEntry[]> {
         // Get metadata from file
-        const mappedMetadata = await readMappedMetadataFromSong(song);
+        const { mappedMetadata, tagType } =
+            await readMappedMetadataFromSong(song);
 
-        const result = mergeDefault(
-            mappedMetadata,
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.tagTypes[0]
-        );
+        const result = mergeDefault(mappedMetadata, tagType);
         metadataFromFile = cloneDeep(result);
         return result;
     }
@@ -351,13 +388,18 @@
         updateArtwork();
         containsError = null;
         previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
-        metadata = await getMetadataFromFile(
+        const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
             $rightClickedTrack || $rightClickedTracks[0]
         );
+        metadata = {
+            mappedMetadata: mergeDefault(mappedMetadata, tagType),
+            tagType
+        };
+        metadataFromFile = cloneDeep(metadata.mappedMetadata);
         originCountry =
             ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
         originCountryEdited = originCountry;
-        hasChanges = !isEqual(metadata, metadataFromFile);
+        hasChanges = !isEqual(metadata?.mappedMetadata, metadataFromFile);
         console.log("metadata", metadata);
     }
 
@@ -399,7 +441,8 @@
     }
 
     $: artistInput =
-        metadata?.find((m) => m.genericId === "artist")?.value ?? "";
+        metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
+            ?.value ?? "";
 
     let artistInputField: HTMLInputElement;
 
@@ -407,7 +450,9 @@
         if (firstMatch?.length) {
             console.log("firstMatch", firstMatch);
             console.log("artistInput", artistInput);
-            const artistField = metadata.find((m) => m.genericId === "artist");
+            const artistField = metadata?.mappedMetadata.find(
+                (m) => m.genericId === "artist"
+            );
             if (artistField) {
                 artistField.value = firstMatch;
             }
@@ -418,7 +463,9 @@
 
     async function onArtistUpdated(evt) {
         artistInput = evt.target.value;
-        const artistField = metadata.find((m) => m.genericId === "artist");
+        const artistField = metadata?.mappedMetadata.find(
+            (m) => m.genericId === "artist"
+        );
         if (artistField) {
             artistField.value = artistInput;
         }
@@ -467,7 +514,7 @@
     let containsError: ValidationErrors = null;
 
     function stripNonAsciiChars() {
-        metadata = metadata.map((entry) => ({
+        metadata.mappedMetadata = metadata?.mappedMetadata.map((entry) => ({
             ...entry,
             id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id
         }));
@@ -479,7 +526,7 @@
     let selectedEncoding = "placeholder";
 
     async function fixEncoding() {
-        for (let item of metadata) {
+        for (let item of metadata?.mappedMetadata) {
             if (!item?.value) continue;
             const decoded = decodeLegacy(item.value, selectedEncoding);
             const encoded = new TextDecoder().decode(encodeUtf8(decoded));
@@ -493,7 +540,7 @@
      * A map of tag id <-> errors that apply to this tag
      */
     $: errors =
-        metadata?.reduce((errors: Validation, currentTag) => {
+        metadata?.mappedMetadata?.reduce((errors: Validation, currentTag) => {
             containsError = null;
             if (!errors[currentTag.id]) {
                 errors[currentTag.id] = {
@@ -523,7 +570,7 @@
             }
 
             // TODO Detect encodings
-            // Tried jschardet but it didn't give good results. 
+            // Tried jschardet but it didn't give good results.
             // Maybe scrap this entirely?
 
             // const windows_encodings = ["windows-1251"];
@@ -626,10 +673,6 @@
     }
 
     onMount(async () => {
-        metadata = await getMetadataFromFile(
-            $rightClickedTrack || $rightClickedTracks[0]
-        );
-
         document.addEventListener("paste", async (event: ClipboardEvent) => {
             // event.stopPropagation();
             // event.preventDefault();
@@ -647,34 +690,7 @@
             }
         });
 
-        unlisten = await listen("write-success", async (event) => {
-            // console.log("Successfully written metadata!");
-            toast.success("Successfully written metadata!", {
-                position: "top-right"
-            });
-            // Re-import track(s)
-            if ($rightClickedTrack) {
-                const updatedSong = await addSong(
-                    $rightClickedTrack.path,
-                    $rightClickedTrack.file,
-                    true
-                );
-                $rightClickedTrack = updatedSong;
-                await getArtwork();
-                metadata = await getMetadataFromFile($rightClickedTrack);
-            } else if ($rightClickedTracks) {
-                $rightClickedTracks.forEach(async (track) => {
-                    const updatedSong = await addSong(
-                        track.path,
-                        track.file,
-                        true
-                    );
-                    track = updatedSong;
-                    await getArtwork();
-                });
-                metadata = await getMetadataFromFile($rightClickedTracks[0]);
-            }
-        });
+        unlisten = await listen("write-success", async (event) => {});
 
         onTableResize();
     });
@@ -728,7 +744,7 @@
         <section class="info-section" bind:this={tableOuterContainer}>
             <div class="file-outer" bind:this={tableOuterContainer}>
                 <h5 class="section-title">
-                    <iconify-icon icon="bi:file-earmark-play" />File info
+                    <Icon icon="bi:file-earmark-play" size={26} />File info
                 </h5>
 
                 {#if $rightClickedTrack || $rightClickedTracks.length}
@@ -784,11 +800,15 @@
                                     >
                                     <td>
                                         <p>
-                                            {track.fileInfo.tagTypes[0]}
+                                            {track.fileInfo.tagType}
                                         </p></td
                                     >
                                     <td>
-                                        <p>{durationText}</p>
+                                        <p>
+                                            {getDurationText(
+                                                track.fileInfo.duration
+                                            )}
+                                        </p>
                                     </td>
                                     <td>
                                         <p>
@@ -796,9 +816,9 @@
                                         </p></td
                                     >
                                     <td>
-                                        {#if track.fileInfo.bitsPerSample}
+                                        {#if track.fileInfo.bitDepth}
                                             <p>
-                                                {track.fileInfo.bitsPerSample} bit
+                                                {track.fileInfo.bitDepth} bit
                                             </p>
                                         {/if}
                                     </td>
@@ -813,18 +833,19 @@
 
             <div class="enrichment">
                 <h5 class="section-title">
-                    <iconify-icon icon="iconoir:atom" />Enrichment center
+                    <Icon icon="iconoir:atom" size={34} />Enrichment center
                 </h5>
                 <div class="label">
                     <h4>Country of origin</h4>
-                    <iconify-icon
-                        icon="mdi:information"
+                    <div
                         use:tippy={{
                             content:
                                 "Set this to use the Map view, and to be able to filter by country in Smart Playlists",
                             placement: "right"
                         }}
-                    />
+                    >
+                        <Icon icon="mdi:information" />
+                    </div>
                 </div>
                 <div class="country">
                     <Input
@@ -869,7 +890,7 @@
                         />
                     {:else}
                         <div class="artwork-placeholder">
-                            <iconify-icon icon="mdi:music-clef-treble" />
+                            <Icon icon="mdi:music-clef-treble" />
                             <!-- <small>No art</small> -->
                         </div>
                     {/if}
@@ -891,9 +912,7 @@
                         "<h3 style='margin:0'>🎨 Artwork priority</h3><br/>First, Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>If there is none, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i> (you can change this list of filenames in Settings).<br/><br/>Otherwise, it will look for any image in the album folder and use that.",
                     placement: "left"
                 }}
-                ><iconify-icon icon="ic:round-info" /><small
-                    >About artwork</small
-                ></span
+                ><Icon icon="ic:round-info" /><small>About artwork</small></span
             >
             <div class="find-art-btn">
                 <ButtonWithIcon
@@ -908,7 +927,7 @@
     <div class="bottom">
         <section class="metadata-section">
             <h5 class="section-title">
-                <iconify-icon icon="fe:music" />Metadata
+                <Icon icon="fe:music" size={30} />Metadata
             </h5>
             {#if $rightClickedTrack || $rightClickedTracks[0]}
                 {#if isUnsupportedFormat}
@@ -922,7 +941,7 @@
                             transition:fly={{ y: -20, duration: 100 }}
                             class="error-prompt"
                         >
-                            <iconify-icon icon="ant-design:warning-outlined" />
+                            <Icon icon="ant-design:warning-outlined" />
                             <p>
                                 Some tags have a hidden character that prevents
                                 them from being read properly.
@@ -931,7 +950,7 @@
                         </div>
                     {/if}
                     <form>
-                        {#each metadata.filter((m) => $rightClickedTrack || ($rightClickedTracks.length && ALBUM_FIELDS.includes(m.genericId))) as tag, idx}
+                        {#each metadata?.mappedMetadata?.filter((m) => $rightClickedTrack || ($rightClickedTracks.length && ALBUM_FIELDS.includes(m.genericId))) as tag, idx}
                             {#if tag.genericId === "artist"}
                                 <div class="tag">
                                     <p class="label">artist</p>
@@ -997,7 +1016,7 @@
                     </form>
                     <div class="tools">
                         <h5 class="section-title">
-                            <iconify-icon icon="ri:tools-fill" />Tools
+                            <Icon icon="ri:tools-fill" />Tools
                         </h5>
                         <div class="tool">
                             <div class="description">

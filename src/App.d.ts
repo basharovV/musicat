@@ -14,7 +14,27 @@ interface ImportStatus {
     importedTracks: number;
     isImporting: boolean;
     currentFolder: string;
+    currentSong: string;
     backgroundImport: boolean;
+    status: string;
+    percent: number;
+}
+
+interface BottomBarNotification {
+    text?: string;
+    timeout?: number;
+}
+
+interface FileInfo {
+    duration: number;
+    overallBitrate: number;
+    audioBitrate: number;
+    sampleRate: number;
+    bitDepth: number;
+    channels: number;
+    lossless: boolean;
+    tagType: string;
+    codec: string;
 }
 
 interface Song {
@@ -33,15 +53,20 @@ interface Song {
     trackNumber: number;
     duration: string;
     metadata: MetadataEntry[];
-    fileInfo: any;
+    fileInfo: FileInfo;
     originCountry?: string;
     songProjectId?: number; // Link to project id
     isFavourite: boolean;
     viewModel?: {
         isFirstArtist: boolean;
         isFirstAlbum: boolean;
-    },
-    playCount: number
+    };
+    playCount: number;
+    // Returned from lofty but only written to db for albums for better grid loading performance
+    artwork?: {
+        data: number[];
+        format: string;
+    };
 }
 
 interface Album {
@@ -55,6 +80,7 @@ interface Album {
     duration: string;
     path: string;
     artwork?: ArtworkSrc;
+    lossless: boolean;
 }
 
 interface Playlist {
@@ -176,7 +202,6 @@ export interface ArtistFileItem extends ContentItem {
     path?: string;
 }
 
-
 export interface MenuItem {
     text: string;
     description?: string;
@@ -189,17 +214,40 @@ export interface MenuSection {
     title: string;
 }
 
-
 interface MapTooltipData {
     countryName: string;
     emoji: string;
-    numberOfArtists: number,
-    artists: string[], // first few,
-    albums: {album: string, artist: string}[] // first few as well
+    numberOfArtists: number;
+    artists: string[]; // first few,
+    albums: { album: string; artist: string }[]; // first few as well
 }
 
+interface ToImport {
+    songs: Song[];
+    progress: number;
+}
+interface ReadMetadataStatus {
+    progress: number;
+}
 
-type LLM =
-    | "gpt-3.5-turbo"
-    | "gpt-4"
-    | "ollama"
+type ArtworkFolderFilename = "folder.jpg" | "cover.jpg" | "artwork.jpg";
+
+interface LookForArtResult {
+    artworkSrc?: string;
+    artworkFormat: string;
+    artworkFilenameMatch: string;
+}
+
+interface ActionEvent {
+    target: string;
+    action: "focus" | "unfocus";
+}
+
+type LLM = "gpt-3.5-turbo" | "gpt-4" | "ollama";
+
+type Compression = "lossy" | "lossless" | "both";
+
+interface LastPlayedInfo {
+    songId?: string;
+    position: number; //seconds;   
+}

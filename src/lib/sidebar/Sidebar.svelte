@@ -17,9 +17,9 @@
     import { flip } from "svelte/animate";
     import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
-    import type { Playlist } from "../App";
-    import { db } from "../data/db";
-    import { lookForArt } from "../data/LibraryImporter";
+    import type { Playlist } from "../../App";
+    import { db } from "../../data/db";
+    import { lookForArt } from "../../data/LibraryImporter";
     import {
         currentSong,
         currentSongArtworkSrc,
@@ -39,20 +39,21 @@
         query,
         rightClickedTrack,
         selectedPlaylistId,
+        shouldFocusFind,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         uiView,
         userSettings,
         volume
-    } from "../data/store";
-    import audioPlayer from "./AudioPlayer";
-    import Input from "./Input.svelte";
-    import Menu from "./menu/Menu.svelte";
-    import MenuOption from "./menu/MenuOption.svelte";
+    } from "../../data/store";
+    import audioPlayer from "../player/AudioPlayer";
+    import Input from "../ui/Input.svelte";
+    import Menu from "../menu/Menu.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
-    import SpectrumAnalyzer from "./SpectrumAnalyzer.svelte";
-    import "./tippy.css";
-    import Icon from "./ui/Icon.svelte";
+    import SpectrumAnalyzer from "../player/SpectrumAnalyzer.svelte";
+    import "../tippy.css";
+    import Icon from "../ui/Icon.svelte";
 
     // Env
     let isArtistToolkitEnabled = true;
@@ -90,7 +91,9 @@
                 convertFileSrc(song.path)
             );
             console.log("metadata", metadata);
-            title = metadata.common?.title?.length ? metadata.common.title : null;
+            title = metadata.common?.title?.length
+                ? metadata.common.title
+                : null;
             fileName = song.file;
             artist = metadata.common.artist;
             album = metadata.common.album;
@@ -201,7 +204,7 @@
             event.preventDefault();
         } else if (event.keyCode === 27) {
             event.preventDefault();
-            $isFindFocused = false;
+            $shouldFocusFind = { target: "search", action: "unfocus" };
         }
     }
 
@@ -479,15 +482,25 @@
         sidebarWidth = sidebar?.clientWidth;
         onResize(); // run once
 
-        isFindFocused.subscribe((focused) => {
-            if (searchInput) {
-                if (focused) {
-                    searchInput.focus();
+        shouldFocusFind.subscribe((event) => {
+            console.log('event', event);
+            if (event?.target === "search") {
+                if (searchInput) {
+                    if (event.action === "focus") {
+                        searchInput.focus();
+                    } else if (event.action === "unfocus") {
+                        searchInput.blur();
+                    }
                 }
             }
+            if (event !== null) {
+                $shouldFocusFind = null;
+            }
         });
+
         searchInput.onfocus = (evt) => {
             $singleKeyShortcutsEnabled = false;
+            $isFindFocused = true;
         };
         searchInput.onblur = (evt) => {
             $singleKeyShortcutsEnabled = true;
@@ -517,7 +530,7 @@
     let animation;
     function resetMarquee() {
         if (animation !== undefined) cancelAnimationFrame(animation);
-        
+
         const context = canvas.getContext("2d");
         if (!context) return;
         const speed = 2; // Adjust the speed as needed
@@ -562,7 +575,11 @@
                     animation = requestAnimationFrame(animate);
                 }
             } else {
-                context.fillText(displayTitle, (canvas.width - textWidth) / 2, 25);
+                context.fillText(
+                    displayTitle,
+                    (canvas.width - textWidth) / 2,
+                    25
+                );
             }
         }
         animate();
@@ -610,7 +627,7 @@
                     on:keydown={onSearchInputKeyDown}
                 />
                 <div class="search-icon">
-                    <iconify-icon icon="ion:search" />
+                    <Icon icon="ion:search" color="#737373" />
                 </div>
             </div>
         </div>
@@ -645,8 +662,11 @@
                                 $uiView = "library";
                             }}
                         >
-                            <iconify-icon
+                            <Icon
                                 icon="fluent:library-20-filled"
+                                color={$uiView === "library"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
                             />Library</item
                         >
                         <item
@@ -655,7 +675,13 @@
                                 $uiView = "albums";
                             }}
                         >
-                            <iconify-icon icon="ic:round-album" />Albums</item
+                            <Icon
+                                icon="ic:round-album"
+                                size={15}
+                                color={$uiView === "albums"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
+                            />Albums</item
                         >
 
                         <item
@@ -664,8 +690,11 @@
                                 isPlaylistsExpanded = !isPlaylistsExpanded;
                             }}
                         >
-                            <iconify-icon
+                            <Icon
                                 icon="mdi:playlist-music"
+                                color={$uiView === "playlists"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
                             />Playlists</item
                         >
 
@@ -793,8 +822,12 @@
                                 $uiView = "smart-query";
                             }}
                         >
-                            <iconify-icon icon="fluent:search-20-filled" />Smart
-                            Playlists</item
+                            <Icon
+                                icon="fluent:search-20-filled"
+                                color={$uiView === "smart-query"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
+                            />Smart Playlists</item
                         >
                         {#if isArtistToolkitEnabled}
                             <item
@@ -803,8 +836,11 @@
                                     $uiView = "your-music";
                                 }}
                             >
-                                <iconify-icon
+                                <Icon
                                     icon="mdi:music-clef-treble"
+                                    color={$uiView === "your-music"
+                                        ? "#45fffcf3"
+                                        : "currentColor"}
                                 />Artist's toolkit</item
                             >
                         {/if}
@@ -814,7 +850,12 @@
                                 $uiView = "map";
                             }}
                         >
-                            <iconify-icon icon="mdi:map" />Map</item
+                            <Icon
+                                icon="mdi:map"
+                                color={$uiView === "map"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
+                            />Map</item
                         >
                         <item
                             class:selected={$uiView === "analytics"}
@@ -822,8 +863,11 @@
                                 $uiView = "analytics";
                             }}
                         >
-                            <iconify-icon
+                            <Icon
                                 icon="gridicons:line-graph"
+                                color={$uiView === "stats"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
                             />Stats</item
                         >
                     </items>
@@ -842,22 +886,25 @@
 
         <div class="track-info-content">
             <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-            <iconify-icon
-                use:tippy={{
-                    theme: $isMiniPlayer ? "hidden" : "",
-                    content: "Toggle the mini player.",
-                    placement: "right"
-                }}
+            <div
                 bind:this={miniToggleBtn}
                 class="mini-toggle"
                 class:hovered={isMiniToggleHovered}
                 on:mouseover={onMiniToggleMouseOver}
                 on:mouseout={onMiniToggleMouseOut}
-                icon={$isMiniPlayer
-                    ? "gg:arrows-expand-up-right"
-                    : "gg:arrows-expand-down-left"}
-                on:click={() => toggleMiniPlayer()}
-            />
+                use:tippy={{
+                    theme: $isMiniPlayer ? "hidden" : "",
+                    content: "Toggle the mini player.",
+                    placement: "right"
+                }}
+            >
+                <Icon
+                    icon={$isMiniPlayer
+                        ? "gg:arrows-expand-up-right"
+                        : "gg:arrows-expand-down-left"}
+                    onClick={() => toggleMiniPlayer()}
+                />
+            </div>
             <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
 
             <div class="info">
@@ -926,39 +973,43 @@
             <Seekbar {duration} />
         </div>
         <transport>
-            <iconify-icon
+            <Icon
                 class="transport-side"
                 icon="ph:shuffle-bold"
-                class:off={!$isShuffleEnabled}
-                on:click={() => {
+                color={!$isShuffleEnabled ? "#474747" : "#e1ff00"}
+                onClick={() => {
                     $isShuffleEnabled = !$isShuffleEnabled;
                 }}
             />
-            <iconify-icon
+            <Icon
                 class="transport-middle"
                 icon="fe:backward"
-                class:disabled={$currentSongIdx === 0}
-                on:click={() => audioPlayer.playPrevious()}
+                size={36}
+                disabled={$currentSongIdx === 0}
+                onClick={() => audioPlayer.playPrevious()}
             />
-            <iconify-icon
+            <Icon
                 class="transport-middle"
-                on:click={togglePlayPause}
+                size={42}
+                onClick={togglePlayPause}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
             />
-            <iconify-icon
+            <Icon
                 class="transport-middle"
+                size={36}
                 icon="fe:forward"
-                class:disabled={$currentSongIdx === $playlist?.length - 1}
-                on:click={() => audioPlayer.playNext()}
+                disabled={$currentSongIdx === $playlist?.length - 1}
+                onClick={() => audioPlayer.playNext()}
             />
-            <iconify-icon
+            <Icon
                 class="transport-side favourite {$currentSong?.isFavourite
                     ? 'active'
                     : 'inactive'}"
+                color={$currentSong?.isFavourite ? "#59cd7a" : "grey"}
                 icon={$currentSong?.isFavourite
                     ? "clarity:heart-solid"
                     : "clarity:heart-line"}
-                on:click={() => {
+                onClick={() => {
                     favouriteCurrentSong();
                 }}
             />
@@ -1147,6 +1198,10 @@
         }
 
         item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
             text-transform: uppercase;
             font-weight: bold;
             text-align: left;
@@ -1168,7 +1223,7 @@
                 }
             }
 
-            &:hover {
+            &:hover:not(.selected) {
                 opacity: 0.5;
             }
 
@@ -1254,14 +1309,14 @@
         .search-icon {
             position: absolute;
             right: 15px;
-            top: 5px;
+            top: 0px;
             bottom: 0;
             height: fit-content;
             padding: 5px;
             margin: auto 0;
             > iconify-icon {
                 font-size: 17px;
-                color: rgb(115, 115, 115);
+                color: #737373;
                 pointer-events: none;
             }
         }
@@ -1507,7 +1562,7 @@
     }
     transport {
         /* background-color: rgb(255, 255, 255); */
-        padding: 0.5em 1em;
+        padding: 0em 1em 1em 1em;
         width: 100%;
         color: white;
         z-index: 2;
@@ -1520,7 +1575,7 @@
         }
 
         :not(.off)[icon="ph:shuffle-bold"] {
-            color: rgb(225, 255, 0);
+            color: #e1ff00;
         }
 
         .transport-side {

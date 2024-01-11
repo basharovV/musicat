@@ -7,7 +7,9 @@ import rollupNodePolyFill from "rollup-plugin-node-polyfills";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [svelte()],
+    plugins: [
+        svelte(),
+    ],
     resolve: {
         alias: {
             // This Rollup aliases are extracted from @esbuild-plugins/node-modules-polyfill,
@@ -64,6 +66,9 @@ export default defineConfig({
                 NodeModulesPolyfillPlugin()
             ]
         }
+    },
+    worker: {
+        format: "es"
     },
     build: {
         rollupOptions: {

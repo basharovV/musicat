@@ -46,25 +46,28 @@ export async function startWatching() {
 
                             // New file
                             if (!song) {
-                                bottomBarNotification.set(
-                                    "Folder watcher: File added - updating library..."
-                                );
+                                bottomBarNotification.set({
+                                    text: "Folder watcher: File added - updating library...",
+                                    timeout: 2000
+                            });
                                 await addSong(path, file, true, false);
                             }
                             // Deletion
                             else if (!fileExists && song) {
-                                bottomBarNotification.set(
-                                    "Folder watcher: File deleted - updating library..."
-                                );
+                                bottomBarNotification.set({
+                                    text: "Folder watcher: File deleted - updating library...",
+                                    timeout: 2000
+                                });
                                 await db.songs.delete(filehash);
                             }
                         }
                     } else if (result === 'directory') {
                         const pathExists = await exists(path);
                         if (!pathExists) {
-                            bottomBarNotification.set(
-                                "Folder watcher: Folder deleted - updating library..."
-                            );
+                            bottomBarNotification.set({
+                                text: "Folder watcher: Folder deleted - updating library...",
+                                timeout: 2000
+                        });
                             // Deleted folder - delete all songs from db
                             const songsToDelete = await db.songs.where("path").startsWith(path);
                             const keys = await songsToDelete.primaryKeys();

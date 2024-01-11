@@ -1,26 +1,27 @@
 <script lang="ts">
-    import { resolve } from "@tauri-apps/api/path";
-    import { liveQuery, type IndexableTypeArray } from "dexie";
+    import { convertFileSrc } from "@tauri-apps/api/tauri";
+    import { liveQuery } from "dexie";
     import "iconify-icon";
+    import md5 from "md5";
+    import * as musicMetadata from "music-metadata-browser";
+    import { cubicInOut } from "svelte/easing";
+    import { fade, fly } from "svelte/transition";
     import type { Album, Song } from "../../App";
+    import { lookForArt } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
         albumPlaylist,
+        compressionSelected,
         currentSong,
         playlist,
         playlistIsAlbum,
         query,
         rightClickedAlbum
     } from "../../data/store";
-    import AlbumItem from "../AlbumItem.svelte";
-    import * as musicMetadata from "music-metadata-browser";
-    import { convertFileSrc } from "@tauri-apps/api/tauri";
-    import { lookForArt } from "../../data/LibraryImporter";
-    import audioPlayer from "../AudioPlayer";
-    import { fade, fly } from "svelte/transition";
-    import { cubicInOut } from "svelte/easing";
-    import md5 from "md5";
-    import AlbumMenu from "../AlbumMenu.svelte";
+    import AlbumItem from "../albums/AlbumItem.svelte";
+    import AlbumMenu from "../albums/AlbumMenu.svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import BottomBar from "../library/BottomBar.svelte";
 
     let isLoading = true;
 
@@ -30,11 +31,18 @@
         let resultsArray: Album[] = [];
         resultsArray = await db.albums.orderBy("title").toArray();
 
-        console.log("albums", resultsArray);
-
         isLoading = false;
         cachedAlbums = resultsArray;
-        return resultsArray;
+        return resultsArray.filter((a) => {
+            const hasTitle = a.title.length;
+            let compressionFilterMatch = true;
+            if ($compressionSelected === "lossless") {
+                compressionFilterMatch = a.lossless;
+            } else if ($compressionSelected === "lossy") {
+                compressionFilterMatch = a.lossless === false;
+            }
+            return hasTitle && compressionFilterMatch;
+        });
     });
 
     $: queriedAlbums =
@@ -54,12 +62,31 @@
         }
     }
 
+    $: counts = liveQuery(() => {
+        return db.transaction("r", db.songs, async () => {
+            const artists = await (
+                await db.songs.orderBy("artist").uniqueKeys()
+            ).length;
+            const albums = await (
+                await db.songs.orderBy("album").uniqueKeys()
+            ).length;
+            const songs = await db.songs.count();
+            return { songs, artists, albums };
+        });
+    });
+
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
+        const albumPath = $currentSong.path.replace(
+            `/${$currentSong.file}`,
+            ""
+        );
+
         // Find the album currently playing
         const currentAlbum = await db.albums.get(
-            md5(`${$currentSong.artist} - ${$currentSong.album}`)
+            md5(`${albumPath} - ${$currentSong.album}`)
         );
+        if (!currentAlbum) return;
         let tracks = await db.songs
             .where("id")
             .anyOf(currentAlbum.tracksIds)
@@ -74,6 +101,7 @@
     }
 
     let showSingles = false;
+    let showInfo = true;
 
     async function loadData() {
         // await getAlbumTrack($albums);
@@ -183,6 +211,10 @@
             <input type="checkbox" bind:checked={showSingles} /></label
         >
         <label
+            >show info
+            <input type="checkbox" bind:checked={showInfo} /></label
+        >
+        <label
             >grid size
             <input
                 type="range"
@@ -239,6 +271,7 @@
                         <AlbumItem
                             {album}
                             highlighted={highlightedAlbum === album.id}
+                            {showInfo}
                         />
                     </div>
                 {/each}
@@ -259,6 +292,7 @@
                             <AlbumItem
                                 {album}
                                 highlighted={highlightedAlbum === album.id}
+                                {showInfo}
                             />
                         </div>
                     {/if}
@@ -266,6 +300,9 @@
             {/if}
         </div>
     {/if}
+    <div class="bottom-bar">
+        <BottomBar {counts} />
+    </div>
 </div>
 
 <style lang="scss">
@@ -468,5 +505,15 @@
         p {
             opacity: 0.6;
         }
+    }
+
+    .bottom-bar {
+        position: sticky;
+        grid-row: 3;
+        grid-column: 1 / 4;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 19;
     }
 </style>

@@ -6,7 +6,6 @@
         droppedFiles,
         emptyDropEvent,
         hoveredFiles,
-        isDraggingExternalFiles,
         isInfoPopupOpen,
         isMiniPlayer,
         isSettingsOpen,
@@ -18,23 +17,27 @@
     import { type UnlistenFn } from "@tauri-apps/api/event";
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
-    import Dropzone from "./lib/Dropzone.svelte";
-    import InfoPopup from "./lib/InfoPopup.svelte";
-    import SettingsPopup from "./lib/SettingsPopup.svelte";
-    import Sidebar from "./lib/Sidebar.svelte";
-    import TrackInfoPopup from "./lib/TrackInfoPopup.svelte";
+    import { startWatching } from "./data/FolderWatcher";
+    import {
+        addPaths,
+        startImportListener
+    } from "./data/LibraryImporter";
+    import Dropzone from "./lib/library/Dropzone.svelte";
+    import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
+    import InfoPopup from "./lib/settings/InfoPopup.svelte";
+    import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
+    import Sidebar from "./lib/sidebar/Sidebar.svelte";
+    import CursorInfo from "./lib/ui/CursorInfo.svelte";
+    import AlbumView from "./lib/views/AlbumsView.svelte";
+    import AnalyticsView from "./lib/views/AnalyticsView.svelte";
     import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
     import LibraryView from "./lib/views/LibraryView.svelte";
-    import { startMenuListener } from "./window/EventListener";
-    import { addFolder, addPaths } from "./data/LibraryImporter";
-    import AlbumView from "./lib/views/AlbumsView.svelte";
-    import WelcomeView from "./lib/views/WelcomeView.svelte";
-    import CursorInfo from "./lib/ui/CursorInfo.svelte";
     import MapView from "./lib/views/MapView.svelte";
-    import AnalyticsView from "./lib/views/AnalyticsView.svelte";
-    import { startWatching } from "./data/FolderWatcher";
+    import WelcomeView from "./lib/views/WelcomeView.svelte";
+    import { startMenuListener } from "./window/EventListener";
 
     startMenuListener();
+    startImportListener();
 
     let unlistenFileDrop: UnlistenFn;
     let unlistenFolderWatch: UnlistenFn;

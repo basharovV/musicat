@@ -1,16 +1,20 @@
 import { type, type OsType } from "@tauri-apps/api/os";
-import SmartQuery from "../lib/smart-query/Query";
-import Query from "./SmartQueries";
-import { writable, type Writable } from "svelte/store";
 import type {
+    ActionEvent,
     Album,
     ArtistContentItem,
     ArtworkSrc,
+    BottomBarNotification,
+    Compression,
     ImportStatus,
+    LastPlayedInfo,
     SidebarItem,
     Song,
     UserSettings
 } from "src/App";
+import { writable, type Writable } from "svelte/store";
+import SmartQuery from "../lib/smart-query/Query";
+import Query from "./SmartQueries";
 
 interface Query {
     orderBy: string;
@@ -20,6 +24,7 @@ interface Query {
 
 type UIView = "library" | "albums";
 
+export const isInit = writable(true);
 export const query: Writable<Query> = writable({
     orderBy: "artist",
     reverse: false,
@@ -29,8 +34,23 @@ export const query: Writable<Query> = writable({
 export const isPlaying = writable(false);
 export const currentSong: Writable<Song> = writable(null);
 export const currentSongIdx = writable(0);
+
+const defaultLastPlayedInfo: LastPlayedInfo = {
+    songId: null,
+    position: 0
+}
+
+export const lastPlayedInfo:Writable<LastPlayedInfo> = writable(
+    {...defaultLastPlayedInfo, ...JSON.parse(localStorage.getItem("lastPlayedInfo"))} || defaultLastPlayedInfo
+);
+// Auto-persist settings
+lastPlayedInfo.subscribe((val) =>
+    localStorage.setItem("lastPlayedInfo", JSON.stringify(val))
+);
+
 export const nextUpSong: Writable<Song> = writable(null);
 export const queriedSongs: Writable<Song[]> = writable([]);
+
 export const playlist: Writable<Song[]> = writable([]);
 export const shuffledPlaylist: Writable<Song[]> = writable([]);
 export const albumPlaylist: Writable<Song[]> = writable([]);
@@ -92,6 +112,8 @@ export const isScrapbookShown = writable(true);
 
 // Library menu
 export const isFindFocused = writable(false);
+export const shouldFocusFind: Writable<ActionEvent|null> = writable(null);
+
 
 // Smart query
 export const isSmartQueryUiOpen = writable(false);
@@ -144,13 +166,17 @@ export const importStatus: Writable<ImportStatus> = writable({
     importedTracks: 0,
     isImporting: false,
     currentFolder: "",
-    backgroundImport: false
+    backgroundImport: false,
+    currentSong: null,
+    status: null,
+    percent: 0
 });
 export const isFolderWatchUpdate = writable(false);
-export const bottomBarNotification: Writable<string> = writable(null);
+export const bottomBarNotification: Writable<BottomBarNotification> = writable(null);
 export const singleKeyShortcutsEnabled = writable(true);
 export const currentSongArtworkSrc: Writable<ArtworkSrc> = writable(null);
 export const isMiniPlayer = writable(false);
+export const compressionSelected: Writable<Compression> = writable("both");
 
 async function getOs() {
     const os = await type();

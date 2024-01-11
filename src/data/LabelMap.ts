@@ -143,8 +143,8 @@ function getMapForTagType(
  * @param codec
  */
 const codecToTagTypeMap = {
-    "FLAC": "vorbis",
-    "MPEG 1 Layer 3": "ID3v2.4"
+    "FLAC": "Vorbis",
+    "MPEG": "ID3v2.4"
 };
 
 function getTagTypeFromCodec(codec) {

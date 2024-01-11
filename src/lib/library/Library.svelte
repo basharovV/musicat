@@ -6,21 +6,25 @@
     import type { Song } from "src/App";
     import { onDestroy } from "svelte";
     import toast from "svelte-french-toast";
+    import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
     import { cubicInOut, quadOut } from "svelte/easing";
     import { get } from "svelte/store";
     import { fade, fly } from "svelte/transition";
-    import { openTauriImportDialog, runScan } from "../data/LibraryImporter";
-    import BuiltInQueries from "../data/SmartQueries";
-    import { db } from "../data/db";
-    import tippy from "svelte-tippy";
+    import { openTauriImportDialog, runScan } from "../../data/LibraryImporter";
+    import BuiltInQueries from "../../data/SmartQueries";
+    import { db } from "../../data/db";
 
     import {
+        bottomBarNotification,
         currentSong,
         currentSongIdx,
+        draggedColumnIdx,
         draggedSongs,
+        emptyDropEvent,
         fileDropHandler,
         importStatus,
+        isFolderWatchUpdate,
         isPlaying,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
@@ -28,39 +32,38 @@
         libraryScrollPos,
         nextUpSong,
         os,
+        playlist,
+        playlistIsAlbum,
+        queriedSongs,
         query,
         rightClickedTrack,
         rightClickedTracks,
+        shouldShowToast,
+        shouldFocusFind,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
         songsJustAdded,
         uiView,
-        draggedColumnIdx,
-        emptyDropEvent,
-        droppedFiles,
-        bottomBarNotification,
-        isFolderWatchUpdate,
-        shouldShowToast,
-        playlist,
-        playlistIsAlbum,
-        queriedSongs
-    } from "../data/store";
-    import { getFlagEmoji } from "../utils/EmojiUtils";
-    import AudioPlayer from "./AudioPlayer";
+        compressionSelected
+    } from "../../data/store";
+    import {
+        moveArrayElement,
+        swapArrayElements
+    } from "../../utils/ArrayUtils";
+    import { getFlagEmoji } from "../../utils/EmojiUtils";
+    import AudioPlayer from "../player/AudioPlayer";
+    import ColumnPicker from "./ColumnPicker.svelte";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
-    import { codes } from "./data/CountryCodes";
-    import { getQueryPart } from "./smart-query/QueryParts";
-    import SmartQueryBuilder from "./smart-query/SmartQueryBuilder.svelte";
-    import SmartQueryMainHeader from "./smart-query/SmartQueryMainHeader.svelte";
-    import SmartQueryResultsPlaceholder from "./smart-query/SmartQueryResultsPlaceholder.svelte";
-    import { UserQueryPart } from "./smart-query/UserQueryPart";
-    import { optionalTippy } from "./ui/TippyAction";
-    import ColumnPicker from "./ColumnPicker.svelte";
-    import { moveArrayElement, swapArrayElements } from "../utils/ArrayUtils";
-    import CompressionSelector from "./ui/CompressionSelector.svelte";
-    import Icon from "./ui/Icon.svelte";
+    import { codes } from "../data/CountryCodes";
+    import { getQueryPart } from "../smart-query/QueryParts";
+    import SmartQueryBuilder from "../smart-query/SmartQueryBuilder.svelte";
+    import SmartQueryMainHeader from "../smart-query/SmartQueryMainHeader.svelte";
+    import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
+    import { UserQueryPart } from "../smart-query/UserQueryPart";
+    import { optionalTippy } from "../ui/TippyAction";
+    import BottomBar from "./BottomBar.svelte";
 
     // TODO
     async function calculateSize(songs: Song[]) {}
@@ -69,9 +72,9 @@
 
     $: songs = $allSongs
         ?.filter((song: Song) => {
-            if (compressionSelected.value === "lossless") {
+            if ($compressionSelected === "lossless") {
                 return song.fileInfo.lossless;
-            } else if (compressionSelected.value === "lossy") {
+            } else if ($compressionSelected === "lossy") {
                 return song.fileInfo.lossless === false;
             } else return true;
         })
@@ -155,23 +158,22 @@
     let showColumnPicker = false;
     let columnPickerPos;
 
-    $: artists = liveQuery(async () => {
+    let artists = liveQuery(async () => {
         let results = await db.artistProjects.toArray();
         return results.map((a) => a.name);
     });
 
-    $: count = liveQuery(() => {
-        return db.songs.count();
-    });
-
-    $: artistCount = liveQuery(async () => {
-        const artists = await db.songs.orderBy("artist").uniqueKeys();
-        return artists.length;
-    });
-
-    $: albumCount = liveQuery(async () => {
-        const albums = await db.songs.orderBy("album").uniqueKeys();
-        return albums.length;
+    $: counts = liveQuery(() => {
+        return db.transaction("r", db.songs, async () => {
+            const artists = await (
+                await db.songs.orderBy("artist").uniqueKeys()
+            ).length;
+            const albums = await (
+                await db.songs.orderBy("album").uniqueKeys()
+            ).length;
+            const songs = await $allSongs.length;
+            return { songs, artists, albums };
+        });
     });
 
     $: noSongs =
@@ -309,8 +311,8 @@
     let highlightedSongIdx = 0;
 
     $: {
-        if (songs?.length && $query.query?.length) {
-            highlightSong(songs[0], 0, false);
+        if (songs?.length && $query.query?.length && !$isTrackInfoPopupOpen) {
+            highlightSong(songs[0], 0, false, true);
         }
     }
 
@@ -432,8 +434,13 @@
         removeEventListener("keyup", onKeyUp);
     });
 
-    function highlightSong(song: Song, idx, isKeyboardArrows: boolean) {
-        // console.log("highlighted", song, idx);
+    function highlightSong(
+        song: Song,
+        idx,
+        isKeyboardArrows: boolean,
+        isDefault = false
+    ) {
+        console.log("highlighted", song, idx);
         if (!isKeyboardArrows && isShiftPressed) {
             if (rangeStartSongIdx === null) {
                 rangeStartSongIdx = idx;
@@ -465,6 +472,9 @@
             $rightClickedTrack = null;
         } else {
             // Highlight single song, via a good old click
+            if (!isDefault) {
+                $shouldFocusFind = { target: "search", action: "unfocus" };
+            }
             songsHighlighted = [song];
             highlightedSongIdx = idx;
             $rightClickedTracks = [];
@@ -590,22 +600,6 @@
             hideSmartQueryBuilder();
         }
     }
-    let COMPRESSION_OPTIONS = [
-        {
-            value: "lossy",
-            label: "lossy"
-        },
-        {
-            value: "lossless",
-            label: "lossless"
-        },
-        {
-            value: "both",
-            label: "lossy + lossless"
-        }
-    ];
-    let compressionSelected = COMPRESSION_OPTIONS[2];
-
     async function favouriteSong(song: Song) {
         await db.songs.update(song, {
             isFavourite: true
@@ -735,10 +729,10 @@
             }
         }
 
-        if ($bottomBarNotification) {
+        if ($bottomBarNotification?.timeout) {
             setTimeout(() => {
                 $bottomBarNotification = null;
-            }, 3000);
+            }, $bottomBarNotification.timeout);
         }
     }
 
@@ -774,10 +768,6 @@
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
     }
-
-    $: scanningStatusText = $importStatus.isImporting
-        ? `Scanning: ${$importStatus.currentFolder}.${$importStatus.importedTracks} / ${$importStatus.totalTracks}`
-        : "Click to re-scan folders.";
 </script>
 
 {#if isLoading}
@@ -1012,58 +1002,9 @@
                             on:click={openTauriImportDialog}>Add music +</button
                         >
                     </div>
-                    <bottom-bar>
-                        <div class="left">
-                            <div class="lossy-selector">
-                                <CompressionSelector
-                                    bind:compressionSelected
-                                    options={COMPRESSION_OPTIONS}
-                                />
-                            </div>
-                            {#if $nextUpSong}
-                                <div class="next-up">
-                                    <p class="label">Next up:</p>
-                                    <p class="song">{$nextUpSong.title}</p>
-                                </div>
-                            {/if}
-                        </div>
-                        {#if $bottomBarNotification}
-                            <div class="notification">
-                                <p>
-                                    {$bottomBarNotification}
-                                </p>
-                            </div>
-                        {/if}
-                        <p></p>
-                        <iconify-icon
-                            icon="tabler:refresh"
-                            class:scanning={$importStatus.isImporting ||
-                                $isFolderWatchUpdate}
-                            on:click={() => {
-                                runScan();
-                            }}
-                            use:tippy={{
-                                content: scanningStatusText,
-                                placement: "top"
-                            }}
-                        />
-                        {#if $count !== undefined && $artistCount !== undefined && $albumCount !== undefined}
-                            <div
-                                class="stats"
-                                in:fly={{
-                                    y: 30,
-                                    duration: 150,
-                                    easing: cubicInOut
-                                }}
-                            >
-                                <p>{$count} songs</p>
-                                <p>{$artistCount} artists</p>
-                                <p>{$albumCount} albums</p>
-                            </div>
-                        {:else}
-                            <p>...</p>
-                        {/if}
-                    </bottom-bar>
+                    <div class="bottom-bar">
+                        <BottomBar {counts} />
+                    </div>
                 {/if}
             </library>
         </container>
@@ -1167,147 +1108,6 @@
 
         &:hover {
             background-color: #4d347c;
-        }
-    }
-
-    bottom-bar {
-        position: sticky;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: rgba(28, 26, 26, 0.645);
-        backdrop-filter: blur(8px);
-        border-top: 1px solid rgb(51, 51, 51);
-        color: white;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 1em;
-        justify-content: flex-end;
-        padding: 0 1em;
-        width: 100%;
-        height: 30px;
-
-        p {
-            color: rgb(176, 161, 161);
-            margin: 0;
-        }
-        @media only screen and (max-width: 522px) {
-            p:not(:nth-child(1)) {
-                display: none;
-            }
-        }
-
-        .left {
-            display: flex;
-            flex-direction: row;
-            flex-grow: 1;
-            align-items: center;
-
-            .next-up {
-                display: flex;
-                flex-direction: row;
-                gap: 5px;
-                max-width: 250px;
-                .label {
-                    opacity: 0.5;
-                }
-                padding: 0 1.5em;
-
-                .song {
-                    overflow: hidden;
-                    text-align: start;
-                    text-overflow: ellipsis;
-                }
-                p {
-                    margin: 0;
-                    white-space: nowrap;
-                    font-size: 0.9em;
-                }
-            }
-
-            .lossy-selector {
-                display: flex;
-                flex-direction: row;
-                background-color: #24232332;
-                /* border: 1px solid rgba(128, 128, 128, 0.29); */
-                border-radius: 3px;
-                > div {
-                    padding: 1px 10px;
-                    cursor: default;
-                    &:hover {
-                        background-color: #bbb9b92e;
-                    }
-                    &:active {
-                        background-color: #bbb9b923;
-                    }
-                    &.selected {
-                        p {
-                            color: rgb(224, 218, 218);
-                        }
-                        background-color: #35309784;
-                    }
-                    p {
-                        margin: 0;
-                        line-height: 1.3em;
-                        user-select: none;
-                        text-transform: lowercase;
-                    }
-                }
-            }
-        }
-
-        iconify-icon[icon="tabler:refresh"] {
-            display: flex;
-            transform: rotate(0deg);
-            &:hover {
-                opacity: 0.5;
-            }
-
-            &.scanning {
-                animation: rotate 1.5s linear infinite normal forwards;
-            }
-        }
-
-        .notification {
-            padding: 0 1em;
-            margin: 0;
-            background: linear-gradient(
-                90deg,
-                rgba(0, 0, 0, 0) 0%,
-                rgba(28, 26, 26, 0.25) 10%,
-                rgba(54, 22, 56, 0.65) 50%,
-                rgba(0, 0, 0, 0) 100%
-            );
-            height: 100%;
-            display: flex;
-            align-items: center;
-            p {
-                color: rgb(203, 182, 208);
-                font-size: 13px;
-                margin: 0;
-            }
-        }
-
-        .stats {
-            display: inline-flex;
-            gap: 10px;
-        }
-    }
-
-    @keyframes rotate {
-        0% {
-            transform: rotate(0deg);
-            opacity: 1;
-        }
-        50% {
-            transform: rotate(180deg);
-            opacity: 0.7;
-            color: cyan;
-        }
-        100% {
-            transform: rotate(360deg);
-            opacity: 1;
         }
     }
 
@@ -1463,14 +1263,11 @@
             }
             > tr.playing > td[data-type="artist"],
             > tr.playing > td[data-type="album"] {
-                color: $playing_text_color;
-                &.is-first {
-                    color: white;
-                    /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
-                    position: sticky;
-                    top: 2em;
-                    background: #5123dd;
-                }
+                color: $playing_text_color !important;
+                /* border-top: 0.5px solid rgba(128, 128, 128, 0.422); */
+                position: sticky;
+                top: 2em;
+                background: #5123dd !important;
             }
         }
 
@@ -1482,12 +1279,14 @@
             &.smart-query {
                 td {
                     background-color: #4d347c;
+                    overflow: visible;
                 }
             }
             td {
                 .theme-outline & {
                     background-color: transparent;
                 }
+                
                 background-color: #71658e7e;
                 border-right: none;
                 overflow: hidden;
@@ -1742,5 +1541,12 @@
         p {
             opacity: 0.6;
         }
+    }
+
+    .bottom-bar {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
     }
 </style>

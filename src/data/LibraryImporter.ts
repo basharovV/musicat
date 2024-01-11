@@ -1,22 +1,33 @@
 import { open } from "@tauri-apps/api/dialog";
+import ImportWorker from "../ImportWorker?worker";
+import { invoke } from "@tauri-apps/api";
 import { BaseDirectory, exists, readDir } from "@tauri-apps/api/fs";
 import { audioDir } from "@tauri-apps/api/path";
+import { convertFileSrc } from "@tauri-apps/api/tauri";
+import { appWindow } from "@tauri-apps/api/window";
 import "iconify-icon";
 import md5 from "md5";
-import { db } from "./db";
-
-import { convertFileSrc } from "@tauri-apps/api/tauri";
 import * as musicMetadata from "music-metadata-browser";
+import type {
+    Album,
+    LookForArtResult,
+    MetadataEntry,
+    Song,
+    TagType,
+    ToImport
+} from "src/App";
+import { get } from "svelte/store";
+import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
+import { getMapForTagType } from "./LabelMap";
+import { db } from "./db";
 import {
+    bottomBarNotification,
     importStatus,
     shouldShowToast,
     songsJustAdded,
     userSettings
 } from "./store";
-import { getMapForTagType } from "./LabelMap";
-import { get } from "svelte/store";
-import type { Album, MetadataEntry, Song } from "src/App";
-import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
+import { cacheArtwork } from "./Cacher";
 
 let addedSongs: Song[] = [];
 
@@ -27,7 +38,8 @@ export async function getMetadataFromFile(filePath: string, fileName: string) {
     return await musicMetadata.fetchFromUrl(convertFileSrc(filePath), {
         duration: false,
         skipCovers: false,
-        skipPostHeaders: true
+        skipPostHeaders: true,
+        includeChapters: false
     });
 }
 
@@ -38,14 +50,15 @@ export async function getMetadataFromFile(filePath: string, fileName: string) {
  */
 export async function readMappedMetadataFromSong(
     song: Song
-): Promise<MetadataEntry[]> {
+): Promise<{ mappedMetadata: MetadataEntry[]; tagType: TagType }> {
+    console.log("song read", song);
     const metadata = await getMetadataFromFile(song.path, song.file);
     console.log("meta", metadata);
     const tagType = metadata.format.tagTypes.length
         ? metadata.format.tagTypes[0]
         : null;
     const map = getMapForTagType(tagType, false);
-    const metadataMapped: MetadataEntry[] = tagType
+    const mappedMetadata: MetadataEntry[] = tagType
         ? metadata.native[tagType]
               .map((tag) => ({
                   genericId: map && tag ? map[tag.id] : "unknown",
@@ -54,7 +67,7 @@ export async function readMappedMetadataFromSong(
               }))
               .filter((tag) => typeof tag.value === "string")
         : [];
-    return metadataMapped;
+    return { mappedMetadata, tagType };
 }
 
 export async function getSongFromMetadata(
@@ -113,61 +126,25 @@ export async function getSongFromMetadata(
     }
 }
 
-async function addAlbumArtworkFromSong(
-    metadata: musicMetadata.IAudioMetadata,
-    song: Song,
-    newAlbum: Album
-) {
-    if (metadata.common.picture?.length) {
-        const artworkFormat = metadata.common.picture[0].format;
-        const artworkBuffer = metadata.common.picture[0].data;
-        const artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-            "base64"
-        )}`;
-        // console.log("artworkSrc", artworkSrc);
-        newAlbum.artwork = {
-            src: artworkSrc,
-            format: artworkFormat,
-            size: {
-                width: metadata.common.picture[0]["width"],
-                height: metadata.common.picture[0]["height"]
-            }
-        };
-    } else {
-        const artwork = await lookForArt(song.path, song.file);
-        if (artwork) {
-            const artworkSrc = artwork.artworkSrc;
-            const artworkFormat = artwork.artworkFormat;
-            newAlbum.artwork = {
-                src: artworkSrc,
-                format: artworkFormat,
-                size: {
-                    width: 200,
-                    height: 200
-                }
-            };
-        }
-    }
-}
-
-async function getAlbumFromMetadata(
-    song: Song,
-    metadata: musicMetadata.IAudioMetadata
-) {
+async function getAlbumFromSong(song: Song) {
+    const albumPath = song.path.replace(`/${song.file}`, "");
     const existingAlbum = await db.albums.get(
-        md5(`${song.artist} - ${song.album}`)
+        md5(`${albumPath} - ${song.album}`)
     );
     if (existingAlbum) {
+        console.log("existing album", `${albumPath} - ${song.album}`);
         existingAlbum.tracksIds.push(song.id);
         existingAlbum.trackCount++;
         if (!existingAlbum.artwork) {
-            await addAlbumArtworkFromSong(metadata, song, existingAlbum);
+            // Done separately in addArtworksToAllAlbums
         }
         return existingAlbum;
         // Re-order trackIds in album order?
     } else {
+        console.log("new album", `${albumPath} - ${song.album}`);
+
         const newAlbum: Album = {
-            id: md5(`${song.artist} - ${song.album}`),
+            id: md5(`${albumPath} - ${song.album}`),
             title: song.album,
             artist: song.artist,
             genre: song.genre,
@@ -175,15 +152,16 @@ async function getAlbumFromMetadata(
             path: song.path.replace(`/${song.file}`, ""),
             trackCount: 1,
             year: song.year,
-            tracksIds: [song.id]
+            tracksIds: [song.id],
+            lossless: song.fileInfo.lossless // Will only be true if all songs are lossless
         };
-        await addAlbumArtworkFromSong(metadata, song, newAlbum);
+        // Artwork done in addArtworksToAllAlbums
         return newAlbum;
     }
 }
 
-async function updateAlbum(song: Song, metadata: musicMetadata.IAudioMetadata) {
-    const albumToSet = await getAlbumFromMetadata(song, metadata);
+async function updateAlbum(song: Song) {
+    const albumToSet = await getAlbumFromSong(song);
 
     if (!albumToSet) {
         return;
@@ -222,7 +200,53 @@ export async function addSong(
         } else {
             await db.songs.put(songToAdd);
         }
-        updateAlbum(songToAdd, metadata);
+        // updateAlbum(songToAdd, metadata);
+    } catch (err) {
+        console.error(err);
+        // Catch 'already exists' case
+    }
+    if (singleFile) {
+        songsJustAdded.update((songs) => {
+            songs.push(songToAdd);
+            return songs;
+        });
+    } else {
+        addedSongs.push(songToAdd);
+    }
+
+    return await db.songs.get(songToAdd.id);
+}
+
+export async function importSong(
+    songToAdd: Song,
+    singleFile = false,
+    showToast = true,
+    shouldUpdateAlbum = false
+): Promise<Song | null> {
+    shouldShowToast.set(showToast);
+    if (singleFile) {
+        songsJustAdded.set([]);
+    }
+    try {
+        if (!songToAdd) {
+            return;
+        }
+        const existingSong = await db.songs.get(songToAdd.id);
+        if (existingSong) {
+            await db.songs.put({
+                ...songToAdd,
+                // Migrate user generated data
+                originCountry: existingSong.originCountry,
+                songProjectId: existingSong.songProjectId,
+                isFavourite: existingSong.isFavourite,
+                playCount: existingSong.playCount
+            });
+        } else {
+            await db.songs.put(songToAdd);
+        }
+        if (shouldUpdateAlbum) {
+            updateAlbum(songToAdd);
+        }
     } catch (err) {
         console.error(err);
         // Catch 'already exists' case
@@ -297,6 +321,93 @@ export async function addPaths(paths: string[]) {
     }
 }
 
+async function importFolder(selected: string, background = true, percent = 0) {
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        currentFolder: selected,
+        status: "Reading metadata",
+        isImporting: !background,
+        percent
+    }));
+    console.log("toImport called");
+
+    const toImport = await invoke<ToImport>("scan_folder", {
+        event: {
+            path: selected
+        }
+    });
+    console.log("toImport result", toImport);
+
+    // Or otherwise it's done in chunks - on 'import_chunk' event
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        totalTracks: toImport.songs.length,
+        currentFolder: selected,
+        status: "Adding to library",
+        isImporting: !background,
+        backgroundImport: background,
+        percent: toImport.progress
+    }));
+
+    // Import in one go
+    if (toImport.songs.length && toImport.progress === 100) {
+        const worker = new ImportWorker();
+        worker.postMessage({ function: "handleImport", toImport: toImport });
+        worker.onmessage = async (ev) => {
+            switch (ev.data) {
+                case "handleImport":
+                    worker.terminate();
+                    addArtworksToAllAlbums(toImport.songs);
+                    break;
+                case "addArtworksToAllAlbums":
+                    worker.terminate();
+                    break;
+            }
+        };
+    }
+}
+
+export async function startImportListener() {
+    const allSongs: Song[] = [];
+    await appWindow.listen<ToImport>("import_chunk", async (event) => {
+        importStatus.update((importStatus) => ({
+            ...importStatus,
+            status: "Writing to library",
+            isImporting: true,
+            backgroundImport: false,
+            percent: event.payload.progress
+        }));
+        const toImport = event.payload;
+
+        if (toImport.songs.length) {
+            allSongs.push(...toImport.songs);
+            const worker = new ImportWorker();
+
+            worker.postMessage({
+                function: "handleImport",
+                toImport: toImport
+            });
+            worker.onmessage = (ev) => {
+                switch (ev.data) {
+                    case "handleImport":
+                        if (toImport.progress === 100) {
+                            // worker.postMessage({
+                            //     function: "addArtworksToAllAlbums",
+                            //     songs: allSongs
+                            // });
+                            addArtworksToAllAlbums(allSongs);
+                            worker.terminate();
+                        }
+                        break;
+                    case "addArtworksToAllAlbums":
+                        worker.terminate();
+                        break;
+                }
+            };
+        }
+    });
+}
+
 export async function openTauriImportDialog() {
     // Open a selection dialog for directories
     const selected = await open({
@@ -310,17 +421,12 @@ export async function openTauriImportDialog() {
         // user cancelled the selection
     } else {
         console.log("selected", selected);
+
         // user selected a single directory
-        addFolder(selected);
+        // addFolder(selected); // JS IMPLEMENTATION
+
+        await importFolder(selected, false);
     }
-}
-
-type ArtworkFolderFilename = "folder.jpg" | "cover.jpg" | "artwork.jpg";
-
-interface LookForArtResult {
-    artworkSrc?: string;
-    artworkFormat: string;
-    artworkFilenameMatch: string;
 }
 
 async function checkFolderArtworkByFilename(folder, artworkFilename) {
@@ -328,8 +434,6 @@ async function checkFolderArtworkByFilename(folder, artworkFilename) {
     let fileExists = false;
     try {
         fileExists = await exists(src);
-
-        console.log("fileExists", fileExists);
 
         if (fileExists) {
             return {
@@ -387,10 +491,102 @@ export async function lookForArt(
             console.error("Couldn't find artwork " + err);
         }
     }
-    console.log("found result", foundResult);
+    // console.log("found result", foundResult);
     return foundResult;
 }
 
+async function addAlbumArtworkFromSong(song: Song, newAlbum: Album) {
+    // console.log("adding artwork from song", song, newAlbum);
+    const artwork = await lookForArt(song.path, song.file);
+    if (artwork) {
+        const artworkSrc = artwork.artworkSrc;
+        const artworkFormat = artwork.artworkFormat;
+        newAlbum.artwork = {
+            src: artworkSrc,
+            format: artworkFormat,
+            size: {
+                width: 200,
+                height: 200
+            }
+        };
+    } else if (song.artwork?.data && song.artwork?.format) {
+        const artworkFormat = song.artwork.format;
+
+        const path = await cacheArtwork(
+            Uint8Array.from(song.artwork.data),
+            newAlbum.id,
+            song.artwork.format
+        );
+
+        // console.log("artworkSrc", artworkSrc);
+        newAlbum.artwork = {
+            src: convertFileSrc(path),
+            format: artworkFormat,
+            size: {
+                width: 200,
+                height: 200
+            }
+        };
+    }
+}
+
+/**
+ * To improve performance, we process the album artworks (including looking in folders as fallbacks)
+ * after the songs have been imported, and the albums have been added.
+ * @param songs List of songs that have been imported
+ */
+export async function addArtworksToAllAlbums(songs: Song[]) {
+    const albumsToPut = {};
+
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        status: "Processing albums",
+        isImporting: true,
+        backgroundImport: false
+    }));
+
+    // Here we can use Promise.all for concurrency since we don't depend on order
+    await Promise.all(
+        songs.map(async (song, idx) => {
+            const albumPath = song.path.replace(`/${song.file}`, "");
+
+            const existingAlbum =
+                albumsToPut[md5(`${albumPath} - ${song.album}`)] ||
+                (await db.albums.get(md5(`${albumPath} - ${song.album}`)));
+
+            if (existingAlbum) {
+                if (!existingAlbum.artwork) {
+                    await addAlbumArtworkFromSong(song, existingAlbum);
+                }
+                if (!albumsToPut[existingAlbum.id]) {
+                    albumsToPut[existingAlbum.id] = existingAlbum;
+                }
+                // Re-order trackIds in album order?
+            }
+        }, {})
+    );
+
+    console.log("albumsToPut", albumsToPut);
+    await db.albums
+        .bulkPut(Object.values(albumsToPut))
+        .catch("BulkError", (err) => {
+            // Explicitly catching the bulkAdd() operation makes those successful
+            // additions commit despite that there were errors.
+            console.error(
+                "Some album writes did not succeed. However, " +
+                    err.failures.length +
+                    " albums was added successfully"
+            );
+        });
+
+    importStatus.update((importStatus) => ({
+        ...importStatus,
+        status: "Processing albums",
+        isImporting: false,
+        backgroundImport: false,
+        percent: 100
+    }));
+}
 export async function runScan() {
     importStatus.update((importStatus) => ({
         ...importStatus,
@@ -400,7 +596,11 @@ export async function runScan() {
     const settings = get(userSettings);
 
     for (const folder of settings.foldersToWatch) {
-        await addFolder(folder);
+        bottomBarNotification.set({
+            text: `Scanning ${folder} ...`,
+            timeout: 2000
+        });
+        await importFolder(folder);
     }
 
     importStatus.update((importStatus) => ({

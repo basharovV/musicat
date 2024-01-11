@@ -1,9 +1,9 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { currentSong, isFullScreenVisualiser } from "../data/store";
+    import { currentSong, isFullScreenVisualiser } from "../../data/store";
     import audioPlayer from "./AudioPlayer";
-    import Icon from "./ui/Icon.svelte";
-    import { AudioVisualiser } from "./visualiser/AudioVisualiser";
+    import Icon from "../ui/Icon.svelte";
+    import { AudioVisualiser } from "./AudioVisualiser";
 
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;

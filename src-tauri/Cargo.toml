@@ -23,6 +23,8 @@ lofty = { version = "0.8.1" }
 base64 = "0.13.0"
 tauri-plugin-fs-watch = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 filetime = "0.2.22"
+chksum-md5 = "0.0.0"
+rayon = "1.8.0"
 
 [features]
 # by default Tauri runs in production mode

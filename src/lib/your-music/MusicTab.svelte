@@ -4,7 +4,7 @@
     import type { Song, SongProject, SongProjectRecording } from "src/App";
     import { currentSong, songDetailsUpdater } from "../../data/store";
     import { db } from "../../data/db";
-    import AudioPlayer from "../AudioPlayer";
+    import AudioPlayer from "../player/AudioPlayer";
     import { fly } from "svelte/transition";
     import { quadInOut, quadOut } from "svelte/easing";
     import { flip } from "svelte/animate";
@@ -62,7 +62,7 @@
                     playSong(recording);
                 }}
             >
-                <iconify-icon icon="fe:play" />
+                <Icon icon="fe:play" />
                 <p>{recording.song.file}</p>
                 {#if isProject}
                     <iconify-icon
@@ -78,7 +78,7 @@
 
         {#if showDropPlaceholder}
             <div class="recording drop-placeholder">
-                <iconify-icon icon="fe:play" />
+                <Icon icon="fe:play" />
                 <p>Drop files here</p>
             </div>
         {/if}

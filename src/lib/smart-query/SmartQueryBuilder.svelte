@@ -133,8 +133,8 @@
     let inputY: number;
 
     function updateQueryPartsAutocompletePos() {
-        inputX = queryInput.offsetLeft;
-        inputY = queryInput.offsetTop + 40;
+        inputX = queryInput.clientLeft;
+        inputY = queryInput.clientTop + 40;
         console.log("X", inputX, "Y", inputY);
     }
 
@@ -172,13 +172,10 @@
         <div class="validation">
             {#if $isSmartQueryValid}
                 <p>query is valid</p>
-                <iconify-icon class="valid" icon="charm:tick" />
+                <Icon color="green" icon="charm:tick" />
             {:else}
                 <p>query is not valid</p>
-                <iconify-icon
-                    class="invalid"
-                    icon="ant-design:warning-outlined"
-                />
+                <Icon color="orange" icon="ant-design:warning-outlined" />
             {/if}
         </div>
         <div class="save">
@@ -222,6 +219,7 @@
         display: grid;
         grid-template-columns: 1fr auto;
         overflow: visible;
+        position: relative;
     }
 
     .query-parts {

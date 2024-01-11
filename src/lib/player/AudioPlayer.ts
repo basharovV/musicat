@@ -1,4 +1,4 @@
-import type { ArtworkSrc, Song } from "src/App";
+import type { ArtworkSrc, LastPlayedInfo, Song } from "src/App";
 import { get } from "svelte/store";
 import {
     currentSong,
@@ -6,15 +6,17 @@ import {
     currentSongIdx,
     isPlaying,
     isShuffleEnabled,
+    lastPlayedInfo,
     nextUpSong,
     playerTime,
     playlist,
+    queriedSongs,
     seekTime,
     shuffledPlaylist,
     volume
-} from "../data/store";
-import { shuffleArray } from "../utils/ArrayUtils";
-import { db } from "../data/db";
+} from "../../data/store";
+import { shuffleArray } from "../../utils/ArrayUtils";
+import { db } from "../../data/db";
 import { convertFileSrc } from "@tauri-apps/api/tauri";
 
 class AudioPlayer {
@@ -39,7 +41,9 @@ class AudioPlayer {
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
     playlist: Song[];
     shouldPlay = false; // Whether to play immediately after loading playlist
+    shouldRestoreLastPlayed: LastPlayedInfo;
     isRunningTransition = false;
+    isInit = true;
     connectOtherAudioFile = (
         toSwitchTo: number,
         transitionPointInTime: number
@@ -58,7 +62,6 @@ class AudioPlayer {
         this.audioFile2 = new Audio();
         this.audioFile.crossOrigin = "anonymous";
         this.audioFile2.crossOrigin = "anonymous";
-
         // this.source = audioCtx.createMediaElementSource(this.audioFile);
         // this.source.connect(this.gainNode);
 
@@ -161,6 +164,7 @@ class AudioPlayer {
                 newCurrentSongIdx = playlist.findIndex(
                     (s) => s.id === this.currentSong?.id
                 );
+                console.log('found index', playlist, this.currentSong);
                 if (newCurrentSongIdx === -1) {
                     newCurrentSongIdx = 0;
                 }
@@ -173,6 +177,10 @@ class AudioPlayer {
             if (this.shouldPlay) {
                 this.playCurrent();
                 this.shouldPlay = false;
+            }
+            if (this.shouldRestoreLastPlayed) {
+                await this.restoreLastPlayed(this.shouldRestoreLastPlayed);
+                this.shouldRestoreLastPlayed = null;
             }
         });
         currentSongIdx.subscribe((idx) => {
@@ -429,19 +437,17 @@ class AudioPlayer {
     }
 
     // MEDIA
-    async playSong(song: Song) {
+    async playSong(song: Song, position = 0, play = true) {
         console.log("playSong", song);
         if (this.getCurrentAudioFile() && song) {
-            
             this.pause();
             this.getCurrentAudioFile().currentTime = 0;
             playerTime.set(this.getCurrentAudioFile().currentTime);
             this.getCurrentAudioFile().src = convertFileSrc(
                 song.path.replace("?", "%3F")
             );
-            this.play();
+            play && this.play();
             currentSong.set(song);
-            this.setNextUpSong();
             this.currentSong = song;
             let newCurrentSongIdx = this.playlist.findIndex(
                 (s) => s.id === this.currentSong?.id
@@ -450,8 +456,16 @@ class AudioPlayer {
                 newCurrentSongIdx = 0;
             }
             currentSongIdx.set(newCurrentSongIdx);
+            this.setNextUpSong();
             this.setMediaSessionData();
             this.incrementPlayCounter(song);
+            if (position > 0) {
+                seekTime.set(position);
+            }
+            lastPlayedInfo.set({
+                songId: this.currentSong.id,
+                position: 0
+            });
         }
     }
 
@@ -459,6 +473,10 @@ class AudioPlayer {
         if (other) {
             this.doPlay(this.currentAudioFile === 1 ? 2 : 1);
             this.ticker = setInterval(() => {
+                lastPlayedInfo.set({
+                    songId: this.currentSong.id,
+                    position: this.getCurrentAudioFile().currentTime
+                });
                 playerTime.set(this.getCurrentAudioFile().currentTime);
             }, 1000);
         } else {
@@ -466,6 +484,10 @@ class AudioPlayer {
                 this.doPlay(this.currentAudioFile);
 
                 this.ticker = setInterval(() => {
+                    lastPlayedInfo.set({
+                        songId: this.currentSong.id,
+                        position: this.getCurrentAudioFile().currentTime
+                    });
                     playerTime.set(this.getCurrentAudioFile().currentTime);
                 }, 1000);
             }
@@ -488,6 +510,11 @@ class AudioPlayer {
         } else {
             this.play();
         }
+    }
+
+    async restoreLastPlayed(lastPlayed: LastPlayedInfo) {
+        const song = await db.songs.get(lastPlayed.songId);
+        this.playSong(song, lastPlayed.position, false);
     }
 }
 

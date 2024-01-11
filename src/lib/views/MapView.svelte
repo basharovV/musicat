@@ -30,7 +30,7 @@
     } from "../../data/store";
     import SmartQuery from "../smart-query/Query";
     import { codes, countries } from "../data/CountryCodes";
-    import audioPlayer from "../AudioPlayer";
+    import audioPlayer from "../player/AudioPlayer";
     import { getFlagEmoji } from "../../utils/EmojiUtils";
     import Particles from "svelte-particles";
     import { loadSlim } from "tsparticles-slim";

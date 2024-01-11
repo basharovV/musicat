@@ -1,23 +1,43 @@
 <script lang="ts">
+    import type { Compression } from "../../App";
+    import { compressionSelected } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
+    import Icon from "./Icon.svelte";
+
+    let COMPRESSION_OPTIONS: {value: Compression, label: string}[] = [
+        {
+            value: "lossy",
+            label: "lossy"
+        },
+        {
+            value: "lossless",
+            label: "lossless"
+        },
+        {
+            value: "both",
+            label: "lossy + lossless"
+        }
+    ];
+    $: selected = COMPRESSION_OPTIONS.find(c => c.value === $compressionSelected)
 
     // Only show songs with selected compression type
     export let options = [];
-    export let compressionSelected;
 
     let showSelector = false;
 </script>
 
 <div class="compression-selector">
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
         on:click={() => {
             showSelector = !showSelector;
         }}
         class="current"
     >
-        <p>{compressionSelected.label}</p>
-        <iconify-icon icon="heroicons-solid:selector" />
+        <p>{selected.label}</p>
+        <Icon icon="heroicons-solid:selector" size={14}/>
     </div>
     {#if showSelector}
         <div class="menu">
@@ -25,15 +45,15 @@
                 position="relative"
                 onClickOutside={() => (showSelector = false)}
             >
-                {#each options as option}
+                {#each COMPRESSION_OPTIONS as option}
                     <MenuOption
                         onClick={() => {
-                            compressionSelected = option;
+                            $compressionSelected = option.value;
                             showSelector = false;
                         }}
                         singleSelection
                         text={option.label}
-                        checked={option.value === compressionSelected.value}
+                        checked={option.value === selected.value}
                     />
                 {/each}
             </Menu>

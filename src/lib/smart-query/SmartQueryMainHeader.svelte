@@ -1,21 +1,18 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
-    import { db } from "../../data/db";
-
     import SmartQuery from "../../data/SmartQueries";
+    import { db } from "../../data/db";
+    import Icon from "../ui/Icon.svelte";
 
     import {
         isSmartQueryBuilderOpen,
-        isSmartQueryUiOpen,
+        isSmartQuerySaveUiOpen,
         isSmartQueryValid,
-        uiView,
         selectedSmartQuery,
         smartQuery,
         smartQueryInitiator,
-        isSmartQuerySaveUiOpen
+        uiView
     } from "../../data/store";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import Icon from "../ui/Icon.svelte";
 
     $: savedSmartQueries = liveQuery(async () => {
         return db.smartQueries.toArray();
@@ -48,7 +45,11 @@
 
 {#if !$isSmartQueryBuilderOpen}
     <div class="query-browser">
-            <Icon icon="mingcute:close-circle-fill" onClick={hideSmartQuery} />
+        <Icon
+            icon="mingcute:close-circle-fill"
+            size={14}
+            onClick={hideSmartQuery}
+        />
         <div class="query-header">
             <p class="query-header-title">Showing results for</p>
             <select bind:value={$selectedSmartQuery}>

@@ -16,7 +16,7 @@
     export let placeholder = "";
     export let autoCompleteValue = "";
     import { createEventDispatcher } from "svelte";
-    import Input from "../Input.svelte";
+    import Input from "../ui/Input.svelte";
     const dispatch = createEventDispatcher();
 
     $: {

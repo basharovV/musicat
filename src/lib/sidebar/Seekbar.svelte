@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { playerTime, seekTime } from "../data/store";
+    import { playerTime, seekTime } from "../../data/store";
 
     let playerState = {
         relativePosition: 0,

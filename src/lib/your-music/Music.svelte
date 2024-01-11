@@ -4,7 +4,7 @@
     import { db } from "../../data/db";
     import { selectedArtistId } from "../../data/store";
 
-    import Library from "../Library.svelte";
+    import Library from "../library/Library.svelte";
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
     let selectedSong: Song;

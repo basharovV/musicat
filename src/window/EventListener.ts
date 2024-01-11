@@ -3,16 +3,20 @@ import { appWindow } from "@tauri-apps/api/window";
 import { get } from "svelte/store";
 
 import {
+    importStatus,
     isFindFocused,
     isInfoPopupOpen,
     isSettingsOpen,
-    isTrackInfoPopupOpen
+    isTrackInfoPopupOpen,
+    shouldFocusFind
 } from "../data/store";
 import { db } from "../data/db";
+import type { ToImport } from "../App";
+import { deleteCacheDirectory } from "../data/Cacher";
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {
-        console.log('menu', event)
+        console.log("menu", event);
         switch (payload) {
             case "clear-db":
                 console.log("clear-db");
@@ -24,6 +28,7 @@ export function startMenuListener() {
                 await db.scrapbook.clear();
                 await db.playlists.clear();
                 await db.delete();
+                await deleteCacheDirectory();
                 break;
             case "about":
                 console.log("about");
@@ -39,7 +44,10 @@ export function startMenuListener() {
                 break;
             case "find":
                 console.log("find");
-                isFindFocused.set(!get(isFindFocused))
+                shouldFocusFind.set({
+                    target: "search",
+                    action: get(isFindFocused) ? "unfocus" : "focus"
+                });
                 break;
         }
     });

@@ -2,12 +2,13 @@
     import { type } from "@tauri-apps/api/os";
     import { open } from "@tauri-apps/api/shell";
     import { onMount } from "svelte";
-    import { db } from "../data/db";
-    import { isTrackInfoPopupOpen, rightClickedAlbum } from "../data/store";
-    import Menu from "./menu/Menu.svelte";
-    import MenuDivider from "./menu/MenuDivider.svelte";
-    import MenuOption from "./menu/MenuOption.svelte";
-    import { fetchAlbumArt } from "./data/LibraryEnrichers";
+    import { db } from "../../data/db";
+    import { isTrackInfoPopupOpen, rightClickedAlbum } from "../../data/store";
+    import Menu from "../menu/Menu.svelte";
+    import MenuDivider from "../menu/MenuDivider.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
+    import { fetchAlbumArt } from "../data/LibraryEnrichers";
+    import { addArtworksToAllAlbums } from "../../data/LibraryImporter";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -93,6 +94,11 @@
         artworkResult = await fetchAlbumArt($rightClickedAlbum);
         isFetchingArtwork = false;
     }
+
+    async function rescanLocalArtwork() {
+        const songs = await db.songs.bulkGet($rightClickedAlbum.tracksIds);
+        await addArtworksToAllAlbums(songs);
+    }
 </script>
 
 {#if showMenu}
@@ -125,6 +131,11 @@
                     isDisabled
                 />
             {/if}
+            <MenuOption
+                onClick={rescanLocalArtwork}
+                text="Scan existing artwork"
+                description="Check encoded art in tracks / folder image"
+            />
             <MenuDivider />
             <MenuOption
                 onClick={searchArtistOnYouTube}

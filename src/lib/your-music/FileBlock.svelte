@@ -6,7 +6,7 @@
         getMetadataFromFile,
         getSongFromMetadata
     } from "../../data/LibraryImporter";
-    import audioPlayer from "../AudioPlayer";
+    import audioPlayer from "../player/AudioPlayer";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
 
     export let item: ArtistFileItem;
@@ -68,7 +68,7 @@
         {/if}
         <div class="item-info">
             {#if item.fileType.type === "audio"}
-                <iconify-icon icon="bi:file-earmark-play" />
+                <Icon icon="bi:file-earmark-play" />
             {:else if item.fileType.type === "video"}
                 <iconify-icon icon="dashicons:editor-video" />
             {:else if item.fileType.type === "image"}
