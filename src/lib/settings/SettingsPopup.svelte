@@ -5,14 +5,18 @@
     import type { LLM, MiniPlayerLocation } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
-    import { importStatus, isSettingsOpen, userSettings } from "../../data/store";
+    import {
+        importStatus,
+        isSettingsOpen,
+        userSettings
+    } from "../../data/store";
     import { clickOutside } from "../../utils/ClickOutside";
     import Input from "../ui/Input.svelte";
     import Icon from "../ui/Icon.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import { open } from "@tauri-apps/api/dialog";
     import { audioDir } from "@tauri-apps/api/path";
-    import { addFolder, importFolder } from "../../data/LibraryImporter";
+    import { importPaths } from "../../data/LibraryImporter";
     import tippy from "svelte-tippy";
 
     let version = getVersion();
@@ -63,7 +67,7 @@
             $userSettings.foldersToWatch.push(selected);
             $userSettings = $userSettings;
 
-            await importFolder(selected, false);
+            await importPaths([selected], false);
         }
     }
 
@@ -192,6 +196,17 @@
                     <td
                         ><Input
                             bind:value={$userSettings.openAIApiKey}
+                            fullWidth
+                        /></td
+                    >
+                </tr>
+
+                <br />
+                <tr>
+                    <td>Genius API Key</td>
+                    <td
+                        ><Input
+                            bind:value={$userSettings.geniusApiKey}
                             fullWidth
                         /></td
                     >

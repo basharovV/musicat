@@ -164,7 +164,7 @@ class AudioPlayer {
                 newCurrentSongIdx = playlist.findIndex(
                     (s) => s.id === this.currentSong?.id
                 );
-                console.log('found index', playlist, this.currentSong);
+                console.log("found index", playlist, this.currentSong);
                 if (newCurrentSongIdx === -1) {
                     newCurrentSongIdx = 0;
                 }
@@ -243,13 +243,13 @@ class AudioPlayer {
             isPlaying.set(false);
             console.log("callback", this.isFinishedCallback);
             this.isFinishedCallback && this.isFinishedCallback();
-            if (!this.isRunningTransition) this.onTimeUpdate(1);
+            if (!this.isRunningTransition) this.onTimeUpdate(player, true);
         } else {
             // The other player has finished playing
         }
     }
 
-    async onTimeUpdate(player: number) {
+    async onTimeUpdate(player: number, ended = false) {
         // console.log("player 1 time: " + this.audioFile.currentTime);
         // console.log("player 2 time: " + this.audioFile2.currentTime);
 
@@ -261,13 +261,41 @@ class AudioPlayer {
             this.currentAudioFile === 1
                 ? this.audioFile.duration
                 : this.audioFile2.duration;
-        if (currentTime > duration - 1.1 && !this.isRunningTransition) {
+
+        // Reached the end of the playlist, exit here
+        if (this.currentSongIdx === this.playlist.length - 1) {
+            return;
+        }
+
+        /*
+         * Playing a short sample - don't try to do gapless
+         * because the sample won't play in its entirety
+         */
+        if (duration < 30 && !this.isRunningTransition && ended) {
+            this.connectOtherAudioFile(this.currentAudioFile === 1 ? 2 : 1, 0);
+            this.currentSongIdx = this.currentSongIdx + 1;
+            currentSongIdx.set(get(currentSongIdx) + 1);
+            playerTime.set(0);
+            currentSong.set(get(nextUpSong));
+            this.currentSong = get(nextUpSong);
+            this.setMediaSessionData();
+            this.isRunningTransition = false;
+            this.playCurrent();
+        } else if (
+            /*
+             * For long audios (songs), attempt to do gapless.
+             * It's not perfect since we don't have control over the
+             * buffer and sample-level precision.
+             */
+            duration > 30 &&
+            currentTime > duration - 1.1 &&
+            !this.isRunningTransition
+        ) {
             this.isRunningTransition = true;
             console.log("2 SECS LEFT! STARTING TRANSITION...");
 
             const chunk = 0.3;
-            const diff = duration - currentTime;
-
+            let diff = duration - currentTime;
             console.log("diff", diff);
             console.log("duration", duration);
             console.log("currentTime", currentTime);

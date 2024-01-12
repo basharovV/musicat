@@ -7,6 +7,7 @@ import type {
     ArtworkSrc,
     BottomBarNotification,
     Compression,
+    CurrentSongLyrics,
     ImportStatus,
     LastPlayedInfo,
     SidebarItem,
@@ -39,10 +40,13 @@ export const currentSongIdx = writable(0);
 const defaultLastPlayedInfo: LastPlayedInfo = {
     songId: null,
     position: 0
-}
+};
 
-export const lastPlayedInfo:Writable<LastPlayedInfo> = writable(
-    {...defaultLastPlayedInfo, ...JSON.parse(localStorage.getItem("lastPlayedInfo"))} || defaultLastPlayedInfo
+export const lastPlayedInfo: Writable<LastPlayedInfo> = writable(
+    {
+        ...defaultLastPlayedInfo,
+        ...JSON.parse(localStorage.getItem("lastPlayedInfo"))
+    } || defaultLastPlayedInfo
 );
 // Auto-persist settings
 lastPlayedInfo.subscribe((val) =>
@@ -113,8 +117,7 @@ export const isScrapbookShown = writable(true);
 
 // Library menu
 export const isFindFocused = writable(false);
-export const shouldFocusFind: Writable<ActionEvent|null> = writable(null);
-
+export const shouldFocusFind: Writable<ActionEvent | null> = writable(null);
 
 // Smart query
 export const isSmartQueryUiOpen = writable(false);
@@ -137,13 +140,15 @@ const defaultSettings: UserSettings = {
     foldersToWatch: [],
     albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"],
     miniPlayerLocation: "bottom-left",
-    llm: 'ollama',
+    llm: "ollama",
     openAIApiKey: null,
-    aiFeaturesEnabled: false
+    aiFeaturesEnabled: false,
+    geniusApiKey: null
 };
 
 export const userSettings: Writable<UserSettings> = writable(
-    {...defaultSettings, ...JSON.parse(localStorage.getItem("settings"))} || defaultSettings
+    { ...defaultSettings, ...JSON.parse(localStorage.getItem("settings")) } ||
+        defaultSettings
 );
 // Auto-persist settings
 userSettings.subscribe((val) =>
@@ -173,13 +178,19 @@ export const importStatus: Writable<ImportStatus> = writable({
     percent: 0
 });
 export const isFolderWatchUpdate = writable(false);
-export const bottomBarNotification: Writable<BottomBarNotification> = writable(null);
+export const bottomBarNotification: Writable<BottomBarNotification> =
+    writable(null);
 export const singleKeyShortcutsEnabled = writable(true);
 export const currentSongArtworkSrc: Writable<ArtworkSrc> = writable(null);
 export const isMiniPlayer = writable(false);
 export const compressionSelected: Writable<Compression> = writable("both");
 
-export const addOriginCountryStatus: Writable<AddOriginCountryStatus> = writable(null); 
+export const addOriginCountryStatus: Writable<AddOriginCountryStatus> =
+    writable(null);
+
+export const isLyricsOpen = writable(false);
+export const isLyricsHovered = writable(false);
+export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 async function getOs() {
     const os = await type();

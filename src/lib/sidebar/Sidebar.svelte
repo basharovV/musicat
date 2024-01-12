@@ -605,7 +605,7 @@
                 );
             }
         }
-        animate();
+        animate(0);
     }
 </script>
 

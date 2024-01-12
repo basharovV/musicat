@@ -18,7 +18,7 @@
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
     import { startWatching } from "./data/FolderWatcher";
-    import { addPaths, startImportListener } from "./data/LibraryImporter";
+    import { importPaths, startImportListener } from "./data/LibraryImporter";
     import Dropzone from "./lib/library/Dropzone.svelte";
     import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
@@ -72,7 +72,7 @@
                     console.log("paths:", evt.payload);
                     if (evt.payload.paths.length > 0) {
                         if ($uiView === "library") {
-                            addPaths(evt.payload.paths);
+                            importPaths(evt.payload.paths, true);
                         } else if ($uiView === "your-music") {
                             $droppedFiles = evt.payload.paths;
                         }

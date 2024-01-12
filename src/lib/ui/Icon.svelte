@@ -105,8 +105,11 @@
         "gg:arrows-expand-down-left": {
             svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="currentColor"><path fill-rule="evenodd" d="M13 5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2zm2 0h4v4h-4z" clip-rule="evenodd"/><path d="M5 13H3v8h8v-2H6.414l5.364-5.364a1 1 0 0 0-1.414-1.414L5 17.586z"/></g></svg>`
         },
-        "tabler:refresh" : {
+        "tabler:refresh": {
             svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4m-4 4a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>`
+        },
+        "material-symbols:lyrics": {
+            svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M6 14h4v-2H6zm13-2q-1.25 0-2.125-.875T16 9q0-1.25.875-2.125T19 6q.275 0 .513.05t.487.125V1h4v2h-2v6q0 1.25-.875 2.125T19 12M6 11h7V9H6zm0-3h7V6H6zm0 10l-4 4V4q0-.825.588-1.412T4 2h11q.825 0 1.413.588T17 4v.425q-1.375.6-2.187 1.838T14 9q0 1.5.813 2.738T17 13.575V16q0 .825-.587 1.413T15 18z"/></svg>`
         }
     };
 
@@ -125,9 +128,19 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div on:click|stopPropagation={onClick && onClick()} class:boxed>
+<div
+    on:click={(e) => {
+        if (onClick) {
+            e.stopPropagation();
+            onClick();
+        }
+    }}
+    class:boxed
+    class:clickable={onClick}
+>
     <svg
         xmlns="http://www.w3.org/2000/svg"
+        class:disabled
         {width}
         {height}
         {viewBox}
@@ -147,8 +160,12 @@
         display: flex;
         align-items: center;
 
-        &:hover {
+        &.clickable:hover {
             opacity: 0.5;
+        }
+        &.clickable:active {
+            opacity: 0.4;
+            transform: scale(0.95);
         }
 
         &.boxed {

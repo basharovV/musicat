@@ -96,7 +96,7 @@
         $playlistIsAlbum = true;
     }
 
-    if ($playlist && !$playlistIsAlbum) {
+    $: if ($playlist && $currentSong) {
         showCurrentlyPlayingAlbum();
     }
 

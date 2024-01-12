@@ -18,6 +18,8 @@ use lofty::{
     read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, Tag,
     TagItem, TagType, TaggedFileExt,
 };
+use reqwest;
+use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
@@ -52,6 +54,53 @@ struct WriteMetatadasEvent {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct FixEncodingEvent {
     file_path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct GetLyricsEvent {
+    url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct GetLyricsResponse {
+    lyrics: Option<String>,
+}
+
+#[tauri::command]
+async fn get_lyrics(event: GetLyricsEvent, app_handle: tauri::AppHandle) -> GetLyricsResponse {
+    let lyrics = fetch_lyrics(event.url.as_str()).await;
+    return GetLyricsResponse {
+        lyrics: lyrics.map_or(None, |l| Some(l)),
+    };
+}
+
+async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
+    // Make an HTTP GET request to the Genius URL
+    let response = reqwest::get(genius_url).await?;
+
+    // Check if the request was successful (status code 200)
+    if !response.status().is_success() {
+        return Err("Lyrics not found".into());
+    }
+
+    // Get the HTML content from the response
+    let body = response.text().await?;
+    // println!("{:?}", body);
+
+    // Parse the HTML content using the scraper crate
+    let document = Html::parse_document(&body);
+
+    // Use a CSS selector to find the lyrics
+    let lyrics_selector = Selector::parse("[data-lyrics-container=\"true\"]").unwrap();
+    
+    let lyrics_element = document.select(&lyrics_selector).next();
+    // println!("{:?}", lyrics_element);
+
+    // Extract and return the lyrics
+    match lyrics_element {
+        Some(element) => Ok(element.text().fold(String::new(), |s, l| s + l + "\n")),
+        None => Err("Lyrics not found".into())
+    }
 }
 
 #[tauri::command]
@@ -120,8 +169,8 @@ async fn write_metadatas(
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct ScanFolderEvent {
-    path: String,
+struct ScanPathsEvent {
+    paths: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -184,10 +233,21 @@ struct ToImportEvent {
 }
 
 #[tauri::command]
-async fn scan_folder(event: ScanFolderEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
-    let directory_path = event.path.as_str();
+async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
-    process_directory(Path::new(directory_path), &songs);
+
+    event.paths.par_iter().for_each(|p| {
+        let path = Path::new(p.as_str());
+
+        if path.is_file() {
+            // println!("{:?}", entry.path());
+            if let Some(song) = extract_metadata(&path) {
+                songs.lock().unwrap().push(song);
+            }
+        } else if path.is_dir() {
+            process_directory(Path::new(path), &songs);
+        }
+    });
 
     // Print the collected songs for demonstration purposes
     // for song in songs.clone(){
@@ -243,21 +303,9 @@ fn process_directory(
                 if let Ok(entry) = entry {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Some(extension) = path.extension() {
-                            if let Some(ext_str) = extension.to_str() {
-                                if ext_str.eq_ignore_ascii_case("mp3")
-                                    || ext_str.eq_ignore_ascii_case("flac")
-                                    || ext_str.eq_ignore_ascii_case("wav")
-                                    || ext_str.eq_ignore_ascii_case("aiff")
-                                    || ext_str.eq_ignore_ascii_case("ape")
-                                    || ext_str.eq_ignore_ascii_case("ogg")
-                                {
-                                    // println!("{:?}", entry.path());
-                                    if let Some(song) = extract_metadata(&path) {
-                                        subsongs.lock().unwrap().push(song);
-                                    }
-                                }
-                            }
+                        // println!("{:?}", entry.path());
+                        if let Some(song) = extract_metadata(&path) {
+                            subsongs.lock().unwrap().push(song);
                         }
                     } else if path.is_dir() {
                         if let Some(sub_songs) = process_directory(&path, songs) {
@@ -283,124 +331,148 @@ fn seconds_to_hms(seconds: u64) -> String {
 }
 
 fn extract_metadata(file_path: &Path) -> Option<Song> {
-    if let Ok(taggedFile) = read_from_path(&file_path) {
-        let id = MD5::hash(file_path.to_str().unwrap().as_bytes()).to_hex_lowercase();
-        let path = file_path.to_string_lossy().into_owned();
-        let file = file_path.file_name()?.to_string_lossy().into_owned();
+    if let Some(extension) = file_path.extension() {
+        if let Some(ext_str) = extension.to_str() {
+            if ext_str.eq_ignore_ascii_case("mp3")
+                || ext_str.eq_ignore_ascii_case("flac")
+                || ext_str.eq_ignore_ascii_case("wav")
+                || ext_str.eq_ignore_ascii_case("aiff")
+                || ext_str.eq_ignore_ascii_case("ape")
+                || ext_str.eq_ignore_ascii_case("ogg")
+            {
+                if let Ok(taggedFile) = read_from_path(&file_path) {
+                    let id = MD5::hash(file_path.to_str().unwrap().as_bytes()).to_hex_lowercase();
+                    let path = file_path.to_string_lossy().into_owned();
+                    let file = file_path.file_name()?.to_string_lossy().into_owned();
 
-        let mut title = String::new();
-        let mut artist = String::new();
-        let mut album = String::new();
-        let mut year = 0;
-        let mut genre = Vec::new();
-        let mut composer = Vec::new();
-        let mut track_number = -1;
-        let mut duration = String::new();
-        let mut file_info = FileInfo::new();
-        let mut artwork = None;
+                    let mut title = String::new();
+                    let mut artist = String::new();
+                    let mut album = String::new();
+                    let mut year = 0;
+                    let mut genre = Vec::new();
+                    let mut composer = Vec::new();
+                    let mut track_number = -1;
+                    let mut duration = String::new();
+                    let mut file_info = FileInfo::new();
+                    let mut artwork = None;
 
-        if (taggedFile.tags().is_empty()) {
-            title = file.to_string();
-        }
-        taggedFile.tags().iter().for_each(|tag| {
-            // println!("Tag type {:?}", tag.tag_type());
-            // println!("Tag items {:?}", tag.items());
-            if (title.is_empty()) {
-                title = tag
-                    .title()
-                    .filter(|x| !x.is_empty())
-                    .unwrap_or(std::borrow::Cow::Borrowed(&file))
-                    .to_string();
-            }
-            if (artist.is_empty()) {
-                artist = tag.artist().unwrap_or_default().to_string();
-            }
-            if (album.is_empty()) {
-                album = tag.album().unwrap_or_default().to_string();
-            }
-            if (genre.is_empty()) {
-                genre = tag
-                    .genre()
-                    .map_or_else(Vec::new, |g| g.split('/').map(String::from).collect());
-            }
-            if (year == 0) {
-                year = tag.year().unwrap_or(0) as i32;
-            }
-            if (composer.is_empty()) {
-                composer = tag
-                    .get_items(&ItemKey::Composer)
-                    .map(|c| c.value().to_owned().into_string().unwrap_or_default())
-                    .clone().collect()
-                
-            }
-            if (track_number == -1) {
-                track_number = tag.track().unwrap_or(0) as i32;
-            }
-            if (duration.is_empty()) {
-                duration = seconds_to_hms(taggedFile.properties().duration().as_secs());
-            }
-            if (file_info.duration.is_none() && file_info.tagType.is_none()) {
-                file_info = FileInfo {
-                    duration: Some(taggedFile.properties().duration().as_secs()),
-                    channels: taggedFile.properties().channels(),
-                    bit_depth: taggedFile.properties().bit_depth().or(Some(16)),
-                    sample_rate: taggedFile.properties().sample_rate(),
-                    audio_bitrate: taggedFile.properties().audio_bitrate(),
-                    overall_bitrate: taggedFile.properties().overall_bitrate(),
-                    lossless: vec![FileType::Flac, FileType::Wav]
-                        .iter()
-                        .any(|f| f.eq(&taggedFile.file_type())),
-                    tagType: match tag.tag_type() {
-                        TagType::VorbisComments => Some("vorbis".to_string()),
-                        TagType::Id3v1 => Some("ID3v1".to_string()),
-                        TagType::Id3v2 => Some("ID3v2".to_string()),
-                        TagType::Ape | TagType::Mp4Ilst | TagType::RiffInfo | TagType::AiffText => {
-                            None
+                    if (taggedFile.tags().is_empty()) {
+                        title = file.to_string();
+                    }
+                    file_info = FileInfo {
+                        duration: Some(taggedFile.properties().duration().as_secs()),
+                        channels: taggedFile.properties().channels(),
+                        bit_depth: taggedFile.properties().bit_depth().or(Some(16)),
+                        sample_rate: taggedFile.properties().sample_rate(),
+                        audio_bitrate: taggedFile.properties().audio_bitrate(),
+                        overall_bitrate: taggedFile.properties().overall_bitrate(),
+                        lossless: vec![FileType::Flac, FileType::Wav]
+                            .iter()
+                            .any(|f| f.eq(&taggedFile.file_type())),
+                        tagType: if let Some(tag) = taggedFile.primary_tag() {
+                            match tag.tag_type() {
+                                TagType::VorbisComments => Some("vorbis".to_string()),
+                                TagType::Id3v1 => Some("ID3v1".to_string()),
+                                TagType::Id3v2 => Some("ID3v2".to_string()),
+                                TagType::Ape
+                                | TagType::Mp4Ilst
+                                | TagType::RiffInfo
+                                | TagType::AiffText => None,
+                                _ => todo!(),
+                            }
+                        } else {
+                            match taggedFile.file_type() {
+                                FileType::Flac | FileType::Wav | FileType::Vorbis => {
+                                    Some("vorbis".to_string())
+                                }
+                                FileType::Mpeg => Some("ID3v2".to_string()),
+                                FileType::Ape | FileType::Opus | FileType::Speex => None,
+                                _ => None,
+                            }
+                        },
+                        codec: match taggedFile.file_type() {
+                            FileType::Flac => Some("FLAC".to_string()),
+                            FileType::Mpeg => Some("MPEG".to_string()),
+                            FileType::Aiff => Some("AIFF".to_string()),
+                            FileType::Wav => Some("WAV".to_string()),
+                            FileType::Ape => Some("APE".to_string()),
+                            FileType::Opus => Some("Opus".to_string()),
+                            FileType::Speex => Some("Speex".to_string()),
+                            FileType::Vorbis => Some("Vorbis".to_string()),
+                            _ => None,
+                        },
+                    };
+
+                    if (duration.is_empty()) {
+                        duration = seconds_to_hms(taggedFile.properties().duration().as_secs());
+                    }
+
+                    // println!("Tag properties {:?}", file_info);
+                    taggedFile.tags().iter().for_each(|tag| {
+                        // println!("Tag type {:?}", tag.tag_type());
+                        // println!("Tag items {:?}", tag.items());
+                        if (title.is_empty()) {
+                            title = tag
+                                .title()
+                                .filter(|x| !x.is_empty())
+                                .unwrap_or(std::borrow::Cow::Borrowed(&file))
+                                .to_string();
                         }
-                        _ => todo!(),
-                    },
-                    codec: match taggedFile.file_type() {
-                        FileType::Flac => Some("FLAC".to_string()),
-                        FileType::Mpeg => Some("MPEG".to_string()),
-                        FileType::Aiff => Some("AIFF".to_string()),
-                        FileType::Wav => Some("WAV".to_string()),
-                        FileType::Ape => Some("APE".to_string()),
-                        FileType::Opus => Some("Opus".to_string()),
-                        FileType::Speex => Some("Speex".to_string()),
-                        FileType::Vorbis => Some("Vorbis".to_string()),
-                        _ => todo!(),
-                    },
-                };
-            }
-        });
+                        if (artist.is_empty()) {
+                            artist = tag.artist().unwrap_or_default().to_string();
+                        }
+                        if (album.is_empty()) {
+                            album = tag.album().unwrap_or_default().to_string();
+                        }
+                        if (genre.is_empty()) {
+                            genre = tag.genre().map_or_else(Vec::new, |g| {
+                                g.split('/').map(String::from).collect()
+                            });
+                        }
+                        if (year == 0) {
+                            year = tag.year().unwrap_or(0) as i32;
+                        }
+                        if (composer.is_empty()) {
+                            composer = tag
+                                .get_items(&ItemKey::Composer)
+                                .map(|c| c.value().to_owned().into_string().unwrap_or_default())
+                                .clone()
+                                .collect()
+                        }
+                        if (track_number == -1) {
+                            track_number = tag.track().unwrap_or(0) as i32;
+                        }
+                    });
 
-        if (taggedFile.primary_tag().is_some()) {
-            if let Some(pic) = taggedFile.primary_tag().unwrap().pictures().first() {
-                artwork = Some(Artwork {
-                    data: pic.data().to_vec(),
-                    format: pic.mime_type().to_string(),
-                })
+                    if (taggedFile.primary_tag().is_some()) {
+                        if let Some(pic) = taggedFile.primary_tag().unwrap().pictures().first() {
+                            artwork = Some(Artwork {
+                                data: pic.data().to_vec(),
+                                format: pic.mime_type().to_string(),
+                            })
+                        }
+                    }
+
+                    return Some(Song {
+                        id,
+                        path,
+                        file,
+                        title,
+                        artist,
+                        album,
+                        year,
+                        genre,
+                        composer,
+                        track_number,
+                        duration,
+                        file_info,
+                        artwork,
+                    });
+                }
             }
         }
-
-        Some(Song {
-            id,
-            path,
-            file,
-            title,
-            artist,
-            album,
-            year,
-            genre,
-            composer,
-            track_number,
-            duration,
-            file_info,
-            artwork,
-        })
-    } else {
-        None
     }
+    None
 }
 
 fn build_menu() -> Menu {
@@ -648,7 +720,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             write_metadata,
             write_metadatas,
-            scan_folder
+            scan_paths,
+            get_lyrics
         ])
         .plugin(tauri_plugin_fs_watch::init())
         .run(tauri::generate_context!())

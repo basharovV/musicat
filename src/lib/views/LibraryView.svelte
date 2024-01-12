@@ -6,6 +6,8 @@
     import { db } from "../../data/db";
     import {
         isInit,
+        isLyricsHovered,
+        isLyricsOpen,
         isSmartQueryBuilderOpen,
         lastPlayedInfo,
         playlist,
@@ -22,6 +24,8 @@
     import SmartQuery from "../smart-query/Query";
     import { get } from "svelte/store";
     import audioPlayer from "../player/AudioPlayer";
+    import LyricsView from "../library/LyricsView.svelte";
+    import { fade, fly } from "svelte/transition";
 
     let isLoading = true;
 
@@ -173,4 +177,26 @@
     });
 </script>
 
-<Library allSongs={songs} showMyArtists={true} {isLoading} />
+<div class="container" class:has-lyrics={$isLyricsOpen}>
+    <Library allSongs={songs} showMyArtists={true} {isLoading} dim={$isLyricsHovered}/>
+    {#if $isLyricsOpen}
+        <div class="lyrics" transition:fade={{duration: 150}}>
+            <LyricsView />
+        </div>
+    {/if}
+</div>
+
+<style lang="scss">
+    .container {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+
+        &.has-lyrics {
+            /* grid-template-columns: 1fr auto; */
+        }
+
+        .lyrics {
+        }
+    }
+</style>

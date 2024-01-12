@@ -149,6 +149,7 @@ interface UserSettings {
     aiFeaturesEnabled: boolean;
     llm: LLM;
     openAIApiKey?: string;
+    geniusApiKey?: string;
 }
 
 type MiniPlayerLocation =
@@ -254,4 +255,13 @@ interface LastPlayedInfo {
 
 interface AddOriginCountryStatus {
     percent: number;
+}
+
+interface GetLyricsResponse {
+    lyrics?: string;
+}
+
+interface CurrentSongLyrics {
+    songId: string;
+    lyrics?: string;
 }

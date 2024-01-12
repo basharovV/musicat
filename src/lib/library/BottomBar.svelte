@@ -9,6 +9,7 @@
         bottomBarNotification,
         importStatus,
         isFolderWatchUpdate,
+        isLyricsOpen,
         nextUpSong
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
@@ -22,7 +23,18 @@
 </script>
 
 <bottom-bar>
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="left">
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <div
+            class="lyrics"
+            on:click={() => {
+                $isLyricsOpen = !$isLyricsOpen;
+            }}
+        >
+            <Icon icon="material-symbols:lyrics" size={14} />
+            <p>Lyrics</p>
+        </div>
         <div class="lossy-selector">
             <CompressionSelector />
         </div>
@@ -159,6 +171,30 @@
                         user-select: none;
                         text-transform: lowercase;
                     }
+                }
+            }
+
+            .lyrics {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 5px;
+                cursor: default;
+
+                border: 1px solid rgba(128, 128, 128, 0.159);
+                border-radius: 4px;
+                padding: 0 4px;
+                margin-right: 8px;
+                &:hover {
+                    background-color: rgba(128, 128, 128, 0.191);
+                }
+                &:active {
+                    background-color: rgba(128, 128, 128, 0.391);
+                }
+                p {
+                    color: rgb(224, 218, 218);
+                    margin: 0;
+                    line-height: normal;
                 }
             }
         }

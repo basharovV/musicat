@@ -69,6 +69,7 @@
     async function calculateSize(songs: Song[]) {}
 
     export let allSongs = null;
+    export let dim = false;
 
     $: songs = $allSongs
         ?.filter((song: Song) => {
@@ -179,7 +180,9 @@
     $: noSongs =
         !songs ||
         songs.length === 0 ||
-        ($uiView === 'smart-query' && $isSmartQueryBuilderOpen && $smartQuery.isEmpty);
+        ($uiView === "smart-query" &&
+            $isSmartQueryBuilderOpen &&
+            $smartQuery.isEmpty);
 
     let container: HTMLElement;
 
@@ -778,10 +781,14 @@
     <ImportPlaceholder />
 {:else}
     <div class="library-container">
+        {#if dim}
+            <div class="dimmer" />
+        {/if}
         <container
             bind:this={container}
             on:scroll={debounce(onScroll, 200)}
             class="theme-{theme}"
+            class:dim
             in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
         >
             <library>
@@ -1051,6 +1058,20 @@
 
     .library-container {
         position: relative;
+
+        .dimmer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            background-color: #1b1b1c61;
+            backdrop-filter: brightness(0.7);
+        }
     }
     container {
         height: 100vh;
@@ -1066,6 +1087,7 @@
             height: fit-content;
             border-bottom: none;
         }
+
         @media only screen and (max-width: 320px) {
             display: none;
         }
@@ -1286,7 +1308,7 @@
                 .theme-outline & {
                     background-color: transparent;
                 }
-                
+
                 background-color: #71658e7e;
                 border-right: none;
                 overflow: hidden;

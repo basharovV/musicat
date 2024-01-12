@@ -5,7 +5,7 @@
     import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "./Icon.svelte";
 
-    let COMPRESSION_OPTIONS: {value: Compression, label: string}[] = [
+    let COMPRESSION_OPTIONS: { value: Compression; label: string }[] = [
         {
             value: "lossy",
             label: "lossy"
@@ -19,7 +19,9 @@
             label: "lossy + lossless"
         }
     ];
-    $: selected = COMPRESSION_OPTIONS.find(c => c.value === $compressionSelected)
+    $: selected = COMPRESSION_OPTIONS.find(
+        (c) => c.value === $compressionSelected
+    );
 
     // Only show songs with selected compression type
     export let options = [];
@@ -37,7 +39,7 @@
         class="current"
     >
         <p>{selected.label}</p>
-        <Icon icon="heroicons-solid:selector" size={14}/>
+        <Icon icon="heroicons-solid:selector" size={14} />
     </div>
     {#if showSelector}
         <div class="menu">
@@ -79,6 +81,10 @@
 
             &:hover {
                 background-color: rgba(128, 128, 128, 0.191);
+            }
+
+            &:active {
+                background-color: rgba(128, 128, 128, 0.391);
             }
 
             iconify-icon {

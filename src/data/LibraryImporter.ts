@@ -310,25 +310,14 @@ export async function addFolder(folderPath) {
     addedSongs = [];
 }
 
-export async function addPaths(paths: string[]) {
-    for (const path of paths) {
-        if (isAudioFile(path)) {
-            const file = path.split("/").pop();
-            await addSong(path, file, true);
-        } else if (path.match(`/.+(?=/)/`).length) {
-            await addFolder(path);
-        }
-    }
-}
-
-export async function importFolder(
-    selected: string,
+export async function importPaths(
+    selected: string[],
     background = true,
     percent = 0
 ) {
     importStatus.update((importStatus) => ({
         ...importStatus,
-        currentFolder: selected,
+        currentFolder: selected[0],
         status: "Reading metadata",
         isImporting: true,
         backgroundImport: background,
@@ -341,9 +330,9 @@ export async function importFolder(
     }
     console.log("toImport called");
 
-    const toImport = await invoke<ToImport>("scan_folder", {
+    const toImport = await invoke<ToImport>("scan_paths", {
         event: {
-            path: selected
+            paths: selected
         }
     });
     console.log("toImport result", toImport);
@@ -352,7 +341,7 @@ export async function importFolder(
     importStatus.update((importStatus) => ({
         ...importStatus,
         totalTracks: toImport.songs.length,
-        currentFolder: selected,
+        currentFolder: selected[0],
         status: "Adding to library",
         isImporting: !background,
         backgroundImport: background,
@@ -372,7 +361,11 @@ export async function importFolder(
         worker.onmessage = async (ev) => {
             switch (ev.data) {
                 case "handleImport":
-                    await addArtworksToAllAlbums(toImport.songs, background, worker);
+                    await addArtworksToAllAlbums(
+                        toImport.songs,
+                        background,
+                        worker
+                    );
                     break;
                 case "bulkAlbumPut":
                     importStatus.update((importStatus) => ({
@@ -426,7 +419,11 @@ export async function startImportListener() {
                             //     function: "addArtworksToAllAlbums",
                             //     songs: allSongs
                             // });
-                            await addArtworksToAllAlbums(allSongs, isBackground, worker);
+                            await addArtworksToAllAlbums(
+                                allSongs,
+                                isBackground,
+                                worker
+                            );
                         }
                         break;
                     // Last step - finish after this
@@ -465,7 +462,7 @@ export async function openTauriImportDialog() {
         // user selected a single directory
         // addFolder(selected); // JS IMPLEMENTATION
 
-        await importFolder(selected, false);
+        await importPaths([selected], false);
     }
 }
 
@@ -645,6 +642,6 @@ export async function runScan() {
             text: `Scanning ${folder} ...`,
             timeout: 2000
         });
-        await importFolder(folder, true);
+        await importPaths([folder], true);
     }
 }
