@@ -63,16 +63,18 @@ export class AudioVisualiser {
         };
 
         volume.subscribe((vol) => {
-            this._gainNode.gain.value = vol;
-            this._gainNode2.gain.value = vol;
+            this._gainNode.gain.value = vol * 0.75;
+            this._gainNode2.gain.value = vol * 0.75;
             localStorage.setItem("volume", String(vol));
         });
 
         isPlaying.subscribe((playing) => {
+            this.shouldStopAnimation = !playing;
             if (playing) {
                 this.setupAnalyserAnimation();
+            } else {
+                this.clearCanvas();
             }
-            this.shouldStopAnimation = !playing;
         });
     }
 
@@ -151,6 +153,15 @@ export class AudioVisualiser {
         this._gainNode.connect(this._audioAnalyser);
         this._gainNode2.connect(this._audioAnalyser);
         this._audioAnalyser.connect(this._audioContext.destination);
+    }
+
+    clearCanvas() {
+        this._canvasContext.clearRect(
+            0,
+            0,
+            this._canvasContext.canvas.clientWidth,
+            this._canvasContext.canvas.clientHeight
+        );
     }
 
     setupAnalyserAnimation() {

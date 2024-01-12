@@ -8,6 +8,7 @@
     let parts = userQueryPart.queryPart.prompt.split(" ");
     export let shouldFocus = true;
     export let onRemove: Function;
+    export let onFocus: Function;
 
     let firstInputField;
     let container: HTMLDivElement;
@@ -87,6 +88,7 @@
         currentFocusedInputPart = part;
         isFocused = true;
         console.log("onfocus", idx, part);
+        onFocus && onFocus();
     }
 
     function onLostFocus() {

@@ -133,8 +133,8 @@
     let inputY: number;
 
     function updateQueryPartsAutocompletePos() {
-        inputX = queryInput.clientLeft;
-        inputY = queryInput.clientTop + 40;
+        inputX = queryInput.offsetLeft;
+        inputY = queryInput.offsetTop + 20;
         console.log("X", inputX, "Y", inputY);
     }
 
@@ -149,6 +149,7 @@
             <SmartQueryPart
                 userQueryPart={queryPart}
                 onRemove={() => onRemovePart(idx)}
+                onFocus={onLostFocus}
             />
             <p>,</p>
         {/each}
@@ -159,7 +160,6 @@
                 bind:this={queryInput}
                 bind:value={$smartQuery.userInput}
                 on:focus={onFocus}
-                on:blur={onLostFocus}
                 on:input={onInput}
                 use:autoWidth
                 autocomplete="off"
@@ -185,6 +185,7 @@
                     $isSmartQuerySaveUiOpen = !$isSmartQuerySaveUiOpen;
                 }}
                 text="Save"
+                theme="transparent"
             />
         </div>
         <div class="close">
@@ -195,6 +196,7 @@
                     $isSmartQuerySaveUiOpen = false;
                 }}
                 text="Close editor"
+                theme="transparent"
             />
         </div>
     </div>

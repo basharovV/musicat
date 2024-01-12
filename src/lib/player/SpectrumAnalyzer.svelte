@@ -78,7 +78,7 @@
             width: 100%;
             height: 100%;
             top: -7px; */
-            opacity: 0.2;
+            opacity: 0.8;
         }
 
         &.full-screen {

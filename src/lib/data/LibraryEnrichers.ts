@@ -5,8 +5,11 @@ import { db } from "../../data/db";
 import type { Album, Song } from "../../App";
 import { convertFileSrc } from "@tauri-apps/api/tauri";
 import md5 from "md5";
+import { addOriginCountryStatus } from "../../data/store";
 
 export async function findCountryByArtist(artistName) {
+    if (!artistName?.length) return null;
+
     const validStatements = ["P27", "P495"];
 
     try {
@@ -19,6 +22,8 @@ export async function findCountryByArtist(artistName) {
         const response = await fetch(url);
         const json = await response.json();
         const firstItem = json.search && json.search[0];
+
+        if (!firstItem) return null;
 
         url = wdk.getEntities({
             ids: [firstItem.id]
@@ -115,8 +120,8 @@ export async function fetchAlbumArt(
                 let format = getImageFormat(imageExtension);
                 // Success! Let's write the artwork to the album
 
-                // TODO: Option to write to track directly? 
-                
+                // TODO: Option to write to track directly?
+
                 await db.albums.update(album, {
                     artwork: {
                         src: convertFileSrc(filePath) + `?${Date.now()}`,
@@ -145,5 +150,49 @@ export async function fetchAlbumArt(
         return {
             error: "Error fetching artwork." + err
         };
+    }
+}
+
+export async function addCountryDataAllSongs() {
+    const allArtists = await db.songs.orderBy("artist").uniqueKeys();
+    let count = 1;
+    let delay = 0;
+    const delayIncrement = 1000;
+
+    await allArtists.map((artist, idx) => {
+        delay += delayIncrement;
+        return new Promise((resolve) => setTimeout(resolve, delay)).then(
+            async () => {
+                await enrichArtistCountry(artist);
+                if (idx === allArtists.length - 1) {
+                    addOriginCountryStatus.set(null);
+                } else {
+                    addOriginCountryStatus.set({
+                        percent: Math.ceil(
+                            ((idx + 1) / allArtists.length) * 100
+                        )
+                    });
+                }
+            }
+        );
+    });
+}
+
+async function enrichArtistCountry(artist) {
+    const country = await findCountryByArtist(artist);
+    console.log("country", country);
+    if (country) {
+        // Find all songs with this artist
+        const artistSongs = await db.songs
+            .where("artist")
+            .equals(artist)
+            .toArray();
+
+        db.songs.bulkPut(
+            artistSongs.map((s) => {
+                s.originCountry = country;
+                return s;
+            })
+        );
     }
 }

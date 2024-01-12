@@ -69,6 +69,22 @@ export async function handleImport(toImport: ToImport) {
         });
 }
 
+async function bulkAlbumPut(albumsToPut: Album[]) {
+
+    console.log("albumsToPut", albumsToPut);
+    await db.albums
+        .bulkPut(Object.values(albumsToPut))
+        .catch("BulkError", (err) => {
+            // Explicitly catching the bulkAdd() operation makes those successful
+            // additions commit despite that there were errors.
+            console.error(
+                "Some album writes did not succeed. However, " +
+                    err.failures.length +
+                    " albums was added successfully"
+            );
+        });
+}
+
 async function addAlbumArtworkFromSong(
     song: Song,
     newAlbum: Album,
@@ -145,6 +161,10 @@ async function handleMessage(e) {
         case "handleImport":
             await handleImport(e.data.toImport);
             postMessage("handleImport");
+            break;
+        case "bulkAlbumPut":
+            await bulkAlbumPut(e.data.albums);
+            postMessage("bulkAlbumPut");
             break;
         case "addArtworksToAllAlbums":
             await addArtworksToAllAlbums(e.data.songs, e.data.userSettings);

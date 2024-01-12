@@ -12,11 +12,12 @@
         nextUpSong
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
+    import Icon from "../ui/Icon.svelte";
 
     export let counts;
 
     $: scanningStatusText = $importStatus.isImporting
-        ? `Scanning: ${$importStatus.currentFolder}.${$importStatus.importedTracks} / ${$importStatus.totalTracks}`
+        ? `Scanning: ${$importStatus.currentFolder}`
         : "Click to re-scan folders.";
 </script>
 
@@ -44,17 +45,22 @@
     <p></p>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <iconify-icon
-        icon="tabler:refresh"
+    <div
+        class="refresh-icon"
         class:scanning={$importStatus.isImporting || $isFolderWatchUpdate}
-        on:click={() => {
-            runScan();
-        }}
         use:tippy={{
             content: scanningStatusText,
             placement: "top"
         }}
-    />
+    >
+        <Icon
+            icon="tabler:refresh"
+            size={15}
+            onClick={() => {
+                runScan();
+            }}
+        />
+    </div>
     {#if $counts !== undefined}
         <div
             class="stats"
@@ -157,13 +163,9 @@
             }
         }
 
-        iconify-icon[icon="tabler:refresh"] {
+        .refresh-icon {
             display: flex;
             transform: rotate(0deg);
-            &:hover {
-                opacity: 0.5;
-            }
-
             &.scanning {
                 animation: rotate 1.5s linear infinite normal forwards;
             }

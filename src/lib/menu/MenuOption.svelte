@@ -41,7 +41,7 @@
               }e7;background-color: transparent;`
             : "background-color: #c6c8ca;"
         : ""}
-    on:click|stopPropagation={() => {
+    on:click|stopPropagation={(e) => {
         onClick && onClick();
     }}
 >

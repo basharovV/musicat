@@ -321,14 +321,24 @@ export async function addPaths(paths: string[]) {
     }
 }
 
-async function importFolder(selected: string, background = true, percent = 0) {
+export async function importFolder(
+    selected: string,
+    background = true,
+    percent = 0
+) {
     importStatus.update((importStatus) => ({
         ...importStatus,
         currentFolder: selected,
         status: "Reading metadata",
-        isImporting: !background,
+        isImporting: true,
+        backgroundImport: background,
         percent
     }));
+    if (background) {
+        bottomBarNotification.set({
+            text: `Reading metadata`
+        });
+    }
     console.log("toImport called");
 
     const toImport = await invoke<ToImport>("scan_folder", {
@@ -348,6 +358,12 @@ async function importFolder(selected: string, background = true, percent = 0) {
         backgroundImport: background,
         percent: toImport.progress
     }));
+    if (background) {
+        bottomBarNotification.set({
+            text: "Adding to library",
+            timeout: 2000
+        });
+    }
 
     // Import in one go
     if (toImport.songs.length && toImport.progress === 100) {
@@ -356,10 +372,18 @@ async function importFolder(selected: string, background = true, percent = 0) {
         worker.onmessage = async (ev) => {
             switch (ev.data) {
                 case "handleImport":
-                    worker.terminate();
-                    addArtworksToAllAlbums(toImport.songs);
+                    await addArtworksToAllAlbums(toImport.songs, background, worker);
                     break;
-                case "addArtworksToAllAlbums":
+                case "bulkAlbumPut":
+                    importStatus.update((importStatus) => ({
+                        ...importStatus,
+                        status: "Processing albums",
+                        isImporting: false,
+                        backgroundImport: false,
+                        percent: 100
+                    }));
+
+                    bottomBarNotification.set(null);
                     worker.terminate();
                     break;
             }
@@ -370,13 +394,20 @@ async function importFolder(selected: string, background = true, percent = 0) {
 export async function startImportListener() {
     const allSongs: Song[] = [];
     await appWindow.listen<ToImport>("import_chunk", async (event) => {
-        importStatus.update((importStatus) => ({
-            ...importStatus,
-            status: "Writing to library",
-            isImporting: true,
-            backgroundImport: false,
-            percent: event.payload.progress
-        }));
+        let isBackground = false;
+        importStatus.update((importStatus) => {
+            isBackground = importStatus.backgroundImport;
+            return {
+                ...importStatus,
+                status: "Writing to library",
+                percent: event.payload.progress
+            };
+        });
+        if (isBackground && allSongs.length) {
+            bottomBarNotification.set({
+                text: `Updating library (${allSongs.length} imported)`
+            });
+        }
         const toImport = event.payload;
 
         if (toImport.songs.length) {
@@ -387,7 +418,7 @@ export async function startImportListener() {
                 function: "handleImport",
                 toImport: toImport
             });
-            worker.onmessage = (ev) => {
+            worker.onmessage = async (ev) => {
                 switch (ev.data) {
                     case "handleImport":
                         if (toImport.progress === 100) {
@@ -395,11 +426,20 @@ export async function startImportListener() {
                             //     function: "addArtworksToAllAlbums",
                             //     songs: allSongs
                             // });
-                            addArtworksToAllAlbums(allSongs);
-                            worker.terminate();
+                            await addArtworksToAllAlbums(allSongs, isBackground, worker);
                         }
                         break;
-                    case "addArtworksToAllAlbums":
+                    // Last step - finish after this
+                    case "bulkAlbumPut":
+                        importStatus.update((importStatus) => ({
+                            ...importStatus,
+                            status: "Processing albums",
+                            isImporting: false,
+                            backgroundImport: false,
+                            percent: 100
+                        }));
+
+                        bottomBarNotification.set(null);
                         worker.terminate();
                         break;
                 }
@@ -535,15 +575,23 @@ async function addAlbumArtworkFromSong(song: Song, newAlbum: Album) {
  * after the songs have been imported, and the albums have been added.
  * @param songs List of songs that have been imported
  */
-export async function addArtworksToAllAlbums(songs: Song[]) {
+export async function addArtworksToAllAlbums(
+    songs: Song[],
+    isBackground = false,
+    worker: Worker = null
+) {
     const albumsToPut = {};
 
     importStatus.update((importStatus) => ({
         ...importStatus,
-        status: "Processing albums",
-        isImporting: true,
-        backgroundImport: false
+        status: "Processing albums"
     }));
+
+    if (isBackground) {
+        bottomBarNotification.set({
+            text: `Processing albums`
+        });
+    }
 
     // Here we can use Promise.all for concurrency since we don't depend on order
     await Promise.all(
@@ -566,33 +614,30 @@ export async function addArtworksToAllAlbums(songs: Song[]) {
         }, {})
     );
 
-    console.log("albumsToPut", albumsToPut);
-    await db.albums
-        .bulkPut(Object.values(albumsToPut))
-        .catch("BulkError", (err) => {
-            // Explicitly catching the bulkAdd() operation makes those successful
-            // additions commit despite that there were errors.
-            console.error(
-                "Some album writes did not succeed. However, " +
-                    err.failures.length +
-                    " albums was added successfully"
-            );
-        });
+    if (!worker) {
+        worker = new ImportWorker();
+        worker.onmessage = (ev) => {
+            if (ev.data === "bulkAlbumPut") {
+                importStatus.update((importStatus) => ({
+                    ...importStatus,
+                    status: "Processing albums",
+                    isImporting: false,
+                    backgroundImport: false,
+                    percent: 100
+                }));
 
-    importStatus.update((importStatus) => ({
-        ...importStatus,
-        status: "Processing albums",
-        isImporting: false,
-        backgroundImport: false,
-        percent: 100
-    }));
+                bottomBarNotification.set(null);
+                worker.terminate();
+            }
+        };
+    } // Otherwise - handled by existing worker
+
+    worker.postMessage({
+        function: "bulkAlbumPut",
+        albums: albumsToPut
+    });
 }
 export async function runScan() {
-    importStatus.update((importStatus) => ({
-        ...importStatus,
-        backgroundImport: true
-    }));
-
     const settings = get(userSettings);
 
     for (const folder of settings.foldersToWatch) {
@@ -600,12 +645,6 @@ export async function runScan() {
             text: `Scanning ${folder} ...`,
             timeout: 2000
         });
-        await importFolder(folder);
+        await importFolder(folder, true);
     }
-
-    importStatus.update((importStatus) => ({
-        ...importStatus,
-        backgroundImport: false,
-        isImporting: false
-    }));
 }

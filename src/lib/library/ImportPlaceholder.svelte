@@ -8,6 +8,7 @@
     import { openTauriImportDialog } from "../../data/LibraryImporter";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
+    import CassetteLoading from "./CassetteLoading.svelte";
 </script>
 
 <div class="container">
@@ -19,6 +20,7 @@
         {#if $importStatus.currentFolder}
             <small>{$importStatus.currentFolder}</small>
         {/if}
+        <CassetteLoading />
         <div class="status">
             <LoadingSpinner />
             <p>{$importStatus.status ?? "Processing files..."}</p>

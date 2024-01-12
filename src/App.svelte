@@ -18,10 +18,7 @@
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
     import { startWatching } from "./data/FolderWatcher";
-    import {
-        addPaths,
-        startImportListener
-    } from "./data/LibraryImporter";
+    import { addPaths, startImportListener } from "./data/LibraryImporter";
     import Dropzone from "./lib/library/Dropzone.svelte";
     import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";

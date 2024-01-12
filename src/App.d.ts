@@ -219,7 +219,7 @@ interface MapTooltipData {
     emoji: string;
     numberOfArtists: number;
     artists: string[]; // first few,
-    albums: { album: string; artist: string }[]; // first few as well
+    albums: { path: string; album: string; artist: string }[]; // first few as well
 }
 
 interface ToImport {
@@ -250,4 +250,8 @@ type Compression = "lossy" | "lossless" | "both";
 interface LastPlayedInfo {
     songId?: string;
     position: number; //seconds;   
+}
+
+interface AddOriginCountryStatus {
+    percent: number;
 }

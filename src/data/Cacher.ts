@@ -1,4 +1,9 @@
-import { BaseDirectory, createDir, removeDir, writeBinaryFile } from "@tauri-apps/api/fs";
+import {
+    BaseDirectory,
+    createDir,
+    removeDir,
+    writeBinaryFile
+} from "@tauri-apps/api/fs";
 import { invokeTauriCommand } from "@tauri-apps/api/helpers/tauri";
 import { appDataDir } from "@tauri-apps/api/path";
 
@@ -28,7 +33,8 @@ import { appDataDir } from "@tauri-apps/api/path";
 //         }
 //     });
 // }
-const CACHE_DIR = process.env.NODE_ENV === "development" ? "cache-dev" : 'cache';
+const CACHE_DIR =
+    process.env.NODE_ENV === "development" ? "cache-dev" : "cache";
 
 /**
  * Cache an image from a given URL to the specified cache directory.
@@ -71,11 +77,11 @@ const getImagePath = async (
     format: string
 ) => {
     if (format === "image/jpeg") {
-        return `${dataDir}/${CACHE_DIR}/${imageName}.jpg`;
+        return `${dataDir}${CACHE_DIR}/${imageName}.jpg`;
     } else if (format === "image/png") {
-        return `${dataDir}/${CACHE_DIR}/${imageName}.png`;
+        return `${dataDir}${CACHE_DIR}/${imageName}.png`;
     }
-    return `${dataDir}/${CACHE_DIR}/${imageName}`;
+    return `${dataDir}${CACHE_DIR}/${imageName}`;
 };
 
 /**
@@ -85,7 +91,7 @@ const getImagePath = async (
  */
 const createCacheDirectory = async (dataDir) => {
     try {
-        await createDir(`${dataDir}/${CACHE_DIR}`, {
+        await createDir(`${dataDir}${CACHE_DIR}`, {
             recursive: true
         });
     } catch (error) {
@@ -101,15 +107,13 @@ const createCacheDirectory = async (dataDir) => {
 export const deleteCacheDirectory = async () => {
     try {
         const dataDir = await appDataDir();
-        await removeDir(`${dataDir}/${CACHE_DIR}`, {
+        await removeDir(`${dataDir}${CACHE_DIR}`, {
             recursive: true
         });
     } catch (error) {
-        throw new Error("Error creating cache directory: " + error);
+        throw new Error("Error deleting cache directory: " + error);
     }
 };
-
-
 
 /**
  * Writes image data to the cache directory.

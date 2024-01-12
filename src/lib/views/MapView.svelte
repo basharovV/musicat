@@ -14,6 +14,7 @@
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
+        addOriginCountryStatus,
         currentSong,
         isSmartQueryBuilderOpen,
         playlist,
@@ -36,6 +37,12 @@
     import { loadSlim } from "tsparticles-slim";
     import { groupBy, shuffleArray } from "../../utils/ArrayUtils";
     import MapTooltip from "../map/MapTooltip.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import {
+        addCountryDataAllSongs,
+        findCountryByArtist
+    } from "../data/LibraryEnrichers";
+    import ProgressBar from "../ui/ProgressBar.svelte";
     let isLoading = true;
 
     let container: HTMLElement;
@@ -277,8 +284,8 @@
         if ($songs) {
             data = groupBy($songs, "originCountry");
             delete data.undefined;
-            nOfCountries = data.length;
-            console.log("data", data);
+            delete data.null;
+            nOfCountries = Object.keys(data)?.length ?? 0;
         }
     }
 
@@ -338,9 +345,11 @@
                         );
 
                     let hoveredCountryFirstFewAlbums: {
+                        path: string;
                         artist: string;
                         album: string;
                     }[] = hoveredCountryPlaylist.map((item) => ({
+                        path: item.path.replace(`/${item.file}`, ""),
                         artist: item.artist,
                         album: item.album
                     }));
@@ -485,6 +494,10 @@
     function onParticlesLoaded(evt) {
         particleContainer = evt.detail.particles;
     }
+
+    async function addCountryData() {
+        await addCountryDataAllSongs();
+    }
 </script>
 
 <svelte:window on:resize={onResize} />
@@ -498,10 +511,41 @@
         {particlesInit}
         on:particlesLoaded={onParticlesLoaded}
     /> -->
+    {#if !nOfCountries && $addOriginCountryStatus === null}
+        <div class="welcome">
+            <h2>Welcome to map view!</h2>
+            <p>
+                To use the map, you need to add some country data to your music:
+            </p>
+
+            <small>
+                1) right-click a track → "Add Origin country", or
+                <br />
+                2) add manually in the Track Info overlay,
+                <br />
+                or click below to scan your whole library
+            </small>
+            <ButtonWithIcon text="Add country data" onClick={addCountryData} />
+            <small class="hint"
+                >This feature uses Wikipedia to read artist info. Some artists
+                may not have an article, so you need to add the country
+                manually.
+            </small>
+        </div>
+    {/if}
     <content>
-        {#if $playlistIsCountry}
-            <div class="header">
-                <div class="options"></div>
+        <div class="header">
+            {#if $addOriginCountryStatus}
+                <div id="info">
+                    <h2>Putting your music on the map...</h2>
+                    <small>i.e checking where your artists are from</small>
+                    <div class="progress">
+                        <ProgressBar
+                            percent={$addOriginCountryStatus.percent}
+                        />
+                    </div>
+                </div>
+            {:else if $playlistIsCountry}
                 <div id="info">
                     <p>Listening to music from</p>
                     <h2>
@@ -513,8 +557,8 @@
                         >{numberOfTracks} tracks from {numberOfArtists} artists</small
                     >
                 </div>
-            </div>
-        {/if}
+            {/if}
+        </div>
     </content>
     {#if songs}
         <div class="map-container">
@@ -675,33 +719,11 @@
     }
 
     .header {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        display: flex;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
         margin-top: 2em;
-        .options {
-            p {
-                margin: 0;
-            }
-
-            .shuffle {
-                display: flex;
-                width: fit-content;
-                margin: auto;
-                padding: 0.5em 2em;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.113);
-                background: rgba(128, 128, 128, 0.105);
-                gap: 5px;
-                flex-direction: row;
-                align-items: center;
-                cursor: default;
-                &:hover {
-                    opacity: 0.6;
-                }
-            }
-        }
     }
 
     #dropdown {
@@ -742,6 +764,47 @@
         * {
             margin: 0;
         }
+    }
+
+    .welcome {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        margin: auto;
+        padding: 0 4em;
+        width: fit-content;
+        display: flex;
+        max-width: 500px;
+        height: fit-content;
+        align-items: center;
+        flex-direction: column;
+        gap: 1em;
+        z-index: 10;
+        padding: 2em;
+        border-radius: 5px;
+        /* background-color: rgba(0, 0, 0, 0.187); */
+        border: 1px solid rgb(53, 51, 51);
+        background: rgba(34, 32, 35, 0.8);
+        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        backdrop-filter: blur(8px);
+        small,
+        p {
+            opacity: 0.8;
+        }
+        * {
+            margin: 0;
+        }
+
+        .hint {
+            max-width: 280px;
+            opacity: 0.5;
+        }
+    }
+
+    .progress {
+        min-width: 300px;
     }
 
     :global(#tsparticles) {

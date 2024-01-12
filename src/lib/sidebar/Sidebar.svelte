@@ -31,6 +31,7 @@
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
+        isSmartQueryBuilderOpen,
         isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         os,
@@ -77,6 +78,7 @@
 
     let bitrate;
     let sampleRate;
+    let stereo;
 
     // Shortcuts
     hotkeys("space", function (event, handler) {
@@ -98,6 +100,7 @@
             artist = metadata.common.artist;
             album = metadata.common.album;
             codec = metadata.format.codec;
+            stereo = metadata.format.numberOfChannels === 2;
             bitrate = metadata.format.bitsPerSample;
             sampleRate = metadata.format.sampleRate;
             duration = metadata.format.duration;
@@ -483,7 +486,7 @@
         onResize(); // run once
 
         shouldFocusFind.subscribe((event) => {
-            console.log('event', event);
+            console.log("event", event);
             if (event?.target === "search") {
                 if (searchInput) {
                     if (event.action === "focus") {
@@ -545,13 +548,40 @@
         let x2 = x + context.measureText(displayTitle).width + gap;
         console.log("x", x, "x2", x2);
         let started = false;
+        var lastFrameTime = 0;
 
-        function animate() {
-            context.clearRect(0, 0, canvas.width, canvas.height);
+        function animate(elapsedTime) {
             let textWidth = context.measureText(displayTitle).width;
             let isOverflowing = textWidth > canvas.width;
-
             if (isOverflowing) {
+                if (!started) {
+                    started = true;
+                    setTimeout(() => {
+                        animation = requestAnimationFrame(animate);
+                    }, 200);
+                } else {
+                    animation = requestAnimationFrame(animate);
+                }
+                // calculate the delta since the last frame
+                var delta = elapsedTime - (lastFrameTime || 0);
+
+                // if we *don't* already have a first frame, and the
+                // delta is less than 33ms (30fps in this case) then
+                // don't do anything and return
+                if (lastFrameTime && delta < 20) {
+                    return;
+                }
+
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
+                // else we have a frame we want to draw at 30fps...
+
+                // capture the last frame draw time so we can work out
+                // a delta next time.
+                lastFrameTime = elapsedTime;
+
+                // now do the frame update and render work
+                // ...
                 context.fillText(displayTitle, x, 25);
                 context.fillText(displayTitle, x2, 25);
 
@@ -565,16 +595,9 @@
                 if (x2 < -context.measureText(displayTitle).width) {
                     x2 = x + context.measureText(displayTitle).width + gap;
                 }
-
-                if (!started) {
-                    started = true;
-                    setTimeout(() => {
-                        animation = requestAnimationFrame(animate);
-                    }, 200);
-                } else {
-                    animation = requestAnimationFrame(animate);
-                }
             } else {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
                 context.fillText(
                     displayTitle,
                     (canvas.width - textWidth) / 2,
@@ -657,13 +680,14 @@
                             class:selected={$uiView === "library" &&
                                 !$selectedPlaylistId}
                             on:click={() => {
-                                $isSmartQueryUiOpen = false;
+                                $isSmartQueryBuilderOpen = false;
                                 $selectedPlaylistId = null;
                                 $uiView = "library";
                             }}
                         >
                             <Icon
                                 icon="fluent:library-20-filled"
+                                size={15}
                                 color={$uiView === "library"
                                     ? "#45fffcf3"
                                     : "currentColor"}
@@ -692,6 +716,7 @@
                         >
                             <Icon
                                 icon="mdi:playlist-music"
+                                size={15}
                                 color={$uiView === "playlists"
                                     ? "#45fffcf3"
                                     : "currentColor"}
@@ -824,6 +849,7 @@
                         >
                             <Icon
                                 icon="fluent:search-20-filled"
+                                size={15}
                                 color={$uiView === "smart-query"
                                     ? "#45fffcf3"
                                     : "currentColor"}
@@ -838,6 +864,7 @@
                             >
                                 <Icon
                                     icon="mdi:music-clef-treble"
+                                    size={15}
                                     color={$uiView === "your-music"
                                         ? "#45fffcf3"
                                         : "currentColor"}
@@ -852,6 +879,7 @@
                         >
                             <Icon
                                 icon="mdi:map"
+                                size={15}
                                 color={$uiView === "map"
                                     ? "#45fffcf3"
                                     : "currentColor"}
@@ -865,7 +893,8 @@
                         >
                             <Icon
                                 icon="gridicons:line-graph"
-                                color={$uiView === "stats"
+                                size={15}
+                                color={$uiView === "analytics"
                                     ? "#45fffcf3"
                                     : "currentColor"}
                             />Stats</item
@@ -936,10 +965,11 @@
                 {/if}
 
                 {#if codec}
-                    <div class="file">
+                    <div class="file" class:empty={!title && !album && !artist}>
                         <p>{codec}</p>
                         {#if bitrate}<p>{bitrate} bit</p>{/if}
-                        <p>{sampleRate} smpls</p>
+                        <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
+                        <p>{stereo ? "stereo" : "mono"}</p>
                     </div>
                 {/if}
             </div>
@@ -976,7 +1006,7 @@
             <Icon
                 class="transport-side"
                 icon="ph:shuffle-bold"
-                color={!$isShuffleEnabled ? "#474747" : "#e1ff00"}
+                color={!$isShuffleEnabled ? "#606060" : "#e1ff00"}
                 onClick={() => {
                     $isShuffleEnabled = !$isShuffleEnabled;
                 }}
@@ -1455,7 +1485,7 @@
         align-items: center;
         justify-content: center;
         gap: 4px;
-        padding: 8px 0;
+        padding: 4px 0;
         user-select: none;
         pointer-events: none;
         width: 100%;
@@ -1466,7 +1496,7 @@
             padding: 0em 0.6em;
             margin: 0;
             border-radius: 2px;
-            font-size: 0.7em;
+            font-size: 0.67em;
             line-height: 1.5em;
             font-weight: 600;
             border-top: 1px solid rgb(49, 49, 49);
@@ -1795,8 +1825,14 @@
             }
         }
 
-        @media only screen and (max-height: 790px) {
-            .file {
+        .file.empty {
+            @media only screen and (max-height: 765px) {
+                display: none;
+            }
+        }
+
+        @media only screen and (max-height: 785px) {
+            .file:not(.empty){
                 display: none;
             }
         }

@@ -179,7 +179,7 @@
     $: noSongs =
         !songs ||
         songs.length === 0 ||
-        ($isSmartQueryBuilderOpen && $smartQuery.isEmpty);
+        ($uiView === 'smart-query' && $isSmartQueryBuilderOpen && $smartQuery.isEmpty);
 
     let container: HTMLElement;
 
@@ -241,7 +241,7 @@
     }
 
     function scrollToCurrentSong() {
-        if (isPlaying && $currentSong && currentSongRow) {
+        if ($isPlaying && $currentSong && currentSongRow) {
             currentSongRow.scrollIntoView({
                 block: "center",
                 behavior: "smooth"

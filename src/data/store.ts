@@ -1,6 +1,7 @@
 import { type, type OsType } from "@tauri-apps/api/os";
 import type {
     ActionEvent,
+    AddOriginCountryStatus,
     Album,
     ArtistContentItem,
     ArtworkSrc,
@@ -177,6 +178,8 @@ export const singleKeyShortcutsEnabled = writable(true);
 export const currentSongArtworkSrc: Writable<ArtworkSrc> = writable(null);
 export const isMiniPlayer = writable(false);
 export const compressionSelected: Writable<Compression> = writable("both");
+
+export const addOriginCountryStatus: Writable<AddOriginCountryStatus> = writable(null); 
 
 async function getOs() {
     const os = await type();

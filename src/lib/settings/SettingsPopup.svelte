@@ -12,7 +12,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import { open } from "@tauri-apps/api/dialog";
     import { audioDir } from "@tauri-apps/api/path";
-    import { addFolder } from "../../data/LibraryImporter";
+    import { addFolder, importFolder } from "../../data/LibraryImporter";
     import tippy from "svelte-tippy";
 
     let version = getVersion();
@@ -63,20 +63,7 @@
             $userSettings.foldersToWatch.push(selected);
             $userSettings = $userSettings;
 
-            // Add this folder!
-            $importStatus = {
-                ...$importStatus,
-                backgroundImport: true
-            };
-
-            await addFolder(selected);
-
-            // Add this folder!
-            $importStatus = {
-                ...$importStatus,
-                backgroundImport: false,
-                isImporting: false
-            };
+            await importFolder(selected, false);
         }
     }
 

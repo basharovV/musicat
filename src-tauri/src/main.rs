@@ -4,26 +4,23 @@
 )]
 
 use rayon::prelude::*;
-use std::any::Any;
-use std::cmp;
 use std::error::Error;
-use std::fs::{self, File, OpenOptions};
-use std::hash::Hash;
+use std::fs::{self, File};
 use std::io::BufReader;
-use std::ops::{Deref, DerefMut, Mul};
+use std::ops::{Deref, Mul};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::{fmt, mem, thread, time};
+use std::{fmt, thread, time};
 
-use chksum_md5::{Hashable, MD5};
+use chksum_md5::MD5;
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{
-    read_from_path, Accessor, AudioFile, FileProperties, FileType, ItemKey, ItemValue, Picture,
-    Probe, Tag, TagItem, TagType,
+    read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, Tag,
+    TagItem, TagType, TaggedFileExt,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{CustomMenuItem, Menu, MenuItem, Runtime, Submenu, Window};
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Event, Manager};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
@@ -255,7 +252,7 @@ fn process_directory(
                                     || ext_str.eq_ignore_ascii_case("ape")
                                     || ext_str.eq_ignore_ascii_case("ogg")
                                 {
-                                    println!("{:?}", entry.path());
+                                    // println!("{:?}", entry.path());
                                     if let Some(song) = extract_metadata(&path) {
                                         subsongs.lock().unwrap().push(song);
                                     }
@@ -286,7 +283,7 @@ fn seconds_to_hms(seconds: u64) -> String {
 }
 
 fn extract_metadata(file_path: &Path) -> Option<Song> {
-    if let Ok(taggedFile) = read_from_path(&file_path, true) {
+    if let Ok(taggedFile) = read_from_path(&file_path) {
         let id = MD5::hash(file_path.to_str().unwrap().as_bytes()).to_hex_lowercase();
         let path = file_path.to_string_lossy().into_owned();
         let file = file_path.file_name()?.to_string_lossy().into_owned();
@@ -306,13 +303,13 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
             title = file.to_string();
         }
         taggedFile.tags().iter().for_each(|tag| {
-            println!("Tag type {:?}", tag.tag_type());
-            println!("Tag items {:?}", tag.items());
+            // println!("Tag type {:?}", tag.tag_type());
+            // println!("Tag items {:?}", tag.items());
             if (title.is_empty()) {
                 title = tag
                     .title()
                     .filter(|x| !x.is_empty())
-                    .unwrap_or(&file)
+                    .unwrap_or(std::borrow::Cow::Borrowed(&file))
                     .to_string();
             }
             if (artist.is_empty()) {
@@ -331,19 +328,13 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
             }
             if (composer.is_empty()) {
                 composer = tag
-                    .get_item_ref(&ItemKey::Composer)
-                    .map_or_else(Vec::new, |c| {
-                        c.value()
-                            .clone()
-                            .into_string()
-                            .unwrap()
-                            .split('/')
-                            .map(String::from)
-                            .collect()
-                    });
+                    .get_items(&ItemKey::Composer)
+                    .map(|c| c.value().to_owned().into_string().unwrap_or_default())
+                    .clone().collect()
+                
             }
             if (track_number == -1) {
-                tag.track().unwrap_or(0) as i32;
+                track_number = tag.track().unwrap_or(0) as i32;
             }
             if (duration.is_empty()) {
                 duration = seconds_to_hms(taggedFile.properties().duration().as_secs());
@@ -356,24 +347,24 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                     sample_rate: taggedFile.properties().sample_rate(),
                     audio_bitrate: taggedFile.properties().audio_bitrate(),
                     overall_bitrate: taggedFile.properties().overall_bitrate(),
-                    lossless: vec![FileType::FLAC, FileType::WAV]
+                    lossless: vec![FileType::Flac, FileType::Wav]
                         .iter()
                         .any(|f| f.eq(&taggedFile.file_type())),
                     tagType: match tag.tag_type() {
                         TagType::VorbisComments => Some("vorbis".to_string()),
-                        TagType::ID3v1 => Some("ID3v1".to_string()),
-                        TagType::ID3v2 => Some("ID3v2".to_string()),
-                        TagType::APE | TagType::MP4ilst | TagType::RIFFInfo | TagType::AIFFText => {
+                        TagType::Id3v1 => Some("ID3v1".to_string()),
+                        TagType::Id3v2 => Some("ID3v2".to_string()),
+                        TagType::Ape | TagType::Mp4Ilst | TagType::RiffInfo | TagType::AiffText => {
                             None
                         }
                         _ => todo!(),
                     },
                     codec: match taggedFile.file_type() {
-                        FileType::FLAC => Some("FLAC".to_string()),
-                        FileType::MPEG => Some("MPEG".to_string()),
-                        FileType::AIFF => Some("AIFF".to_string()),
-                        FileType::WAV => Some("WAV".to_string()),
-                        FileType::APE => Some("APE".to_string()),
+                        FileType::Flac => Some("FLAC".to_string()),
+                        FileType::Mpeg => Some("MPEG".to_string()),
+                        FileType::Aiff => Some("AIFF".to_string()),
+                        FileType::Wav => Some("WAV".to_string()),
+                        FileType::Ape => Some("APE".to_string()),
                         FileType::Opus => Some("Opus".to_string()),
                         FileType::Speex => Some("Speex".to_string()),
                         FileType::Vorbis => Some("Vorbis".to_string()),
@@ -495,10 +486,10 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
             let mut tag_type_evt = v.tag_type.as_deref().unwrap();
             match tag_type_evt {
                 "vorbis" => tag_type = Some(TagType::VorbisComments),
-                "ID3v1" => tag_type = Some(TagType::ID3v2),
-                "ID3v2.2" => tag_type = Some(TagType::ID3v2),
-                "ID3v2.3" => tag_type = Some(TagType::ID3v2),
-                "ID3v2.4" => tag_type = Some(TagType::ID3v2),
+                "ID3v1" => tag_type = Some(TagType::Id3v2),
+                "ID3v2.2" => tag_type = Some(TagType::Id3v2),
+                "ID3v2.3" => tag_type = Some(TagType::Id3v2),
+                "ID3v2.4" => tag_type = Some(TagType::Id3v2),
                 _ => println!("Unhandled tag type: {:?}", v.tag_type),
             }
             let mut tag_type_value = tag_type.unwrap();
@@ -506,7 +497,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
             // &probe.guess_file_type();
             let fileType = &probe.file_type();
             println!("fileType: {:?}", &fileType);
-            let mut tag = read_from_path(&v.file_path, true).unwrap();
+            let mut tag = read_from_path(&v.file_path).unwrap();
             let tagFileType = tag.file_type();
             let mut to_write = lofty::Tag::new(tag_type.unwrap());
 
@@ -569,7 +560,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                         } else {
                             let item_value: ItemValue =
                                 ItemValue::Text(String::from(item.value.as_str().unwrap()));
-                            to_write.insert_item_unchecked(TagItem::new(item_key, item_value));
+                            to_write.insert_unchecked(TagItem::new(item_key, item_value));
                         }
                     }
                 }

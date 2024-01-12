@@ -1,7 +1,12 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
-    import { isSettingsOpen, query, userSettings } from "../../data/store";
+    import {
+        isSettingsOpen,
+        query,
+        uiView,
+        userSettings
+    } from "../../data/store";
     import type { Album, Song } from "../../App";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { groupBy } from "../../utils/ArrayUtils";
@@ -239,7 +244,7 @@
             }
             openai = new OpenAI({
                 apiKey: $userSettings.openAIApiKey,
-                dangerouslyAllowBrowser: true, // This is the default and can be omitted
+                dangerouslyAllowBrowser: true // This is the default and can be omitted
             });
         }
         const params: OpenAI.Chat.ChatCompletionCreateParams = {
@@ -264,7 +269,7 @@
     }
 
     async function getModelResponse(prompt) {
-        console.log($userSettings.llm)
+        console.log($userSettings.llm);
         switch ($userSettings.llm) {
             case "gpt-3.5-turbo":
             case "gpt-4":
@@ -325,7 +330,11 @@
         <div class="analytics" in:fade={{ duration: 500 }}>
             <section class="plays">
                 <h1><span>{stats.totalSongs}</span> songs</h1>
-                <h2><span>{stats.totalDurationMins / 60} hours</span></h2>
+                <h2>
+                    <span
+                        >{(stats.totalDurationMins / 60).toFixed(2)} hours</span
+                    >
+                </h2>
                 <p>
                     You have listened to {stats.percentageListened.toPrecision(
                         2
@@ -351,18 +360,28 @@
             </section>
 
             <section class="country">
-                <h1>
-                    <span>{stats.country.count} </span>countries
-                </h1>
-                <h2>
-                    You have more music from <span
-                        >{stats.country.mostPlayed}</span
-                    >
-                    than any other country
-                </h2>
-                <p>
-                    from {stats.country.playCount} tracks
-                </p>
+                {#if stats.country.mostPlayed && stats.country.count}
+                    <h1>
+                        <span>{stats.country.count} </span>countries
+                    </h1>
+                    <h2>
+                        You have more music from <span
+                            >{stats.country.mostPlayed}</span
+                        >
+                        than any other country
+                    </h2>
+
+                    <p>
+                        from {stats.country.playCount} tracks
+                    </p>
+                {:else}
+                    <p>No country data in your library</p>
+                    <br />
+                    <ButtonWithIcon
+                        text="Add country data"
+                        onClick={() => ($uiView = "map")}
+                    />
+                {/if}
             </section>
             <section class="timeline">
                 <AlbumsTimeline {albumsByYear} />
@@ -374,8 +393,8 @@
                         singleWordSummaryLoading}
                 >
                     <h3>
-                        <Icon icon="mdi:thunder"></Icon>The
-                        sentiment of your library is
+                        <Icon icon="mdi:thunder"></Icon>The sentiment of your
+                        library is
                     </h3>
                     <h2 id="gpt-summary">
                         {@html singleWordSummary
@@ -388,8 +407,8 @@
                     class:loading={!gptSummary && gptSummaryLoading}
                 >
                     <h3>
-                        <Icon icon="mdi:thunder"></Icon>GPT
-                        summary of your library
+                        <Icon icon="mdi:thunder"></Icon>GPT summary of your
+                        library
                     </h3>
                     <h2 id="gpt-summary">
                         {@html gptSummary ? gptSummary : "one moment ..."}
@@ -400,8 +419,7 @@
                     class:loading={!gptDidYouKnow && gptDidYouKnowLoading}
                 >
                     <h3>
-                        <Icon icon="mdi:thunder"></Icon>Did you
-                        know?
+                        <Icon icon="mdi:thunder"></Icon>Did you know?
                     </h3>
                     <h2 id="gpt-summary">
                         {@html gptDidYouKnow ? gptDidYouKnow : "thinking ..."}
@@ -412,7 +430,9 @@
                     <ButtonWithIcon
                         icon="bi:robot"
                         text="Enable AI analysis"
-                        onClick={() => { $isSettingsOpen = true}}
+                        onClick={() => {
+                            $isSettingsOpen = true;
+                        }}
                     />
                     <p>
                         Get sentiment analysis, a summary of your music taste,
