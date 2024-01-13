@@ -688,7 +688,8 @@
                             <Icon
                                 icon="fluent:library-20-filled"
                                 size={15}
-                                color={$uiView === "library"
+                                color={$uiView === "library" &&
+                                !$selectedPlaylistId
                                     ? "#45fffcf3"
                                     : "currentColor"}
                             />Library</item
@@ -709,6 +710,8 @@
                         >
 
                         <item
+                            class:selected={$uiView === "library" &&
+                                $selectedPlaylistId}
                             on:click={() => {
                                 // expand playlists
                                 isPlaylistsExpanded = !isPlaylistsExpanded;
@@ -717,11 +720,18 @@
                             <Icon
                                 icon="mdi:playlist-music"
                                 size={15}
-                                color={$uiView === "playlists"
+                                color={$uiView === "library" &&
+                                $selectedPlaylistId
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Playlists</item
-                        >
+                            />Playlists
+                            <div
+                                class="chevron"
+                                class:expanded={isPlaylistsExpanded}
+                            >
+                                <Icon icon="lucide:chevron-down" size={14} />
+                            </div>
+                        </item>
 
                         {#if isPlaylistsExpanded}
                             <div class="playlists">
@@ -768,6 +778,7 @@
                                             {#if isRenamingPlaylist && playlistToEdit.id === playlist.id}
                                                 <Icon
                                                     icon="mingcute:close-circle-fill"
+                                                    size={14}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         isRenamingPlaylist = false;
@@ -783,8 +794,8 @@
                                                     <Icon
                                                         icon="charm:menu-kebab"
                                                         color="#898989"
+                                                        size={14}
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
                                                             menuX = e.clientX;
                                                             menuY = e.clientY;
                                                             playlistToEdit =
@@ -1251,10 +1262,17 @@
                 iconify-icon {
                     color: #45fffcf3;
                 }
+                .chevron {
+                    visibility: visible;
+                }
             }
 
             &:hover:not(.selected) {
                 opacity: 0.5;
+
+                .chevron {
+                    visibility: visible;
+                }
             }
 
             &:not(.selected) {
@@ -1268,6 +1286,14 @@
                 font-size: 15px;
                 text-align: center;
                 vertical-align: middle;
+            }
+
+            .chevron {
+                visibility: hidden;
+                &.expanded {
+                    visibility: visible;
+                    transform: rotate(180deg);
+                }
             }
         }
     }
@@ -1713,6 +1739,8 @@
             }
 
             &:hover {
+                border-radius: 5px;
+                background-color: #392f5d3b;
                 .playlist-menu {
                     display: flex;
                 }
@@ -1832,7 +1860,7 @@
         }
 
         @media only screen and (max-height: 785px) {
-            .file:not(.empty){
+            .file:not(.empty) {
                 display: none;
             }
         }
