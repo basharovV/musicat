@@ -18,6 +18,9 @@
 <small>🖼 download album art, origin country from Wikipedia
 </small>
 <br/>
+<small>🎤 fetch lyrics for current song
+</small>
+<br/>
 <small>🗺 World Map view - see your library on a map
 </small>
 <br/>
