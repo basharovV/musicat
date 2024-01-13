@@ -41,7 +41,9 @@
 
 ![screenshot](docs/musicat-jan-2024.jpg)
 
+{% warning %}
 Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
+{% warning %}
 
 ## Screenshots
 ![screenshot](docs/albums.jpg)
