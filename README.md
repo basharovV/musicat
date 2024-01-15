@@ -18,6 +18,9 @@
 <small>🖼 download album art, origin country from Wikipedia
 </small>
 <br/>
+<small>🎤 fetch lyrics for current song
+</small>
+<br/>
 <small>🗺 World Map view - see your library on a map
 </small>
 <br/>
@@ -38,7 +41,7 @@
 
 ![screenshot](docs/musicat-jan-2024.jpg)
 
-Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
+⚠️ Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
 
 ## Screenshots
 ![screenshot](docs/albums.jpg)
