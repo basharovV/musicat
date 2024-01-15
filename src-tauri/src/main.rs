@@ -92,14 +92,14 @@ async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
 
     // Use a CSS selector to find the lyrics
     let lyrics_selector = Selector::parse("[data-lyrics-container=\"true\"]").unwrap();
-    
+
     let lyrics_element = document.select(&lyrics_selector).next();
     // println!("{:?}", lyrics_element);
 
     // Extract and return the lyrics
     match lyrics_element {
         Some(element) => Ok(element.text().fold(String::new(), |s, l| s + l + "\n")),
-        None => Err("Lyrics not found".into())
+        None => Err("Lyrics not found".into()),
     }
 }
 
@@ -508,12 +508,15 @@ fn build_menu() -> Menu {
                 .add_native_item(MenuItem::Separator)
                 .add_native_item(MenuItem::SelectAll),
         ));
-
     #[cfg(dev)]
-    menu.add_submenu(Submenu::new(
+    let newMenu = menu.add_submenu(Submenu::new(
         "DevTools",
         Menu::new().add_item(CustomMenuItem::new("clear-db", "Clear DB")),
-    ))
+    ));
+    #[cfg(dev)]
+    return newMenu;
+
+    return menu;
 }
 
 #[derive(Debug)]

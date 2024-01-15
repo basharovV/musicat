@@ -74,14 +74,14 @@
     $: songs = $allSongs
         ?.filter((song: Song) => {
             if ($compressionSelected === "lossless") {
-                return song.fileInfo.lossless;
+                return song?.fileInfo?.lossless;
             } else if ($compressionSelected === "lossy") {
-                return song.fileInfo.lossless === false;
-            } else return true;
+                return song?.fileInfo?.lossless === false;
+            } else return song !== undefined;
         })
         .reduce(
             (status, s, idx, songsArray) => {
-                if (s.album !== status.state.previousAlbum) {
+                if (s?.album !== status.state.previousAlbum) {
                     if (status.state.firstSongInPreviousAlbum) {
                         // Set the view model property here
                         const song =
@@ -99,7 +99,7 @@
                 } else {
                     status.state.tracksInAlbum++;
                 }
-                if (s.artist !== status.state.previousArtist) {
+                if (s?.artist !== status.state.previousArtist) {
                     if (status.state.firstSongInPreviousArtist) {
                         // Set the view model property here
                         const song =
@@ -117,8 +117,8 @@
                 } else {
                     status.state.albumsInArtist++;
                 }
-                status.state.previousAlbum = s.album;
-                status.state.previousArtist = s.artist;
+                status.state.previousAlbum = s?.album;
+                status.state.previousArtist = s?.artist;
                 return {
                     songs: songsArray,
                     state: status.state

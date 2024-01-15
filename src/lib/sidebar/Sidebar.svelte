@@ -396,6 +396,7 @@
     let isConfirmingPlaylistDelete = false;
     let playlistToEdit: Playlist = null;
     let draggingOverPlaylist: Playlist = null;
+    let hoveringOverPlaylistId: number = null;
     let isRenamingPlaylist = false;
 
     function onCreatePlaylist() {
@@ -424,14 +425,18 @@
         isRenamingPlaylist = false;
     }
 
-    function onDragOverPlaylist(playlist: Playlist) {
+    function onMouseOverPlaylist(playlist: Playlist) {
         if ($draggedSongs.length && draggingOverPlaylist?.id !== playlist?.id) {
             draggingOverPlaylist = playlist;
+            hoveringOverPlaylistId = null;
+        } else {
+            hoveringOverPlaylistId = playlist?.id;
         }
     }
 
-    function onDragOutPlaylist() {
+    function onMouseLeavePlaylist() {
         draggingOverPlaylist = null;
+        hoveringOverPlaylistId = null;
     }
 
     // $: {
@@ -745,6 +750,8 @@
                                             class="playlist"
                                             class:dragover={draggingOverPlaylist ===
                                                 playlist}
+                                            class:hover={hoveringOverPlaylistId ===
+                                                playlist.id}
                                             class:selected={$selectedPlaylistId ===
                                                 playlist.id}
                                             on:click={() => {
@@ -752,9 +759,9 @@
                                                 $selectedPlaylistId =
                                                     playlist.id;
                                             }}
-                                            on:mouseleave|preventDefault|stopPropagation={onDragOutPlaylist}
+                                            on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
-                                                onDragOverPlaylist(playlist)}
+                                                onMouseOverPlaylist(playlist)}
                                             on:mouseup|preventDefault|stopPropagation={() =>
                                                 onDropSongsToPlaylist(
                                                     playlist.id
@@ -1738,7 +1745,7 @@
                 border-radius: 5px;
             }
 
-            &:hover {
+            &.hover {
                 border-radius: 5px;
                 background-color: #392f5d3b;
                 .playlist-menu {

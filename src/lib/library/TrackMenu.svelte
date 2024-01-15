@@ -35,6 +35,7 @@
 
     let songId;
     let isConfirmingDelete = false;
+    let isConfirmingRemoveFromPlaylist = false;
 
     $: {
         if (
@@ -42,23 +43,38 @@
             songId !== $rightClickedTrack?.id
         ) {
             isConfirmingDelete = false;
+            isConfirmingRemoveFromPlaylist = false;
         }
     }
 
     function closeMenu() {
         showMenu = false;
         isConfirmingDelete = false;
+        isConfirmingRemoveFromPlaylist = false;
     }
 
-    function deleteTrack() {
+    async function deleteTrack(selectedPlaylistId = null) {
+        let playlist;
+
         console.log("delete");
         if (!isConfirmingDelete) {
             songId = $rightClickedTrack?.id;
             isConfirmingDelete = true;
             return;
         }
+
         if ($rightClickedTracks.length) {
             closeMenu();
+            if (selectedPlaylistId) {
+                playlist = await db.playlists.get(selectedPlaylistId);
+
+                $rightClickedTracks.forEach((t) => {
+                    const trackIdx = playlist.tracks.findIndex(
+                        (pt) => pt === t.id
+                    );
+                    playlist.tracks.splice(trackIdx, 1);
+                });
+            }
             $rightClickedTracks.forEach((t) => {
                 db.songs.delete(t.id);
             });
@@ -66,6 +82,14 @@
             isConfirmingDelete = false;
         } else if ($rightClickedTrack) {
             closeMenu();
+            if (selectedPlaylistId) {
+                playlist = await db.playlists.get(selectedPlaylistId);
+
+                const trackIdx = playlist.tracks.findIndex(
+                    (pt) => pt === $rightClickedTrack.id
+                );
+                playlist.tracks.splice(trackIdx, 1);
+            }
             db.songs.delete($rightClickedTrack.id);
             $rightClickedTrack = null;
             isConfirmingDelete = false;
@@ -73,6 +97,11 @@
     }
 
     async function removeFromPlaylist() {
+        if (!isConfirmingRemoveFromPlaylist) {
+            songId = $rightClickedTrack?.id;
+            isConfirmingRemoveFromPlaylist = true;
+            return;
+        }
         const playlist = await db.playlists.get($selectedPlaylistId);
         if ($rightClickedTracks.length) {
             closeMenu();
@@ -167,7 +196,7 @@
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu}>
+    <Menu {...pos} onClickOutside={closeMenu} fixed>
         <MenuOption
             isDisabled={true}
             text={$rightClickedTrack
@@ -177,14 +206,20 @@
         <MenuOption
             isDestructive={true}
             isConfirming={isConfirmingDelete}
-            onClick={deleteTrack}
+            onClick={() => {
+                if (!$selectedPlaylistId) {
+                    deleteTrack();
+                } else {
+                    deleteTrack($selectedPlaylistId);
+                }
+            }}
             text={$rightClickedTrack ? "Delete track" : "Delete tracks"}
             confirmText="Click again to confirm"
         />
         {#if $selectedPlaylistId}
             <MenuOption
                 isDestructive={true}
-                isConfirming={isConfirmingDelete}
+                isConfirming={isConfirmingRemoveFromPlaylist}
                 onClick={removeFromPlaylist}
                 text={$rightClickedTrack
                     ? "Remove from playlist"

@@ -24,11 +24,12 @@ export async function getLyrics(songTitle: string, artist: string) {
                 }
             }
         );
+        console.log('result', geniusResult);
         if (!geniusResult.ok) {
             throw new Error("Genius API: " + JSON.stringify(geniusResult.data))
         }
         const hits = geniusResult.data?.response?.hits;
-        if (hits?.length) {
+        if (hits?.filter(h => artist.toLowerCase() === h?.result?.artist_names?.toLowerCase()).length) {
             geniusPage = hits[0]?.result?.url;
         }
         console.log("geniusPage", geniusPage);
