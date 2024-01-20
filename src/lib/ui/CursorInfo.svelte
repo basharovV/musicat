@@ -5,7 +5,7 @@
     export let show = false;
 </script>
 
-{#if show && x + y > 0}
+{#if show}
     <div style="transform: translateY({y}px) translateX({x}px);">
         {#if $draggedSongs}
             {#if $draggedSongs.length > 1}

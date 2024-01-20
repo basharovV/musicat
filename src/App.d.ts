@@ -264,4 +264,5 @@ interface GetLyricsResponse {
 interface CurrentSongLyrics {
     songId: string;
     lyrics?: string;
+    writers?: string[];
 }

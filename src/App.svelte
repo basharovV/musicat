@@ -32,7 +32,8 @@
     import MapView from "./lib/views/MapView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
-
+    import 'overlayscrollbars/overlayscrollbars.css';
+    
     startMenuListener();
     startImportListener();
 
@@ -146,7 +147,7 @@
         unlistenFolderWatch();
     });
 
-    $: showCursorInfo = $draggedSongs.length > 0;
+    $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->

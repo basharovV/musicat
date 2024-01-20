@@ -1187,10 +1187,6 @@
                 animation-duration: 0.5s;
                 animation-iteration-count: infinite;
                 animation-delay: 0s;
-                -webkit-animation-name: shorteq;
-                -webkit-animation-duration: 0.5s;
-                -webkit-animation-iteration-count: infinite;
-                animation-delay: 0s;
             }
 
             .eq2 {
@@ -1200,10 +1196,6 @@
                 animation-duration: 0.5s;
                 animation-iteration-count: infinite;
                 animation-delay: 0.17s;
-                -webkit-animation-name: talleq;
-                -webkit-animation-duration: 0.5s;
-                -webkit-animation-iteration-count: infinite;
-                animation-delay: 0.17s;
             }
 
             .eq3 {
@@ -1212,10 +1204,6 @@
                 animation-name: shorteq;
                 animation-duration: 0.5s;
                 animation-iteration-count: infinite;
-                animation-delay: 0.34s;
-                -webkit-animation-name: shorteq;
-                -webkit-animation-duration: 0.5s;
-                -webkit-animation-iteration-count: infinite;
                 animation-delay: 0.34s;
             }
         }

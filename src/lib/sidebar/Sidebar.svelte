@@ -540,7 +540,7 @@
         if (animation !== undefined) cancelAnimationFrame(animation);
 
         const context = canvas.getContext("2d");
-        if (!context) return;
+        if (!canvas || !context) return;
         const speed = 2; // Adjust the speed as needed
 
         context.font =
@@ -556,6 +556,7 @@
         var lastFrameTime = 0;
 
         function animate(elapsedTime) {
+            if (!canvas) return;
             let textWidth = context.measureText(displayTitle).width;
             let isOverflowing = textWidth > canvas.width;
             if (isOverflowing) {
@@ -720,6 +721,10 @@
                             on:click={() => {
                                 // expand playlists
                                 isPlaylistsExpanded = !isPlaylistsExpanded;
+                            }}
+                            on:mouseenter={() => {
+                                if ($draggedSongs.length > 0)
+                                    isPlaylistsExpanded = true;
                             }}
                         >
                             <Icon

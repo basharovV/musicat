@@ -5,7 +5,12 @@ import type { GetLyricsResponse } from "../App";
 import { fetch } from "@tauri-apps/api/http";
 
 export async function getLyrics(songTitle: string, artist: string) {
+    let result = {
+        lyrics: null,
+        writers: []
+    }
     let geniusPage;
+
     const settings = get(userSettings);
     try {
         if (!settings.geniusApiKey) {
@@ -31,6 +36,20 @@ export async function getLyrics(songTitle: string, artist: string) {
         const hits = geniusResult.data?.response?.hits;
         if (hits?.filter(h => artist.toLowerCase() === h?.result?.artist_names?.toLowerCase()).length) {
             geniusPage = hits[0]?.result?.url;
+           let  songId = hits[0]?.result?.id;
+
+            const songResult = await fetch(
+                `https://api.genius.com/songs/${songId}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${settings.geniusApiKey}`
+                    }
+                }
+            );
+            result.writers = songResult.data?.response?.song?.writer_artists?.map(w => w?.name);
+            
         }
         console.log("geniusPage", geniusPage);
     } catch (err) {
@@ -38,12 +57,12 @@ export async function getLyrics(songTitle: string, artist: string) {
         throw new Error("Error: " + err);
     }
     if (geniusPage) {
-        const result = await invoke<GetLyricsResponse>("get_lyrics", {
+        const lyricsResult = await invoke<GetLyricsResponse>("get_lyrics", {
             event: {
                 url: geniusPage
             }
         });
-        return result?.lyrics;
+        result.lyrics = lyricsResult?.lyrics;
     }
-    return null;
+    return result;
 }

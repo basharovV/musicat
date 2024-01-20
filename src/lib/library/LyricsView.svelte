@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { fade } from "svelte/transition";
+    import { fade, fly } from "svelte/transition";
     import { getLyrics } from "../../data/LyricsGrabber";
     import {
         currentSong,
@@ -9,11 +9,9 @@
         isSettingsOpen,
         userSettings
     } from "../../data/store";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-
-    export var fontSize = "font-20";
     export var isFullScreen = false;
     var onLyricsUpdated;
 
@@ -21,8 +19,39 @@
         onLyricsUpdated(e.target.value);
     }
 
+    const fontSizes = ["font-xs", "font-s", "font-m", "font-l", "font-xl"];
+
+    let currentFontSizeIdx = 2;
+    $: fontSize = fontSizes[currentFontSizeIdx];
+
+    function increaseFontSize() {
+        currentFontSizeIdx =
+            currentFontSizeIdx <= fontSizes.length - 2
+                ? currentFontSizeIdx + 1
+                : fontSizes.length - 1;
+    }
+    function decreaseFontSize() {
+        currentFontSizeIdx =
+            currentFontSizeIdx > 0 ? currentFontSizeIdx - 1 : 0;
+    }
+
     let isLoading = false;
     let error = null;
+
+    function replaceHeadingsWithSpan(lyricsText) {
+        // Use a regular expression to match any text within square brackets
+        lyricsText = lyricsText
+            .replace(/\[(.*?)\]/g, function (match, p1) {
+                // Create a <span> element with the class as the lowercase text within square brackets
+                return (
+                    '<span class="section" contenteditable="false">' +
+                    p1 +
+                    "</span>"
+                );
+            })
+            .replace(/(?:\r\n|\r|\n)/g, "<br>");
+        return lyricsText;
+    }
 
     async function grabLyrics() {
         if (
@@ -32,14 +61,15 @@
         ) {
             isLoading = true;
             try {
-                let lyrics = await getLyrics(
+                let result = await getLyrics(
                     $currentSong.title,
                     $currentSong.artist
                 );
-                $currentSongLyrics = lyrics
+                $currentSongLyrics = result.lyrics
                     ? {
                           songId: $currentSong.id,
-                          lyrics
+                          lyrics: result.lyrics,
+                          writers: result.writers
                       }
                     : null;
                 error = null;
@@ -49,6 +79,31 @@
                 isLoading = false;
             }
         }
+    }
+
+    function getWritersText(writersList: string[]) {
+        if (writersList?.length === 1) {
+            return writersList[0];
+        } else if (writersList?.length === 2) {
+            return `${writersList[0]} & ${writersList[1]}`;
+        } else if (writersList?.length > 2) {
+            let last = writersList[writersList?.length - 1];
+            return (
+                writersList.slice(0, writersList.length - 1).join(", ") +
+                " and " +
+                last
+            );
+        }
+        return null;
+    }
+
+    let scrolledToBottom = false;
+
+    function onScroll(ev) {
+        let area = ev.target;
+        if (area)
+            scrolledToBottom =
+                area.scrollTop + area.offsetHeight >= area.scrollHeight;
     }
 
     let isEmpty = false;
@@ -62,7 +117,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-    class="container {fontSize}"
+    class="container"
     class:full-screen={isFullScreen}
     on:mouseenter={() => {
         $isLyricsHovered = true;
@@ -71,6 +126,15 @@
         $isLyricsHovered = false;
     }}
 >
+    {#if $isLyricsHovered && scrolledToBottom && $currentSongLyrics?.writers?.length}
+        <div class="credits" in:fly={{ y: 5, duration: 150 }}>
+            <small>
+                Written by <span
+                    >{getWritersText($currentSongLyrics.writers)}</span
+                ></small
+            >
+        </div>
+    {/if}
     <div class="content">
         <header>
             <div class="close-icon">
@@ -86,7 +150,20 @@
                 <p>Lyrics</p>
                 <small>{$currentSong.title}</small>
             </div>
-            <div></div>
+            <div class="options">
+                <Icon
+                    icon="mdi:format-font-size-decrease"
+                    onClick={decreaseFontSize}
+                    boxed
+                    size={20}
+                />
+                <Icon
+                    icon="mdi:format-font-size-increase"
+                    onClick={increaseFontSize}
+                    boxed
+                    size={20}
+                />
+            </div>
         </header>
         {#if !$userSettings.geniusApiKey?.length}
             <div class="placeholder">
@@ -123,11 +200,15 @@
                 >
             </div>
         {:else if $currentSongLyrics}
-            <textarea
+            <div
+                class="textarea {fontSize}"
+                contenteditable="plaintext-only"
                 placeholder="Start typing..."
                 on:input={onLyricsChanged}
-                bind:value={$currentSongLyrics.lyrics}
-            />
+                on:scroll={onScroll}
+            >
+                {@html replaceHeadingsWithSpan($currentSongLyrics.lyrics)}
+            </div>
         {:else}
             <div class="placeholder">
                 <br />
@@ -149,7 +230,6 @@
         text-align: center;
         min-width: 330px;
         max-width: 360px;
-        overflow: hidden;
         z-index: 2;
         height: 100%;
         border-radius: 5px;
@@ -159,12 +239,32 @@
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
         backdrop-filter: blur(8px);
 
+        .credits {
+            margin-top: -3.8em;
+            margin-left: 1.5em;
+            margin-right: 1.5em;
+            margin-bottom: 1em;
+            position: absolute;
+            bottom: 0;
+            width: 85%;
+            z-index: 10;
+            padding: 0.3em 1em;
+            border-top: 1px solid rgb(73, 68, 68);
+            /* border-radius: 5px; */
+            /* background: rgb(40, 39, 44); */
+
+            line-height: normal;
+            small {
+                opacity: 0.5;
+            }
+        }
         .content {
             position: relative;
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
 
             p {
                 opacity: 0.5;
@@ -235,49 +335,70 @@
                         white-space: initial;
                     }
                     small {
+                        max-width: 200px;
                         opacity: 0.7;
+                        white-space: nowrap;
+                        text-overflow: ellipsis;
+                        overflow: hidden;
                     }
+                }
+
+                .options {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: flex-end;
+                    padding-right: 1em;
+                    user-select: none;
                 }
             }
 
-            textarea {
+            .textarea {
                 appearance: none;
                 width: 100%;
                 height: 100%;
-                padding: 3rem 2em;
+                padding: 1em 2em 4.5rem 2em;
                 text-align: center;
                 outline: none;
+                overflow-y: auto;
+                overflow-x: hidden;
                 border: none;
                 background: none;
                 font-size: inherit;
                 line-height: 1.8em;
                 resize: none;
                 color: rgb(236, 213, 222);
-                font-weight: 500;
-            }
+                font-weight: normal;
+                font-family: "Lyrics";
 
-            &.font-12 {
-                font-size: 12px;
-            }
+                &.font-xs {
+                    font-size: 12px;
+                }
 
-            &.font-14 {
-                font-size: 14px;
-            }
+                &.font-s {
+                    font-size: 14px;
+                }
 
-            &.font-20 {
-                font-size: 20px;
-            }
+                &.font-m {
+                    font-size: 16px;
+                }
 
-            &.font-24 {
-                font-size: 24px;
-            }
+                &.font-l {
+                    font-size: 20px;
+                }
 
-            &.font-32 {
-                font-size: 32px;
-            }
-
-            &.font-48 {
-                font-size: 48px;
+                &.font-xl {
+                    font-size: 26px;
+                }
+                :global(.section) {
+                    margin: 10px 0;
+                    color: rgb(179, 146, 179);
+                    background: rgb(73, 70, 70, 0.5);
+                    border-radius: 5px;
+                    padding: 3px 5px;
+                    display: inline-block;
+                    line-height: normal;
+                }
             }
         }
     }
