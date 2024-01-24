@@ -4,7 +4,7 @@
     import "iconify-icon";
     import { debounce } from "lodash-es";
     import type { Song } from "src/App";
-    import { onDestroy } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
@@ -137,18 +137,101 @@
     export let isLoading = true;
 
     const DEFAULT_FIELDS = [
-        { name: "Title", value: "title", show: true },
-        { name: "Artist", value: "artist", show: true },
-        { name: "Composer", value: "composer", show: false },
-        { name: "Album", value: "album", show: true },
-        { name: "Track", value: "trackNumber", show: true },
-        { name: "Year", value: "year", show: true },
-        { name: "Genre", value: "genre", show: true },
-        { name: "Origin", value: "originCountry", show: true },
-        { name: "Duration", value: "duration", show: true }
+        {
+            name: "Title",
+            value: "title",
+            show: true,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
+        },
+        {
+            name: "Artist",
+            value: "artist",
+            show: true,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
+        },
+        {
+            name: "Composer",
+            value: "composer",
+            show: false,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
+        },
+        {
+            name: "Album",
+            value: "album",
+            show: true,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
+        },
+        {
+            name: "Track",
+            value: "trackNumber",
+            show: true,
+            viewProps: {
+                width: 68,
+                x: 0,
+                autoWidth: false
+            }
+        },
+        {
+            name: "Year",
+            value: "year",
+            show: true,
+            viewProps: {
+                width: 68,
+                x: 0,
+                autoWidth: false
+            }
+        },
+        {
+            name: "Genre",
+            value: "genre",
+            show: true,
+            viewProps: {
+                width: 130,
+                x: 0,
+                autoWidth: false
+            }
+        },
+        {
+            name: "Origin",
+            value: "originCountry",
+            show: true,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
+        },
+        {
+            name: "Duration",
+            value: "duration",
+            show: true,
+            viewProps: {
+                width: 88,
+                x: 0,
+                autoWidth: false
+            }
+        }
     ];
 
     export let fields = DEFAULT_FIELDS;
+
+    let displayFields = fields.filter((f) => f.show);
 
     export let showMyArtists = false;
 
@@ -192,12 +275,187 @@
             if ($libraryScrollPos && container) {
                 container.scrollTop = $libraryScrollPos;
             }
+            contentHeight = songs?.length * ROW_HEIGHT;
+
+            viewportHeight = container?.clientHeight;
+            width = container?.clientWidth;
+            calculateColumns();
+            calculateSongSlice();
+        }
+    }
+
+    /**
+     * Virtualized scrolling
+     *
+     */
+    let contentHeight = 0;
+    let scrollNormalized = 0;
+    let scrollOffset = 0;
+
+    // Sandwich
+    let sandwichTopHeight = 0;
+    let sandwichBottomY = 0;
+    let sandwichBottomHeight = 0;
+
+    let width = 0;
+    let viewportHeight = 0;
+    let virtualViewportHeight = 0; // With padding
+
+    // CONSTANTS
+    const HEADER_HEIGHT = 20;
+    const ROW_HEIGHT = 26;
+    const BORDER_WIDTH = 1;
+    const SCROLL_PADDING = 200;
+    const DUMMY_COUNT = 10;
+    const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
+
+    let songsSlice: Song[] = [];
+
+    function calculateSongSlice() {
+        if (songs?.length) {
+            console.log(
+                "scrollPos",
+                $libraryScrollPos,
+                "contentHeight",
+                contentHeight,
+                "viewport",
+                viewportHeight
+            );
+
+            // See how many rows fit in the current height
+
+            const scrollableArea = contentHeight - viewportHeight;
+            const songsCountScrollable = Math.ceil(scrollableArea / ROW_HEIGHT);
+            const songsCountViewport = Math.ceil(viewportHeight / ROW_HEIGHT);
+
+            // Get px of current scroll position (content)
+            let contentY = scrollableArea * scrollNormalized;
+            sandwichTopHeight = contentY;
+            sandwichBottomY = contentY + viewportHeight;
+            sandwichBottomHeight =
+                contentHeight - sandwichTopHeight - viewportHeight;
+
+            let songsStartSlice = Math.floor(
+                Math.max(0, Math.floor(scrollNormalized * songsCountScrollable))
+            );
+            let songsEndSlice = Math.min(
+                songs.length,
+                Math.ceil(songsStartSlice + songsCountViewport)
+            );
+
+            // let remainder = contentY % ROW_HEIGHT;
+            // scrollOffset = -remainder * songsCountViewport;
+
+            const getTopOffscreenRows = (
+                firstOnScreenIdx,
+                backwardsCount,
+                prefix
+            ) => {
+                let offscreenRows = [];
+                let firstSongIdx = Math.max(
+                    0,
+                    firstOnScreenIdx - backwardsCount
+                );
+                let lastSongIdx = Math.max(0, firstOnScreenIdx);
+                if (firstOnScreenIdx >= 0 && lastSongIdx >= 0) {
+                    offscreenRows.unshift(
+                        ...songs
+                            .slice(firstSongIdx, lastSongIdx)
+                            .map((s) => ({ ...s}))
+                    );
+                }
+                let dummyCount =
+                    firstOnScreenIdx - backwardsCount < 0
+                        ? Math.abs(firstOnScreenIdx - backwardsCount)
+                        : 0;
+                if (dummyCount) {
+                    offscreenRows.unshift(
+                        ...getDummyRows(dummyCount, "dummy-top")
+                    );
+                }
+                return offscreenRows;
+            };
+
+            const getBottomOffscreenRows = (
+                lastOnScreenIdx,
+                forwardsCount,
+                prefix
+            ) => {
+                let offscreenRows = [];
+                let firstSongIdx = Math.min(songs.length - 1, lastOnScreenIdx);
+                let lastSongIdx = Math.min(
+                    songs.length - 1,
+                    lastOnScreenIdx + forwardsCount
+                );
+                // console.log("first", firstSongIdx, "lastSongIdx", lastSongIdx);
+
+                // console.log("songs length", songs.length);
+                if (
+                    firstSongIdx <= songs.length - 1 &&
+                    lastSongIdx <= songs.length - 1
+                ) {
+                    offscreenRows.push(
+                        ...songs
+                            .slice(firstSongIdx, lastSongIdx)
+                            .map((s) => ({ ...s}))
+                    );
+                }
+                let dummyRemainder =
+                    songs.length - (lastOnScreenIdx + forwardsCount);
+                let dummyCount =
+                    dummyRemainder < 0 ? Math.abs(dummyRemainder) : 0;
+                if (dummyCount) {
+                    offscreenRows.push(
+                        ...getDummyRows(dummyCount, "dummy-bottom")
+                    );
+                }
+                // console.log("bottom", offscreenRows);
+
+                return offscreenRows;
+            };
+
+            const getDummyRows = (count, prefix) => {
+                return new Array(count)
+                    .fill({ title: "dummy" })
+                    .map((s, idx) => ({
+                        ...s,
+                        id: `${prefix}-${idx}`,
+                        dummy: true
+                    }));
+            };
+
+            // Make sure the window is always filled with the right amount of rows
+            songsSlice = songs.slice(songsStartSlice, songsEndSlice);
+            // console.log("slice", songsStartSlice, songsEndSlice);
+            let diff = songsCountViewport - (songsSlice.length - 1);
+            // console.log("diff", diff);
+            if (diff) {
+                songsSlice = songsSlice.concat(
+                    getDummyRows(diff, "dummy-middle")
+                );
+            }
+            // Top and bottom dummies
+            songsSlice = getTopOffscreenRows(
+                songsStartSlice,
+                DUMMY_COUNT,
+                "dummy-top"
+            )
+                .concat(...songsSlice)
+                .concat(
+                    ...getBottomOffscreenRows(
+                        songsEndSlice,
+                        DUMMY_COUNT,
+                        "dummy-bottom"
+                    )
+                );
         }
     }
 
     function onScroll(evt) {
         console.log("scroll", evt);
         $libraryScrollPos = evt.target.scrollTop;
+        scrollNormalized = $libraryScrollPos / (contentHeight - viewportHeight);
+
         if (currentSongRow) {
             let rect = currentSongRow.getBoundingClientRect();
 
@@ -213,6 +471,8 @@
                         document.documentElement
                             .clientWidth) /* or $(window).width() */;
         }
+
+        calculateSongSlice();
     }
 
     let currentSongRow;
@@ -676,7 +936,7 @@
     let hoveredColumnIdx = null;
     let columnToInsertIdx = null;
     let columnToInsertXPos = 0;
-    $: numColumns = fields.filter((f) => f.show).length;
+    $: numColumns = displayFields.length;
 
     function handleDragOver(event: DragEvent, index) {
         event.preventDefault();
@@ -771,6 +1031,47 @@
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
     }
+
+    function calculateColumns() {
+        let runningX = 0;
+        let previousWidth = 0;
+        // Calculate total width of fixed-width rectangles
+        const fixedWidths = displayFields
+            .filter((f) => !f.viewProps.autoWidth)
+            .map((f) => f.viewProps.width);
+        const totalFixedWidth = fixedWidths.reduce(
+            (total, width) => total + width,
+            0
+        );
+        console.log("width", width, "totalFixedWidth", totalFixedWidth);
+        // Calculate available width for 'auto' size rectangles
+        const availableWidth = width - totalFixedWidth;
+
+        // Calculate the width for each 'auto' size rectangle
+        const autoWidth =
+            availableWidth / (displayFields.length - fixedWidths.length);
+        console.log(
+            "autoWidth",
+            autoWidth,
+            displayFields.length,
+            fixedWidths.length
+        );
+        displayFields.forEach((f) => {
+            const rectWidth = f.viewProps.autoWidth
+                ? autoWidth
+                : f.viewProps.width;
+            f.viewProps.x = runningX += previousWidth;
+            f.viewProps.width = rectWidth;
+            previousWidth = f.viewProps.width;
+            return f;
+        });
+    }
+
+    onMount(() => {
+        viewportHeight = container?.clientHeight;
+        width = container?.clientWidth;
+        calculateColumns();
+    });
 </script>
 
 {#if isLoading}
@@ -786,7 +1087,7 @@
         {/if}
         <container
             bind:this={container}
-            on:scroll={debounce(onScroll, 200)}
+            on:scroll={onScroll}
             class="theme-{theme}"
             class:dim
             in:fade={{ duration: 170, delay: 100, easing: cubicInOut }}
@@ -866,6 +1167,8 @@
                                                 placement: "bottom",
                                                 show: field.value === "artist"
                                             }}
+                                            style="width:{field.viewProps
+                                                .width}px"
                                             ><div>
                                                 {#if hoveredColumnIdx === idx}
                                                     <iconify-icon
@@ -901,9 +1204,9 @@
                             </tr>
                         {/each}
                     </thead>
-
-                    {#if songs}
-                        {#each songs as song, idx (song.id)}
+                    <tr class="dummy" style="height:{sandwichTopHeight}px" />
+                    {#if songsSlice}
+                        {#each songsSlice as song, idx (song.id)}
                             <tr
                                 data-song={song.id}
                                 class:playing={get(currentSong) &&
@@ -918,8 +1221,9 @@
                                 on:dblclick={() => onDoubleClickSong(song, idx)}
                                 on:mousedown|preventDefault={(e) =>
                                     e.button === 0 && onSongDragStart(song)}
+                                style="transform: translateY(-{DUMMY_PADDING-scrollOffset}px);z-index: -10;visibility:{song.dummy ? 'hidden': 'visible'};"
                             >
-                                {#each fields.filter((f) => f.show) as field (field)}
+                                {#each displayFields as field (field)}
                                     <td
                                         data-type={field.value}
                                         class:is-first={(field.value ===
@@ -927,6 +1231,7 @@
                                             song.viewModel?.isFirstArtist) ||
                                             (field.value === "album" &&
                                                 song.viewModel?.isFirstAlbum)}
+                                        style="width:{field.viewProps.width}px"
                                     >
                                         <div class="field">
                                             <p
@@ -997,6 +1302,7 @@
                             </tr>
                         {/each}
                     {/if}
+                    <tr class="dummy" style="height:{sandwichBottomHeight}px" />
                 </table>
 
                 {#if $isSmartQueryBuilderOpen && noSongs}
@@ -1286,6 +1592,7 @@
             position: sticky;
             top: 0;
             backdrop-filter: blur(8px);
+            z-index: 2;
             &.smart-query {
                 td {
                     background-color: #4d347c;
@@ -1343,9 +1650,6 @@
             .icon-clock {
                 display: none;
             }
-            &[data-type="track"] {
-                max-width: min-content;
-            }
 
             p {
                 margin: 0;
@@ -1381,32 +1685,6 @@
                     }
                     .icon-clock {
                         display: block;
-                    }
-                }
-            }
-            &[data-type="title"] {
-                max-width: 160px;
-            }
-            @media only screen and (min-width: 950px) {
-                &[data-type="artist"] {
-                    max-width: 120px;
-                }
-                &[data-type="album"] {
-                    max-width: 120px;
-                }
-                &[data-type="trackNumber"] {
-                    max-width: 52px;
-                }
-                &[data-type="genre"] {
-                    max-width: 55px;
-                }
-                &[data-type="year"] {
-                    max-width: 51px;
-                }
-                &[data-type="duration"] {
-                    max-width: 60px;
-                    .icon-clock {
-                        display: none;
                     }
                 }
             }

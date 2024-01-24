@@ -26,7 +26,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import LyricsView from "../library/LyricsView.svelte";
     import { fade, fly } from "svelte/transition";
-    import CanvasLibrary from "../library/CanvasLibrary.svelte";
+    // import CanvasLibrary from "../library/CanvasLibrary.svelte";
 
     let isLoading = true;
 
@@ -179,7 +179,7 @@
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
-    <CanvasLibrary allSongs={songs} {isLoading} />
+    <!-- <CanvasLibrary allSongs={songs} {isLoading} /> -->
     {#if $isLyricsOpen}
         <div class="lyrics" transition:fade={{duration: 150}}>
             <LyricsView />

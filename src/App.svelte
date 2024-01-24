@@ -184,8 +184,8 @@
     {#if !$isWelcomeSeen}
         <WelcomeView />
     {:else if $uiView === "library" || $uiView === "smart-query"}
-        <!-- <LibraryView /> -->
-        <CanvasLibraryView/>
+        <LibraryView />
+        <!-- <CanvasLibraryView/> -->
     {:else if $uiView === "albums"}
         <AlbumView />
     {:else if $uiView === "your-music"}
