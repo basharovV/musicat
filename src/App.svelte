@@ -32,7 +32,7 @@
     import MapView from "./lib/views/MapView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
-    import 'overlayscrollbars/overlayscrollbars.css';
+    import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
     
     startMenuListener();
     startImportListener();
@@ -184,7 +184,8 @@
     {#if !$isWelcomeSeen}
         <WelcomeView />
     {:else if $uiView === "library" || $uiView === "smart-query"}
-        <LibraryView />
+        <!-- <LibraryView /> -->
+        <CanvasLibraryView/>
     {:else if $uiView === "albums"}
         <AlbumView />
     {:else if $uiView === "your-music"}
