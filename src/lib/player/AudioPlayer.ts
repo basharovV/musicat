@@ -44,12 +44,6 @@ class AudioPlayer {
     shouldRestoreLastPlayed: LastPlayedInfo;
     isRunningTransition = false;
     isInit = true;
-    connectOtherAudioFile = (
-        toSwitchTo: number,
-        transitionPointInTime: number
-    ) => {};
-    doPlay = (number) => {};
-    doPause = (number) => {};
 
     private constructor() {
         // let AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -186,6 +180,7 @@ class AudioPlayer {
         currentSongIdx.subscribe((idx) => {
             this.currentSongIdx = idx;
         });
+        this.setupAnalyserAudio();
     }
 
     shuffle() {
@@ -272,7 +267,6 @@ class AudioPlayer {
          * because the sample won't play in its entirety
          */
         if (duration < 30 && !this.isRunningTransition && ended) {
-            this.connectOtherAudioFile(this.currentAudioFile === 1 ? 2 : 1, 0);
             this.currentSongIdx = this.currentSongIdx + 1;
             currentSongIdx.set(get(currentSongIdx) + 1);
             playerTime.set(0);
@@ -305,27 +299,26 @@ class AudioPlayer {
             //     this.getCurrentAudioFile().volume = get(volume);
             // }, (diff - 0.177) * 1000);
 
-            this.connectOtherAudioFile(
-                this.currentAudioFile === 1 ? 2 : 1,
-                diff
-            );
             this.queueGapless(diff);
         }
     }
 
     async queueGapless(diff) {
         const playDelay = 0.1;
-        setTimeout(async () => {
-            this.play(true);
-            this.switchAudioFile();
-            currentSongIdx.set(get(currentSongIdx) + 1);
-            playerTime.set(0);
-            currentSong.set(get(nextUpSong));
-            this.currentSong = get(nextUpSong);
-            this.setNextUpSong();
-            this.setMediaSessionData();
-            this.isRunningTransition = false;
-        }, (diff - 0.41) * 1000);
+        setTimeout(
+            async () => {
+                this.switchAudioFile();
+                currentSongIdx.set(get(currentSongIdx) + 1);
+                playerTime.set(0);
+                currentSong.set(get(nextUpSong));
+                this.currentSong = get(nextUpSong);
+                this.setNextUpSong();
+                this.setMediaSessionData();
+                this.play(false);
+                this.isRunningTransition = false;
+            },
+            (diff - 0.41) * 1000
+        );
     }
 
     playCurrent() {
@@ -544,6 +537,74 @@ class AudioPlayer {
         const song = await db.songs.get(lastPlayed.songId);
         this.playSong(song, lastPlayed.position, false);
     }
+
+    private _audioContext: AudioContext;
+
+    audioElement: HTMLAudioElement;
+    audioElement2: HTMLAudioElement;
+
+    // Nodes
+    private _audioSource: MediaElementAudioSourceNode;
+    private _audioSource2: MediaElementAudioSourceNode;
+    audioAnalyser: AnalyserNode;
+    private _gainNode: GainNode;
+    private _gainNode2: GainNode;
+
+    /**
+     * Connect the nodes together, so sound is flowing
+     * into the analyser node from the source node
+     */
+    setupAnalyserAudio() {
+        this.audioElement = this.getCurrentAudioFile();
+        this.audioElement2 = this.getOtherAudioFile();
+        let AudioContext = window.AudioContext || window.webkitAudioContext;
+        this._audioContext = new AudioContext({ sampleRate: 48000 });
+        this._audioSource = this._audioContext.createMediaElementSource(
+            this.audioElement
+        );
+
+        this._audioSource2 = this._audioContext.createMediaElementSource(
+            this.audioElement2
+        );
+        this.audioAnalyser = new AnalyserNode(this._audioContext, {
+            fftSize: 2048,
+            smoothingTimeConstant: 0.9
+        });
+        this._gainNode = new GainNode(this._audioContext, {
+            gain: get(volume)
+        });
+        this._gainNode2 = new GainNode(this._audioContext, {
+            gain: get(volume)
+        });
+        this._audioSource.mediaElement.volume = get(volume);
+        this._audioSource2.mediaElement.volume = get(volume);
+        // Source -> Gain -> Analyser -> Destination (master)
+        this._audioSource.connect(this._gainNode);
+        this._audioSource2.connect(this._gainNode2);
+        this._gainNode.connect(this.audioAnalyser);
+        this._gainNode2.connect(this.audioAnalyser);
+        this.audioAnalyser.connect(this._audioContext.destination);
+
+        volume.subscribe((vol) => {
+            this._gainNode.gain.value = vol * 0.75;
+            this._gainNode2.gain.value = vol * 0.75;
+            localStorage.setItem("volume", String(vol));
+        });
+    }
+    doPlay = (number) => {
+        if (number === 1) {
+            this._audioSource.mediaElement.play();
+        } else {
+            this._audioSource2.mediaElement.play();
+        }
+    };
+    doPause = (number) => {
+        if (number === 1) {
+            this._audioSource.mediaElement.pause();
+        } else {
+            this._audioSource2.mediaElement.pause();
+        }
+    };
 }
 
 const audioPlayer = AudioPlayer.Instance;

@@ -14,11 +14,13 @@
     onMount(() => {
         width = container.clientWidth;
         height = container.clientHeight;
-
-        analyser = new AudioVisualiser(
-            audioPlayer.getCurrentAudioFile(),
-            canvas
+        console.log(
+            "width",
+            container.clientWidth,
+            container.offsetWidth,
+            container.scrollWidth
         );
+        analyser = new AudioVisualiser(canvas);
 
         isFullScreenVisualiser.subscribe((isFullScreen) => {
             console.log("w", width);
@@ -42,7 +44,12 @@
     class:full-screen={$isFullScreenVisualiser}
     class:mini={!$isFullScreenVisualiser}
 >
-    <canvas bind:this={canvas} class:hidden={$currentSong === null} />
+    <canvas
+        bind:this={canvas}
+        class:hidden={$currentSong === null}
+        {width}
+        {height}
+    />
 
     {#if $isFullScreenVisualiser}
         <div class="icon">
@@ -63,12 +70,11 @@
 
     canvas {
         width: 100%;
-        height: auto;
+        height: 100%;
         opacity: 1;
     }
     .container {
         z-index: 1;
-        position: absolute;
         bottom: 4px;
         pointer-events: none;
         width: 100%;

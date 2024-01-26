@@ -13,6 +13,7 @@
         smartQueryInitiator,
         uiView
     } from "../../data/store";
+    import { fly } from "svelte/transition";
 
     $: savedSmartQueries = liveQuery(async () => {
         return db.smartQueries.toArray();
@@ -33,67 +34,37 @@
         $isSmartQueryBuilderOpen = true;
         $isSmartQuerySaveUiOpen = false;
     }
-
-    function save() {
-        $smartQuery.save();
-        // Close the builder UI and set the current selected query to the one we just saved
-        $isSmartQueryBuilderOpen = false;
-        $selectedSmartQuery = `~usq:${$smartQuery.name}`;
-        $smartQuery.reset();
-    }
 </script>
 
-{#if !$isSmartQueryBuilderOpen}
-    <div class="query-browser">
-        <Icon
-            icon="mingcute:close-circle-fill"
-            size={14}
-            onClick={hideSmartQuery}
-        />
-        <div class="query-header">
-            <p class="query-header-title">Showing results for</p>
-            <select bind:value={$selectedSmartQuery}>
-                {#each SmartQuery as query}
-                    <option value={query.value}>{query.name}</option>
+<div class="query-browser">
+    <Icon
+        icon="mingcute:close-circle-fill"
+        size={14}
+        onClick={hideSmartQuery}
+    />
+    <div class="query-header">
+        <p class="query-header-title">Showing results for</p>
+        <select bind:value={$selectedSmartQuery}>
+            {#each SmartQuery as query}
+                <option value={query.value}>{query.name}</option>
+            {/each}
+            <option value="----">----</option>
+
+            {#if $savedSmartQueries}
+                {#each $savedSmartQueries as query}
+                    <option value={`~usq:${query.name}`}>{query.name}</option>
                 {/each}
-                <option value="----">----</option>
-
-                {#if $savedSmartQueries}
-                    {#each $savedSmartQueries as query}
-                        <option value={`~usq:${query.name}`}
-                            >{query.name}</option
-                        >
-                    {/each}
-                {/if}
-            </select>
-        </div>
-        <div>
-            <button on:click={showSmartQueryBuilder}
-                >{$isSmartQueryBuilderOpen
-                    ? "Save smart playlist"
-                    : "New smart playlist"}</button
-            >
-        </div>
+            {/if}
+        </select>
     </div>
-{:else}
-    <div class="query-editor-info">
-        <!-- <ButtonWithIcon
-            icon="mingcute:close-circle-fill"
-            onClick={hideSmartQueryBuilder}
-            text="Hide builder"
-        /> -->
-
-        <div class="smart-query-actions">
-            <p>Name:</p>
-            <input bind:value={$smartQuery.name} />
-            <img src="images/arrow-down-right.svg" />
-            <button
-                disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
-                on:click={save}>Save smart query</button
-            >
-        </div>
+    <div>
+        <button on:click={showSmartQueryBuilder}
+            >{$isSmartQueryBuilderOpen
+                ? "Save smart playlist"
+                : "New smart playlist"}</button
+        >
     </div>
-{/if}
+</div>
 
 <style lang="scss">
     .close-icon {
@@ -106,6 +77,7 @@
         display: grid;
         grid-template-columns: auto auto 1fr;
         gap: 1em;
+        padding: 0.5em;
         > :nth-child(3) {
             display: flex;
             justify-content: flex-end;
@@ -128,13 +100,17 @@
 
             select {
                 font-size: 18px;
-                color: rgb(51, 51, 51);
+                color: rgb(233, 226, 226);
                 /* background-color: rgb(220, 208, 237); */
                 outline: none;
                 opacity: 0.9;
                 margin-top: 4px;
             }
         }
+    }
+
+    select > option {
+        color: white;
     }
 
     button {

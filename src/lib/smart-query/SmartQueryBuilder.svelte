@@ -6,6 +6,7 @@
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
+        selectedSmartQuery,
         smartQuery,
         smartQueryInitiator
     } from "../../data/store";
@@ -16,6 +17,7 @@
     import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
     import Icon from "../ui/Icon.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import { fade, fly } from "svelte/transition";
 
     const fields = ["artist"];
 
@@ -140,88 +142,157 @@
 
     let hoveredItemIdx = 0;
     let numberOfItems = 0;
+
+    function save() {
+        $smartQuery.save();
+        // Close the builder UI and set the current selected query to the one we just saved
+        $isSmartQueryBuilderOpen = false;
+        $selectedSmartQuery = `~usq:${$smartQuery.name}`;
+        $smartQuery.reset();
+    }
 </script>
 
 <container>
-    <div class="query-parts">
-        {#each $smartQuery.parts as queryPart, idx (queryPart.queryPart.name + idx)}
-            <!-- <div>{queryPart.toString()}</div> -->
-            <SmartQueryPart
-                userQueryPart={queryPart}
-                onRemove={() => onRemovePart(idx)}
-                onFocus={onLostFocus}
-            />
-            <p>,</p>
-        {/each}
+    <div class="builder">
+        <div class="query-parts">
+            {#each $smartQuery.parts as queryPart, idx (queryPart.queryPart.name + idx)}
+                <!-- <div>{queryPart.toString()}</div> -->
+                <SmartQueryPart
+                    userQueryPart={queryPart}
+                    onRemove={() => onRemovePart(idx)}
+                    onFocus={onLostFocus}
+                />
+                <p>,</p>
+            {/each}
 
-        <span>
-            <input
-                type="text"
-                bind:this={queryInput}
-                bind:value={$smartQuery.userInput}
-                on:focus={onFocus}
-                on:input={onInput}
-                use:autoWidth
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="add new block"
-            /></span
-        >
-    </div>
-    <div class="options">
-        <div class="validation">
-            {#if $isSmartQueryValid}
-                <p>query is valid</p>
-                <Icon color="green" icon="charm:tick" />
-            {:else}
-                <p>query is not valid</p>
-                <Icon color="orange" icon="ant-design:warning-outlined" />
-            {/if}
+            <span>
+                <input
+                    type="text"
+                    bind:this={queryInput}
+                    bind:value={$smartQuery.userInput}
+                    on:focus={onFocus}
+                    on:input={onInput}
+                    use:autoWidth
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="add new block"
+                /></span
+            >
         </div>
-        <div class="save">
-            <ButtonWithIcon
-                icon="material-symbols:save-outline"
-                onClick={() => {
-                    $isSmartQuerySaveUiOpen = !$isSmartQuerySaveUiOpen;
-                }}
-                text="Save"
-                theme="transparent"
+        <div class="options">
+            <div class="validation">
+                {#if $isSmartQueryValid}
+                    <p>query is valid</p>
+                    <Icon color="green" icon="charm:tick" />
+                {:else}
+                    <p>query is not valid</p>
+                    <Icon color="orange" icon="ant-design:warning-outlined" />
+                {/if}
+            </div>
+            <div class="save">
+                <ButtonWithIcon
+                    icon="material-symbols:save-outline"
+                    onClick={() => {
+                        $isSmartQuerySaveUiOpen = !$isSmartQuerySaveUiOpen;
+                    }}
+                    text="Save"
+                    theme="transparent"
+                />
+            </div>
+            <div class="close">
+                <ButtonWithIcon
+                    icon="material-symbols:close"
+                    onClick={() => {
+                        $isSmartQueryBuilderOpen = false;
+                    }}
+                    text="Close editor"
+                    theme="transparent"
+                />
+            </div>
+        </div>
+        {#if matchingQueryParts.length > 0}
+            <Menu
+                x={inputX}
+                y={inputY}
+                onClickOutside={closeAutoComplete}
+                items={matchingQueryParts.map((p) => ({
+                    text: p.description,
+                    description: "eg. " + p.example,
+                    source: p
+                }))}
+                onItemSelected={onSelectPart}
             />
-        </div>
-        <div class="close">
-            <ButtonWithIcon
-                icon="material-symbols:close"
-                onClick={() => {
-                    $isSmartQueryBuilderOpen = false;
-                    $isSmartQuerySaveUiOpen = false;
-                }}
-                text="Close editor"
-                theme="transparent"
-            />
-        </div>
+        {/if}
     </div>
-    {#if matchingQueryParts.length > 0}
-        <Menu
-            x={inputX}
-            y={inputY}
-            onClickOutside={closeAutoComplete}
-            items={matchingQueryParts.map((p) => ({
-                text: p.description,
-                description: "eg. " + p.example,
-                source: p
-            }))}
-            onItemSelected={onSelectPart}
-        />
+    {#if $isSmartQuerySaveUiOpen}
+        <!-- <ButtonWithIcon
+        icon="mingcute:close-circle-fill"
+        onClick={hideSmartQueryBuilder}
+        text="Hide builder"
+    /> -->
+
+        <div class="smart-query-actions">
+            <p>Name:</p>
+            <input bind:value={$smartQuery.name} />
+            <img src="images/arrow-down-right.svg" />
+            <button
+                disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
+                on:click={save}>Save smart query</button
+            >
+        </div>
     {/if}
 </container>
 
 <style lang="scss">
     container {
-        margin-top: 0.5em;
+        display: flex;
+        flex-direction: column;
+    }
+    .builder {
+        padding: 0.5em 0.5em 0.5em 0;
         display: grid;
         grid-template-columns: 1fr auto;
         overflow: visible;
         position: relative;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .smart-query-actions {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        justify-content: flex-end;
+        padding-right: 0.5em;
+
+        input {
+            background-color: transparent;
+            outline: none;
+            border: none;
+            margin-left: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.36);
+            border-radius: 4px;
+            padding: 0 0.5em;
+            font-size: 1em;
+            line-height: 1.8rem;
+            width: fit-content;
+            min-width: 100px;
+        }
+
+        img {
+            width: 40px;
+            position: relative;
+            opacity: 0.2;
+        }
+
+        button {
+            background-color: rgb(98, 77, 212);
+            border-radius: 4px;
+
+            &:disabled {
+                background-color: rgb(73, 53, 184);
+                color: rgb(116, 114, 114);
+            }
+        }
     }
 
     .query-parts {
@@ -231,6 +302,7 @@
         gap: 0.5em 0.2em;
         margin-right: 1em;
         margin-left: 1em;
+        margin-top: 0.3em;
         flex-wrap: wrap;
         max-width: 90%;
         > p {

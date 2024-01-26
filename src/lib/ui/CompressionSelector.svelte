@@ -68,6 +68,7 @@
         cursor: default;
         display: flex;
         position: relative;
+        width: max-content;
 
         .current {
             padding: 0px 5px;

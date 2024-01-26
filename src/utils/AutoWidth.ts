@@ -2,7 +2,7 @@ function measureMyInputText(input) {
     var c = document.createElement("canvas");
     var ctx = c.getContext("2d");
     ctx.font = font(input);
-    var txtWidth = ctx.measureText(input.value).width;
+    var txtWidth = ctx.measureText(input.value).width * 1.1;
 
     return txtWidth;
 }
@@ -19,7 +19,7 @@ function font(element) {
 export const autoWidth = (node) => {
     /* Constants */
     const update = new Event("update");
-    const buffer = 7;
+    const buffer = 10;
   
     /* Functions */
     const init = () => {

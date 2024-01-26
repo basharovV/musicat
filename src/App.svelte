@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Toaster } from "svelte-french-toast";
     import {
+        dragGhostReset,
         draggedScrapbookItems,
         draggedSongs,
         droppedFiles,
@@ -32,7 +33,8 @@
     import MapView from "./lib/views/MapView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
-    
+    import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
+
     startMenuListener();
     startImportListener();
 
@@ -138,6 +140,8 @@
         } else {
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
+            mouseX = 0;
+            mouseY = 0;
         }
     });
 
@@ -183,7 +187,9 @@
     {#if !$isWelcomeSeen}
         <WelcomeView />
     {:else if $uiView === "library" || $uiView === "smart-query"}
-        <LibraryView />
+        <CanvasLibraryView />
+    {:else if $uiView === "playlists"}
+        <CanvasLibraryView />
     {:else if $uiView === "albums"}
         <AlbumView />
     {:else if $uiView === "your-music"}
