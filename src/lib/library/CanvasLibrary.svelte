@@ -2,7 +2,16 @@
 
 <script lang="ts">
     import { onMount } from "svelte";
-    import { Group, Layer, Rect, Stage, Text } from "svelte-konva";
+    import {
+        Group,
+        Layer,
+        Rect,
+        Stage,
+        Text,
+        Line,
+        Path,
+        type KonvaDragTransformEvent
+    } from "svelte-konva";
 
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
@@ -85,6 +94,13 @@
         })
         .reduce(
             (status, s, idx, songsArray) => {
+                if (s.viewModel) {
+                    s.viewModel.index = idx;
+                } else {
+                    s.viewModel = {
+                        index: idx
+                    };
+                }
                 if (s?.album !== status.state.previousAlbum) {
                     if (status.state.firstSongInPreviousAlbum) {
                         // Set the view model property here
@@ -184,7 +200,7 @@
             value: "trackNumber",
             show: true,
             viewProps: {
-                width: 50,
+                width: 63,
                 x: 0,
                 autoWidth: false
             }
@@ -194,7 +210,7 @@
             value: "year",
             show: true,
             viewProps: {
-                width: 50,
+                width: 63,
                 x: 0,
                 autoWidth: false
             }
@@ -204,7 +220,7 @@
             value: "genre",
             show: true,
             viewProps: {
-                width: 80,
+                width: 100,
                 x: 0,
                 autoWidth: false
             }
@@ -214,9 +230,9 @@
             value: "originCountry",
             show: true,
             viewProps: {
-                width: 0,
+                width: 120,
                 x: 0,
-                autoWidth: true
+                autoWidth: false
             }
         },
         {
@@ -224,7 +240,7 @@
             value: "duration",
             show: true,
             viewProps: {
-                width: 65,
+                width: 63,
                 x: 0,
                 autoWidth: false
             }
@@ -233,8 +249,28 @@
 
     export let fields = DEFAULT_FIELDS;
 
+    let hoveredColumnIdx = null;
+    let hoveredSongIdx = null; // Index is slice-specific
+    let columnToInsertIdx = null;
+    let columnToInsertXPos = 0;
+
+    $: isOrderChanged =
+        JSON.stringify(
+            displayFields.filter((f) => f.show).map((f) => f.value)
+        ) !==
+        JSON.stringify(
+            DEFAULT_FIELDS.filter((f) => f.show).map((f) => f.value)
+        );
+
+    let showColumnPicker = false;
+    let columnPickerPos;
+
     $: displayFields = fields.filter((f) => f.show);
+    $: numColumns = fields.filter((f) => f.show).length;
+
     let songsSlice: Song[];
+    let songsStartSlice = 0;
+    let songsEndSlice = 0;
     let canvas;
 
     let shouldRender = false;
@@ -242,6 +278,7 @@
     let scrollContainer: HTMLDivElement;
     let container: HTMLElement;
     let stage;
+    let isScrollable = false;
     let prevScrollPos = 0;
     let scrollPos = 0;
     let scrollOffset = 0;
@@ -259,8 +296,8 @@
     let dpr;
 
     // CONSTANTS
-    const HEADER_HEIGHT = 20;
-    const ROW_HEIGHT = 22;
+    const HEADER_HEIGHT = 26;
+    const ROW_HEIGHT = 26;
     const BORDER_WIDTH = 1;
     const SCROLL_PADDING = 200;
     const DUMMY_COUNT = 5;
@@ -269,11 +306,17 @@
     // COLORS
     const BG_COLOR = "rgba(36, 33, 34, 0.688)";
     const HEADER_BG_COLOR = "#71658e7e";
+    const OFFSCREEN_BG_COLOR = "#71658e3b";
+    const HEADER_BG_COLOR_HOVERED = "#604d8d";
     const TEXT_COLOR = "rgb(211, 211, 211)";
     const HIGHLIGHT_BG_COLOR = "#2e3357";
     const ROW_BG_COLOR = "transparent";
+    const ROW_BG_COLOR_HOVERED = "#1f1f1f";
     const PLAYING_BG_COLOR = "#5123dd";
     const PLAYING_TEXT_COLOR = "#00ddff";
+    const COLUMN_INSERT_HINT_COLOR = "#b399ffca";
+    const DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
+
     onMount(() => {
         init();
     });
@@ -282,11 +325,32 @@
         drawSongDataGrid();
     }
 
-    let contentHeight = HEADER_HEIGHT;
+    function onResize(e: MouseEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+        drawSongDataGrid();
+    }
 
+    let contentHeight = HEADER_HEIGHT;
+    let scrollableArea = contentHeight;
+
+    // Trigger: on songs updated
     $: if (songs?.length) {
-        contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT ;
-        calculateSongSlice();
+        console.log("SONGS UPDATED");
+        drawSongDataGrid();
+        scrollContainer?.scrollTo({
+            top: 0
+        });
+        if (stage) {
+            stage.on("click", function (e) {
+                // e.target is a clicked Konva.Shape or current stage if you clicked on empty space
+                console.log("clicked on", e.target);
+                console.log(
+                    "usual click on " +
+                        JSON.stringify(stage.getPointerPosition())
+                );
+            });
+        }
     }
 
     function drawSongDataGrid() {
@@ -300,19 +364,36 @@
     }
 
     function printInfo() {
-        console.log("fields", fields);
-        console.log("canvas size", width, virtualViewportHeight);
-        console.log("dpr", dpr);
+        // console.log("fields", fields);
+        // console.log("canvas size", width, virtualViewportHeight);
+        // console.log(
+        //     "widths add up to",
+        //     displayFields.reduce((total, f) => (total += f.viewProps.width), 0)
+        // );
     }
 
     function calculateCanvasSize() {
-        // Get the device pixel ratio
-        dpr = window.devicePixelRatio || 1;
-        // Set canvas size to fill the parent and account for high-DPI displays
-        const rect = scrollContainer.getBoundingClientRect();
-        width = rect.width;
+        contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
+        let area = contentHeight - viewportHeight;
+        width = scrollContainer.clientWidth;
+        // Set canvas size to fill the parent
+        console.log("CANVS WIDTH", width);
         viewportHeight = container.getBoundingClientRect().height;
-        virtualViewportHeight = viewportHeight + SCROLL_PADDING * 2;
+        virtualViewportHeight = viewportHeight;
+
+        if (area < 0) {
+            area = 0;
+            virtualViewportHeight = viewportHeight;
+        }
+
+        scrollableArea = area;
+        isScrollable = scrollableArea > 0;
+        console.log("scrollable", isScrollable);
+
+        setTimeout(() => {
+            width = scrollContainer.clientWidth;
+            calculateColumns();
+        }, 50);
     }
 
     function calculateColumns() {
@@ -327,23 +408,25 @@
             (total, width) => total + width,
             0
         );
-        console.log("width", width, "totalFixedWidth", totalFixedWidth);
+        // console.log("width", width, "totalFixedWidth", totalFixedWidth);
         // Calculate available width for 'auto' size rectangles
         const availableWidth = width - totalFixedWidth;
-
+        // console.log("availableWidth", availableWidth);
         // Calculate the width for each 'auto' size rectangle
         const autoWidth =
             availableWidth / (displayFields.length - fixedWidths.length);
 
-        displayFields.forEach((f) => {
-            const rectWidth = f.viewProps.autoWidth
-                ? autoWidth
-                : f.viewProps.width;
-            f.viewProps.x = runningX += previousWidth;
-            f.viewProps.width = rectWidth;
-            previousWidth = f.viewProps.width;
-            return f;
-        });
+        displayFields = [
+            ...displayFields.map((f) => {
+                const rectWidth = f.viewProps.autoWidth
+                    ? autoWidth
+                    : f.viewProps.width;
+                f.viewProps.x = runningX += previousWidth;
+                f.viewProps.width = rectWidth;
+                previousWidth = f.viewProps.width;
+                return f;
+            })
+        ];
         printInfo();
     }
 
@@ -362,7 +445,6 @@
 
             // See how many rows fit in the current height
             let contentToViewportRatio = viewportHeight / contentHeight; // Multiply by this to get content sizes, divide to get viewport sizes
-            const scrollableArea = contentHeight - viewportHeight;
             const songsCountScrollable = Math.ceil(scrollableArea / ROW_HEIGHT);
             const songsCountPadding = Math.ceil(SCROLL_PADDING / ROW_HEIGHT);
             // console.log("pad", songsCountPadding);
@@ -404,13 +486,14 @@
             //     "startSlice",
             //     scrollNormalized * (songsCountScrollable - songsToPadTop)
             // );
-            let songsStartSlice = Math.floor(
+            songsStartSlice = Math.floor(
                 Math.max(0, Math.floor(scrollNormalized * songsCountScrollable))
             );
-            let songsEndSlice = Math.min(
+            songsEndSlice = Math.min(
                 songs.length,
                 Math.ceil(songsStartSlice + songsCountViewport)
             );
+            // console.log("start", songsStartSlice, "end", songsEndSlice);
 
             const getTopOffscreenRows = (
                 firstOnScreenIdx,
@@ -425,7 +508,9 @@
                 let lastSongIdx = Math.max(0, firstOnScreenIdx);
                 if (firstOnScreenIdx >= 0 && lastSongIdx >= 0) {
                     offscreenRows.unshift(
-                        ...songs.slice(firstSongIdx, lastSongIdx).map(s => ({...s, dummy: true}))
+                        ...songs
+                            .slice(firstSongIdx, lastSongIdx)
+                            .map((s) => ({ ...s, dummy: true }))
                     );
                 }
                 let dummyCount =
@@ -459,7 +544,9 @@
                     lastSongIdx <= songs.length - 1
                 ) {
                     offscreenRows.push(
-                        ...songs.slice(firstSongIdx, lastSongIdx).map(s => ({...s, dummy: true}))
+                        ...songs
+                            .slice(firstSongIdx, lastSongIdx)
+                            .map((s) => ({ ...s, dummy: true }))
                     );
                 }
                 let dummyRemainder =
@@ -496,6 +583,7 @@
                     getDummyRows(diff, "dummy-middle")
                 );
             }
+            // console.log("slice", songsSlice);
             // Top and bottom dummies
             songsSlice = getTopOffscreenRows(
                 songsStartSlice,
@@ -522,13 +610,51 @@
         if (scrollContainer && stage) {
             calculateSongSlice();
 
+            currentSongInView =
+                $currentSongIdx >= songsStartSlice &&
+                $currentSongIdx <= songsEndSlice;
+
             var dy = scrollPos;
             // stage.container().style.transform = "translateY(" + -dy + "px)";
             // requestAnimationFrame(() => stage.y(-dy));
         }
     }
 
+    let currentSongY = 0;
+    $: if ($currentSongIdx) {
+        currentSongY = $currentSongIdx * ROW_HEIGHT;
+
+        currentSongInView =
+            $currentSongIdx >= songsStartSlice &&
+            $currentSongIdx <= songsEndSlice;
+
+        // console.log("currentSongY", currentSongY);
+    }
+
+    function scrollToCurrentSong() {
+        console.log("y", currentSongY);
+        let adjustedPos = currentSongY;
+        if (currentSongY > viewportHeight / 2.3) {
+            adjustedPos -= viewportHeight / 2.3;
+        }
+        if ($isPlaying && $currentSong) {
+            scrollContainer.scrollTo({
+                top: adjustedPos,
+                behavior: "smooth"
+            });
+        }
+    }
+
     // LIBRARY FUNCTIONALITY
+
+    let isCmdOrCtrlPressed = false;
+    let isShiftPressed = false;
+    let rangeStartSongIdx = null;
+    let rangeEndSongIdx = null;
+    let highlightedSongIdx = 0;
+    let showTrackMenu = false;
+    let menuPos;
+    let currentSongInView = false;
 
     function onDoubleClickSong(song, idx) {
         $currentSongIdx = idx;
@@ -537,11 +663,21 @@
         AudioPlayer.playSong(song);
     }
 
-    let isCmdOrCtrlPressed = false;
-    let isShiftPressed = false;
-    let rangeStartSongIdx = null;
-    let rangeEndSongIdx = null;
-    let highlightedSongIdx = 0;
+    function onRightClick(e, song, idx) {
+        if (!songsHighlighted.includes(song)) {
+            highlightSong(song, idx, false);
+        }
+
+        console.log("songIdsHighlighted", songsHighlighted);
+        if (songsHighlighted.length > 1) {
+            $rightClickedTracks = songsHighlighted;
+            $rightClickedTrack = null;
+        } else {
+            $rightClickedTrack = song;
+        }
+        showTrackMenu = true;
+        menuPos = { x: e.clientX, y: e.clientY };
+    }
 
     $: {
         if (songs?.length && $query.query?.length && !$isTrackInfoPopupOpen) {
@@ -633,143 +769,581 @@
         songsHighlighted = songsHighlighted;
         onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
+
+    function onSongDragStart(song: Song) {
+        console.log("dragstart", song);
+        console.log("songshighlighted", songsHighlighted);
+        if (songsHighlighted.length > 1) {
+            $draggedSongs = songsHighlighted;
+        } else {
+            $draggedSongs = [song];
+        }
+    }
+
+    // Shortcuts
+
+    if ($os === "Darwin") {
+        hotkeys("cmd", function (event, handler) {
+            isCmdOrCtrlPressed = true;
+        });
+    } else if ($os === "Windows_NT" || $os === "Linux") {
+        hotkeys("ctrl", function (event, handler) {
+            isCmdOrCtrlPressed = true;
+        });
+    }
+
+    hotkeys("esc", function (event, handler) {
+        if ($isSmartQueryBuilderOpen) {
+            $isSmartQueryBuilderOpen = false;
+        }
+    });
+
+    function onKeyDown(event) {
+        if (event.keyCode === 16) {
+            isShiftPressed = true;
+            console.log("shift pressed");
+        } else if (
+            event.keyCode === 38 &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            event.preventDefault();
+            // up
+            if (highlightedSongIdx > 0) {
+                toggleHighlight(
+                    songs[highlightedSongIdx - 1],
+                    highlightedSongIdx - 1,
+                    true
+                );
+            }
+        } else if (
+            event.keyCode === 40 &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            // down
+            event.preventDefault();
+            if (highlightedSongIdx < songs.length) {
+                toggleHighlight(
+                    songs[highlightedSongIdx + 1],
+                    highlightedSongIdx + 1,
+                    true
+                );
+            }
+        } else if (
+            event.keyCode === 73 &&
+            !$isTrackInfoPopupOpen &&
+            $singleKeyShortcutsEnabled &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            // 'i' for info popup
+            event.preventDefault();
+            console.log("active element", document.activeElement.tagName);
+            // Check if there an input in focus currently
+            if (!$isTrackInfoPopupOpen && songsHighlighted.length) {
+                console.log("opening info", songsHighlighted);
+                if (songsHighlighted.length > 1) {
+                    $rightClickedTracks = songsHighlighted;
+                } else {
+                    $rightClickedTrack = songsHighlighted[0];
+                }
+                $isTrackInfoPopupOpen = true;
+            }
+        } else if (
+            event.keyCode === 13 &&
+            !$isTrackInfoPopupOpen &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            // 'Enter' to play highlighted track
+            event.preventDefault();
+            if (!$isTrackInfoPopupOpen) {
+                $playlist = $queriedSongs;
+                $playlistIsAlbum = false;
+                $currentSongIdx = highlightedSongIdx;
+                AudioPlayer.playSong(songsHighlighted[0]);
+            }
+        }
+    }
+    function onKeyUp(event) {
+        if (event.keyCode === 16) {
+            isShiftPressed = false;
+            console.log("shift lifted");
+        }
+    }
+
+    addEventListener("keydown", onKeyDown);
+    addEventListener("keyup", onKeyUp);
+
+    onDestroy(() => {
+        hotkeys.unbind("ctrl");
+        hotkeys.unbind("cmd");
+        hotkeys.unbind("esc");
+        removeEventListener("keydown", onKeyDown);
+        removeEventListener("keyup", onKeyUp);
+    });
+
+    // COLUMNS
+
+    function updateOrderBy(newOrderBy) {
+        if (newOrderBy === "trackNumber") return; // Not supported
+        if ($query.orderBy === newOrderBy) {
+            $query.reverse = !$query.reverse;
+        }
+        $query.orderBy = newOrderBy;
+        $query = $query;
+    }
+
+    // Re-order columns
+
+    $: {
+        displayFields && calculateColumns();
+    }
+
+    let dropColumnIdx = null;
+
+    function handleColumnDrag(
+        pos: { x: number; y: number },
+        index
+    ): { x: number; y: number } {
+        console.log("over", pos);
+        // const headerColumn = document.querySelector(`[data-index='${index}']`);
+        // const elementRect = headerColumn.getBoundingClientRect();
+        // const elementWidth = elementRect.width;
+        // const dragZoneWidth = 6; // 5% of the element's width
+
+        return { x: pos.x, y: 0 };
+    }
+
+    function onDragStart(event: KonvaDragTransformEvent, index) {
+        event.detail.target.moveToBottom();
+        $draggedColumnIdx = index;
+    }
+
+    function onDragEnd(event: KonvaDragTransformEvent, index) {
+        console.log("event", event);
+        if (columnToInsertIdx !== null) {
+            insertColumn($draggedColumnIdx, columnToInsertIdx);
+        } else {
+            swapColumns($draggedColumnIdx, dropColumnIdx);
+        }
+        $draggedColumnIdx = null;
+        dropColumnIdx = null;
+        event.detail.target.position({ x: 0, y: 0 });
+    }
+
+    function onDragMove(event: KonvaDragTransformEvent) {
+        let x = event.detail.evt.offsetX;
+        const index = displayFields.findIndex(
+            (f) => x >= f.viewProps.x && x <= f.viewProps.x + f.viewProps.width
+        );
+
+        dropColumnIdx = index;
+        const column = displayFields[index];
+        const elementWidth = column.viewProps.width;
+        let offsetX = x - column.viewProps.x;
+        const dragZoneWidth = 6; // 5% of the element's width
+        if (
+            index !== $draggedColumnIdx &&
+            index !== $draggedColumnIdx + 1 &&
+            offsetX < dragZoneWidth
+        ) {
+            // User is dragging over the sides (5% of width) of the element
+            columnToInsertIdx = index;
+            columnToInsertXPos = column.viewProps.x;
+            // Add your logic here
+        } else if (
+            index !== $draggedColumnIdx - 1 &&
+            index !== $draggedColumnIdx &&
+            index < displayFields.length - 1 &&
+            offsetX > elementWidth - dragZoneWidth
+        ) {
+            columnToInsertIdx = index + 1;
+            columnToInsertXPos = column.viewProps.x + column.viewProps.width;
+        } else {
+            columnToInsertIdx = null;
+            columnToInsertXPos = 0;
+        }
+        console.log("columnToInsertIdx", columnToInsertIdx);
+        console.log("dropidx", dropColumnIdx);
+    }
+
+    function resetColumnOrderUi() {
+        $fileDropHandler = null;
+        $emptyDropEvent = null;
+        dropColumnIdx = null;
+        $draggedColumnIdx = null;
+        columnToInsertIdx = null;
+        columnToInsertXPos = 0;
+    }
+    function insertColumn(oldIndex, newIndex) {
+        displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
+        resetColumnOrderUi();
+    }
+
+    function swapColumns(oldIndex, newIndex) {
+        console.log(oldIndex, newIndex);
+        displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
+        resetColumnOrderUi();
+    }
+
+    // Sets back to default
+    function resetColumnOrder() {
+        fields = DEFAULT_FIELDS;
+    }
 </script>
 
-<div id="scroll-container" on:scroll={onScroll} bind:this={scrollContainer}>
-    <div id="large-container" style="height: {contentHeight}px;"></div>
-</div>
+<svelte:window on:resize={debounce(onResize, 5)} />
 
-<div class="container" bind:this={container}>
-    {#if shouldRender}
-        <Stage
-            config={{
-                width,
-                height: virtualViewportHeight,
-                y: -sandwichTopHeight
-            }}
-            bind:handle={stage}
-        >
-            <Layer>
-                <Rect
-                    config={{
-                        x: 0,
-                        y: 0,
-                        width,
-                        height: sandwichTopHeight,
-                        fill: HEADER_BG_COLOR
-                    }}
-                />
-                {#each displayFields as f, idx (f.name)}
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+
+<TrackMenu bind:showMenu={showTrackMenu} bind:pos={menuPos} />
+<ColumnPicker
+    bind:showMenu={showColumnPicker}
+    bind:pos={columnPickerPos}
+    bind:fields
+    onResetOrder={resetColumnOrder}
+    {isOrderChanged}
+/>
+
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+{#if $isPlaying && $currentSong && !currentSongInView}
+    <div
+        in:fly={{ duration: 150, y: 30 }}
+        out:fly={{ duration: 150, y: 30 }}
+        class="scroll-now-playing"
+        on:click={scrollToCurrentSong}
+    >
+        <div class="eq">
+            <span class="eq1" />
+            <span class="eq2" />
+            <span class="eq3" />
+        </div>
+        <p>Scroll to Now playing</p>
+    </div>
+{/if}
+
+<div
+    id="scroll-container"
+    style="overflow-y: {isScrollable ? 'visible' : 'hidden'}"
+    on:scroll={onScroll}
+    bind:this={scrollContainer}
+>
+    <div
+        id="large-container"
+        style="height: {scrollableArea}px;max-height: {scrollableArea}px;"
+    />
+
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div class="container" bind:this={container} on:contextmenu|preventDefault>
+        {#if shouldRender}
+            <Stage
+                config={{
+                    width,
+                    height: virtualViewportHeight,
+                    y: -sandwichTopHeight
+                }}
+                bind:handle={stage}
+            >
+                <Layer>
                     <Rect
                         config={{
-                            x: f.viewProps.x,
-                            y: sandwichTopHeight,
-                            width:
-                                idx === displayFields.length - 1
-                                    ? f.viewProps.width
-                                    : f.viewProps.width - 2,
-                            height: HEADER_HEIGHT,
-                            fill: HEADER_BG_COLOR
+                            x: 0,
+                            y: 0,
+                            width,
+                            height: sandwichTopHeight,
+                            fill: OFFSCREEN_BG_COLOR
                         }}
                     />
-                    <Text
-                        config={{
-                            x: f.viewProps.x,
-                            y: sandwichTopHeight,
-                            text: f.name,
-                            align: "center",
-                            width:
-                                idx === displayFields.length - 1
-                                    ? f.viewProps.width
-                                    : f.viewProps.width - 2,
-                            height: HEADER_HEIGHT,
-                            fontSize: 14,
-                            verticalAlign: "middle",
-                            fill: TEXT_COLOR
-                        }}
-                    />
-                {/each}
-                {#if songsSlice?.length}
-                    {#each songsSlice as song, songIdx (song.id)}
-                        <Group
-                            on:dblclick={() => onDoubleClickSong(song, songIdx)}
-                            on:click={(e) => {
-                                console.log("e", e);
-                                toggleHighlight(song, songIdx);
-                            }}
+                    {#if columnToInsertIdx !== null}
+                        <Rect
                             config={{
-                                visible: !song.dummy
+                                x: columnToInsertXPos,
+                                y: sandwichTopHeight + HEADER_HEIGHT,
+                                height: viewportHeight,
+                                width: 2,
+                                fill: COLUMN_INSERT_HINT_COLOR
+                            }}
+                        />
+                    {/if}
+                    {#each displayFields as f, idx (f.value)}
+                        <Group
+                            config={{
+                                x: f.viewProps.x,
+                                y: sandwichTopHeight,
+                                width: f.viewProps.width,
+                                draggable: true,
+                                dragBoundFunc(pos) {
+                                    return handleColumnDrag(pos, idx);
+                                }
+                            }}
+                            on:click={(ev) => {
+                                if (ev.detail.evt.button === 0)
+                                    updateOrderBy(f.value);
+                                else if (ev.detail.evt.button === 2) {
+                                    console.log("ev", ev);
+                                    columnPickerPos = {
+                                        x: ev.detail.evt.offsetX,
+                                        y: 15
+                                    };
+                                    showColumnPicker = !showColumnPicker;
+                                }
+                            }}
+                            on:mouseenter={() => {
+                                hoveredColumnIdx = idx;
+                            }}
+                            on:mouseleave={() => {
+                                hoveredColumnIdx = null;
+                            }}
+                            on:dragmove={(ev) => {
+                                onDragMove(ev);
+                            }}
+                            on:dragstart={(ev) => {
+                                onDragStart(ev, idx);
+                            }}
+                            on:dragend={(ev) => {
+                                onDragEnd(ev, idx);
                             }}
                         >
                             <Rect
                                 config={{
-                                    x: 0,
-                                    y:
-                                        sandwichTopHeight +
-                                        HEADER_HEIGHT +
-                                        ROW_HEIGHT * songIdx +
-                                        -DUMMY_PADDING +
-                                        scrollOffset,
-                                    width: width,
-                                    height: ROW_HEIGHT,
+                                    width:
+                                        idx === displayFields.length - 1
+                                            ? f.viewProps.width
+                                            : f.viewProps.width - 0.5,
+                                    height: HEADER_HEIGHT,
                                     fill:
-                                        $currentSong?.id === song?.id
-                                            ? PLAYING_BG_COLOR
-                                            : songsHighlighted &&
-                                                isSongHighlighted(song)
-                                              ? HIGHLIGHT_BG_COLOR
-                                              : ROW_BG_COLOR
+                                        columnToInsertIdx === null &&
+                                        dropColumnIdx === idx &&
+                                        dropColumnIdx !== $draggedColumnIdx
+                                            ? DROP_HIGHLIGHT_BG_COLOR
+                                            : hoveredColumnIdx === idx ||
+                                                $query.orderBy === f.value
+                                              ? HEADER_BG_COLOR_HOVERED
+                                              : HEADER_BG_COLOR
                                 }}
                             />
-                            {#each displayFields as f, idx (f.value)}
-                                <Text
+                            {#if hoveredColumnIdx === idx}
+                                <Path
                                     config={{
-                                        x: f.viewProps.x,
+                                        x: -2,
+                                        y: 6,
+                                        scaleX: 0.9,
+                                        scaleY: 0.9,
+                                        data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
+                                        fill: "rgba(255, 255, 255, 0.5)"
+                                    }}
+                                />
+                            {/if}
+                            {#if $query.orderBy === f.value}
+                                {#if $query.reverse}
+                                    <Path
+                                        config={{
+                                            x: f.viewProps.width - 16,
+                                            y: 6,
+                                            scaleX: 0.6,
+                                            scaleY: 0.6,
+                                            data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
+                                            fill: "rgba(255, 255, 255, 0.8)"
+                                        }}
+                                    />
+                                {:else}
+                                    <Path
+                                        config={{
+                                            x: f.viewProps.width - 16,
+                                            y: 6,
+                                            scaleX: 0.6,
+                                            scaleY: 0.6,
+                                            data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
+                                            fill: "rgba(255, 255, 255, 0.8)"
+                                        }}
+                                    />
+                                {/if}
+                            {/if}
+                            <Text
+                                config={{
+                                    text: f.name,
+                                    align: "left",
+                                    padding:
+                                        f.value.match(/^(track|duration)/) !==
+                                        null
+                                            ? 8
+                                            : 10,
+                                    height: HEADER_HEIGHT,
+                                    fontSize: 14,
+                                    letterSpacing:
+                                        f.value.match(/^(duration)/) !== null
+                                            ? -1
+                                            : 0,
+                                    fontStyle: "bold",
+                                    verticalAlign: "middle",
+                                    fontFamily:
+                                        "-apple-system, Avenir, Helvetica, Arial, sans-serif",
+                                    fill: TEXT_COLOR
+                                }}
+                            />
+                        </Group>
+                        {#if idx > 0}
+                            <Rect
+                                config={{
+                                    x: f.viewProps.x - 1,
+                                    y: sandwichTopHeight + HEADER_HEIGHT,
+                                    height: viewportHeight,
+                                    width: 0.5,
+                                    fill: "rgba(242, 242, 242, 0.144)"
+                                }}
+                            />
+                        {/if}
+                    {/each}
+                    {#if songsSlice?.length}
+                        {#each songsSlice as song, songIdx (song.viewModel?.viewId ?? song.id)}
+                            <Group
+                                on:dblclick={() =>
+                                    onDoubleClickSong(song, songIdx)}
+                                on:click={(e) => {
+                                    console.log("e", e);
+                                    if (e.detail.evt.button === 0) {
+                                        toggleHighlight(
+                                            song,
+                                            song.viewModel.index
+                                        );
+                                    } else if (e.detail.evt.button === 2) {
+                                        onRightClick(
+                                            e.detail.evt,
+                                            song,
+                                            song.viewModel.index
+                                        );
+                                    }
+                                }}
+                                on:mouseenter={() => {
+                                    hoveredSongIdx = songIdx;
+                                }}
+                                on:mouseleave={() => {
+                                    hoveredSongIdx = null;
+                                }}
+                                on:mousedown={(e) =>
+                                    e.detail.evt.button === 0 &&
+                                    onSongDragStart(song)}
+                                config={{
+                                    visible: !song.dummy
+                                }}
+                            >
+                                <Rect
+                                    config={{
+                                        x: 0,
                                         y:
                                             sandwichTopHeight +
                                             HEADER_HEIGHT +
                                             ROW_HEIGHT * songIdx +
                                             -DUMMY_PADDING +
                                             scrollOffset,
-                                        text: song[f.value],
-                                        padding: f.value === "title" ? 10 : 0,
-                                        align: f.value === "title" ? "left" : "center",
-                                        width:
-                                            idx === displayFields.length - 1
-                                                ? f.viewProps.width
-                                                : f.viewProps.width - 2,
-                                        height: HEADER_HEIGHT,
-                                        fontSize: 14,
-                                        verticalAlign: "middle",
+                                        width: width,
+                                        height: ROW_HEIGHT,
                                         fill:
-                                            $currentSong?.id === song.id
-                                                ? PLAYING_TEXT_COLOR
-                                                : TEXT_COLOR
+                                            $currentSong?.id === song?.id
+                                                ? PLAYING_BG_COLOR
+                                                : songsHighlighted &&
+                                                    isSongHighlighted(song)
+                                                  ? HIGHLIGHT_BG_COLOR
+                                                  : hoveredSongIdx === songIdx
+                                                    ? ROW_BG_COLOR_HOVERED
+                                                    : ROW_BG_COLOR
                                     }}
                                 />
-                            {/each}
-                        </Group>
-                    {/each}
-                    <Rect
-                        config={{
-                            x: 0,
-                            y: sandwichBottomY,
-                            width,
-                            height: sandwichBottomHeight,
-                            fill: HEADER_BG_COLOR
-                        }}
-                    />
-                {/if}
-            </Layer>
-        </Stage>
-    {/if}
+                                {#each displayFields as f, idx (f.value)}
+                                    <Text
+                                        config={{
+                                            x:
+                                                f.value.match(
+                                                    /^(title|artist|album|track)/
+                                                ) !== null
+                                                    ? f.viewProps.x + 10
+                                                    : f.viewProps.x,
+                                            y:
+                                                sandwichTopHeight +
+                                                HEADER_HEIGHT +
+                                                ROW_HEIGHT * songIdx +
+                                                -DUMMY_PADDING +
+                                                scrollOffset,
+                                            text: song[f.value],
+                                            align:
+                                                f.value.match(
+                                                    /^(title|artist|album|track)/
+                                                ) !== null
+                                                    ? "left"
+                                                    : "center",
+                                            width:
+                                                idx === displayFields.length - 1
+                                                    ? f.viewProps.width - 10
+                                                    : f.value.match(
+                                                            /^(title|artist|album|track)/
+                                                        ) !== null
+                                                      ? f.viewProps.width - 12
+                                                      : f.viewProps.width,
+                                            padding:
+                                                f.value.match(/^(genre)/) !==
+                                                null
+                                                    ? 10
+                                                    : 2,
+                                            height: HEADER_HEIGHT,
+                                            fontSize: 13.5,
+                                            verticalAlign: "middle",
+                                            fill:
+                                                $currentSong?.id === song.id
+                                                    ? PLAYING_TEXT_COLOR
+                                                    : TEXT_COLOR,
+                                            ellipsis:
+                                                f.value.match(
+                                                    /^(title|artist|album|genre)/
+                                                ) !== null
+                                        }}
+                                    />
+                                {/each}
+                            </Group>
+                        {/each}
+                        <Rect
+                            config={{
+                                x: 0,
+                                y: sandwichBottomY,
+                                width,
+                                height: sandwichBottomHeight,
+                                fill: OFFSCREEN_BG_COLOR
+                            }}
+                        />
+                    {/if}
+                </Layer>
+            </Stage>
+        {/if}
+    </div>
 </div>
 
-<style>
+<style lang="scss">
     .container {
         width: 100%;
         height: 100vh;
-        pointer-events: auto;
+        pointer-events: all;
+        display: flex;
+        position: sticky;
+        top: 0;
+        bottom: 0;
+        user-select: none;
+        background-color: rgba(36, 33, 34, 0.688);
     }
 
     #large-container {
@@ -778,11 +1352,114 @@
     }
 
     #scroll-container {
-        width: calc(100%);
+        width: 100%;
         height: 100vh;
         position: absolute;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         z-index: 10;
-        pointer-events: visible;
+        pointer-events: auto;
+    }
+
+    .scroll-now-playing {
+        position: absolute;
+        bottom: 3em;
+        left: 0;
+        right: 0;
+        padding: 0.5em 1em;
+        border-radius: 10px;
+        background-color: #1b1b1c;
+        border: 1px solid rgb(58, 56, 56);
+        box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.834);
+        color: white;
+        margin: auto;
+        width: fit-content;
+        z-index: 11;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        cursor: default;
+        user-select: none;
+
+        @media only screen and (max-width: 522px) {
+            display: none;
+        }
+        &:hover {
+            background-color: #1f1f21;
+            border: 1px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+        &:active {
+            background-color: #2a2a2d;
+            border: 2px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+
+        .eq {
+            width: 15px;
+            padding: 0.5em;
+            position: relative;
+
+            span {
+                display: inline-block;
+                width: 3px;
+                background-color: #ddd;
+                position: absolute;
+                bottom: 0;
+            }
+
+            .eq1 {
+                height: 13px;
+                left: 0;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0s;
+            }
+
+            .eq2 {
+                height: 15px;
+                left: 6px;
+                animation-name: talleq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.17s;
+            }
+
+            .eq3 {
+                height: 13px;
+                left: 12px;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.34s;
+            }
+        }
+        p {
+            margin: 0;
+        }
+    }
+
+    @keyframes shorteq {
+        0% {
+            height: 10px;
+        }
+        50% {
+            height: 5px;
+        }
+        100% {
+            height: 10px;
+        }
+    }
+    @keyframes talleq {
+        0% {
+            height: 15px;
+        }
+        50% {
+            height: 8px;
+        }
+        100% {
+            height: 15px;
+        }
     }
 </style>

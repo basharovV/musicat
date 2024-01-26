@@ -39,6 +39,13 @@
             const playlist = await db.playlists.get($selectedPlaylistId);
             console.log("playlist to get", playlist);
             results = await db.songs.bulkGet(playlist.tracks);
+            // Add display ID
+            results = results.map((s, idx) => ({
+                ...s,
+                viewModel: {
+                    viewId: idx
+                }
+            }));
             isIndexed = false;
             // Filter within playlist
             if ($query.query.length) {
@@ -181,7 +188,7 @@
 <div class="container" class:has-lyrics={$isLyricsOpen}>
     <CanvasLibrary allSongs={songs} {isLoading} />
     {#if $isLyricsOpen}
-        <div class="lyrics" transition:fade={{duration: 150}}>
+        <div class="lyrics" transition:fade={{ duration: 150 }}>
             <LyricsView />
         </div>
     {/if}
