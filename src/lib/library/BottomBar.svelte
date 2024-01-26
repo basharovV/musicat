@@ -14,6 +14,7 @@
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
+    import SpectrumAnalyzer from "../player/SpectrumAnalyzer.svelte";
 
     export let counts;
 
@@ -22,9 +23,9 @@
         : "Click to re-scan folders.";
 </script>
 
-<bottom-bar>
+<bottom-bar data-tauri-drag-region>
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="left">
+    <div class="left" data-tauri-drag-region>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div
             class="lyrics"
@@ -46,6 +47,10 @@
                 </p>
             </div>
         {/if}
+
+        <div class="spectrum">
+            <SpectrumAnalyzer />
+        </div>
     </div>
     {#if $bottomBarNotification}
         <div class="notification">
@@ -54,7 +59,6 @@
             </p>
         </div>
     {/if}
-    <p></p>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
@@ -197,6 +201,21 @@
                     line-height: normal;
                 }
             }
+
+            .spectrum {
+                display: flex;
+                width: 100%;
+                max-width: 200px;
+                height: 30px;
+                position: relative;
+                mask-image: linear-gradient(
+                    to right,
+                    transparent 0%,
+                    #242026 15%,
+                    #242026 85%,
+                    transparent 100%
+                );
+            }
         }
 
         .refresh-icon {
@@ -230,6 +249,7 @@
         .stats {
             display: inline-flex;
             gap: 10px;
+            white-space: nowrap;
         }
     }
 

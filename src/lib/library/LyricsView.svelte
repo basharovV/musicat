@@ -230,7 +230,7 @@
         text-align: center;
         min-width: 330px;
         max-width: 360px;
-        z-index: 2;
+        z-index: 13;
         height: 100%;
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */

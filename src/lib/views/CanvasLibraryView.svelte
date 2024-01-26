@@ -170,7 +170,7 @@
         } else {
             queriedSongs.set(resultsArray);
         }
-        if (get(isInit)) {
+        if ($uiView === "library" && get(isInit)) {
             console.log("init");
             const lastPlayed = get(lastPlayedInfo);
             if (lastPlayed.songId) {
@@ -186,7 +186,7 @@
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
-    <CanvasLibrary allSongs={songs} {isLoading} />
+    <CanvasLibrary allSongs={songs} {isLoading} dim={$isLyricsHovered} />
     {#if $isLyricsOpen}
         <div class="lyrics" transition:fade={{ duration: 150 }}>
             <LyricsView />

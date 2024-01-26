@@ -760,7 +760,7 @@
                                             class:selected={$selectedPlaylistId ===
                                                 playlist.id}
                                             on:click={() => {
-                                                $uiView = "library";
+                                                $uiView = "playlists";
                                                 $selectedPlaylistId =
                                                     playlist.id;
                                             }}
@@ -999,7 +999,6 @@
         </div>
     </div>
 
-    <SpectrumAnalyzer />
     {#if $currentSong}
         <div class="artwork-container">
             <div class="artwork-frame">
@@ -1349,6 +1348,7 @@
         width: 100%;
         position: relative;
         background-color: $sidebar_secondary_color;
+        user-select: none;
 
         .search {
             margin: 0;

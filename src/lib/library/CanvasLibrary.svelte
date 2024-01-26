@@ -81,78 +81,84 @@
 
     export let allSongs = null;
     export let dim = false;
-
     export let isLoading = false;
+    export let theme = "default";
+    export let isInit = true;
 
-    $: songs = $allSongs
-        ?.filter((song: Song) => {
-            if ($compressionSelected === "lossless") {
-                return song?.fileInfo?.lossless;
-            } else if ($compressionSelected === "lossy") {
-                return song?.fileInfo?.lossless === false;
-            } else return song !== undefined;
-        })
-        .reduce(
-            (status, s, idx, songsArray) => {
-                if (s.viewModel) {
-                    s.viewModel.index = idx;
-                } else {
-                    s.viewModel = {
-                        index: idx
+    $: songs =
+        $allSongs
+            ?.filter((song: Song) => {
+                if ($compressionSelected === "lossless") {
+                    return song?.fileInfo?.lossless;
+                } else if ($compressionSelected === "lossy") {
+                    return song?.fileInfo?.lossless === false;
+                } else return song !== undefined;
+            })
+            .reduce(
+                (status, s, idx, songsArray) => {
+                    if (s.viewModel) {
+                        s.viewModel.index = idx;
+                    } else {
+                        s.viewModel = {
+                            index: idx
+                        };
+                    }
+                    if (s?.album !== status.state.previousAlbum) {
+                        if (status.state.firstSongInPreviousAlbum) {
+                            // Set the view model property here
+                            const song =
+                                songsArray[
+                                    status.state.firstSongInPreviousAlbum
+                                ];
+                            if (song.viewModel) {
+                                song.viewModel.isFirstAlbum = true;
+                            } else {
+                                song.viewModel = {
+                                    isFirstAlbum: true,
+                                    isFirstArtist: false
+                                };
+                            }
+                        }
+                        status.state.firstSongInPreviousAlbum = idx;
+                    } else {
+                        status.state.tracksInAlbum++;
+                    }
+                    if (s?.artist !== status.state.previousArtist) {
+                        if (status.state.firstSongInPreviousArtist) {
+                            // Set the view model property here
+                            const song =
+                                songsArray[
+                                    status.state.firstSongInPreviousArtist
+                                ];
+                            if (song.viewModel) {
+                                song.viewModel.isFirstArtist = true;
+                            } else {
+                                song.viewModel = {
+                                    isFirstAlbum: false,
+                                    isFirstArtist: true
+                                };
+                            }
+                        }
+                        status.state.firstSongInPreviousArtist = idx;
+                    } else {
+                        status.state.albumsInArtist++;
+                    }
+                    status.state.previousAlbum = s?.album;
+                    status.state.previousArtist = s?.artist;
+                    return {
+                        songs: songsArray,
+                        state: status.state
                     };
-                }
-                if (s?.album !== status.state.previousAlbum) {
-                    if (status.state.firstSongInPreviousAlbum) {
-                        // Set the view model property here
-                        const song =
-                            songsArray[status.state.firstSongInPreviousAlbum];
-                        if (song.viewModel) {
-                            song.viewModel.isFirstAlbum = true;
-                        } else {
-                            song.viewModel = {
-                                isFirstAlbum: true,
-                                isFirstArtist: false
-                            };
-                        }
+                },
+                {
+                    state: {
+                        previousAlbum: null,
+                        previousArtist: null,
+                        firstSongInPreviousAlbum: null,
+                        firstSongInPreviousArtist: null
                     }
-                    status.state.firstSongInPreviousAlbum = idx;
-                } else {
-                    status.state.tracksInAlbum++;
                 }
-                if (s?.artist !== status.state.previousArtist) {
-                    if (status.state.firstSongInPreviousArtist) {
-                        // Set the view model property here
-                        const song =
-                            songsArray[status.state.firstSongInPreviousArtist];
-                        if (song.viewModel) {
-                            song.viewModel.isFirstArtist = true;
-                        } else {
-                            song.viewModel = {
-                                isFirstAlbum: false,
-                                isFirstArtist: true
-                            };
-                        }
-                    }
-                    status.state.firstSongInPreviousArtist = idx;
-                } else {
-                    status.state.albumsInArtist++;
-                }
-                status.state.previousAlbum = s?.album;
-                status.state.previousArtist = s?.artist;
-                return {
-                    songs: songsArray,
-                    state: status.state
-                };
-            },
-            {
-                state: {
-                    previousAlbum: null,
-                    previousArtist: null,
-                    firstSongInPreviousAlbum: null,
-                    firstSongInPreviousArtist: null
-                }
-            }
-        ).songs;
+            )?.songs ?? [];
 
     const DEFAULT_FIELDS = [
         {
@@ -274,7 +280,8 @@
     let canvas;
 
     let shouldRender = false;
-
+    let ready = false; // When scroll position is restored (if available), to avoid jump
+    let libraryContainer: HTMLDivElement;
     let scrollContainer: HTMLDivElement;
     let container: HTMLElement;
     let stage;
@@ -304,7 +311,7 @@
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
 
     // COLORS
-    const BG_COLOR = "rgba(36, 33, 34, 0.688)";
+    const BG_COLOR = "rgba(36, 33, 34, 0.982)";
     const HEADER_BG_COLOR = "#71658e7e";
     const OFFSCREEN_BG_COLOR = "#71658e3b";
     const HEADER_BG_COLOR_HOVERED = "#604d8d";
@@ -334,23 +341,68 @@
     let contentHeight = HEADER_HEIGHT;
     let scrollableArea = contentHeight;
 
+    let prevSongCount = 0;
+
+    $: counts = liveQuery(() => {
+        return db.transaction("r", db.songs, async () => {
+            const artists = await (
+                await db.songs.orderBy("artist").uniqueKeys()
+            ).length;
+            const albums = await (
+                await db.songs.orderBy("album").uniqueKeys()
+            ).length;
+            const songs = await $allSongs.length;
+            return { songs, artists, albums };
+        });
+    });
+
+    $: noSongs =
+        !songs ||
+        songs.length === 0 ||
+        ($uiView === "smart-query" &&
+            $isSmartQueryBuilderOpen &&
+            $smartQuery.isEmpty);
+
     // Trigger: on songs updated
-    $: if (songs?.length) {
-        console.log("SONGS UPDATED");
-        drawSongDataGrid();
+    $: {
+        if (songs !== undefined && libraryContainer) {
+            console.log("SONGS UPDATED", songs.length);
+            drawSongDataGrid();
+            prevSongCount = songs.length;
+        }
+    }
+
+    // Restore scroll position if any
+    $: if (
+        $uiView === "library" &&
+        isInit &&
+        $libraryScrollPos !== null &&
+        scrollContainer &&
+        shouldRender
+    ) {
+        console.log(
+            "scrollpos",
+            $libraryScrollPos,
+            (songs?.length * ROW_HEIGHT - viewportHeight) * $libraryScrollPos
+        );
+        setTimeout(() => {
+            scrollContainer.scrollTo({
+                top: (contentHeight - viewportHeight) * $libraryScrollPos
+            });
+
+            ready = true;
+        });
+        isInit = false;
+    } else if ($uiView === "playlists") {
         scrollContainer?.scrollTo({
             top: 0
         });
-        if (stage) {
-            stage.on("click", function (e) {
-                // e.target is a clicked Konva.Shape or current stage if you clicked on empty space
-                console.log("clicked on", e.target);
-                console.log(
-                    "usual click on " +
-                        JSON.stringify(stage.getPointerPosition())
-                );
-            });
-        }
+        ready = true;
+    } else if ($uiView === "smart-query") {
+        scrollContainer?.scrollTo({
+            top: 0
+        });
+        ready = true;
     }
 
     function drawSongDataGrid() {
@@ -375,10 +427,9 @@
     function calculateCanvasSize() {
         contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
         let area = contentHeight - viewportHeight;
-        width = scrollContainer.clientWidth;
+        width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
         // Set canvas size to fill the parent
-        console.log("CANVS WIDTH", width);
-        viewportHeight = container.getBoundingClientRect().height;
+        viewportHeight = libraryContainer.getBoundingClientRect().height;
         virtualViewportHeight = viewportHeight;
 
         if (area < 0) {
@@ -388,10 +439,11 @@
 
         scrollableArea = area;
         isScrollable = scrollableArea > 0;
-        console.log("scrollable", isScrollable);
+        console.log("scrollableArea", scrollableArea);
 
         setTimeout(() => {
-            width = scrollContainer.clientWidth;
+            width =
+                scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
             calculateColumns();
         }, 50);
     }
@@ -433,7 +485,11 @@
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
 
     function calculateSongSlice() {
-        if (songs?.length) {
+        if (songs.length === 0) {
+            songsSlice = [];
+            songsStartSlice = 0;
+            songsEndSlice = 0;
+        } else if (songs?.length) {
             // console.log(
             //     "scrollPos",
             //     scrollPos,
@@ -444,9 +500,7 @@
             // );
 
             // See how many rows fit in the current height
-            let contentToViewportRatio = viewportHeight / contentHeight; // Multiply by this to get content sizes, divide to get viewport sizes
             const songsCountScrollable = Math.ceil(scrollableArea / ROW_HEIGHT);
-            const songsCountPadding = Math.ceil(SCROLL_PADDING / ROW_HEIGHT);
             // console.log("pad", songsCountPadding);
             const songsCountViewport = Math.ceil(viewportHeight / ROW_HEIGHT);
             // Get px of current scroll position (content)
@@ -455,37 +509,18 @@
             sandwichBottomY = contentY + viewportHeight;
             sandwichBottomHeight =
                 contentHeight - sandwichTopHeight - viewportHeight;
-
-            // How much space to leave at the top and bottom
-            let paddingTop = Math.min(contentY, SCROLL_PADDING / 2);
-            // console.log('b', (contentHeight - contentY - viewportHeight));
-            let paddingBottom = Math.min(
-                contentHeight - contentY - viewportHeight,
-                SCROLL_PADDING / 2
+            console.log(
+                "sandwichTop",
+                sandwichTopHeight,
+                "sandwichBottom",
+                sandwichBottomY,
+                sandwichBottomHeight
             );
-
-            // console.log(
-            //     "sandwich top",
-            //     sandwichTopHeight,
-            //     "bottom",
-            //     sandwichBottomHeight
-            // );
-
-            let songsToPadTop = Math.floor(paddingTop / ROW_HEIGHT);
-            let songsToPadBottom = Math.floor(paddingBottom / ROW_HEIGHT);
-            let songsScrolled = contentY / ROW_HEIGHT;
-            // console.log("songs at top", songsToPadTop);
-            // console.log("songs at bottom", songsToPadBottom);
             let remainder = contentY % ROW_HEIGHT;
             prevRemainder = remainder;
             // console.log("remainder", remainder);
             // scrollOffset = -contentY / 20;
 
-            // console.log("scrollNormalized", scrollNormalized);
-            // console.log(
-            //     "startSlice",
-            //     scrollNormalized * (songsCountScrollable - songsToPadTop)
-            // );
             songsStartSlice = Math.floor(
                 Math.max(0, Math.floor(scrollNormalized * songsCountScrollable))
             );
@@ -603,25 +638,30 @@
         }
     }
 
+    function rememberScrollPos() {
+        $libraryScrollPos = scrollNormalized; // 0-1
+    }
+
     function onScroll() {
         scrollPos = scrollContainer.scrollTop;
         scrollNormalized = scrollPos / (contentHeight - viewportHeight);
 
         if (scrollContainer && stage) {
             calculateSongSlice();
-
             currentSongInView =
                 $currentSongIdx >= songsStartSlice &&
                 $currentSongIdx <= songsEndSlice;
+        }
 
-            var dy = scrollPos;
-            // stage.container().style.transform = "translateY(" + -dy + "px)";
-            // requestAnimationFrame(() => stage.y(-dy));
+        // Only save/restore scroll pos in main library view, not on playlists
+        if ($uiView === "library") {
+            debounce(rememberScrollPos, 100)();
         }
     }
 
     let currentSongY = 0;
     $: if ($currentSongIdx) {
+        console.log("currentSongIdx", $currentSongIdx);
         currentSongY = $currentSongIdx * ROW_HEIGHT;
 
         currentSongInView =
@@ -1004,6 +1044,33 @@
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
     }
+
+    $: if (isSmartQueryEnabled && $uiView === "smart-query") {
+    }
+
+    // SMART QUERY
+    export let isSmartQueryEnabled = true; // Only for main view
+
+    // Favourite
+
+    async function favouriteSong(song: Song) {
+        await db.songs.update(song, {
+            isFavourite: true
+        });
+
+        if ($currentSong?.id === song.id) {
+            $currentSong.isFavourite = true;
+        }
+    }
+
+    async function unfavouriteSong(song: Song) {
+        await db.songs.update(song, {
+            isFavourite: false
+        });
+        if ($currentSong?.id === song.id) {
+            $currentSong.isFavourite = false;
+        }
+    }
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
@@ -1020,330 +1087,532 @@
     {isOrderChanged}
 />
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-{#if $isPlaying && $currentSong && !currentSongInView}
-    <div
-        in:fly={{ duration: 150, y: 30 }}
-        out:fly={{ duration: 150, y: 30 }}
-        class="scroll-now-playing"
-        on:click={scrollToCurrentSong}
-    >
-        <div class="eq">
-            <span class="eq1" />
-            <span class="eq2" />
-            <span class="eq3" />
+<div class="library-container" bind:this={libraryContainer}>
+    {#if isLoading}
+        <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
+            <p>💿 one sec...</p>
         </div>
-        <p>Scroll to Now playing</p>
-    </div>
-{/if}
+    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
+        <ImportPlaceholder />
+    {:else}
+        <div
+            id="scroll-container"
+            style="overflow-y: {isScrollable ? 'visible' : 'hidden'}"
+            class:ready
+            on:scroll={onScroll}
+            bind:this={scrollContainer}
+        >
+            <div
+                id="large-container"
+                style="height: {scrollableArea}px;max-height: {scrollableArea}px;"
+            />
 
-<div
-    id="scroll-container"
-    style="overflow-y: {isScrollable ? 'visible' : 'hidden'}"
-    on:scroll={onScroll}
-    bind:this={scrollContainer}
->
-    <div
-        id="large-container"
-        style="height: {scrollableArea}px;max-height: {scrollableArea}px;"
-    />
-
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="container" bind:this={container} on:contextmenu|preventDefault>
-        {#if shouldRender}
-            <Stage
-                config={{
-                    width,
-                    height: virtualViewportHeight,
-                    y: -sandwichTopHeight
-                }}
-                bind:handle={stage}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div
+                class="container"
+                bind:this={container}
+                on:contextmenu|preventDefault
             >
-                <Layer>
-                    <Rect
-                        config={{
-                            x: 0,
-                            y: 0,
-                            width,
-                            height: sandwichTopHeight,
-                            fill: OFFSCREEN_BG_COLOR
+                {#if dim}
+                    <div class="dimmer" />
+                {/if}
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                {#if $isPlaying && $currentSong && !currentSongInView}
+                    <div
+                        in:fly={{ duration: 150, y: 30 }}
+                        out:fly={{ duration: 150, y: 30 }}
+                        class="scroll-now-playing"
+                        on:click={scrollToCurrentSong}
+                    >
+                        <div class="eq">
+                            <span class="eq1" />
+                            <span class="eq2" />
+                            <span class="eq3" />
+                        </div>
+                        <p>Scroll to Now playing</p>
+                    </div>
+                {/if}
+
+                {#if $uiView === "smart-query"}
+                    <div
+                        class="smart-query"
+                        transition:fly={{
+                            y: -10,
+                            duration: 200,
+                            easing: cubicInOut
                         }}
-                    />
-                    {#if columnToInsertIdx !== null}
-                        <Rect
-                            config={{
-                                x: columnToInsertXPos,
-                                y: sandwichTopHeight + HEADER_HEIGHT,
-                                height: viewportHeight,
-                                width: 2,
-                                fill: COLUMN_INSERT_HINT_COLOR
-                            }}
-                        />
-                    {/if}
-                    {#each displayFields as f, idx (f.value)}
-                        <Group
-                            config={{
-                                x: f.viewProps.x,
-                                y: sandwichTopHeight,
-                                width: f.viewProps.width,
-                                draggable: true,
-                                dragBoundFunc(pos) {
-                                    return handleColumnDrag(pos, idx);
-                                }
-                            }}
-                            on:click={(ev) => {
-                                if (ev.detail.evt.button === 0)
-                                    updateOrderBy(f.value);
-                                else if (ev.detail.evt.button === 2) {
-                                    console.log("ev", ev);
-                                    columnPickerPos = {
-                                        x: ev.detail.evt.offsetX,
-                                        y: 15
-                                    };
-                                    showColumnPicker = !showColumnPicker;
-                                }
-                            }}
-                            on:mouseenter={() => {
-                                hoveredColumnIdx = idx;
-                            }}
-                            on:mouseleave={() => {
-                                hoveredColumnIdx = null;
-                            }}
-                            on:dragmove={(ev) => {
-                                onDragMove(ev);
-                            }}
-                            on:dragstart={(ev) => {
-                                onDragStart(ev, idx);
-                            }}
-                            on:dragend={(ev) => {
-                                onDragEnd(ev, idx);
-                            }}
-                        >
+                    >
+                        {#if $isSmartQueryBuilderOpen}
+                            <div
+                                in:fade={{
+                                    duration: 150
+                                }}
+                                class="smart-query-builder"
+                            >
+                                <SmartQueryBuilder />
+                            </div>
+                        {:else}
+                            <div
+                                class="smart-query-main"
+                                transition:fly={{
+                                    y: -10,
+                                    duration: 150,
+                                    easing: cubicInOut
+                                }}
+                            >
+                                <SmartQueryMainHeader />
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+                {#if shouldRender}
+                    <Stage
+                        config={{
+                            width,
+                            height: virtualViewportHeight,
+                            y: -sandwichTopHeight
+                        }}
+                        bind:handle={stage}
+                    >
+                        <Layer>
                             <Rect
                                 config={{
-                                    width:
-                                        idx === displayFields.length - 1
-                                            ? f.viewProps.width
-                                            : f.viewProps.width - 0.5,
-                                    height: HEADER_HEIGHT,
-                                    fill:
-                                        columnToInsertIdx === null &&
-                                        dropColumnIdx === idx &&
-                                        dropColumnIdx !== $draggedColumnIdx
-                                            ? DROP_HIGHLIGHT_BG_COLOR
-                                            : hoveredColumnIdx === idx ||
-                                                $query.orderBy === f.value
-                                              ? HEADER_BG_COLOR_HOVERED
-                                              : HEADER_BG_COLOR
+                                    x: 0,
+                                    y: sandwichTopHeight,
+                                    width,
+                                    height: viewportHeight,
+                                    fill: BG_COLOR
                                 }}
                             />
-                            {#if hoveredColumnIdx === idx}
-                                <Path
-                                    config={{
-                                        x: -2,
-                                        y: 6,
-                                        scaleX: 0.9,
-                                        scaleY: 0.9,
-                                        data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
-                                        fill: "rgba(255, 255, 255, 0.5)"
-                                    }}
-                                />
-                            {/if}
-                            {#if $query.orderBy === f.value}
-                                {#if $query.reverse}
-                                    <Path
-                                        config={{
-                                            x: f.viewProps.width - 16,
-                                            y: 6,
-                                            scaleX: 0.6,
-                                            scaleY: 0.6,
-                                            data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
-                                            fill: "rgba(255, 255, 255, 0.8)"
+
+                            {#if songsSlice?.length}
+                                {#each songsSlice as song, songIdx (song.viewModel?.viewId ?? song.id)}
+                                    <Group
+                                        on:dblclick={() =>
+                                            onDoubleClickSong(song, songIdx)}
+                                        on:click={(e) => {
+                                            console.log("e", e);
+                                            if (e.detail.evt.button === 0) {
+                                                toggleHighlight(
+                                                    song,
+                                                    song.viewModel.index
+                                                );
+                                            } else if (
+                                                e.detail.evt.button === 2
+                                            ) {
+                                                onRightClick(
+                                                    e.detail.evt,
+                                                    song,
+                                                    song.viewModel.index
+                                                );
+                                            }
                                         }}
-                                    />
-                                {:else}
-                                    <Path
+                                        on:mouseenter={() => {
+                                            hoveredSongIdx = songIdx;
+                                        }}
+                                        on:mouseleave={() => {
+                                            hoveredSongIdx = null;
+                                        }}
+                                        on:mousedown={(e) =>
+                                            e.detail.evt.button === 0 &&
+                                            onSongDragStart(song)}
                                         config={{
-                                            x: f.viewProps.width - 16,
-                                            y: 6,
-                                            scaleX: 0.6,
-                                            scaleY: 0.6,
-                                            data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
-                                            fill: "rgba(255, 255, 255, 0.8)"
+                                            visible: !song.dummy
+                                        }}
+                                    >
+                                        <Rect
+                                            config={{
+                                                x: 0,
+                                                y:
+                                                    sandwichTopHeight +
+                                                    HEADER_HEIGHT +
+                                                    ROW_HEIGHT * songIdx +
+                                                    -DUMMY_PADDING +
+                                                    scrollOffset,
+                                                width: width,
+                                                height: ROW_HEIGHT,
+                                                fill:
+                                                    $currentSong?.id ===
+                                                    song?.id
+                                                        ? PLAYING_BG_COLOR
+                                                        : songsHighlighted &&
+                                                            isSongHighlighted(
+                                                                song
+                                                            )
+                                                          ? HIGHLIGHT_BG_COLOR
+                                                          : hoveredSongIdx ===
+                                                              songIdx
+                                                            ? ROW_BG_COLOR_HOVERED
+                                                            : ROW_BG_COLOR
+                                            }}
+                                        />
+                                        {#each displayFields as f, idx (f.value)}
+                                            <Text
+                                                config={{
+                                                    x:
+                                                        f.value.match(
+                                                            /^(title|artist|album|track)/
+                                                        ) !== null
+                                                            ? f.viewProps.x + 10
+                                                            : f.viewProps.x,
+                                                    y:
+                                                        sandwichTopHeight +
+                                                        HEADER_HEIGHT +
+                                                        ROW_HEIGHT * songIdx +
+                                                        -DUMMY_PADDING +
+                                                        scrollOffset,
+                                                    text: song[f.value],
+                                                    align:
+                                                        f.value.match(
+                                                            /^(title|artist|album|track)/
+                                                        ) !== null
+                                                            ? "left"
+                                                            : "center",
+                                                    width:
+                                                        idx ===
+                                                        displayFields.length - 1
+                                                            ? f.viewProps
+                                                                  .width - 10
+                                                            : f.value.match(
+                                                                    /^(title|artist|album|track)/
+                                                                ) !== null
+                                                              ? f.value ===
+                                                                    "title" &&
+                                                                $currentSong?.id ===
+                                                                    song.id
+                                                                  ? f.viewProps
+                                                                        .width -
+                                                                    38
+                                                                  : f.viewProps
+                                                                        .width -
+                                                                    12
+                                                              : f.viewProps
+                                                                    .width,
+                                                    padding:
+                                                        f.value.match(
+                                                            /^(genre)/
+                                                        ) !== null
+                                                            ? 10
+                                                            : 2,
+                                                    height: HEADER_HEIGHT,
+                                                    fontSize: 13.5,
+                                                    verticalAlign: "middle",
+                                                    fill:
+                                                        $currentSong?.id ===
+                                                        song.id
+                                                            ? PLAYING_TEXT_COLOR
+                                                            : TEXT_COLOR,
+                                                    ellipsis:
+                                                        f.value.match(
+                                                            /^(title|artist|album|genre)/
+                                                        ) !== null
+                                                }}
+                                            />
+
+                                            {#if f.value === "title"}
+                                                <!-- Now playing icon -->
+                                                {#if $currentSong?.id === song.id}
+                                                    <Path
+                                                        config={{
+                                                            x:
+                                                                f.viewProps
+                                                                    .width - 40,
+                                                            y:
+                                                                sandwichTopHeight +
+                                                                HEADER_HEIGHT +
+                                                                ROW_HEIGHT *
+                                                                    songIdx +
+                                                                -DUMMY_PADDING +
+                                                                scrollOffset +
+                                                                7,
+                                                            scaleX: 0.65,
+                                                            scaleY: 0.65,
+                                                            data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
+                                                            fill: "#00ddff"
+                                                        }}
+                                                    />
+                                                {/if}
+
+                                                <!-- Favourite icon button -->
+                                                {#if song.isFavourite}
+                                                    <Path
+                                                        on:click={() =>
+                                                            unfavouriteSong(
+                                                                song
+                                                            )}
+                                                        config={{
+                                                            x:
+                                                                f.viewProps
+                                                                    .width - 20,
+                                                            y:
+                                                                sandwichTopHeight +
+                                                                HEADER_HEIGHT +
+                                                                ROW_HEIGHT *
+                                                                    songIdx +
+                                                                -DUMMY_PADDING +
+                                                                scrollOffset +
+                                                                6,
+                                                            scaleX: 0.36,
+                                                            scaleY: 0.36,
+                                                            data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
+                                                            fill:
+                                                                $currentSong.id ===
+                                                                song.id
+                                                                    ? "#00ddff"
+                                                                    : "#5123dd"
+                                                        }}
+                                                    />
+                                                {:else if hoveredSongIdx === songIdx}
+                                                    <Path
+                                                        on:click={() =>
+                                                            favouriteSong(song)}
+                                                        config={{
+                                                            x:
+                                                                f.viewProps
+                                                                    .width - 20,
+                                                            y:
+                                                                sandwichTopHeight +
+                                                                HEADER_HEIGHT +
+                                                                ROW_HEIGHT *
+                                                                    songIdx +
+                                                                -DUMMY_PADDING +
+                                                                scrollOffset +
+                                                                6,
+                                                            scaleX: 0.36,
+                                                            scaleY: 0.36,
+                                                            data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
+                                                            fill: "transparent",
+                                                            stroke: "#784bff"
+                                                        }}
+                                                    />
+                                                {/if}
+                                            {/if}
+                                        {/each}
+                                    </Group>
+                                {/each}
+                                {#if isScrollable}
+                                    <Rect
+                                        config={{
+                                            x: 0,
+                                            y: sandwichBottomY,
+                                            width,
+                                            height: sandwichBottomHeight,
+                                            fill: OFFSCREEN_BG_COLOR
                                         }}
                                     />
                                 {/if}
                             {/if}
-                            <Text
-                                config={{
-                                    text: f.name,
-                                    align: "left",
-                                    padding:
-                                        f.value.match(/^(track|duration)/) !==
-                                        null
-                                            ? 8
-                                            : 10,
-                                    height: HEADER_HEIGHT,
-                                    fontSize: 14,
-                                    letterSpacing:
-                                        f.value.match(/^(duration)/) !== null
-                                            ? -1
-                                            : 0,
-                                    fontStyle: "bold",
-                                    verticalAlign: "middle",
-                                    fontFamily:
-                                        "-apple-system, Avenir, Helvetica, Arial, sans-serif",
-                                    fill: TEXT_COLOR
-                                }}
-                            />
-                        </Group>
-                        {#if idx > 0}
-                            <Rect
-                                config={{
-                                    x: f.viewProps.x - 1,
-                                    y: sandwichTopHeight + HEADER_HEIGHT,
-                                    height: viewportHeight,
-                                    width: 0.5,
-                                    fill: "rgba(242, 242, 242, 0.144)"
-                                }}
-                            />
-                        {/if}
-                    {/each}
-                    {#if songsSlice?.length}
-                        {#each songsSlice as song, songIdx (song.viewModel?.viewId ?? song.id)}
-                            <Group
-                                on:dblclick={() =>
-                                    onDoubleClickSong(song, songIdx)}
-                                on:click={(e) => {
-                                    console.log("e", e);
-                                    if (e.detail.evt.button === 0) {
-                                        toggleHighlight(
-                                            song,
-                                            song.viewModel.index
-                                        );
-                                    } else if (e.detail.evt.button === 2) {
-                                        onRightClick(
-                                            e.detail.evt,
-                                            song,
-                                            song.viewModel.index
-                                        );
-                                    }
-                                }}
-                                on:mouseenter={() => {
-                                    hoveredSongIdx = songIdx;
-                                }}
-                                on:mouseleave={() => {
-                                    hoveredSongIdx = null;
-                                }}
-                                on:mousedown={(e) =>
-                                    e.detail.evt.button === 0 &&
-                                    onSongDragStart(song)}
-                                config={{
-                                    visible: !song.dummy
-                                }}
-                            >
+                        </Layer>
+                        <Layer>
+                            {#if isScrollable}
                                 <Rect
                                     config={{
                                         x: 0,
-                                        y:
-                                            sandwichTopHeight +
-                                            HEADER_HEIGHT +
-                                            ROW_HEIGHT * songIdx +
-                                            -DUMMY_PADDING +
-                                            scrollOffset,
-                                        width: width,
-                                        height: ROW_HEIGHT,
-                                        fill:
-                                            $currentSong?.id === song?.id
-                                                ? PLAYING_BG_COLOR
-                                                : songsHighlighted &&
-                                                    isSongHighlighted(song)
-                                                  ? HIGHLIGHT_BG_COLOR
-                                                  : hoveredSongIdx === songIdx
-                                                    ? ROW_BG_COLOR_HOVERED
-                                                    : ROW_BG_COLOR
+                                        y: 0,
+                                        width,
+                                        height: sandwichTopHeight,
+                                        fill: OFFSCREEN_BG_COLOR
                                     }}
                                 />
-                                {#each displayFields as f, idx (f.value)}
-                                    <Text
+                            {/if}
+
+                            {#if columnToInsertIdx !== null}
+                                <Rect
+                                    config={{
+                                        x: columnToInsertXPos,
+                                        y: sandwichTopHeight + HEADER_HEIGHT,
+                                        height: viewportHeight,
+                                        width: 2,
+                                        fill: COLUMN_INSERT_HINT_COLOR
+                                    }}
+                                />
+                            {/if}
+                            {#each displayFields as f, idx (f.value)}
+                                <Group
+                                    config={{
+                                        x: f.viewProps.x,
+                                        y: sandwichTopHeight,
+                                        width: f.viewProps.width,
+                                        draggable: true,
+                                        dragBoundFunc(pos) {
+                                            return handleColumnDrag(pos, idx);
+                                        }
+                                    }}
+                                    on:click={(ev) => {
+                                        if (ev.detail.evt.button === 0)
+                                            updateOrderBy(f.value);
+                                        else if (ev.detail.evt.button === 2) {
+                                            console.log("ev", ev);
+                                            columnPickerPos = {
+                                                x: ev.detail.evt.offsetX,
+                                                y: 15
+                                            };
+                                            showColumnPicker =
+                                                !showColumnPicker;
+                                        }
+                                    }}
+                                    on:mouseenter={() => {
+                                        hoveredColumnIdx = idx;
+                                    }}
+                                    on:mouseleave={() => {
+                                        hoveredColumnIdx = null;
+                                    }}
+                                    on:dragmove={(ev) => {
+                                        onDragMove(ev);
+                                    }}
+                                    on:dragstart={(ev) => {
+                                        onDragStart(ev, idx);
+                                    }}
+                                    on:dragend={(ev) => {
+                                        onDragEnd(ev, idx);
+                                    }}
+                                >
+                                    <Rect
                                         config={{
-                                            x:
-                                                f.value.match(
-                                                    /^(title|artist|album|track)/
-                                                ) !== null
-                                                    ? f.viewProps.x + 10
-                                                    : f.viewProps.x,
-                                            y:
-                                                sandwichTopHeight +
-                                                HEADER_HEIGHT +
-                                                ROW_HEIGHT * songIdx +
-                                                -DUMMY_PADDING +
-                                                scrollOffset,
-                                            text: song[f.value],
-                                            align:
-                                                f.value.match(
-                                                    /^(title|artist|album|track)/
-                                                ) !== null
-                                                    ? "left"
-                                                    : "center",
                                             width:
                                                 idx === displayFields.length - 1
-                                                    ? f.viewProps.width - 10
-                                                    : f.value.match(
-                                                            /^(title|artist|album|track)/
-                                                        ) !== null
-                                                      ? f.viewProps.width - 12
-                                                      : f.viewProps.width,
-                                            padding:
-                                                f.value.match(/^(genre)/) !==
-                                                null
-                                                    ? 10
-                                                    : 2,
+                                                    ? f.viewProps.width
+                                                    : f.viewProps.width - 0.5,
                                             height: HEADER_HEIGHT,
-                                            fontSize: 13.5,
-                                            verticalAlign: "middle",
                                             fill:
-                                                $currentSong?.id === song.id
-                                                    ? PLAYING_TEXT_COLOR
-                                                    : TEXT_COLOR,
-                                            ellipsis:
-                                                f.value.match(
-                                                    /^(title|artist|album|genre)/
-                                                ) !== null
+                                                columnToInsertIdx === null &&
+                                                dropColumnIdx === idx &&
+                                                dropColumnIdx !==
+                                                    $draggedColumnIdx
+                                                    ? DROP_HIGHLIGHT_BG_COLOR
+                                                    : hoveredColumnIdx ===
+                                                            idx ||
+                                                        $query.orderBy ===
+                                                            f.value
+                                                      ? HEADER_BG_COLOR_HOVERED
+                                                      : HEADER_BG_COLOR
                                         }}
                                     />
-                                {/each}
-                            </Group>
-                        {/each}
-                        <Rect
-                            config={{
-                                x: 0,
-                                y: sandwichBottomY,
-                                width,
-                                height: sandwichBottomHeight,
-                                fill: OFFSCREEN_BG_COLOR
-                            }}
-                        />
-                    {/if}
-                </Layer>
-            </Stage>
-        {/if}
-    </div>
+                                    {#if hoveredColumnIdx === idx}
+                                        <Path
+                                            config={{
+                                                x: -2,
+                                                y: 6,
+                                                scaleX: 0.9,
+                                                scaleY: 0.9,
+                                                data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
+                                                fill: "rgba(255, 255, 255, 0.5)"
+                                            }}
+                                        />
+                                    {/if}
+                                    {#if $query.orderBy === f.value}
+                                        {#if $query.reverse}
+                                            <Path
+                                                config={{
+                                                    x: f.viewProps.width - 16,
+                                                    y: 6,
+                                                    scaleX: 0.6,
+                                                    scaleY: 0.6,
+                                                    data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
+                                                    fill: "rgba(255, 255, 255, 0.8)"
+                                                }}
+                                            />
+                                        {:else}
+                                            <Path
+                                                config={{
+                                                    x: f.viewProps.width - 16,
+                                                    y: 6,
+                                                    scaleX: 0.6,
+                                                    scaleY: 0.6,
+                                                    data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
+                                                    fill: "rgba(255, 255, 255, 0.8)"
+                                                }}
+                                            />
+                                        {/if}
+                                    {/if}
+                                    <Text
+                                        config={{
+                                            text: f.name,
+                                            align: "left",
+                                            padding:
+                                                f.value.match(
+                                                    /^(track|duration)/
+                                                ) !== null
+                                                    ? 8
+                                                    : 10,
+                                            height: HEADER_HEIGHT,
+                                            fontSize: 14,
+                                            letterSpacing:
+                                                f.value.match(/^(duration)/) !==
+                                                null
+                                                    ? -1
+                                                    : 0,
+                                            fontStyle: "bold",
+                                            verticalAlign: "middle",
+                                            fontFamily:
+                                                "-apple-system, Avenir, Helvetica, Arial, sans-serif",
+                                            fill: TEXT_COLOR
+                                        }}
+                                    />
+                                </Group>
+                                {#if idx > 0}
+                                    <Rect
+                                        config={{
+                                            x: f.viewProps.x - 1,
+                                            y:
+                                                sandwichTopHeight +
+                                                HEADER_HEIGHT,
+                                            height: viewportHeight,
+                                            width: 0.5,
+                                            fill: "rgba(242, 242, 242, 0.144)"
+                                        }}
+                                    />
+                                {/if}
+                            {/each}
+                        </Layer>
+                    </Stage>
+                {/if}
+                {#if $isSmartQueryBuilderOpen && noSongs}
+                    <SmartQueryResultsPlaceholder />
+                {/if}
+
+                <div class="bottom-bar">
+                    <BottomBar {counts} />
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
+    .library-container {
+        height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
     .container {
         width: 100%;
         height: 100vh;
         pointer-events: all;
         display: flex;
+        flex-direction: column;
         position: sticky;
         top: 0;
         bottom: 0;
         user-select: none;
-        background-color: rgba(36, 33, 34, 0.688);
+    }
+
+    .dimmer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 12;
+        pointer-events: none;
+        background-color: #1b1b1c61;
+        backdrop-filter: brightness(0.7);
     }
 
     #large-container {
@@ -1359,6 +1628,10 @@
         overflow-x: hidden;
         z-index: 10;
         pointer-events: auto;
+        visibility: hidden;
+        &.ready {
+            visibility: visible;
+        }
     }
 
     .scroll-now-playing {
@@ -1461,5 +1734,23 @@
         100% {
             height: 15px;
         }
+    }
+
+    .smart-query {
+        min-height: 51px;
+        .smart-query-builder {
+        }
+
+        .smart-query-main {
+        }
+        background-color: #4d347c;
+    }
+
+    .bottom-bar {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 15;
     }
 </style>
