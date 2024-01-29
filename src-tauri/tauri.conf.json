@@ -34,9 +34,9 @@
                 "assetScope": ["**"]
             },
             "http": {
-                "all": true, 
+                "all": true,
                 "request": true,
-                "scope": ["http://**", "https://**"]
+                "scope": ["http://**", "https://**", "asset://**"]
             }
         },
         "bundle": {

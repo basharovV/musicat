@@ -3,25 +3,24 @@
     windows_subsystem = "windows"
 )]
 
-use rayon::prelude::*;
-use std::error::Error;
-use std::fs::{self, File};
-use std::io::BufReader;
-use std::ops::{Deref, Mul};
-use std::path::Path;
-use std::sync::{Arc, Mutex};
-use std::{fmt, thread, time};
-
 use chksum_md5::MD5;
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{
     read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, Tag,
     TagItem, TagType, TaggedFileExt,
 };
+use rayon::prelude::*;
 use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::error::Error;
+use std::fs::{self, File};
+use std::io::{BufReader, SeekFrom};
+use std::ops::{Deref, Mul};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Event, Manager};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
@@ -678,6 +677,27 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
     // println("title:")
 }
 
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct GetFileSizeRequest {
+    path: Option<String>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GetFileSizeResponse {
+    file_size: Option<u64>,
+}
+
+#[tauri::command]
+fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
+    if let Ok(metadata) = fs::metadata(event.path.unwrap()) {
+        return GetFileSizeResponse {
+            file_size: Some(metadata.len())
+        }
+    }
+    return GetFileSizeResponse { file_size: None };
+}
+
 fn main() {
     tauri::Builder::default()
         .menu(build_menu())
@@ -724,7 +744,8 @@ fn main() {
             write_metadata,
             write_metadatas,
             scan_paths,
-            get_lyrics
+            get_lyrics,
+            get_file_size
         ])
         .plugin(tauri_plugin_fs_watch::init())
         .run(tauri::generate_context!())

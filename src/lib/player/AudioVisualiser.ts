@@ -73,21 +73,25 @@ export class AudioVisualiser {
     }
 
     setupAnalyserAnimation() {
-        this.freqDomain = new Uint8Array(
-            audioPlayer.audioAnalyser.frequencyBinCount
-        );
-        this.timeDomain = new Uint8Array(audioPlayer.audioAnalyser.fftSize);
+        if (audioPlayer.audioAnalyser) {
+            this.freqDomain = new Uint8Array(
+                audioPlayer.audioAnalyser.frequencyBinCount
+            );
+            this.timeDomain = new Uint8Array(audioPlayer.audioAnalyser.fftSize);
 
-        let tick = () => {
-            audioPlayer.audioAnalyser.getByteFrequencyData(this.freqDomain);
-            audioPlayer.audioAnalyser.getByteTimeDomainData(this.timeDomain);
-            this.clearCanvas();
-            if (!this.shouldStopAnimation) {
-                this.drawOscilloscope();
-                window.requestAnimationFrame(tick);
-            }
-        };
-        tick();
+            let tick = () => {
+                audioPlayer.audioAnalyser.getByteFrequencyData(this.freqDomain);
+                audioPlayer.audioAnalyser.getByteTimeDomainData(
+                    this.timeDomain
+                );
+                this.clearCanvas();
+                if (!this.shouldStopAnimation) {
+                    this.drawOscilloscope();
+                    window.requestAnimationFrame(tick);
+                }
+            };
+            tick();
+        }
     }
 
     public addAnimation(animation: IAnimation): void {

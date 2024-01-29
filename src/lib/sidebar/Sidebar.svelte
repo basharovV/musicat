@@ -89,24 +89,20 @@
 
     currentSong.subscribe(async (song) => {
         if (song) {
-            const metadata = await musicMetadata.fetchFromUrl(
-                convertFileSrc(song.path)
-            );
-            console.log("metadata", metadata);
-            title = metadata.common?.title?.length
-                ? metadata.common.title
-                : null;
+            title = song?.title?.length ? song.title : null;
             fileName = song.file;
-            artist = metadata.common.artist;
-            album = metadata.common.album;
-            codec = metadata.format.codec;
-            stereo = metadata.format.numberOfChannels === 2;
-            bitrate = metadata.format.bitsPerSample;
-            sampleRate = metadata.format.sampleRate;
-            duration = metadata.format.duration;
-            if (metadata.common.picture?.length) {
-                artworkFormat = metadata.common.picture[0].format;
-                artworkBuffer = metadata.common.picture[0].data;
+            artist = song.artist;
+            album = song.album;
+            codec = song.fileInfo.codec;
+            stereo = song.fileInfo.channels === 2;
+            bitrate = song.fileInfo.audioBitrate;
+            sampleRate = song.fileInfo.sampleRate;
+            duration = song.fileInfo.duration;
+
+            // TODO: Metadata + Artwork from Rust
+            if (song.artwork) {
+                artworkFormat = song.artwork.format;
+                artworkBuffer = new Uint8Array(song.artwork.data).buffer;
                 artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                     "base64"
                 )}`;
@@ -115,8 +111,8 @@
                     src: artworkSrc,
                     format: artworkFormat,
                     size: {
-                        width: metadata.common.picture[0]["width"],
-                        height: metadata.common.picture[0]["height"]
+                        width: 300,
+                        height: 300
                     }
                 };
             } else {

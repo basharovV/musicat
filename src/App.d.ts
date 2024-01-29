@@ -268,3 +268,7 @@ interface CurrentSongLyrics {
     lyrics?: string;
     writers?: string[];
 }
+
+interface GetFileSizeResponse {
+    fileSize: nuumber;
+}

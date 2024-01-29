@@ -1,4 +1,9 @@
-import type { ArtworkSrc, LastPlayedInfo, Song } from "src/App";
+import type {
+    ArtworkSrc,
+    LastPlayedInfo,
+    Song,
+    GetFileSizeResponse
+} from "src/App";
 import { get } from "svelte/store";
 import {
     currentSong,
@@ -17,7 +22,150 @@ import {
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
 import { db } from "../../data/db";
-import { convertFileSrc } from "@tauri-apps/api/tauri";
+import { convertFileSrc, invoke } from "@tauri-apps/api/tauri";
+
+if (!ReadableStream.prototype[Symbol.asyncIterator]) {
+    ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
+        const reader = this.getReader();
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    yield { done, value };
+                    return;
+                }
+                yield { done, value };
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    };
+}
+
+class TimestampSource {
+    #interval;
+    // stream: ReadableStream;
+    i = 0; // Chunk counter.
+    src: string;
+    path: string;
+    desiredSize = 1024;
+    isCancelled = false;
+    firstBytes;
+    prevChunkSize = 0;
+    chunksLeft = true;
+    chunkIdx = 0;
+    fileSize = 0;
+
+    constructor(src, path) {
+        this.src = src;
+        this.path = path;
+    }
+
+    sleep(ms) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, ms);
+        });
+    }
+
+    async start(controller) {
+        console.log("Starting stream for ", this.path);
+
+        console.log(controller);
+        const fileSizeResponse = await invoke<GetFileSizeResponse>(
+            "get_file_size",
+            {
+                event: { path: this.path }
+            }
+        );
+        this.fileSize = fileSizeResponse.fileSize;
+        console.log("filesize", this.fileSize);
+        const initialResponse = await fetch(this.src, {
+            headers: {
+                "Range": `bytes=0-1`,
+                "access-control-expose-headers": "*",
+                "access-control-allow-headers": "*"
+            }
+        });
+        initialResponse.headers.forEach(function (value, name) {
+            console.log(name + ": " + value);
+        });
+        if (initialResponse.status === 206) {
+            // More content
+            let contentLength = initialResponse.headers.get("Content-Length");
+            console.log("range", contentLength);
+            this.firstBytes = await initialResponse.body.getReader().read();
+            // Enqueue the next data chunk into our target stream
+            let chunksLeft = true;
+            this.prevChunkSize = 2;
+            this.chunkIdx = 0;
+        }
+    }
+
+    async pull(controller) {
+        console.log("Pull requested for stream: ", this.path);
+
+        if (this.isCancelled) {
+            controller.close();
+            return;
+        }
+        console.log("controller.desiredSize", this.desiredSize);
+        if (this.firstBytes.value && this.fileSize) {
+            // We already have first byte, will be prepended later
+            this.chunkIdx = this.chunkIdx + this.prevChunkSize;
+
+            let chunkEndIdx = Math.min(
+                this.fileSize,
+                this.chunkIdx + this.desiredSize
+            );
+            let response = await fetch(this.src, {
+                headers: {
+                    "Range": `bytes=${this.chunkIdx}-`
+                }
+            });
+            console.log("chunk response", response);
+            this.prevChunkSize = Number(response.headers.get("Content-Length"));
+            console.log("chunkIdx", this.chunkIdx, "size", this.prevChunkSize);
+            if (response.ok) {
+                for await (const { done, value } of response.body) {
+                    if (value) {
+                        let currentChunk: Uint8Array = value;
+                        if (this.i === 0) {
+                            // Prepend first bytes
+                            console.log(
+                                "prepending first bytes",
+                                this.firstBytes.value
+                            );
+                            currentChunk = new Uint8Array([
+                                ...this.firstBytes.value,
+                                ...value
+                            ]);
+                        }
+
+                        if (currentChunk) {
+                            console.log("currentChunk", currentChunk);
+                            controller.enqueue(currentChunk);
+                        }
+                    }
+                }
+            }
+            if (chunkEndIdx === this.fileSize) {
+                console.log("END OF STREAM");
+                controller.close();
+                this.chunksLeft = false;
+                return;
+            }
+            await this.sleep(3000);
+            this.i += 1;
+        }
+    }
+
+    cancel() {
+        this.isCancelled = true;
+        console.log("Cancelling existing stream for ", this.path);
+        // This is called if the reader cancels.
+        clearInterval(this.#interval);
+    }
+}
 
 class AudioPlayer {
     private static _instance: AudioPlayer;
@@ -29,6 +177,9 @@ class AudioPlayer {
 
     audioFile: HTMLAudioElement;
     audioFile2: HTMLAudioElement; // for gapless playback
+
+    mediaSource: MediaSource;
+
     currentAudioFile: 1 | 2 = 1;
     // source: MediaElementAudioSourceNode;
     duration: number;
@@ -44,6 +195,13 @@ class AudioPlayer {
     shouldRestoreLastPlayed: LastPlayedInfo;
     isRunningTransition = false;
     isInit = true;
+    currentStreamSrc = null; // To see if a stream needs to be loaded
+    prevStreamSrc = null;
+    fileStreams: { [key: string]: ReadableStream } = {};
+    activeStream: string = null;
+    sourceBuffer: SourceBuffer;
+    readCancelled = false;
+    readableStream: ReadableStream;
 
     private constructor() {
         // let AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -56,6 +214,214 @@ class AudioPlayer {
         this.audioFile2 = new Audio();
         this.audioFile.crossOrigin = "anonymous";
         this.audioFile2.crossOrigin = "anonymous";
+        this.mediaSource = new MediaSource();
+
+        this.mediaSource.addEventListener("sourceopen", async () => {
+            console.log("mse: sourceopen");
+            if (!this.currentSong.file.match(/\.(mp3)$/i)) {
+                return; // Only mp3 support for now
+            }
+            if (MediaSource.isTypeSupported("audio/mpeg")) {
+                console.info("Mimetype is", "audio/mpeg");
+                // TODO ...
+            } else {
+                console.error("Mimetype not supported", "audio/mpeg");
+                return;
+            }
+
+            // Reset
+            if (this.currentStreamSrc !== this.prevStreamSrc) {
+                // Remove all source buffers
+                for (let buffer of this.mediaSource.activeSourceBuffers) {
+                    this.mediaSource.removeSourceBuffer(buffer);
+                }
+                this.removeStream(this.activeStream);
+
+                // Add source buffer
+                this.sourceBuffer =
+                    this.mediaSource.addSourceBuffer("audio/mpeg");
+                this.sourceBuffer.onerror = function (ev) {
+                    console.error("SOURCE BUFFER err", ev);
+                };
+            }
+            this.prevStreamSrc = this.currentStreamSrc;
+
+            this.readableStream = new ReadableStream(
+                new TimestampSource(
+                    this.currentStreamSrc,
+                    this.currentSong.path
+                ),
+                new ByteLengthQueuingStrategy({
+                    highWaterMark: 1024 * 1024
+                })
+            );
+
+            this.setActiveStream(this.readableStream);
+
+            // Retrieve an audio segment via XHR.  For simplicity, we're retrieving the
+            // entire segment at once, but we could also retrieve it in chunks and append
+            // each chunk separately.  MSE will take care of assembling the pieces.
+            // let response = await fetch();
+
+            const stream = this.getActiveStream();
+            const streamId = this.activeStream.slice();
+            const reader = stream.getReader();
+            let hasMore = true;
+            let chunkIdx = 0;
+            try {
+                while (hasMore) {
+                    // Check if stream changed
+                    if (
+                        this.abortStreamIfNecessary(
+                            this.readableStream,
+                            reader,
+                            streamId,
+                            this.sourceBuffer
+                        )
+                    ) {
+                        return;
+                    }
+
+                    const { done, value } = await reader.read();
+
+                    // Check again.
+                    if (
+                        this.abortStreamIfNecessary(
+                            stream,
+                            reader,
+                            streamId,
+                            this.sourceBuffer
+                        )
+                    ) {
+                        return;
+                    }
+
+                    if (value) {
+                        // Append the ArrayBuffer data into our new SourceBuffer.
+                        console.log("data", value);
+                        console.log("sourcebuffer", this.sourceBuffer);
+                        let appendTime = 0;
+
+                        for (
+                            let i = 0;
+                            i < this.sourceBuffer.buffered.length;
+                            i++
+                        ) {
+                            console.log(
+                                "start:",
+                                this.sourceBuffer.buffered.start(i),
+                                "end",
+                                this.sourceBuffer.buffered.end(i)
+                            );
+                            appendTime =
+                                chunkIdx > 0
+                                    ? this.sourceBuffer.buffered.end(i)
+                                    : 0;
+                        }
+                        this.sourceBuffer.appendWindowStart = appendTime;
+                        // this.sourceBuffer.appendWindowEnd =
+                        //     appendTime + gaplessMetadata.audioDuration;
+
+                        console.log(
+                            "appendTime",
+                            this.sourceBuffer.appendWindowStart
+                        );
+
+                        console.log("buffered", this.sourceBuffer.buffered);
+                        this.sourceBuffer.timestampOffset = appendTime;
+
+                        try {
+                            if (this.sourceBuffer.updating) {
+                                this.sourceBuffer.addEventListener(
+                                    "updateend",
+                                    () => {
+                                        if (streamId === this.activeStream) {
+                                            console.log("APPENDING BUFFER");
+                                            this.sourceBuffer.appendBuffer(
+                                                value
+                                            );
+                                        } else {
+                                            hasMore = false;
+                                            this.abortStreamIfNecessary(
+                                                stream,
+                                                reader,
+                                                streamId,
+                                                this.sourceBuffer
+                                            );
+                                            return;
+                                        }
+                                    }
+                                );
+                            } else {
+                                console.log(
+                                    "activeStreamId",
+                                    this.activeStream
+                                );
+                                console.log("streamId", streamId);
+                                if (streamId === this.activeStream) {
+                                    console.log("APPENDING BUFFER");
+                                    this.sourceBuffer.appendBuffer(value);
+                                } else {
+                                    hasMore = false;
+                                    this.abortStreamIfNecessary(
+                                        stream,
+                                        reader,
+                                        streamId,
+                                        this.sourceBuffer
+                                    );
+                                    return;
+                                }
+                            }
+                        } catch (err) {
+                            console.log("handling err", err);
+                        }
+                    }
+                    if (done) {
+                        if (this.sourceBuffer) {
+                            this.sourceBuffer.addEventListener(
+                                "updateend",
+                                () => {
+                                    if (
+                                        this.abortStreamIfNecessary(
+                                            stream,
+                                            reader,
+                                            streamId,
+                                            this.sourceBuffer
+                                        )
+                                    ) {
+                                        hasMore = false;
+                                        return;
+                                    }
+
+                                    console.log("Stream complete");
+                                    this.mediaSource.endOfStream();
+                                }
+                            );
+                        } else {
+                            if (
+                                this.abortStreamIfNecessary(
+                                    stream,
+                                    reader,
+                                    streamId,
+                                    this.sourceBuffer
+                                )
+                            ) {
+                                hasMore = false;
+                                return;
+                            }
+                            console.log("Stream complete");
+                            this.mediaSource.endOfStream();
+                        }
+                        hasMore = false;
+                        return;
+                    }
+                    chunkIdx++;
+                }
+            } finally {
+                reader.releaseLock();
+            }
+            URL.revokeObjectURL(this.getCurrentAudioFile().src);
+        });
         // this.source = audioCtx.createMediaElementSource(this.audioFile);
         // this.source.connect(this.gainNode);
 
@@ -180,7 +546,45 @@ class AudioPlayer {
         currentSongIdx.subscribe((idx) => {
             this.currentSongIdx = idx;
         });
-        this.setupAnalyserAudio();
+
+        volume.subscribe((vol) => {
+            this.getCurrentAudioFile().volume = vol * 0.75;
+            localStorage.setItem("volume", String(vol));
+        });
+
+        // this.setupAnalyserAudio();
+    }
+
+    getActiveStream() {
+        return this.fileStreams[this.currentSong.file];
+    }
+
+    setActiveStream(readableStream: ReadableStream) {
+        this.fileStreams[this.currentSong.file] = readableStream;
+        this.activeStream = this.currentSong.file;
+    }
+
+    removeStream(streamId: string) {
+        delete this.fileStreams[streamId];
+    }
+
+    abortStreamIfNecessary(
+        stream,
+        reader,
+        streamId,
+        sourceBuffer: SourceBuffer
+    ) {
+        if (streamId !== this.activeStream) {
+            console.log("ABORTING STREAM");
+
+            reader.releaseLock();
+            stream.cancel();
+            console.log("Stream changed");
+            this.mediaSource.endOfStream();
+            this.removeStream(streamId);
+            return true;
+        }
+        return false;
     }
 
     shuffle() {
@@ -458,8 +862,55 @@ class AudioPlayer {
     }
 
     // MEDIA
+    async msePlaySong(song: Song, position = 0, play = true) {
+        console.log("mse: playSong", song);
+        if (this.getCurrentAudioFile() && song) {
+            this.pause();
+            this.getCurrentAudioFile().currentTime = 0;
+
+            currentSong.set(song);
+            this.currentSong = song;
+
+            playerTime.set(this.getCurrentAudioFile().currentTime);
+
+            let fileSrc = convertFileSrc(
+                this.currentSong.path.replace("?", "%3F")
+            );
+
+            if (fileSrc !== this.currentStreamSrc) {
+                this.currentStreamSrc = fileSrc;
+
+                this.getCurrentAudioFile().src = URL.createObjectURL(
+                    this.mediaSource
+                );
+            }
+
+            play && this.play();
+            this.shouldPlay = play;
+            let newCurrentSongIdx = this.playlist.findIndex(
+                (s) => s.id === this.currentSong?.id
+            );
+            if (newCurrentSongIdx === -1) {
+                newCurrentSongIdx = 0;
+            }
+            currentSongIdx.set(newCurrentSongIdx);
+            // this.setNextUpSong();
+            this.setMediaSessionData();
+            this.incrementPlayCounter(song);
+            if (position > 0) {
+                seekTime.set(position);
+            }
+            lastPlayedInfo.set({
+                songId: this.currentSong.id,
+                position: 0
+            });
+        }
+    }
+
     async playSong(song: Song, position = 0, play = true) {
         console.log("playSong", song);
+        this.msePlaySong(song, position, play);
+        return;
         if (this.getCurrentAudioFile() && song) {
             this.pause();
             this.getCurrentAudioFile().currentTime = 0;
@@ -491,8 +942,8 @@ class AudioPlayer {
     }
 
     play(other: boolean = false) {
-        if (other) {
-            this.doPlay(this.currentAudioFile === 1 ? 2 : 1);
+        if (this.getCurrentAudioFile()) {
+            this.getCurrentAudioFile().play();
             this.ticker = setInterval(() => {
                 lastPlayedInfo.set({
                     songId: this.currentSong.id,
@@ -500,29 +951,11 @@ class AudioPlayer {
                 });
                 playerTime.set(this.getCurrentAudioFile().currentTime);
             }, 1000);
-        } else {
-            if (this.getCurrentAudioFile()) {
-                this.doPlay(this.currentAudioFile);
-
-                this.ticker = setInterval(() => {
-                    lastPlayedInfo.set({
-                        songId: this.currentSong.id,
-                        position: this.getCurrentAudioFile().currentTime
-                    });
-                    playerTime.set(this.getCurrentAudioFile().currentTime);
-                }, 1000);
-            }
         }
     }
 
     pause(other: boolean = false) {
-        if (other && this.getOtherAudioFile()) {
-            this.doPause(this.currentAudioFile === 1 ? 2 : 1);
-        } else {
-            if (this.getCurrentAudioFile()) {
-                this.doPause(this.currentAudioFile);
-            }
-        }
+        this.getCurrentAudioFile().pause();
     }
 
     togglePlay() {
@@ -584,25 +1017,23 @@ class AudioPlayer {
         this._gainNode.connect(this.audioAnalyser);
         this._gainNode2.connect(this.audioAnalyser);
         this.audioAnalyser.connect(this._audioContext.destination);
-
-        volume.subscribe((vol) => {
-            this._gainNode.gain.value = vol * 0.75;
-            this._gainNode2.gain.value = vol * 0.75;
-            localStorage.setItem("volume", String(vol));
-        });
     }
     doPlay = (number) => {
-        if (number === 1) {
-            this._audioSource.mediaElement.play();
-        } else {
-            this._audioSource2.mediaElement.play();
+        if (this._audioSource?.mediaElement) {
+            if (number === 1) {
+                this._audioSource.mediaElement.play();
+            } else {
+                this._audioSource2.mediaElement.play();
+            }
         }
     };
     doPause = (number) => {
-        if (number === 1) {
-            this._audioSource.mediaElement.pause();
-        } else {
-            this._audioSource2.mediaElement.pause();
+        if (this._audioSource?.mediaElement) {
+            if (number === 1) {
+                this._audioSource.mediaElement.pause();
+            } else {
+                this._audioSource2.mediaElement.pause();
+            }
         }
     };
 }
