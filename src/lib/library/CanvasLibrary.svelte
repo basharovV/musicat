@@ -5,11 +5,10 @@
     import {
         Group,
         Layer,
+        Path,
         Rect,
         Stage,
         Text,
-        Line,
-        Path,
         type KonvaDragTransformEvent
     } from "svelte-konva";
 
@@ -19,18 +18,13 @@
     import { debounce } from "lodash-es";
     import type { Song } from "src/App";
     import { onDestroy } from "svelte";
-    import toast from "svelte-french-toast";
-    import tippy from "svelte-tippy";
-    import { flip } from "svelte/animate";
-    import { cubicInOut, quadOut } from "svelte/easing";
-    import { get } from "svelte/store";
+    import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
-    import { openTauriImportDialog, runScan } from "../../data/LibraryImporter";
-    import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
 
     import {
         bottomBarNotification,
+        compressionSelected,
         currentSong,
         currentSongIdx,
         draggedColumnIdx,
@@ -38,13 +32,10 @@
         emptyDropEvent,
         fileDropHandler,
         importStatus,
-        isFolderWatchUpdate,
         isPlaying,
         isSmartQueryBuilderOpen,
-        isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
-        nextUpSong,
         os,
         playlist,
         playlistIsAlbum,
@@ -52,32 +43,23 @@
         query,
         rightClickedTrack,
         rightClickedTracks,
-        shouldShowToast,
         shouldFocusFind,
         singleKeyShortcutsEnabled,
         smartQuery,
-        smartQueryInitiator,
-        songsJustAdded,
-        uiView,
-        compressionSelected
+        uiView
     } from "../../data/store";
     import {
         moveArrayElement,
         swapArrayElements
     } from "../../utils/ArrayUtils";
-    import { getFlagEmoji } from "../../utils/EmojiUtils";
     import AudioPlayer from "../player/AudioPlayer";
-    import ColumnPicker from "./ColumnPicker.svelte";
-    import ImportPlaceholder from "./ImportPlaceholder.svelte";
-    import TrackMenu from "./TrackMenu.svelte";
-    import { codes } from "../data/CountryCodes";
-    import { getQueryPart } from "../smart-query/QueryParts";
     import SmartQueryBuilder from "../smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "../smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
-    import { UserQueryPart } from "../smart-query/UserQueryPart";
-    import { optionalTippy } from "../ui/TippyAction";
     import BottomBar from "./BottomBar.svelte";
+    import ColumnPicker from "./ColumnPicker.svelte";
+    import ImportPlaceholder from "./ImportPlaceholder.svelte";
+    import TrackMenu from "./TrackMenu.svelte";
 
     export let allSongs = null;
     export let dim = false;
@@ -234,11 +216,11 @@
         {
             name: "Origin",
             value: "originCountry",
-            show: true,
+            show: false,
             viewProps: {
-                width: 120,
+                width: 0,
                 x: 0,
-                autoWidth: false
+                autoWidth: true
             }
         },
         {
@@ -326,6 +308,15 @@
 
     onMount(() => {
         init();
+
+        // Check for retina screens
+        var query =
+            "(-webkit-min-device-pixel-ratio: 2), (min-device-pixel-ratio: 2), (min-resolution: 192dpi)";
+
+        if (matchMedia(query).matches) {
+            // Slightly reduce the ratio for better performance
+            // Konva.pixelRatio = 1.8;
+        }
     });
 
     function init() {
@@ -1071,6 +1062,12 @@
             $currentSong.isFavourite = false;
         }
     }
+
+    $: if ($bottomBarNotification?.timeout) {
+        setTimeout(() => {
+            $bottomBarNotification = null;
+        }, $bottomBarNotification.timeout);
+    }
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
@@ -1233,6 +1230,7 @@
                                                     scrollOffset,
                                                 width: width,
                                                 height: ROW_HEIGHT,
+                                                listening: true,
                                                 fill:
                                                     $currentSong?.id ===
                                                     song?.id
@@ -1264,6 +1262,7 @@
                                                         -DUMMY_PADDING +
                                                         scrollOffset,
                                                     text: song[f.value],
+                                                    listening: false,
                                                     align:
                                                         f.value.match(
                                                             /^(title|artist|album|track)/
@@ -1327,6 +1326,7 @@
                                                                 -DUMMY_PADDING +
                                                                 scrollOffset +
                                                                 7,
+                                                            listening: false,
                                                             scaleX: 0.65,
                                                             scaleY: 0.65,
                                                             data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
@@ -1399,7 +1399,8 @@
                                             y: sandwichBottomY,
                                             width,
                                             height: sandwichBottomHeight,
-                                            fill: OFFSCREEN_BG_COLOR
+                                            fill: OFFSCREEN_BG_COLOR,
+                                            listening: false
                                         }}
                                     />
                                 {/if}
@@ -1413,7 +1414,8 @@
                                         y: 0,
                                         width,
                                         height: sandwichTopHeight,
-                                        fill: OFFSCREEN_BG_COLOR
+                                        fill: OFFSCREEN_BG_COLOR,
+                                        listening: false
                                     }}
                                 />
                             {/if}
@@ -1425,7 +1427,8 @@
                                         y: sandwichTopHeight + HEADER_HEIGHT,
                                         height: viewportHeight,
                                         width: 2,
-                                        fill: COLUMN_INSERT_HINT_COLOR
+                                        fill: COLUMN_INSERT_HINT_COLOR,
+                                        listening: false
                                     }}
                                 />
                             {/if}
@@ -1476,6 +1479,7 @@
                                                     ? f.viewProps.width
                                                     : f.viewProps.width - 0.5,
                                             height: HEADER_HEIGHT,
+                                            listening: true,
                                             fill:
                                                 columnToInsertIdx === null &&
                                                 dropColumnIdx === idx &&
@@ -1495,6 +1499,7 @@
                                             config={{
                                                 x: -2,
                                                 y: 6,
+                                                listening: false,
                                                 scaleX: 0.9,
                                                 scaleY: 0.9,
                                                 data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
@@ -1508,6 +1513,7 @@
                                                 config={{
                                                     x: f.viewProps.width - 16,
                                                     y: 6,
+                                                    listening: false,
                                                     scaleX: 0.6,
                                                     scaleY: 0.6,
                                                     data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
@@ -1519,6 +1525,7 @@
                                                 config={{
                                                     x: f.viewProps.width - 16,
                                                     y: 6,
+                                                    listening: false,
                                                     scaleX: 0.6,
                                                     scaleY: 0.6,
                                                     data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
@@ -1548,7 +1555,8 @@
                                             verticalAlign: "middle",
                                             fontFamily:
                                                 "-apple-system, Avenir, Helvetica, Arial, sans-serif",
-                                            fill: TEXT_COLOR
+                                            fill: TEXT_COLOR,
+                                            listening: false
                                         }}
                                     />
                                 </Group>
@@ -1561,7 +1569,8 @@
                                                 HEADER_HEIGHT,
                                             height: viewportHeight,
                                             width: 0.5,
-                                            fill: "rgba(242, 242, 242, 0.144)"
+                                            fill: "rgba(242, 242, 242, 0.144)",
+                                            listening: false
                                         }}
                                     />
                                 {/if}

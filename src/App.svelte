@@ -6,13 +6,16 @@
         draggedSongs,
         droppedFiles,
         emptyDropEvent,
+        foldersToWatch,
         hoveredFiles,
+        isFolderWatchUpdate,
         isInfoPopupOpen,
         isMiniPlayer,
         isSettingsOpen,
         isTrackInfoPopupOpen,
         isWelcomeSeen,
-        uiView
+        uiView,
+        userSettings
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
@@ -104,7 +107,10 @@
             }
         });
 
-        unlistenFolderWatch = await startWatching();
+        foldersToWatch.subscribe(async (_) => {
+            unlistenFolderWatch && unlistenFolderWatch();
+            unlistenFolderWatch = await startWatching();
+        });
     });
 
     function onDragMove(evt: MouseEvent) {

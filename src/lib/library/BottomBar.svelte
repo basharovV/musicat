@@ -51,14 +51,15 @@
         <div class="spectrum">
             <SpectrumAnalyzer />
         </div>
+
+        {#if $bottomBarNotification}
+            <div class="notification">
+                <p>
+                    {$bottomBarNotification.text}
+                </p>
+            </div>
+        {/if}
     </div>
-    {#if $bottomBarNotification}
-        <div class="notification">
-            <p>
-                {$bottomBarNotification.text}
-            </p>
-        </div>
-    {/if}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
@@ -125,6 +126,7 @@
             flex-direction: row;
             flex-grow: 1;
             align-items: center;
+            position: relative;
 
             .next-up {
                 display: flex;
@@ -227,6 +229,10 @@
         }
 
         .notification {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
             padding: 0 1em;
             margin: 0;
             background: linear-gradient(
@@ -239,6 +245,7 @@
             height: 100%;
             display: flex;
             align-items: center;
+            width: max-content;
             p {
                 color: rgb(203, 182, 208);
                 font-size: 13px;
