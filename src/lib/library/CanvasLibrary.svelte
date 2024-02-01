@@ -9,6 +9,8 @@
         Rect,
         Stage,
         Text,
+        Label,
+        Tag,
         type KonvaDragTransformEvent
     } from "svelte-konva";
 
@@ -31,9 +33,11 @@
         draggedSongs,
         emptyDropEvent,
         fileDropHandler,
+        forceRefreshLibrary,
         importStatus,
         isPlaying,
         isSmartQueryBuilderOpen,
+        isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
         os,
@@ -46,6 +50,7 @@
         shouldFocusFind,
         singleKeyShortcutsEnabled,
         smartQuery,
+        smartQueryInitiator,
         uiView
     } from "../../data/store";
     import {
@@ -60,6 +65,9 @@
     import ColumnPicker from "./ColumnPicker.svelte";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
+    import BigSeekbarWithNotes from "../player/BigSeekbarWithNotes.svelte";
+    import { getQueryPart } from "../smart-query/QueryParts";
+    import { UserQueryPart } from "../smart-query/UserQueryPart";
 
     export let allSongs = null;
     export let dim = false;
@@ -241,6 +249,7 @@
     let hoveredSongIdx = null; // Index is slice-specific
     let columnToInsertIdx = null;
     let columnToInsertXPos = 0;
+    let hoveredField = null;
 
     $: isOrderChanged =
         JSON.stringify(
@@ -305,6 +314,8 @@
     const PLAYING_TEXT_COLOR = "#00ddff";
     const COLUMN_INSERT_HINT_COLOR = "#b399ffca";
     const DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
+    const CLICKABLE_CELL_BG_COLOR = "#71658e1e";
+    const CLICKABLE_CELL_BG_COLOR_HOVERED = "#8c7dae36";
 
     onMount(() => {
         init();
@@ -366,24 +377,25 @@
     // Restore scroll position if any
     $: if (
         $uiView === "library" &&
-        isInit &&
+        (isInit || $forceRefreshLibrary === true) &&
         $libraryScrollPos !== null &&
         scrollContainer &&
         shouldRender
     ) {
-        console.log(
-            "scrollpos",
-            $libraryScrollPos,
-            (songs?.length * ROW_HEIGHT - viewportHeight) * $libraryScrollPos
-        );
+        // console.log(
+        //     "scrollpos",
+        //     $libraryScrollPos,
+        //     (songs?.length * ROW_HEIGHT - viewportHeight) * $libraryScrollPos
+        // );
         setTimeout(() => {
             scrollContainer.scrollTo({
-                top: (contentHeight - viewportHeight) * $libraryScrollPos
+                top: (contentHeight - viewportHeight) * $libraryScrollPos,
+                behavior: "instant"
             });
-
             ready = true;
-        });
+        }, 50);
         isInit = false;
+        $forceRefreshLibrary = false;
     } else if ($uiView === "playlists") {
         scrollContainer?.scrollTo({
             top: 0
@@ -500,13 +512,13 @@
             sandwichBottomY = contentY + viewportHeight;
             sandwichBottomHeight =
                 contentHeight - sandwichTopHeight - viewportHeight;
-            console.log(
-                "sandwichTop",
-                sandwichTopHeight,
-                "sandwichBottom",
-                sandwichBottomY,
-                sandwichBottomHeight
-            );
+            // console.log(
+            //     "sandwichTop",
+            //     sandwichTopHeight,
+            //     "sandwichBottom",
+            //     sandwichBottomY,
+            //     sandwichBottomHeight
+            // );
             let remainder = contentY % ROW_HEIGHT;
             prevRemainder = remainder;
             // console.log("remainder", remainder);
@@ -652,7 +664,6 @@
 
     let currentSongY = 0;
     $: if ($currentSongIdx) {
-        console.log("currentSongIdx", $currentSongIdx);
         currentSongY = $currentSongIdx * ROW_HEIGHT;
 
         currentSongInView =
@@ -1068,6 +1079,54 @@
             $bottomBarNotification = null;
         }, $bottomBarNotification.timeout);
     }
+
+    function filterByField(fieldName: string, fieldValue: any) {
+        let queryPart;
+        console.log("filter", fieldName, fieldValue);
+        switch (fieldName) {
+            case "genre":
+                queryPart = getQueryPart("CONTAINS_GENRE");
+                $smartQueryInitiator = "library-cell";
+                break;
+            case "year":
+                queryPart = getQueryPart("RELEASED_IN");
+                $smartQueryInitiator = "library-cell";
+                break;
+            case "originCountry":
+                queryPart = getQueryPart("FROM_COUNTRY");
+                $smartQueryInitiator = "library-cell";
+                break;
+            default:
+                return;
+        }
+        if ($uiView !== "smart-query") {
+            $smartQuery.reset();
+        }
+        // console.log("built in query Part", queryPart);
+        const userQueryPart = new UserQueryPart(queryPart);
+        // console.log("built in user query Part", userQueryPart);
+        userQueryPart.userInputs[fieldName].value = fieldValue;
+        $smartQuery.addPart(userQueryPart);
+        $smartQuery.parts = $smartQuery.parts;
+        $isSmartQueryBuilderOpen = true;
+        $isSmartQuerySaveUiOpen = false;
+        $uiView = "smart-query";
+    }
+
+    function isInvalidValue(value) {
+        return (
+            value === "" ||
+            value === -1 ||
+            value === 0 ||
+            value === null ||
+            value === undefined ||
+            value?.length === 0
+        );
+    }
+
+    function validatedValue(value) {
+        return isInvalidValue(value) ? "-" : value;
+    }
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
@@ -1116,7 +1175,7 @@
                 {/if}
                 <!-- svelte-ignore a11y-click-events-have-key-events -->
                 <!-- svelte-ignore a11y-no-static-element-interactions -->
-                {#if $isPlaying && $currentSong && !currentSongInView}
+                {#if $uiView === "library" && $isPlaying && $currentSong && !currentSongInView}
                     <div
                         in:fly={{ duration: 150, y: 30 }}
                         out:fly={{ duration: 150, y: 30 }}
@@ -1247,68 +1306,151 @@
                                             }}
                                         />
                                         {#each displayFields as f, idx (f.value)}
-                                            <Text
-                                                config={{
-                                                    x:
-                                                        f.value.match(
-                                                            /^(title|artist|album|track)/
-                                                        ) !== null
-                                                            ? f.viewProps.x + 10
-                                                            : f.viewProps.x,
-                                                    y:
-                                                        sandwichTopHeight +
-                                                        HEADER_HEIGHT +
-                                                        ROW_HEIGHT * songIdx +
-                                                        -DUMMY_PADDING +
-                                                        scrollOffset,
-                                                    text: song[f.value],
-                                                    listening: false,
-                                                    align:
-                                                        f.value.match(
-                                                            /^(title|artist|album|track)/
-                                                        ) !== null
-                                                            ? "left"
-                                                            : "center",
-                                                    width:
-                                                        idx ===
-                                                        displayFields.length - 1
-                                                            ? f.viewProps
-                                                                  .width - 10
-                                                            : f.value.match(
-                                                                    /^(title|artist|album|track)/
-                                                                ) !== null
-                                                              ? f.value ===
-                                                                    "title" &&
+                                            <!-- Smart query fields -->
+                                            {#if f.value.match(/^(year|genre|originCountry)/) !== null && !isInvalidValue(song[f.value])}
+                                                <Label
+                                                    config={{
+                                                        x: f.viewProps.x + 5,
+                                                        y:
+                                                            sandwichTopHeight +
+                                                            HEADER_HEIGHT +
+                                                            ROW_HEIGHT *
+                                                                songIdx +
+                                                            -DUMMY_PADDING +
+                                                            scrollOffset +
+                                                            2.5,
+                                                        width:
+                                                            f.viewProps.width -
+                                                            10,
+                                                        height: ROW_HEIGHT - 5
+                                                    }}
+                                                    on:mouseenter={() => {
+                                                        hoveredField = f.value;
+                                                    }}
+                                                    on:mouseleave={() => {
+                                                        hoveredField = null;
+                                                    }}
+                                                    on:click={() => {
+                                                        filterByField(
+                                                            f.value,
+                                                            song[f.value]
+                                                        );
+                                                    }}
+                                                >
+                                                    <Tag
+                                                        config={{
+                                                            fill:
+                                                                hoveredSongIdx ===
+                                                                    songIdx &&
+                                                                hoveredField ===
+                                                                    f.value
+                                                                    ? CLICKABLE_CELL_BG_COLOR_HOVERED
+                                                                    : CLICKABLE_CELL_BG_COLOR,
+                                                            padding: 10,
+                                                            cornerRadius: 2
+                                                        }}
+                                                    />
+                                                    <Text
+                                                        config={{
+                                                            text: validatedValue(
+                                                                song[f.value]
+                                                            ),
+                                                            listening: false,
+                                                            y: 0,
+                                                            x: 0,
+                                                            width:
+                                                                f.viewProps
+                                                                    .width - 10,
+                                                            height:
+                                                                ROW_HEIGHT - 5,
+                                                            align: "center",
+                                                            fontSize: 13.5,
+                                                            verticalAlign:
+                                                                "middle",
+                                                            fill:
                                                                 $currentSong?.id ===
-                                                                    song.id
-                                                                  ? f.viewProps
-                                                                        .width -
-                                                                    38
+                                                                song.id
+                                                                    ? PLAYING_TEXT_COLOR
+                                                                    : TEXT_COLOR,
+                                                            ellipsis:
+                                                                f.value.match(
+                                                                    /^(title|artist|album|genre)/
+                                                                ) !== null
+                                                        }}
+                                                    />
+                                                </Label>
+                                            {:else}
+                                                <Text
+                                                    config={{
+                                                        x:
+                                                            f.value.match(
+                                                                /^(title|artist|album|track)/
+                                                            ) !== null
+                                                                ? f.viewProps
+                                                                      .x + 10
+                                                                : f.viewProps.x,
+                                                        y:
+                                                            sandwichTopHeight +
+                                                            HEADER_HEIGHT +
+                                                            ROW_HEIGHT *
+                                                                songIdx +
+                                                            -DUMMY_PADDING +
+                                                            scrollOffset,
+                                                        text: validatedValue(
+                                                            song[f.value]
+                                                        ),
+                                                        listening: false,
+                                                        align:
+                                                            f.value.match(
+                                                                /^(title|artist|album|track)/
+                                                            ) !== null
+                                                                ? "left"
+                                                                : "center",
+                                                        width:
+                                                            idx ===
+                                                            displayFields.length -
+                                                                1
+                                                                ? f.viewProps
+                                                                      .width -
+                                                                  10
+                                                                : f.value.match(
+                                                                        /^(title|artist|album|track)/
+                                                                    ) !== null
+                                                                  ? f.value ===
+                                                                        "title" &&
+                                                                    $currentSong?.id ===
+                                                                        song.id
+                                                                      ? f
+                                                                            .viewProps
+                                                                            .width -
+                                                                        38
+                                                                      : f
+                                                                            .viewProps
+                                                                            .width -
+                                                                        12
                                                                   : f.viewProps
-                                                                        .width -
-                                                                    12
-                                                              : f.viewProps
-                                                                    .width,
-                                                    padding:
-                                                        f.value.match(
-                                                            /^(genre)/
-                                                        ) !== null
-                                                            ? 10
-                                                            : 2,
-                                                    height: HEADER_HEIGHT,
-                                                    fontSize: 13.5,
-                                                    verticalAlign: "middle",
-                                                    fill:
-                                                        $currentSong?.id ===
-                                                        song.id
-                                                            ? PLAYING_TEXT_COLOR
-                                                            : TEXT_COLOR,
-                                                    ellipsis:
-                                                        f.value.match(
-                                                            /^(title|artist|album|genre)/
-                                                        ) !== null
-                                                }}
-                                            />
+                                                                        .width,
+                                                        padding:
+                                                            f.value.match(
+                                                                /^(genre)/
+                                                            ) !== null
+                                                                ? 10
+                                                                : 2,
+                                                        height: HEADER_HEIGHT,
+                                                        fontSize: 13.5,
+                                                        verticalAlign: "middle",
+                                                        fill:
+                                                            $currentSong?.id ===
+                                                            song.id
+                                                                ? PLAYING_TEXT_COLOR
+                                                                : TEXT_COLOR,
+                                                        ellipsis:
+                                                            f.value.match(
+                                                                /^(title|artist|album|genre)/
+                                                            ) !== null
+                                                    }}
+                                                />
+                                            {/if}
 
                                             {#if f.value === "title"}
                                                 <!-- Now playing icon -->
@@ -1398,7 +1540,9 @@
                                             x: 0,
                                             y: sandwichBottomY,
                                             width,
-                                            height: sandwichBottomHeight,
+                                            height:
+                                                sandwichBottomHeight +
+                                                ROW_HEIGHT,
                                             fill: OFFSCREEN_BG_COLOR,
                                             listening: false
                                         }}
@@ -1645,7 +1789,7 @@
 
     .scroll-now-playing {
         position: absolute;
-        bottom: 3em;
+        bottom: 4.3em;
         left: 0;
         right: 0;
         padding: 0.5em 1em;
@@ -1758,6 +1902,14 @@
     .bottom-bar {
         position: sticky;
         bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 15;
+    }
+
+    .big-seekbar {
+        position: sticky;
+        bottom: 29.5px;
         left: 0;
         right: 0;
         z-index: 15;

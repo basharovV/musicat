@@ -1,23 +1,24 @@
 <script lang="ts">
     import { UserQueryPart } from "./UserQueryPart";
 
-    import { autoWidth } from "../../utils/AutoWidth";
+    import { onMount } from "svelte";
     import {
+        forceRefreshLibrary,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         selectedSmartQuery,
         smartQuery,
-        smartQueryInitiator
+        smartQueryInitiator,
+        uiView
     } from "../../data/store";
+    import { autoWidth } from "../../utils/AutoWidth";
     import Menu from "../menu/Menu.svelte";
-    import type { QueryPartStruct } from "./QueryPart";
-    import SmartQueryPart from "./SmartQueryPart.svelte";
-    import { onMount } from "svelte";
-    import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
-    import Icon from "../ui/Icon.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { fade, fly } from "svelte/transition";
+    import Icon from "../ui/Icon.svelte";
+    import type { QueryPartStruct } from "./QueryPart";
+    import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
+    import SmartQueryPart from "./SmartQueryPart.svelte";
 
     const fields = ["artist"];
 
@@ -53,7 +54,7 @@
     onMount(() => {
         setTimeout(() => {
             isAutofocus = true;
-            if ($smartQueryInitiator !== "genre-pill") {
+            if ($smartQueryInitiator !== "library-cell") {
                 queryInput.focus();
             }
         }, 150);
@@ -203,7 +204,11 @@
                 <ButtonWithIcon
                     icon="material-symbols:close"
                     onClick={() => {
-                        $isSmartQueryBuilderOpen = false;
+                        if ($smartQueryInitiator === "library-cell") {
+                            $forceRefreshLibrary = true;
+                            $isSmartQueryBuilderOpen = false;
+                            $uiView = "library";
+                        }
                     }}
                     text="Close editor"
                     theme="transparent"

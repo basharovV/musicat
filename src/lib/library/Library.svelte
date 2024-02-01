@@ -621,15 +621,15 @@
         switch (fieldName) {
             case "genre":
                 queryPart = getQueryPart("CONTAINS_GENRE");
-                $smartQueryInitiator = "genre-pill";
+                $smartQueryInitiator = "library-cell";
                 break;
             case "year":
                 queryPart = getQueryPart("RELEASED_IN");
-                $smartQueryInitiator = "genre-pill";
+                $smartQueryInitiator = "library-cell";
                 break;
             case "originCountry":
                 queryPart = getQueryPart("FROM_COUNTRY");
-                $smartQueryInitiator = "genre-pill";
+                $smartQueryInitiator = "library-cell";
                 break;
             default:
                 return;

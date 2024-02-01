@@ -7,13 +7,10 @@
     import {
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
-        isSmartQueryValid,
         selectedSmartQuery,
-        smartQuery,
         smartQueryInitiator,
         uiView
     } from "../../data/store";
-    import { fly } from "svelte/transition";
 
     $: savedSmartQueries = liveQuery(async () => {
         return db.smartQueries.toArray();
@@ -24,7 +21,7 @@
     }
 
     function hideSmartQueryBuilder() {
-        if ($smartQueryInitiator === "genre-pill") {
+        if ($smartQueryInitiator === "library-cell") {
             $uiView = "library";
         }
         $isSmartQueryBuilderOpen = false;

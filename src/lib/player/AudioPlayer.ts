@@ -221,7 +221,6 @@ class AudioPlayer {
 
     onPlay(player: number) {
         isPlaying.set(true);
-        console.log("callback in play", this.isFinishedCallback);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "playing";
     }

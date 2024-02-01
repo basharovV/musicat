@@ -16,7 +16,9 @@
         playlist,
         playlistIsAlbum,
         query,
-        rightClickedAlbum
+        rightClickedAlbum,
+        rightClickedTrack,
+        rightClickedTracks
     } from "../../data/store";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
@@ -187,9 +189,12 @@
     let pos;
     let highlightedAlbum;
 
-    function onRightClick(e, album, idx) {
+    async function onRightClick(e, album, idx) {
         highlightedAlbum = album.id;
         $rightClickedAlbum = album;
+        const tracks = await db.songs.bulkGet(album.tracksIds);
+        $rightClickedTrack = null;
+        $rightClickedTracks = tracks;
         showAlbumMenu = true;
         pos = { x: e.clientX, y: e.clientY };
     }

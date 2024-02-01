@@ -27,6 +27,7 @@ interface Query {
 type UIView = "library" | "albums";
 
 export const isInit = writable(true);
+export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
     orderBy: "artist",
     reverse: false,
