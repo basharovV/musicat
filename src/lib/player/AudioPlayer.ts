@@ -306,14 +306,17 @@ class AudioPlayer {
         const playDelay = 0.1;
         setTimeout(
             async () => {
+                this.pause(true);
                 this.switchAudioFile();
+                console.log("currentAudioFile", this.currentAudioFile);
+                console.log("currentAudioFile switched", this.currentAudioFile);
                 currentSongIdx.set(get(currentSongIdx) + 1);
                 playerTime.set(0);
                 currentSong.set(get(nextUpSong));
                 this.currentSong = get(nextUpSong);
-                this.setNextUpSong();
                 this.setMediaSessionData();
                 this.play(false);
+                this.setNextUpSong();
                 this.isRunningTransition = false;
             },
             (diff - 0.41) * 1000
