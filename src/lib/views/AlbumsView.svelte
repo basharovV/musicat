@@ -13,17 +13,19 @@
         albumPlaylist,
         compressionSelected,
         currentSong,
+        isPlaying,
         playlist,
         playlistIsAlbum,
         query,
         rightClickedAlbum,
         rightClickedTrack,
-        rightClickedTracks
+        rightClickedTracks,
+        uiView
     } from "../../data/store";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
-    import audioPlayer from "../player/AudioPlayer";
     import BottomBar from "../library/BottomBar.svelte";
+    import audioPlayer from "../player/AudioPlayer";
 
     let isLoading = true;
 
@@ -77,6 +79,10 @@
         });
     });
 
+    let isCurrentAlbumInView = false;
+    let currentAlbum: Album;
+    let currentAlbumElement: HTMLDivElement;
+
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
         const albumPath = $currentSong.path.replace(
@@ -85,7 +91,7 @@
         );
 
         // Find the album currently playing
-        const currentAlbum = await db.albums.get(
+        currentAlbum = await db.albums.get(
             md5(`${albumPath} - ${$currentSong.album}`)
         );
         if (!currentAlbum) return;
@@ -96,6 +102,15 @@
 
         $albumPlaylist = tracks;
         $playlistIsAlbum = true;
+
+        // Scroll to album
+        currentAlbumElement = document.querySelector(
+            `[data-album='${currentAlbum.id}']`);
+
+        currentAlbumElement?.scrollIntoView({
+            block: "center",
+            behavior: "instant"
+        });
     }
 
     $: if ($playlist && $currentSong) {
@@ -198,6 +213,26 @@
         showAlbumMenu = true;
         pos = { x: e.clientX, y: e.clientY };
     }
+
+    let container: HTMLDivElement;
+
+    function onScroll() {
+        const containerRect = container.getBoundingClientRect();
+
+        if (currentAlbumElement && containerRect) {
+            isCurrentAlbumInView =
+                currentAlbumElement.offsetTop > container.scrollTop &&
+                currentAlbumElement.offsetTop <
+                    container.scrollTop + containerRect.height;
+        }
+    }
+
+    function scrollToCurrentAlbum() {
+        currentAlbumElement?.scrollIntoView({
+            block: "center",
+            behavior: "smooth"
+        });
+    }
 </script>
 
 <AlbumMenu
@@ -207,7 +242,7 @@
         highlightedAlbum = null;
     }}
 />
-<div class="grid-container">
+<div class="grid-container" on:scroll={onScroll} bind:this={container}>
     <div class="header">
         <h1>Albums</h1>
         {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if}
@@ -272,6 +307,7 @@
                     <div
                         on:contextmenu|preventDefault={(e) =>
                             onRightClick(e, album, idx)}
+                        data-album={album.id}
                     >
                         <AlbumItem
                             {album}
@@ -293,6 +329,7 @@
                         <div
                             on:contextmenu|preventDefault={(e) =>
                                 onRightClick(e, album, idx)}
+                            data-album={album.id}
                         >
                             <AlbumItem
                                 {album}
@@ -308,6 +345,24 @@
     <div class="bottom-bar">
         <BottomBar {counts} />
     </div>
+
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
+        <div
+            in:fly={{ duration: 150, y: 30 }}
+            out:fly={{ duration: 150, y: 30 }}
+            class="scroll-now-playing"
+            on:click={scrollToCurrentAlbum}
+        >
+            <div class="eq">
+                <span class="eq1" />
+                <span class="eq2" />
+                <span class="eq3" />
+            </div>
+            <p>Scroll to Now playing</p>
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -520,5 +575,108 @@
         left: 0;
         right: 0;
         z-index: 19;
+    }
+
+    .scroll-now-playing {
+        position: fixed;
+        bottom: 4.3em;
+        grid-column: 1 / 4;
+        left: 0;
+        right: 0;
+        padding: 0.5em 1em;
+        border-radius: 10px;
+        background-color: #1b1b1c;
+        border: 1px solid rgb(58, 56, 56);
+        box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.834);
+        color: white;
+        margin: auto;
+        width: fit-content;
+        z-index: 11;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        cursor: default;
+        user-select: none;
+
+        @media only screen and (max-width: 522px) {
+            display: none;
+        }
+        &:hover {
+            background-color: #1f1f21;
+            border: 1px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+        &:active {
+            background-color: #2a2a2d;
+            border: 2px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+
+        .eq {
+            width: 15px;
+            padding: 0.5em;
+            position: relative;
+
+            span {
+                display: inline-block;
+                width: 3px;
+                background-color: #ddd;
+                position: absolute;
+                bottom: 0;
+            }
+
+            .eq1 {
+                height: 13px;
+                left: 0;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0s;
+            }
+
+            .eq2 {
+                height: 15px;
+                left: 6px;
+                animation-name: talleq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.17s;
+            }
+
+            .eq3 {
+                height: 13px;
+                left: 12px;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.34s;
+            }
+        }
+        p {
+            margin: 0;
+        }
+    }
+
+    @keyframes shorteq {
+        0% {
+            height: 10px;
+        }
+        50% {
+            height: 5px;
+        }
+        100% {
+            height: 10px;
+        }
+    }
+    @keyframes talleq {
+        0% {
+            height: 15px;
+        }
+        50% {
+            height: 8px;
+        }
+        100% {
+            height: 15px;
+        }
     }
 </style>
