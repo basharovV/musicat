@@ -245,12 +245,14 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
                 songs.lock().unwrap().push(song);
             }
         } else if path.is_dir() {
-            process_directory(Path::new(path), &songs);
+            if let Some(sub_songs) = process_directory(Path::new(path), &songs) {
+                songs.lock().unwrap().extend(sub_songs);
+            }
         }
     });
 
     // Print the collected songs for demonstration purposes
-    // for song in songs.clone(){
+    // for song in songs.lock().unwrap().clone(){
     //     println!("{:?}", song);
     // }
 
@@ -302,8 +304,9 @@ fn process_directory(
             entries.by_ref().par_bridge().for_each(|entry| {
                 if let Ok(entry) = entry {
                     let path = entry.path();
+
+                    // println!("{:?}", entry.path());
                     if path.is_file() {
-                        // println!("{:?}", entry.path());
                         if let Some(song) = extract_metadata(&path) {
                             subsongs.lock().unwrap().push(song);
                         }
