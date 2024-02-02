@@ -22,7 +22,7 @@
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu}>
+    <Menu {...pos} onClickOutside={closeMenu} fixed>
         <MenuOption text="Columns" isDisabled />
         {#each fields as field}
             <MenuOption

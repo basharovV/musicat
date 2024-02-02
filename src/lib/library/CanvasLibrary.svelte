@@ -65,7 +65,6 @@
     import ColumnPicker from "./ColumnPicker.svelte";
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
-    import BigSeekbarWithNotes from "../player/BigSeekbarWithNotes.svelte";
     import { getQueryPart } from "../smart-query/QueryParts";
     import { UserQueryPart } from "../smart-query/UserQueryPart";
 
@@ -1593,7 +1592,7 @@
                                         else if (ev.detail.evt.button === 2) {
                                             console.log("ev", ev);
                                             columnPickerPos = {
-                                                x: ev.detail.evt.offsetX,
+                                                x: ev.detail.evt.clientX,
                                                 y: 15
                                             };
                                             showColumnPicker =
