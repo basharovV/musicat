@@ -224,8 +224,8 @@
 <style lang="scss">
     .container {
         position: absolute;
-        bottom: 3em;
-        right: 2em;
+        bottom: 3.5em;
+        right: 1.5em;
         max-height: 400px;
         text-align: center;
         min-width: 330px;

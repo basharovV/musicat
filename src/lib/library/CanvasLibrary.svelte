@@ -301,7 +301,7 @@
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
 
     // COLORS
-    const BG_COLOR = "rgba(36, 33, 34, 0.982)";
+    const BG_COLOR = "rgba(36, 33, 34, 0.948)";
     const HEADER_BG_COLOR = "#71658e7e";
     const OFFSCREEN_BG_COLOR = "#71658e3b";
     const HEADER_BG_COLOR_HOVERED = "#604d8d";
@@ -360,7 +360,7 @@
     $: noSongs =
         !songs ||
         songs.length === 0 ||
-        ($uiView === "smart-query" &&
+        ($uiView.match(/^(smart-query|favourites)/) &&
             $isSmartQueryBuilderOpen &&
             $smartQuery.isEmpty);
 
@@ -400,7 +400,7 @@
             top: 0
         });
         ready = true;
-    } else if ($uiView === "smart-query") {
+    } else if ($uiView.match(/^(smart-query|favourites)/)) {
         scrollContainer?.scrollTo({
             top: 0
         });
@@ -429,6 +429,7 @@
     function calculateCanvasSize() {
         contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
         let area = contentHeight - viewportHeight;
+        console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
         // Set canvas size to fill the parent
         viewportHeight = libraryContainer.getBoundingClientRect().height;
@@ -454,8 +455,25 @@
         let runningX = 0;
         let previousWidth = 0;
 
+        // Fields visible depending on window width
+        const visibleFields = fields.filter((f) => {
+            switch (f.value) {
+                case "duration":
+                    return f.show && width > 800;
+                case "genre":
+                    return f.show && width > 700;
+                case "year":
+                    return f.show && width > 650;
+                case "trackNumber":
+                    return f.show && width > 500;
+                case "album":
+                    return f.show && width > 450;
+                default:
+                    return f.show;
+            }
+        });
         // Calculate total width of fixed-width rectangles
-        const fixedWidths = fields
+        const fixedWidths = visibleFields
             .filter((f) => !f.viewProps.autoWidth)
             .map((f) => f.viewProps.width);
         const totalFixedWidth = fixedWidths.reduce(
@@ -468,10 +486,11 @@
         // console.log("availableWidth", availableWidth);
         // Calculate the width for each 'auto' size rectangle
         const autoWidth =
-            availableWidth / (displayFields.length - fixedWidths.length);
+            availableWidth / (visibleFields.length - fixedWidths.length);
 
+        // Final display fields
         displayFields = [
-            ...displayFields.map((f) => {
+            ...visibleFields.map((f) => {
                 const rectWidth = f.viewProps.autoWidth
                     ? autoWidth
                     : f.viewProps.width;
@@ -1046,9 +1065,6 @@
         fields = DEFAULT_FIELDS;
     }
 
-    $: if (isSmartQueryEnabled && $uiView === "smart-query") {
-    }
-
     // SMART QUERY
     export let isSmartQueryEnabled = true; // Only for main view
 
@@ -1098,7 +1114,7 @@
             default:
                 return;
         }
-        if ($uiView !== "smart-query") {
+        if ($uiView.match(/^(smart-query|favourites)/) === null) {
             $smartQuery.reset();
         }
         // console.log("built in query Part", queryPart);
@@ -1147,7 +1163,7 @@
         <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
         </div>
-    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView !== "smart-query"))}
+    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites)/) === null))}
         <ImportPlaceholder />
     {:else}
         <div
@@ -1190,7 +1206,7 @@
                     </div>
                 {/if}
 
-                {#if $uiView === "smart-query"}
+                {#if $uiView.match(/^(smart-query)/)}
                     <div
                         class="smart-query"
                         transition:fly={{
@@ -1724,10 +1740,6 @@
                 {#if $isSmartQueryBuilderOpen && noSongs}
                     <SmartQueryResultsPlaceholder />
                 {/if}
-
-                <div class="bottom-bar">
-                    <BottomBar {counts} />
-                </div>
             </div>
         </div>
     {/if}
@@ -1735,15 +1747,21 @@
 
 <style lang="scss">
     .library-container {
-        height: 100vh;
+        position: relative;
+        height: 100%;
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-left: 0.7px solid #ffffff2a;
+        border-bottom: 0.7px solid #ffffff2a;
+        overflow: hidden;
     }
     .container {
         width: 100%;
-        height: 100vh;
+        height: 100%;
         pointer-events: all;
         display: flex;
         flex-direction: column;
@@ -1774,7 +1792,7 @@
 
     #scroll-container {
         width: 100%;
-        height: 100vh;
+        height: 100%;
         position: absolute;
         overflow-y: auto;
         overflow-x: hidden;
@@ -1788,7 +1806,7 @@
 
     .scroll-now-playing {
         position: absolute;
-        bottom: 4.3em;
+        bottom: 0.5em;
         left: 0;
         right: 0;
         padding: 0.5em 1em;
@@ -1889,11 +1907,20 @@
     }
 
     .smart-query {
-        min-height: 51px;
+        display: grid;
+        /* min-height: 51px; */
         .smart-query-builder {
+            grid-column-start: 1;
+            grid-column-end: 2;
+            grid-row-start: 1;
+            grid-row-end: 2;
         }
 
         .smart-query-main {
+            grid-column-start: 1;
+            grid-column-end: 2;
+            grid-row-start: 1;
+            grid-row-end: 2;
         }
         background-color: #4d347c;
     }

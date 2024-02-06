@@ -530,7 +530,6 @@
     // Smart query stuff
 
     // Smart query - predefined or user-defined queries i.e smart playlists
-    let smartQuerySelectedVal = BuiltInQueries[0].value;
 
     function hideSmartQueryBuilder() {
         if (tableHeaders[0] === "smart-query-builder") {

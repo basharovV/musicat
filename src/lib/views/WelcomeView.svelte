@@ -13,15 +13,13 @@
         <br />
         <p style="margin: 0 auto" in:fade={{ delay: 1000, duration: 400 }}>
             <span>Musicat</span> is all about helping listeners connect more with
-            their music collection, and for artists to feel empowered to write more
-            music and never lose an idea for a great song.
+            their music collection.
         </p>
         <p style="font-size: 1.2em" in:fade={{ delay: 4800, duration: 400 }}>
-            It's a hybrid app born out of necessity and curiosity.
-            In the age of streaming, how can I learn to love my music collection
-            again? What if my music player is also where I organize my own
-            music? What if the app embraces the scrappiness and scattered nature
-            of the creative process?
+            It's a hybrid app born out of necessity and curiosity. In the age of
+            streaming, how can I learn to love my music collection again? <br/><br/>What
+            if I see my whole music library on a world map? <br/><br/>What if my music
+            player is also where I organize my own music ideas? 
         </p>
         <div in:fade={{ delay: 9800, duration: 400 }}>~~~</div>
         <p
@@ -35,7 +33,7 @@
             - Slav
         </p>
 
-        <div  in:fade={{ delay: 10800, duration: 400 }} class="button-container">
+        <div in:fade={{ delay: 10800, duration: 400 }} class="button-container">
             <img class="logo" src="icon.png" />
             <button
                 on:click={() => {
@@ -109,7 +107,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        opacity: 0.3;
+        opacity: 0.2;
         object-fit: cover;
         animation: move 15s alternate-reverse infinite ease-in-out;
     }

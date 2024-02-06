@@ -105,7 +105,8 @@
 
         // Scroll to album
         currentAlbumElement = document.querySelector(
-            `[data-album='${currentAlbum.id}']`);
+            `[data-album='${currentAlbum.id}']`
+        );
 
         currentAlbumElement?.scrollIntoView({
             block: "center",
@@ -242,90 +243,73 @@
         highlightedAlbum = null;
     }}
 />
-<div class="grid-container" on:scroll={onScroll} bind:this={container}>
-    <div class="header">
-        <h1>Albums</h1>
-        {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if}
-        <label
-            >show singles
-            <input type="checkbox" bind:checked={showSingles} /></label
-        >
-        <label
-            >show info
-            <input type="checkbox" bind:checked={showInfo} /></label
-        >
-        <label
-            >grid size
-            <input
-                type="range"
-                min={100}
-                max={400}
-                bind:value={minWidth}
-            /></label
-        >
-    </div>
 
-    {#if $playlist?.length && $playlistIsAlbum}
-        <div class="now-playing" in:fly={{ duration: 200, x: -200 }}>
-            <h1>Now playing</h1>
-            <div class="album-info">
-                <p>{$currentSong.album}</p>
-                <p>{$currentSong.artist}</p>
-            </div>
-            <div class="tracks">
-                {#each $albumPlaylist as track, idx}
-                    <div
-                        class="track"
-                        class:playing={$currentSong.id === track.id}
-                        on:click={() => {
-                            audioPlayer.playSong(track);
-                        }}
-                    >
-                        <p>{idx + 1}.</p>
-                        <p>{track.title}</p>
-                        {#if $currentSong.id === track.id}<iconify-icon
-                                icon="heroicons-solid:volume-up"
-                            />{/if}
-                    </div>
-                {/each}
-            </div>
-        </div>
-    {/if}
-
-    {#if isLoading}
-        <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
-            <p>💿 one sec...</p>
-        </div>
-    {:else}
-        {#if $query.query?.length && queriedAlbums?.length}
-            <div
-                class="grid"
-                class:show={$query.query?.length}
-                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+<div class="albums-container">
+    <div class="grid-container" on:scroll={onScroll} bind:this={container}>
+        <div class="header">
+            <h1>Albums</h1>
+            {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if}
+            <label
+                >show singles
+                <input type="checkbox" bind:checked={showSingles} /></label
             >
-                {#each queriedAlbums as album, idx (album.id)}
-                    <div
-                        on:contextmenu|preventDefault={(e) =>
-                            onRightClick(e, album, idx)}
-                        data-album={album.id}
-                    >
-                        <AlbumItem
-                            {album}
-                            highlighted={highlightedAlbum === album.id}
-                            {showInfo}
-                        />
-                    </div>
-                {/each}
+            <label
+                >show info
+                <input type="checkbox" bind:checked={showInfo} /></label
+            >
+            <label
+                >grid size
+                <input
+                    type="range"
+                    min={100}
+                    max={400}
+                    bind:value={minWidth}
+                /></label
+            >
+        </div>
+
+        {#if $playlist?.length && $playlistIsAlbum}
+            <div class="now-playing" in:fly={{ duration: 200, x: -200 }}>
+                <h1>Now playing</h1>
+                <div class="album-info">
+                    <p>{$currentSong.album}</p>
+                    <p>{$currentSong.artist}</p>
+                </div>
+                <div class="tracks">
+                    {#each $albumPlaylist as track, idx}
+                        <div
+                            class="track"
+                            class:playing={$currentSong.id === track.id}
+                            on:click={() => {
+                                audioPlayer.playSong(track);
+                            }}
+                        >
+                            <p>{idx + 1}.</p>
+                            <p>{track.title}</p>
+                            {#if $currentSong.id === track.id}<iconify-icon
+                                    icon="heroicons-solid:volume-up"
+                                />{/if}
+                        </div>
+                    {/each}
+                </div>
             </div>
         {/if}
-        <div
-            class="grid"
-            class:show={$albums && $query.query?.length === 0}
-            style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
-        >
-            {#if $albums}
-                {#each $albums as album, idx (album.id)}
-                    {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
+
+        {#if isLoading}
+            <div
+                class="loading"
+                out:fade={{ duration: 90, easing: cubicInOut }}
+            >
+                <p>💿 one sec...</p>
+            </div>
+        {:else}
+            {#if $query.query?.length && queriedAlbums?.length}
+                <div
+                    class="grid"
+                    class:show={$query.query?.length}
+                    style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+                >
+                    {#each queriedAlbums as album, idx (album.id)}
                         <div
                             on:contextmenu|preventDefault={(e) =>
                                 onRightClick(e, album, idx)}
@@ -337,44 +321,86 @@
                                 {showInfo}
                             />
                         </div>
-                    {/if}
-                {/each}
+                    {/each}
+                </div>
             {/if}
-        </div>
-    {/if}
+            <div
+                class="grid"
+                class:show={$albums && $query.query?.length === 0}
+                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+            >
+                {#if $albums}
+                    {#each $albums as album, idx (album.id)}
+                        {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
+                            <div
+                                on:contextmenu|preventDefault={(e) =>
+                                    onRightClick(e, album, idx)}
+                                data-album={album.id}
+                            >
+                                <AlbumItem
+                                    {album}
+                                    highlighted={highlightedAlbum === album.id}
+                                    {showInfo}
+                                />
+                            </div>
+                        {/if}
+                    {/each}
+                {/if}
+            </div>
+        {/if}
+
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
+            <div
+                in:fly={{ duration: 150, y: 30 }}
+                out:fly={{ duration: 150, y: 30 }}
+                class="scroll-now-playing"
+                on:click={scrollToCurrentAlbum}
+            >
+                <div class="eq">
+                    <span class="eq1" />
+                    <span class="eq2" />
+                    <span class="eq3" />
+                </div>
+                <p>Scroll to Now playing</p>
+            </div>
+        {/if}
+    </div>
+
     <div class="bottom-bar">
         <BottomBar {counts} />
     </div>
-
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
-        <div
-            in:fly={{ duration: 150, y: 30 }}
-            out:fly={{ duration: 150, y: 30 }}
-            class="scroll-now-playing"
-            on:click={scrollToCurrentAlbum}
-        >
-            <div class="eq">
-                <span class="eq1" />
-                <span class="eq2" />
-                <span class="eq3" />
-            </div>
-            <p>Scroll to Now playing</p>
-        </div>
-    {/if}
 </div>
 
 <style lang="scss">
+    .albums-container {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+        margin: 5px 5px 5px 0;
+        row-gap: 5px;
+        border-radius: 5px;
+        box-sizing: border-box;
+        overflow: hidden;
+        /* border: 0.7px solid #ffffff0b; */
+        border-top: 0.7px solid #ffffff36;
+    }
     .grid-container {
         overflow-x: hidden;
         overflow-y: auto;
         display: grid;
         height: 100%;
+        width: 100%;
+        position: relative;
         grid-template-rows: auto 1fr;
         grid-template-columns: auto 1fr;
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-left: 0.7px solid #ffffff2a;
+        border-bottom: 0.7px solid #ffffff2a;
         background-color: #242026b3;
-        position: relative;
     }
 
     .header {
@@ -568,13 +594,11 @@
     }
 
     .bottom-bar {
-        position: sticky;
-        grid-row: 3;
-        grid-column: 1 / 4;
+        position: relative;
         bottom: 0;
         left: 0;
         right: 0;
-        z-index: 19;
+        z-index: 15;
     }
 
     .scroll-now-playing {

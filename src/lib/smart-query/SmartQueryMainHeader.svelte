@@ -40,9 +40,9 @@
         onClick={hideSmartQuery}
     />
     <div class="query-header">
-        <p class="query-header-title">Showing results for</p>
+        <p class="query-header-title">Smart playlist:</p>
         <select bind:value={$selectedSmartQuery}>
-            {#each SmartQuery as query}
+            {#each Object.values(SmartQuery) as query}
                 <option value={query.value}>{query.name}</option>
             {/each}
             <option value="----">----</option>

@@ -126,7 +126,7 @@ export const isSmartQueryBuilderOpen = writable(false);
 export const isSmartQuerySaveUiOpen = writable(false);
 export const smartQuery: Writable<SmartQuery> = writable(new SmartQuery());
 export const smartQueryInitiator = writable("sidebar");
-export const selectedSmartQuery = writable(Query[0].value);
+export const selectedSmartQuery = writable(Query.favourites.value);
 export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);
 export const smartQueryResults: Writable<Song[]> = writable([]);
@@ -145,7 +145,8 @@ const defaultSettings: UserSettings = {
     llm: "ollama",
     openAIApiKey: null,
     aiFeaturesEnabled: false,
-    geniusApiKey: null
+    geniusApiKey: null,
+    isArtistsToolkitEnabled: false
 };
 
 export const userSettings: Writable<UserSettings> = writable(

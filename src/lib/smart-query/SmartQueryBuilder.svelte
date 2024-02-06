@@ -19,6 +19,8 @@
     import type { QueryPartStruct } from "./QueryPart";
     import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
     import SmartQueryPart from "./SmartQueryPart.svelte";
+    import { fly } from "svelte/transition";
+    import { cubicInOut } from "svelte/easing";
 
     const fields = ["artist"];
 
@@ -208,6 +210,9 @@
                             $forceRefreshLibrary = true;
                             $isSmartQueryBuilderOpen = false;
                             $uiView = "library";
+                        } else {
+                            $isSmartQueryBuilderOpen = false;
+                            // $uiView = "smart-query";
                         }
                     }}
                     text="Close editor"
@@ -236,9 +241,18 @@
         text="Hide builder"
     /> -->
 
-        <div class="smart-query-actions">
+        <div
+            class="smart-query-actions"
+            transition:fly={{
+                y: -10,
+                duration: 200,
+                easing: cubicInOut
+            }}
+        >
             <p>Name:</p>
-            <input bind:value={$smartQuery.name} />
+            <form on:submit|preventDefault={save}>
+                <input bind:value={$smartQuery.name} />
+            </form>
             <img src="images/arrow-down-right.svg" />
             <button
                 disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
@@ -284,7 +298,8 @@
         }
 
         img {
-            width: 40px;
+            width: 30px;
+            margin: 0 5px;
             position: relative;
             opacity: 0.2;
         }

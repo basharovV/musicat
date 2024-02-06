@@ -7,9 +7,20 @@
 
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;
-    let width;
+    export let width;
     let height;
     let analyser: AudioVisualiser;
+    export let show = true;
+
+    $: if (analyser) {
+        if (show) {
+            analyser.shouldStopAnimation = false;
+            analyser.setupAnalyserAnimation();
+        } else {
+            analyser.shouldStopAnimation = true;
+            analyser.clearCanvas();
+        }
+    }
 
     onMount(() => {
         width = container.clientWidth;

@@ -27,6 +27,7 @@
     import LyricsView from "../library/LyricsView.svelte";
     import { fade, fly } from "svelte/transition";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
+    import BottomBar from "../library/BottomBar.svelte";
 
     let isLoading = true;
 
@@ -62,7 +63,7 @@
                             .includes($query.query.toLowerCase())
                 );
             }
-        } else if ($uiView === "smart-query") {
+        } else if ($uiView === "smart-query" || $uiView === "favourites") {
             /**
              * User-built smart queries don't support indexing
              */
@@ -91,9 +92,7 @@
                     isIndexed = false;
                 } else {
                     // Run the query from built-in functions
-                    results = await BuiltInQueries.find(
-                        (q) => q.value === $selectedSmartQuery
-                    ).query();
+                    results = await BuiltInQueries[$selectedSmartQuery].query();
 
                     isIndexed = true;
                 }
@@ -183,6 +182,19 @@
         isLoading = false;
         return resultsArray;
     });
+
+    $: counts = liveQuery(() => {
+        return db.transaction("r", db.songs, async () => {
+            const artists = await (
+                await db.songs.orderBy("artist").uniqueKeys()
+            ).length;
+            const albums = await (
+                await db.songs.orderBy("album").uniqueKeys()
+            ).length;
+            const s = await $songs.length;
+            return { songs: s, artists, albums };
+        });
+    });
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
@@ -192,6 +204,10 @@
             <LyricsView />
         </div>
     {/if}
+
+    <div class="bottom-bar">
+        <BottomBar {counts} />
+    </div>
 </div>
 
 <style lang="scss">
@@ -199,12 +215,28 @@
         position: relative;
         display: grid;
         grid-template-columns: 1fr;
-
+        grid-template-rows: 1fr auto;
+        margin: 5px 5px 5px 0;
+        row-gap: 5px;
+        border-radius: 5px;
+        box-sizing:content-box;
+        overflow: hidden;
+        /* border: 0.7px solid #ffffff0b; */
+        border-top: 0.7px solid #ffffff36;
         &.has-lyrics {
             /* grid-template-columns: 1fr auto; */
         }
 
         .lyrics {
         }
+
+
+    }
+    .bottom-bar {
+        position: relative;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 15;
     }
 </style>

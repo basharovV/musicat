@@ -17,7 +17,8 @@ export class AudioVisualiser {
 
     private _canvasContext: CanvasRenderingContext2D;
     private _activeAnimations: IAnimation[] = [];
-    private shouldStopAnimation = false;
+    isEnabled = true;
+    shouldStopAnimation = false;
     timeDomain: Uint8Array;
     freqDomain: Uint8Array;
 
@@ -71,7 +72,7 @@ export class AudioVisualiser {
             this._canvasContext.canvas.clientHeight
         );
     }
-
+    
     setupAnalyserAnimation() {
         this.freqDomain = new Uint8Array(
             audioPlayer.audioAnalyser.frequencyBinCount

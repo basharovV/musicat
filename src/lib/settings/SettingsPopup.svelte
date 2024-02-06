@@ -211,6 +211,18 @@
                         /></td
                     >
                 </tr>
+
+                <br />
+
+                <tr>
+                    <td>Enable Artist's Toolkit</td>
+                    <td
+                        ><input
+                            type="checkbox"
+                            bind:checked={$userSettings.isArtistsToolkitEnabled}
+                        /></td
+                    >
+                </tr>
             </table>
         </section>
     </div></container

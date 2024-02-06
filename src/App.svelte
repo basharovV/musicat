@@ -187,12 +187,15 @@
 {/if}
 
 <main class:mini-player={$isMiniPlayer}>
-    {#if $isWelcomeSeen}
-        <Sidebar />
-    {/if}
+    <div class="sidebar">
+        {#if $isWelcomeSeen}
+            <Sidebar />
+        {/if}
+    </div>
+
     {#if !$isWelcomeSeen}
         <WelcomeView />
-    {:else if $uiView === "library" || $uiView === "smart-query"}
+    {:else if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
         <CanvasLibraryView />
     {:else if $uiView === "playlists"}
         <CanvasLibraryView />
@@ -222,8 +225,20 @@
             overflow: hidden;
         }
 
+        .sidebar { 
+            width: 120px;
+            display: contents;
+        }
+
         @media only screen and (max-width: 320px) {
             grid-template-columns: 1fr;
+        }
+        @media only screen and (max-width: 320px) and (min-height: 300px) {
+            grid-template-columns: 1fr;
+            .sidebar {
+                display: none;
+            }
+            padding-top: 2em;
         }
     }
 
