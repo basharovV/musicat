@@ -211,6 +211,18 @@
                         /></td
                     >
                 </tr>
+
+                <br />
+
+                <tr>
+                    <td>Enable Artist's Toolkit</td>
+                    <td
+                        ><input
+                            type="checkbox"
+                            bind:checked={$userSettings.isArtistsToolkitEnabled}
+                        /></td
+                    >
+                </tr>
             </table>
         </section>
     </div></container
@@ -230,6 +242,7 @@
         width: fit-content;
         max-height: 85%;
         min-width: 500px;
+        max-width: 550px;
         margin: auto;
         display: flex;
         flex-direction: column;
@@ -356,6 +369,9 @@
         padding: 1px 10px;
         margin-bottom: 5px;
         position: relative;
+        word-wrap: anywhere;
+        word-break: break-all;
+        width: 100%;
 
         > div {
             display: flex;
@@ -366,7 +382,7 @@
             font-size: 0.9em;
             color: rgb(196, 195, 195);
             white-space: wrap;
-            max-width: 200px;
+            max-width: 300px;
             line-height: initial;
         }
     }

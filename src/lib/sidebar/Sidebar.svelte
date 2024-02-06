@@ -40,6 +40,7 @@
         query,
         rightClickedTrack,
         selectedPlaylistId,
+        selectedSmartQuery,
         shouldFocusFind,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
@@ -55,9 +56,7 @@
     import SpectrumAnalyzer from "../player/SpectrumAnalyzer.svelte";
     import "../tippy.css";
     import Icon from "../ui/Icon.svelte";
-
-    // Env
-    let isArtistToolkitEnabled = true;
+    import SmartQueries from "../../data/SmartQueries";
 
     // What to show in the sidebar
     let title;
@@ -135,8 +134,9 @@
     });
 
     function togglePlayPause() {
-        if (!audioPlayer.audioFile.src) {
-            audioPlayer.playSong($queriedSongs[$currentSongIdx]);
+        if (!audioPlayer.getCurrentAudioFile().src) {
+            audioPlayer.shouldPlay = true;
+            $playlist = $queriedSongs;
         } else {
             audioPlayer.togglePlay();
         }
@@ -342,7 +342,12 @@
     let showMenuBottomScrollShadow = false;
 
     function onMenuResize() {
-        console.log("scrollTop");
+        console.log(
+            "scrollTop",
+            menuInnerScrollArea.scrollTop,
+            menuInnerScrollArea.clientHeight,
+            menuInnerScrollArea.scrollHeight
+        );
         // Check scroll area size, add shadows if necessary
         if (menuInnerScrollArea) {
             showMenuTopScrollShadow =
@@ -350,8 +355,11 @@
                 menuInnerScrollArea.scrollHeight >
                     menuInnerScrollArea.clientHeight;
             showMenuBottomScrollShadow =
+                menuInnerScrollArea.scrollTop <
+                    menuInnerScrollArea.scrollHeight -
+                        menuInnerScrollArea.clientHeight &&
                 menuInnerScrollArea.scrollHeight >
-                menuInnerScrollArea.clientHeight;
+                    menuInnerScrollArea.clientHeight;
         }
     }
 
@@ -374,6 +382,13 @@
         // Show top shadow
         showMenuTopScrollShadow =
             menuInnerScrollArea.scrollTop > 0 &&
+            menuInnerScrollArea.scrollHeight > menuInnerScrollArea.clientHeight;
+
+        // Show bottom shadow
+        showMenuBottomScrollShadow =
+            menuInnerScrollArea.scrollTop <
+                menuInnerScrollArea.scrollHeight -
+                    menuInnerScrollArea.clientHeight &&
             menuInnerScrollArea.scrollHeight > menuInnerScrollArea.clientHeight;
     }
 
@@ -627,16 +642,8 @@
     <Knob bind:value={volumeKnob} max={100} min={0} pixelRange={200} />
   </div> -->
     <div class="top" data-tauri-drag-region>
+        <h1 class="app-title" on:click={openInfoWindow}>Musicat</h1>
         <div class="top-header" data-tauri-drag-region>
-            <h1
-                class="app-title"
-                style={process.env.NODE_ENV === "development"
-                    ? "opacity: 1"
-                    : ""}
-                on:click={openInfoWindow}
-            >
-                Musicat{process.env.NODE_ENV === "development" ? " 🚧" : ""}
-            </h1>
             <div class="search-container">
                 <input
                     bind:this={searchInput}
@@ -660,6 +667,8 @@
         <div
             class="menu-outer"
             class:top-border={showMenuTopScrollShadow}
+            class:top-shadow={showMenuTopScrollShadow}
+            class:bottom-shadow={showMenuBottomScrollShadow}
             bind:this={menuOuterContainer}
         >
             {#if showMenuTopScrollShadow}
@@ -709,6 +718,24 @@
                                     ? "#45fffcf3"
                                     : "currentColor"}
                             />Albums</item
+                        >
+
+                        <item
+                            class:selected={$uiView === "favourites"}
+                            on:click={() => {
+                                $uiView = "favourites";
+                                $selectedPlaylistId = null;
+                                $selectedSmartQuery =
+                                    SmartQueries.favourites.value;
+                            }}
+                        >
+                            <Icon
+                                icon="clarity:heart-solid"
+                                size={15}
+                                color={$uiView === "favourites"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
+                            />Favourites</item
                         >
 
                         <item
@@ -863,6 +890,7 @@
                             class:selected={$uiView === "smart-query"}
                             on:click={() => {
                                 $smartQueryInitiator = "sidebar";
+                                $selectedPlaylistId = null;
                                 $uiView = "smart-query";
                             }}
                         >
@@ -874,7 +902,7 @@
                                     : "currentColor"}
                             />Smart Playlists</item
                         >
-                        {#if isArtistToolkitEnabled}
+                        {#if $userSettings.isArtistsToolkitEnabled}
                             <item
                                 class:selected={$uiView === "your-music"}
                                 on:click={() => {
@@ -1104,7 +1132,7 @@
     $mini_y_breakpoint: 460px;
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
-    $sidebar_secondary_color: #242026;
+    $sidebar_secondary_color: transparent;
     sidebar {
         position: relative;
         display: grid;
@@ -1115,7 +1143,7 @@
         height: 100vh;
         max-width: 210px;
         min-width: 210px;
-        border-right: 1px solid #ececec1c;
+        /* border-right: 1px solid #ececec1c; */
         background-color: $sidebar_primary_color;
     }
 
@@ -1132,11 +1160,38 @@
         position: relative;
         overflow: hidden;
 
+        &.top-shadow {
+            mask-image: linear-gradient(
+                to bottom,
+                transparent 0%,
+                black 18%,
+                black 100%
+            );
+        }
+        &.bottom-shadow {
+            mask-image: linear-gradient(
+                to bottom,
+                black 0%,
+                black 85%,
+                transparent 100%
+            );
+        }
+        &.top-shadow.bottom-shadow {
+            mask-image: linear-gradient(
+                to bottom,
+                transparent 0%,
+                black 15%,
+                black 85%,
+                transparent 100%
+            );
+        }
+
         &.top-border {
             border-top: 0.7px solid #ffffff12;
         }
 
         .top-shadow {
+            display: none;
             pointer-events: none;
             background: linear-gradient(
                 to bottom,
@@ -1166,6 +1221,7 @@
             z-index: 4;
         }
         .bottom-shadow {
+            display: none;
             pointer-events: none;
             background: linear-gradient(
                 to top,
@@ -1232,7 +1288,7 @@
         margin: 0;
         position: relative;
         user-select: none;
-        padding: 1em;
+        padding: 0 1em 0.5em 1em;
         &::-webkit-scrollbar {
             /* hide scrollbar */
             display: none;
@@ -1242,7 +1298,7 @@
             display: flex;
             flex-direction: column;
             border-radius: 3px;
-            gap: 3px;
+            gap: 2px;
         }
 
         item {
@@ -1253,12 +1309,12 @@
             text-transform: uppercase;
             font-weight: bold;
             text-align: left;
-            width: fit-content;
+            width: max-content;
             padding: 0.3em 0.5em;
             font-size: 12px;
             letter-spacing: 0.2px;
             color: rgb(143, 144, 147);
-            width: 100%;
+            /* width: 100%; */
             border-radius: 3px;
             box-sizing: border-box;
             border: 1px solid transparent;
@@ -1271,6 +1327,13 @@
                 }
                 .chevron {
                     visibility: visible;
+                }
+                &::after {
+                    content: "";
+                    height: 1.5px;
+                    background-color: #504c4c6c;
+                    width: 150px;
+                    position: relative;
                 }
             }
 
@@ -1311,12 +1374,15 @@
         position: sticky;
         overflow: hidden;
         padding-top: 2em;
+        /* border-bottom-right-radius: 5px; */
         display: flex;
         flex-direction: column;
+        /* background-color: $sidebar_secondary_color; */
         background-color: $sidebar_secondary_color;
         top: 0;
         z-index: 3;
         transition: height 1s ease-in-out;
+        border-bottom: 0.7px solid #ffffff17;
 
         .top-header {
             /* height: 80px; */
@@ -1327,11 +1393,14 @@
         .app-title {
             font-family: "2Peas";
             width: fit-content;
-            font-size: 2em;
-            opacity: 0.2;
+            font-size: 1.7em;
+            position: absolute;
+            top: 0;
+            right: 1em;
             user-select: none;
-            margin: 1em auto 0;
-            transition: height 1s ease-in-out;
+            margin: 0.3em 0;
+            /* transition: height 1s ease-in-out; */
+            opacity: 0.2;
             cursor: default;
             &:hover {
                 opacity: 0.5;
@@ -1398,7 +1467,7 @@
         cursor: default;
         user-select: none;
         pointer-events: none;
-        border-top: 0.7px solid #ffffff23;
+        /* border-top: 0.7px solid #ffffff23; */
         z-index: 2;
         overflow: hidden;
     }
@@ -1444,8 +1513,8 @@
             mask-image: linear-gradient(
                 to right,
                 transparent 0%,
-                $sidebar_secondary_color 15%,
-                $sidebar_secondary_color 85%,
+                white 15%,
+                white 85%,
                 transparent 100%
             );
 
@@ -1562,8 +1631,8 @@
         pointer-events: none;
         opacity: 1;
         box-sizing: content-box;
-        border-top: 0.7px solid #ffffff23;
-        border-bottom: 0.7px solid #ffffff23;
+        /* border-top: 0.7px solid #ffffff23; */
+        /* border-bottom: 0.7px solid #ffffff23; */
         z-index: 1;
 
         .artwork-frame {
@@ -1604,7 +1673,7 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        background-color: #242026bc;
+        /* background-color: #242026bc; */
     }
 
     @keyframes marquee {

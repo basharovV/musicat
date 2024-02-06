@@ -152,6 +152,7 @@ interface UserSettings {
     llm: LLM;
     openAIApiKey?: string;
     geniusApiKey?: string;
+    isArtistsToolkitEnabled: boolean
 }
 
 type MiniPlayerLocation =
@@ -171,6 +172,7 @@ type Comparison =
 
 type SidebarItem =
     | "library"
+    | "favourites"
     | "smart-query"
     | "your-music"
     | "albums"

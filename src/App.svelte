@@ -6,13 +6,16 @@
         draggedSongs,
         droppedFiles,
         emptyDropEvent,
+        foldersToWatch,
         hoveredFiles,
+        isFolderWatchUpdate,
         isInfoPopupOpen,
         isMiniPlayer,
         isSettingsOpen,
         isTrackInfoPopupOpen,
         isWelcomeSeen,
-        uiView
+        uiView,
+        userSettings
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
@@ -104,7 +107,10 @@
             }
         });
 
-        unlistenFolderWatch = await startWatching();
+        foldersToWatch.subscribe(async (_) => {
+            unlistenFolderWatch && unlistenFolderWatch();
+            unlistenFolderWatch = await startWatching();
+        });
     });
 
     function onDragMove(evt: MouseEvent) {
@@ -181,12 +187,15 @@
 {/if}
 
 <main class:mini-player={$isMiniPlayer}>
-    {#if $isWelcomeSeen}
-        <Sidebar />
-    {/if}
+    <div class="sidebar">
+        {#if $isWelcomeSeen}
+            <Sidebar />
+        {/if}
+    </div>
+
     {#if !$isWelcomeSeen}
         <WelcomeView />
-    {:else if $uiView === "library" || $uiView === "smart-query"}
+    {:else if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
         <CanvasLibraryView />
     {:else if $uiView === "playlists"}
         <CanvasLibraryView />
@@ -216,8 +225,20 @@
             overflow: hidden;
         }
 
+        .sidebar { 
+            width: 120px;
+            display: contents;
+        }
+
         @media only screen and (max-width: 320px) {
             grid-template-columns: 1fr;
+        }
+        @media only screen and (max-width: 320px) and (min-height: 300px) {
+            grid-template-columns: 1fr;
+            .sidebar {
+                display: none;
+            }
+            padding-top: 2em;
         }
     }
 

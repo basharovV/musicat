@@ -14,7 +14,7 @@ import type {
     Song,
     UserSettings
 } from "src/App";
-import { writable, type Writable } from "svelte/store";
+import { derived, get, writable, type Writable } from "svelte/store";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
 
@@ -27,6 +27,7 @@ interface Query {
 type UIView = "library" | "albums";
 
 export const isInit = writable(true);
+export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
     orderBy: "artist",
     reverse: false,
@@ -125,7 +126,7 @@ export const isSmartQueryBuilderOpen = writable(false);
 export const isSmartQuerySaveUiOpen = writable(false);
 export const smartQuery: Writable<SmartQuery> = writable(new SmartQuery());
 export const smartQueryInitiator = writable("sidebar");
-export const selectedSmartQuery = writable(Query[0].value);
+export const selectedSmartQuery = writable(Query.favourites.value);
 export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);
 export const smartQueryResults: Writable<Song[]> = writable([]);
@@ -144,13 +145,20 @@ const defaultSettings: UserSettings = {
     llm: "ollama",
     openAIApiKey: null,
     aiFeaturesEnabled: false,
-    geniusApiKey: null
+    geniusApiKey: null,
+    isArtistsToolkitEnabled: false
 };
 
 export const userSettings: Writable<UserSettings> = writable(
     { ...defaultSettings, ...JSON.parse(localStorage.getItem("settings")) } ||
         defaultSettings
 );
+
+export const foldersToWatch = derived(
+    userSettings,
+    (val) => val.foldersToWatch
+);
+
 // Auto-persist settings
 userSettings.subscribe((val) =>
     localStorage.setItem("settings", JSON.stringify(val))

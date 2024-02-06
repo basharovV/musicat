@@ -7,13 +7,10 @@
     import {
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
-        isSmartQueryValid,
         selectedSmartQuery,
-        smartQuery,
         smartQueryInitiator,
         uiView
     } from "../../data/store";
-    import { fly } from "svelte/transition";
 
     $: savedSmartQueries = liveQuery(async () => {
         return db.smartQueries.toArray();
@@ -24,7 +21,7 @@
     }
 
     function hideSmartQueryBuilder() {
-        if ($smartQueryInitiator === "genre-pill") {
+        if ($smartQueryInitiator === "library-cell") {
             $uiView = "library";
         }
         $isSmartQueryBuilderOpen = false;
@@ -43,9 +40,9 @@
         onClick={hideSmartQuery}
     />
     <div class="query-header">
-        <p class="query-header-title">Showing results for</p>
+        <p class="query-header-title">Smart playlist:</p>
         <select bind:value={$selectedSmartQuery}>
-            {#each SmartQuery as query}
+            {#each Object.values(SmartQuery) as query}
                 <option value={query.value}>{query.name}</option>
             {/each}
             <option value="----">----</option>

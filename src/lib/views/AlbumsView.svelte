@@ -13,15 +13,19 @@
         albumPlaylist,
         compressionSelected,
         currentSong,
+        isPlaying,
         playlist,
         playlistIsAlbum,
         query,
-        rightClickedAlbum
+        rightClickedAlbum,
+        rightClickedTrack,
+        rightClickedTracks,
+        uiView
     } from "../../data/store";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
-    import audioPlayer from "../player/AudioPlayer";
     import BottomBar from "../library/BottomBar.svelte";
+    import audioPlayer from "../player/AudioPlayer";
 
     let isLoading = true;
 
@@ -75,6 +79,10 @@
         });
     });
 
+    let isCurrentAlbumInView = false;
+    let currentAlbum: Album;
+    let currentAlbumElement: HTMLDivElement;
+
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
         const albumPath = $currentSong.path.replace(
@@ -83,7 +91,7 @@
         );
 
         // Find the album currently playing
-        const currentAlbum = await db.albums.get(
+        currentAlbum = await db.albums.get(
             md5(`${albumPath} - ${$currentSong.album}`)
         );
         if (!currentAlbum) return;
@@ -94,6 +102,16 @@
 
         $albumPlaylist = tracks;
         $playlistIsAlbum = true;
+
+        // Scroll to album
+        currentAlbumElement = document.querySelector(
+            `[data-album='${currentAlbum.id}']`
+        );
+
+        currentAlbumElement?.scrollIntoView({
+            block: "center",
+            behavior: "instant"
+        });
     }
 
     $: if ($playlist && $currentSong) {
@@ -187,11 +205,34 @@
     let pos;
     let highlightedAlbum;
 
-    function onRightClick(e, album, idx) {
+    async function onRightClick(e, album, idx) {
         highlightedAlbum = album.id;
         $rightClickedAlbum = album;
+        const tracks = await db.songs.bulkGet(album.tracksIds);
+        $rightClickedTrack = null;
+        $rightClickedTracks = tracks;
         showAlbumMenu = true;
         pos = { x: e.clientX, y: e.clientY };
+    }
+
+    let container: HTMLDivElement;
+
+    function onScroll() {
+        const containerRect = container.getBoundingClientRect();
+
+        if (currentAlbumElement && containerRect) {
+            isCurrentAlbumInView =
+                currentAlbumElement.offsetTop > container.scrollTop &&
+                currentAlbumElement.offsetTop <
+                    container.scrollTop + containerRect.height;
+        }
+    }
+
+    function scrollToCurrentAlbum() {
+        currentAlbumElement?.scrollIntoView({
+            block: "center",
+            behavior: "smooth"
+        });
     }
 </script>
 
@@ -202,92 +243,77 @@
         highlightedAlbum = null;
     }}
 />
-<div class="grid-container">
-    <div class="header">
-        <h1>Albums</h1>
-        {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if}
-        <label
-            >show singles
-            <input type="checkbox" bind:checked={showSingles} /></label
-        >
-        <label
-            >show info
-            <input type="checkbox" bind:checked={showInfo} /></label
-        >
-        <label
-            >grid size
-            <input
-                type="range"
-                min={100}
-                max={400}
-                bind:value={minWidth}
-            /></label
-        >
-    </div>
 
-    {#if $playlist?.length && $playlistIsAlbum}
-        <div class="now-playing" in:fly={{ duration: 200, x: -200 }}>
-            <h1>Now playing</h1>
-            <div class="album-info">
-                <p>{$currentSong.album}</p>
-                <p>{$currentSong.artist}</p>
-            </div>
-            <div class="tracks">
-                {#each $albumPlaylist as track, idx}
-                    <div
-                        class="track"
-                        class:playing={$currentSong.id === track.id}
-                        on:click={() => {
-                            audioPlayer.playSong(track);
-                        }}
-                    >
-                        <p>{idx + 1}.</p>
-                        <p>{track.title}</p>
-                        {#if $currentSong.id === track.id}<iconify-icon
-                                icon="heroicons-solid:volume-up"
-                            />{/if}
-                    </div>
-                {/each}
-            </div>
-        </div>
-    {/if}
-
-    {#if isLoading}
-        <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
-            <p>💿 one sec...</p>
-        </div>
-    {:else}
-        {#if $query.query?.length && queriedAlbums?.length}
-            <div
-                class="grid"
-                class:show={$query.query?.length}
-                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+<div class="albums-container">
+    <div class="grid-container" on:scroll={onScroll} bind:this={container}>
+        <div class="header">
+            <h1>Albums</h1>
+            {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if}
+            <label
+                >show singles
+                <input type="checkbox" bind:checked={showSingles} /></label
             >
-                {#each queriedAlbums as album, idx (album.id)}
-                    <div
-                        on:contextmenu|preventDefault={(e) =>
-                            onRightClick(e, album, idx)}
-                    >
-                        <AlbumItem
-                            {album}
-                            highlighted={highlightedAlbum === album.id}
-                            {showInfo}
-                        />
-                    </div>
-                {/each}
+            <label
+                >show info
+                <input type="checkbox" bind:checked={showInfo} /></label
+            >
+            <label
+                >grid size
+                <input
+                    type="range"
+                    min={100}
+                    max={400}
+                    bind:value={minWidth}
+                /></label
+            >
+        </div>
+
+        {#if $playlist?.length && $playlistIsAlbum}
+            <div class="now-playing" in:fly={{ duration: 200, x: -200 }}>
+                <h1>Now playing</h1>
+                <div class="album-info">
+                    <p>{$currentSong.album}</p>
+                    <p>{$currentSong.artist}</p>
+                </div>
+                <div class="tracks">
+                    {#each $albumPlaylist as track, idx}
+                        <div
+                            class="track"
+                            class:playing={$currentSong.id === track.id}
+                            on:click={() => {
+                                audioPlayer.playSong(track);
+                            }}
+                        >
+                            <p>{idx + 1}.</p>
+                            <p>{track.title}</p>
+                            {#if $currentSong.id === track.id}<iconify-icon
+                                    icon="heroicons-solid:volume-up"
+                                />{/if}
+                        </div>
+                    {/each}
+                </div>
             </div>
         {/if}
-        <div
-            class="grid"
-            class:show={$albums && $query.query?.length === 0}
-            style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
-        >
-            {#if $albums}
-                {#each $albums as album, idx (album.id)}
-                    {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
+
+        {#if isLoading}
+            <div
+                class="loading"
+                out:fade={{ duration: 90, easing: cubicInOut }}
+            >
+                <p>💿 one sec...</p>
+            </div>
+        {:else}
+            {#if $query.query?.length && queriedAlbums?.length}
+                <div
+                    class="grid"
+                    class:show={$query.query?.length}
+                    style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+                >
+                    {#each queriedAlbums as album, idx (album.id)}
                         <div
                             on:contextmenu|preventDefault={(e) =>
                                 onRightClick(e, album, idx)}
+                            data-album={album.id}
                         >
                             <AlbumItem
                                 {album}
@@ -295,26 +321,86 @@
                                 {showInfo}
                             />
                         </div>
-                    {/if}
-                {/each}
+                    {/each}
+                </div>
             {/if}
-        </div>
-    {/if}
+            <div
+                class="grid"
+                class:show={$albums && $query.query?.length === 0}
+                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+            >
+                {#if $albums}
+                    {#each $albums as album, idx (album.id)}
+                        {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
+                            <div
+                                on:contextmenu|preventDefault={(e) =>
+                                    onRightClick(e, album, idx)}
+                                data-album={album.id}
+                            >
+                                <AlbumItem
+                                    {album}
+                                    highlighted={highlightedAlbum === album.id}
+                                    {showInfo}
+                                />
+                            </div>
+                        {/if}
+                    {/each}
+                {/if}
+            </div>
+        {/if}
+
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
+            <div
+                in:fly={{ duration: 150, y: 30 }}
+                out:fly={{ duration: 150, y: 30 }}
+                class="scroll-now-playing"
+                on:click={scrollToCurrentAlbum}
+            >
+                <div class="eq">
+                    <span class="eq1" />
+                    <span class="eq2" />
+                    <span class="eq3" />
+                </div>
+                <p>Scroll to Now playing</p>
+            </div>
+        {/if}
+    </div>
+
     <div class="bottom-bar">
         <BottomBar {counts} />
     </div>
 </div>
 
 <style lang="scss">
+    .albums-container {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+        margin: 5px 5px 5px 0;
+        row-gap: 5px;
+        border-radius: 5px;
+        box-sizing: border-box;
+        overflow: hidden;
+        /* border: 0.7px solid #ffffff0b; */
+        border-top: 0.7px solid #ffffff36;
+    }
     .grid-container {
         overflow-x: hidden;
         overflow-y: auto;
         display: grid;
         height: 100%;
+        width: 100%;
+        position: relative;
         grid-template-rows: auto 1fr;
         grid-template-columns: auto 1fr;
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-left: 0.7px solid #ffffff2a;
+        border-bottom: 0.7px solid #ffffff2a;
         background-color: #242026b3;
-        position: relative;
     }
 
     .header {
@@ -508,12 +594,113 @@
     }
 
     .bottom-bar {
-        position: sticky;
-        grid-row: 3;
-        grid-column: 1 / 4;
+        position: relative;
         bottom: 0;
         left: 0;
         right: 0;
-        z-index: 19;
+        z-index: 15;
+    }
+
+    .scroll-now-playing {
+        position: fixed;
+        bottom: 4.3em;
+        grid-column: 1 / 4;
+        left: 0;
+        right: 0;
+        padding: 0.5em 1em;
+        border-radius: 10px;
+        background-color: #1b1b1c;
+        border: 1px solid rgb(58, 56, 56);
+        box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.834);
+        color: white;
+        margin: auto;
+        width: fit-content;
+        z-index: 11;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        cursor: default;
+        user-select: none;
+
+        @media only screen and (max-width: 522px) {
+            display: none;
+        }
+        &:hover {
+            background-color: #1f1f21;
+            border: 1px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+        &:active {
+            background-color: #2a2a2d;
+            border: 2px solid rgb(101, 98, 98);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
+        }
+
+        .eq {
+            width: 15px;
+            padding: 0.5em;
+            position: relative;
+
+            span {
+                display: inline-block;
+                width: 3px;
+                background-color: #ddd;
+                position: absolute;
+                bottom: 0;
+            }
+
+            .eq1 {
+                height: 13px;
+                left: 0;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0s;
+            }
+
+            .eq2 {
+                height: 15px;
+                left: 6px;
+                animation-name: talleq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.17s;
+            }
+
+            .eq3 {
+                height: 13px;
+                left: 12px;
+                animation-name: shorteq;
+                animation-duration: 0.5s;
+                animation-iteration-count: infinite;
+                animation-delay: 0.34s;
+            }
+        }
+        p {
+            margin: 0;
+        }
+    }
+
+    @keyframes shorteq {
+        0% {
+            height: 10px;
+        }
+        50% {
+            height: 5px;
+        }
+        100% {
+            height: 10px;
+        }
+    }
+    @keyframes talleq {
+        0% {
+            height: 15px;
+        }
+        50% {
+            height: 8px;
+        }
+        100% {
+            height: 15px;
+        }
     }
 </style>

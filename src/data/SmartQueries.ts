@@ -44,29 +44,18 @@ async function jazzFromThe50s() {
         .and((song) => song.year < 1960 && song.year > 1949);
 }
 
+export async function favourites() {
+    return db.songs.filter((s) => s.isFavourite);
+}
+
 export async function whereGenreIs(genre: string) {
     return db.songs.where("genre").equals(genre);
 }
 
-export default [
-    {
-        name: "tracks with no metadata",
-        value: "no-metadata",
-        query: tracksWithEmptyMetadata
-    },
-    {
-        name: "artists with multiple albums",
-        value: "multiple-albums",
-        query: artistsWithMultipleAlbums
-    },
-    {
-        name: "tracks longer than 6 minutes",
-        value: "longer-6min",
-        query: tracksLongerThan6Minutes
-    },
-    {
-        name: "jazz from the 50s",
-        value: "jazz-50s",
-        query: jazzFromThe50s
+export default {
+    favourites: {
+        name: "favourites",
+        value: "favourites",
+        query: favourites
     }
-];
+};

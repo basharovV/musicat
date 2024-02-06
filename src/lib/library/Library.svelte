@@ -530,7 +530,6 @@
     // Smart query stuff
 
     // Smart query - predefined or user-defined queries i.e smart playlists
-    let smartQuerySelectedVal = BuiltInQueries[0].value;
 
     function hideSmartQueryBuilder() {
         if (tableHeaders[0] === "smart-query-builder") {
@@ -621,15 +620,15 @@
         switch (fieldName) {
             case "genre":
                 queryPart = getQueryPart("CONTAINS_GENRE");
-                $smartQueryInitiator = "genre-pill";
+                $smartQueryInitiator = "library-cell";
                 break;
             case "year":
                 queryPart = getQueryPart("RELEASED_IN");
-                $smartQueryInitiator = "genre-pill";
+                $smartQueryInitiator = "library-cell";
                 break;
             case "originCountry":
                 queryPart = getQueryPart("FROM_COUNTRY");
-                $smartQueryInitiator = "genre-pill";
+                $smartQueryInitiator = "library-cell";
                 break;
             default:
                 return;

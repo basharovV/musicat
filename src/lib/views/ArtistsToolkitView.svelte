@@ -132,8 +132,13 @@
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr;
-        height: 100vh;
         overflow: hidden;
+
+        border: 0.7px solid #ffffff2a;
+        margin: 5px 5px 5px 0;
+        border-radius: 5px;
+        overflow: hidden;
+        background-color: #0d0c0c2a;
 
         &.scrapbook-open {
             /* grid-template-columns: 1fr 350px; */ // INLINE STYLED

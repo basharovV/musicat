@@ -8,7 +8,8 @@ export enum QUERY_PARTS {
     LONGER_THAN = "longer-than",
     CONTAINS_GENRE = "contains-genre",
     RELEASED_IN = "released-in",
-    FROM_COUNTRY = "from-country"
+    FROM_COUNTRY = "from-country",
+    BY_COMPOSER = "by-composer"
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
@@ -153,6 +154,23 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         name: QUERY_PARTS.FROM_COUNTRY,
         inputRequired: {
             "originCountry": {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string"
+            }
+        }
+    },
+    {
+        dataType: "song",
+        fieldKey: "composer",
+        comparison: "is-equal",
+        description: "by composer",
+        example: "by composer: Gottschalk",
+        prompt: "by composer: {composer}",
+        name: QUERY_PARTS.BY_COMPOSER,
+        inputRequired: {
+            "composer": {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,

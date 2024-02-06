@@ -4,6 +4,7 @@
     import { cubicInOut } from "svelte/easing";
     import { fly } from "svelte/transition";
     import { runScan } from "../../data/LibraryImporter";
+    import { debounce } from "lodash-es";
 
     import {
         bottomBarNotification,
@@ -18,10 +19,28 @@
 
     export let counts;
 
+    let right;
+    let nextUp;
+
     $: scanningStatusText = $importStatus.isImporting
         ? `Scanning: ${$importStatus.currentFolder}`
         : "Click to re-scan folders.";
+
+    let showVisualiser = true;
+    let visualiserWidth = 0;
+
+    function onResize() {
+        // calculate remaining space for spectroscope visualizer
+        const nextUpRight = nextUp.getBoundingClientRect().right;
+        const rightXPos = right.getBoundingClientRect().left;
+        const diff = Math.abs(nextUpRight - rightXPos);
+        console.log("diff", diff);
+        visualiserWidth = Math.min(200, diff - 13);
+        showVisualiser = window.innerWidth > 900 && diff > 140;
+    }
 </script>
+
+<svelte:window on:resize={debounce(onResize, 5)} />
 
 <bottom-bar data-tauri-drag-region>
     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -40,7 +59,7 @@
             <CompressionSelector />
         </div>
         {#if $nextUpSong}
-            <div class="next-up">
+            <div class="next-up" bind:this={nextUp}>
                 <p class="label">Next up:</p>
                 <p class="song">
                     {$nextUpSong.title ?? $nextUpSong.file}
@@ -49,64 +68,69 @@
         {/if}
 
         <div class="spectrum">
-            <SpectrumAnalyzer />
+            <SpectrumAnalyzer show={showVisualiser} width={visualiserWidth} />
         </div>
+
+        {#if $bottomBarNotification}
+            <div class="notification">
+                <p>
+                    {$bottomBarNotification.text}
+                </p>
+            </div>
+        {/if}
     </div>
-    {#if $bottomBarNotification}
-        <div class="notification">
-            <p>
-                {$bottomBarNotification.text}
-            </p>
-        </div>
-    {/if}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div
-        class="refresh-icon"
-        class:scanning={$importStatus.isImporting || $isFolderWatchUpdate}
-        use:tippy={{
-            content: scanningStatusText,
-            placement: "top"
-        }}
-    >
-        <Icon
-            icon="tabler:refresh"
-            size={15}
-            onClick={() => {
-                runScan();
-            }}
-        />
-    </div>
-    {#if $counts !== undefined}
+    <div class="right" bind:this={right}>
         <div
-            class="stats"
-            in:fly={{
-                y: 30,
-                duration: 150,
-                easing: cubicInOut
+            class="refresh-icon"
+            class:scanning={$importStatus.isImporting || $isFolderWatchUpdate}
+            use:tippy={{
+                content: scanningStatusText,
+                placement: "top"
             }}
         >
-            <p>{$counts.songs} songs</p>
-            <p>{$counts.artists} artists</p>
-            <p>{$counts.albums} albums</p>
+            <Icon
+                icon="tabler:refresh"
+                size={15}
+                onClick={() => {
+                    runScan();
+                }}
+            />
         </div>
-    {:else}
-        <p>...</p>
-    {/if}
+        {#if $counts !== undefined}
+            <div
+                class="stats"
+                in:fly={{
+                    y: 30,
+                    duration: 150,
+                    easing: cubicInOut
+                }}
+            >
+                <p class="songs">{$counts.songs} songs</p>
+                <p class="artists">{$counts.artists} artists</p>
+                <p class="albums">{$counts.albums} albums</p>
+            </div>
+        {:else}
+            <p>...</p>
+        {/if}
+    </div>
 </bottom-bar>
 
 <style lang="scss">
     bottom-bar {
-        background-color: rgba(28, 26, 26, 0.645);
-        backdrop-filter: blur(8px);
-        border-top: 1px solid rgb(51, 51, 51);
+        /* background-color: rgba(28, 26, 26, 0.645); */
+        /* backdrop-filter: blur(8px); */
+        /* border-top: 1px solid rgb(51, 51, 51); */
+        /* border-left: 0.7px solid #ffffff2a; */
+        /* border-radius: 5px; */
         color: white;
         display: flex;
         flex-direction: row;
         align-items: center;
         gap: 1em;
         justify-content: flex-end;
-        padding: 0 1em;
+        padding: 0 1em 0 0;
         width: 100%;
         height: 30px;
 
@@ -125,12 +149,16 @@
             flex-direction: row;
             flex-grow: 1;
             align-items: center;
+            position: relative;
 
             .next-up {
                 display: flex;
                 flex-direction: row;
                 gap: 5px;
                 max-width: 250px;
+                @media only screen and (max-width: 900px) {
+                    display: none;
+                }
                 .label {
                     opacity: 0.5;
                 }
@@ -218,6 +246,16 @@
             }
         }
 
+        .right {
+            display: flex;
+            flex-direction: row;
+            flex-grow: 1;
+            align-items: center;
+            position: relative;
+            gap: 1em;
+            justify-content: flex-end;
+        }
+
         .refresh-icon {
             display: flex;
             transform: rotate(0deg);
@@ -227,6 +265,10 @@
         }
 
         .notification {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
             padding: 0 1em;
             margin: 0;
             background: linear-gradient(
@@ -239,6 +281,7 @@
             height: 100%;
             display: flex;
             align-items: center;
+            width: max-content;
             p {
                 color: rgb(203, 182, 208);
                 font-size: 13px;
@@ -250,6 +293,17 @@
             display: inline-flex;
             gap: 10px;
             white-space: nowrap;
+
+            @media only screen and (max-width: 730px) {
+                .albums {
+                    display: none;
+                }
+            }
+            @media only screen and (max-width: 627px) {
+                .artists {
+                    display: none;
+                }
+            }
         }
     }
 

@@ -1,23 +1,26 @@
 <script lang="ts">
     import { UserQueryPart } from "./UserQueryPart";
 
-    import { autoWidth } from "../../utils/AutoWidth";
+    import { onMount } from "svelte";
     import {
+        forceRefreshLibrary,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         selectedSmartQuery,
         smartQuery,
-        smartQueryInitiator
+        smartQueryInitiator,
+        uiView
     } from "../../data/store";
+    import { autoWidth } from "../../utils/AutoWidth";
     import Menu from "../menu/Menu.svelte";
-    import type { QueryPartStruct } from "./QueryPart";
-    import SmartQueryPart from "./SmartQueryPart.svelte";
-    import { onMount } from "svelte";
-    import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
-    import Icon from "../ui/Icon.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { fade, fly } from "svelte/transition";
+    import Icon from "../ui/Icon.svelte";
+    import type { QueryPartStruct } from "./QueryPart";
+    import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
+    import SmartQueryPart from "./SmartQueryPart.svelte";
+    import { fly } from "svelte/transition";
+    import { cubicInOut } from "svelte/easing";
 
     const fields = ["artist"];
 
@@ -53,7 +56,7 @@
     onMount(() => {
         setTimeout(() => {
             isAutofocus = true;
-            if ($smartQueryInitiator !== "genre-pill") {
+            if ($smartQueryInitiator !== "library-cell") {
                 queryInput.focus();
             }
         }, 150);
@@ -203,7 +206,14 @@
                 <ButtonWithIcon
                     icon="material-symbols:close"
                     onClick={() => {
-                        $isSmartQueryBuilderOpen = false;
+                        if ($smartQueryInitiator === "library-cell") {
+                            $forceRefreshLibrary = true;
+                            $isSmartQueryBuilderOpen = false;
+                            $uiView = "library";
+                        } else {
+                            $isSmartQueryBuilderOpen = false;
+                            // $uiView = "smart-query";
+                        }
                     }}
                     text="Close editor"
                     theme="transparent"
@@ -231,9 +241,18 @@
         text="Hide builder"
     /> -->
 
-        <div class="smart-query-actions">
+        <div
+            class="smart-query-actions"
+            transition:fly={{
+                y: -10,
+                duration: 200,
+                easing: cubicInOut
+            }}
+        >
             <p>Name:</p>
-            <input bind:value={$smartQuery.name} />
+            <form on:submit|preventDefault={save}>
+                <input bind:value={$smartQuery.name} />
+            </form>
             <img src="images/arrow-down-right.svg" />
             <button
                 disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
@@ -279,7 +298,8 @@
         }
 
         img {
-            width: 40px;
+            width: 30px;
+            margin: 0 5px;
             position: relative;
             opacity: 0.2;
         }
