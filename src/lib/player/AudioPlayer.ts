@@ -220,13 +220,17 @@ class AudioPlayer {
     }
 
     onPlay(player: number) {
-        isPlaying.set(true);
+        if (player === this.currentAudioFile) {
+            isPlaying.set(true);
+        }
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "playing";
     }
 
     onPause(player: number) {
-        isPlaying.set(false);
+        if (player === this.currentAudioFile) {
+            isPlaying.set(false);
+        }
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "paused";
     }
@@ -285,10 +289,10 @@ class AudioPlayer {
             !this.isRunningTransition
         ) {
             this.isRunningTransition = true;
-            console.log("2 SECS LEFT! STARTING TRANSITION...");
 
             const chunk = 0.3;
             let diff = duration - currentTime;
+            console.log("2 SECS LEFT! STARTING TRANSITION...");
             console.log("diff", diff);
             console.log("duration", duration);
             console.log("currentTime", currentTime);
@@ -375,12 +379,14 @@ class AudioPlayer {
             [
                 "play",
                 () => {
+                    console.log("action handler play");
                     this.play();
                 }
             ],
             [
                 "pause",
                 () => {
+                    console.log("action handler pause");
                     // Pause active playback
                     this.pause();
                 }
@@ -594,6 +600,7 @@ class AudioPlayer {
         });
     }
     doPlay = (number) => {
+        console.log('doplay ', number);
         if (number === 1) {
             this._audioSource.mediaElement.play();
         } else {
@@ -601,6 +608,7 @@ class AudioPlayer {
         }
     };
     doPause = (number) => {
+        console.log('dopause ', number);
         if (number === 1) {
             this._audioSource.mediaElement.pause();
         } else {
