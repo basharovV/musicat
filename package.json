@@ -11,6 +11,7 @@
     "tauri": "tauri"
   },
   "devDependencies": {
+    "@alexanderolsen/libsamplerate-js": "^2.1.1",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@iconify/json": "^2.1.110",
@@ -27,6 +28,7 @@
     "konva": "^9.3.1",
     "lodash-es": "^4.17.21",
     "md5": "^2.3.0",
+    "mpg123-decoder": "^1.0.0",
     "openai": "^4.22.0",
     "postcss": "^8.4.16",
     "sass": "^1.54.5",

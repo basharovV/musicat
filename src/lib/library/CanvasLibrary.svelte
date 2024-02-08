@@ -367,7 +367,7 @@
     // Trigger: on songs updated
     $: {
         if (songs !== undefined && libraryContainer) {
-            console.log("SONGS UPDATED", songs.length);
+            console.log("Library::songs updated", songs.length);
             drawSongDataGrid();
             prevSongCount = songs.length;
         }
@@ -412,7 +412,6 @@
         calculateColumns();
         calculateSongSlice();
         shouldRender = true;
-        console.log("fields", fields);
         // drawHeaders();
         // drawRows();
     }
@@ -429,7 +428,7 @@
     function calculateCanvasSize() {
         contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
         let area = contentHeight - viewportHeight;
-        console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
+        // console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
         // Set canvas size to fill the parent
         viewportHeight = libraryContainer.getBoundingClientRect().height;
@@ -442,7 +441,7 @@
 
         scrollableArea = area;
         isScrollable = scrollableArea > 0;
-        console.log("scrollableArea", scrollableArea);
+        // console.log("scrollableArea", scrollableArea);
 
         setTimeout(() => {
             width =
@@ -692,7 +691,7 @@
     }
 
     function scrollToCurrentSong() {
-        console.log("y", currentSongY);
+        // console.log("y", currentSongY);
         let adjustedPos = currentSongY;
         if (currentSongY > viewportHeight / 2.3) {
             adjustedPos -= viewportHeight / 2.3;
@@ -728,7 +727,7 @@
             highlightSong(song, idx, false);
         }
 
-        console.log("songIdsHighlighted", songsHighlighted);
+        // console.log("songIdsHighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
             $rightClickedTracks = songsHighlighted;
             $rightClickedTrack = null;
@@ -772,7 +771,7 @@
         isKeyboardArrows: boolean,
         isDefault = false
     ) {
-        console.log("highlighted", song, idx);
+        // console.log("highlighted", song, idx);
         if (!isKeyboardArrows && isShiftPressed) {
             if (rangeStartSongIdx === null) {
                 rangeStartSongIdx = idx;
@@ -792,7 +791,7 @@
                 rangeStartSongIdx = null;
                 rangeEndSongIdx = null;
                 $rightClickedTrack = null;
-                console.log("highlighted2", songsHighlighted);
+                // console.log("highlighted2", songsHighlighted);
             }
         } else if (
             (isKeyboardArrows && isShiftPressed) ||
@@ -831,8 +830,8 @@
     }
 
     function onSongDragStart(song: Song) {
-        console.log("dragstart", song);
-        console.log("songshighlighted", songsHighlighted);
+        // console.log("dragstart", song);
+        // console.log("songshighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
             $draggedSongs = songsHighlighted;
         } else {
@@ -1097,7 +1096,7 @@
 
     function filterByField(fieldName: string, fieldValue: any) {
         let queryPart;
-        console.log("filter", fieldName, fieldValue);
+        // console.log("filter", fieldName, fieldValue);
         switch (fieldName) {
             case "genre":
                 queryPart = getQueryPart("CONTAINS_GENRE");
@@ -1264,7 +1263,7 @@
                                         on:dblclick={() =>
                                             onDoubleClickSong(song, songIdx)}
                                         on:click={(e) => {
-                                            console.log("e", e);
+                                            // console.log("e", e);
                                             if (e.detail.evt.button === 0) {
                                                 toggleHighlight(
                                                     song,

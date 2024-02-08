@@ -134,7 +134,7 @@
     });
 
     function togglePlayPause() {
-        if (!audioPlayer.getCurrentAudioFile().src) {
+        if (!audioPlayer.fileStreamSource?.src) {
             audioPlayer.shouldPlay = true;
             $playlist = $queriedSongs;
         } else {

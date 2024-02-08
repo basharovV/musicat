@@ -61,7 +61,7 @@ interface Song {
         isFirstArtist: boolean;
         isFirstAlbum: boolean;
         index: number; // When viewed in a song slice, we need the actual index of this song in the list,
-        viewId: string // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
+        viewId: string; // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
     };
     playCount: number;
     // Returned from lofty but only written to db for albums for better grid loading performance
@@ -152,7 +152,7 @@ interface UserSettings {
     llm: LLM;
     openAIApiKey?: string;
     geniusApiKey?: string;
-    isArtistsToolkitEnabled: boolean
+    isArtistsToolkitEnabled: boolean;
 }
 
 type MiniPlayerLocation =
@@ -254,7 +254,7 @@ type Compression = "lossy" | "lossless" | "both";
 
 interface LastPlayedInfo {
     songId?: string;
-    position: number; //seconds;   
+    position: number; //seconds;
 }
 
 interface AddOriginCountryStatus {
@@ -273,4 +273,20 @@ interface CurrentSongLyrics {
 
 interface GetFileSizeResponse {
     fileSize: nuumber;
+}
+
+interface AudioSourceNodeOptions {
+    numberOfInputs: number;
+    numberOfOutputs: number;
+    outputChannelCount: number;
+    processorOptions: {
+        initialSamples: Float32Array[][];
+        trackStates: Array<boolean>;
+        trackDescriptions: [{numberChannels: number}];
+        shouldLoop: boolean;
+        totalSamples: number;
+        loopStartSample: number;
+        inputSampleRate: number;
+        outputSampleRate: number;
+    }
 }

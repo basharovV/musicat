@@ -23,7 +23,10 @@ import {
 import { shuffleArray } from "../../utils/ArrayUtils";
 import { db } from "../../data/db";
 import { convertFileSrc, invoke } from "@tauri-apps/api/tauri";
-
+import FileStreamSource from "./FileStreamSource";
+import AudioSourceWorkletUrl from "../../AudioSourceWorker?url";
+import AudioResamplerWorkletUrl from "../../AudioResamplerWorker?url";
+import LibSamplerateWorkletUrl from "@alexanderolsen/libsamplerate-js/dist/libsamplerate.worklet?url";
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
         const reader = this.getReader();
@@ -40,131 +43,6 @@ if (!ReadableStream.prototype[Symbol.asyncIterator]) {
             reader.releaseLock();
         }
     };
-}
-
-class TimestampSource {
-    #interval;
-    // stream: ReadableStream;
-    i = 0; // Chunk counter.
-    src: string;
-    path: string;
-    desiredSize = 1024;
-    isCancelled = false;
-    firstBytes;
-    prevChunkSize = 0;
-    chunksLeft = true;
-    chunkIdx = 0;
-    fileSize = 0;
-
-    constructor(src, path) {
-        this.src = src;
-        this.path = path;
-    }
-
-    sleep(ms) {
-        return new Promise((resolve) => {
-            setTimeout(resolve, ms);
-        });
-    }
-
-    async start(controller) {
-        console.log("Starting stream for ", this.path);
-
-        console.log(controller);
-        const fileSizeResponse = await invoke<GetFileSizeResponse>(
-            "get_file_size",
-            {
-                event: { path: this.path }
-            }
-        );
-        this.fileSize = fileSizeResponse.fileSize;
-        console.log("filesize", this.fileSize);
-        const initialResponse = await fetch(this.src, {
-            headers: {
-                "Range": `bytes=0-1`,
-                "access-control-expose-headers": "*",
-                "access-control-allow-headers": "*"
-            }
-        });
-        initialResponse.headers.forEach(function (value, name) {
-            console.log(name + ": " + value);
-        });
-        if (initialResponse.status === 206) {
-            // More content
-            let contentLength = initialResponse.headers.get("Content-Length");
-            console.log("range", contentLength);
-            this.firstBytes = await initialResponse.body.getReader().read();
-            // Enqueue the next data chunk into our target stream
-            let chunksLeft = true;
-            this.prevChunkSize = 2;
-            this.chunkIdx = 0;
-        }
-    }
-
-    async pull(controller) {
-        console.log("Pull requested for stream: ", this.path);
-
-        if (this.isCancelled) {
-            controller.close();
-            return;
-        }
-        console.log("controller.desiredSize", this.desiredSize);
-        if (this.firstBytes.value && this.fileSize) {
-            // We already have first byte, will be prepended later
-            this.chunkIdx = this.chunkIdx + this.prevChunkSize;
-
-            let chunkEndIdx = Math.min(
-                this.fileSize,
-                this.chunkIdx + this.desiredSize
-            );
-            let response = await fetch(this.src, {
-                headers: {
-                    "Range": `bytes=${this.chunkIdx}-`
-                }
-            });
-            console.log("chunk response", response);
-            this.prevChunkSize = Number(response.headers.get("Content-Length"));
-            console.log("chunkIdx", this.chunkIdx, "size", this.prevChunkSize);
-            if (response.ok) {
-                for await (const { done, value } of response.body) {
-                    if (value) {
-                        let currentChunk: Uint8Array = value;
-                        if (this.i === 0) {
-                            // Prepend first bytes
-                            console.log(
-                                "prepending first bytes",
-                                this.firstBytes.value
-                            );
-                            currentChunk = new Uint8Array([
-                                ...this.firstBytes.value,
-                                ...value
-                            ]);
-                        }
-
-                        if (currentChunk) {
-                            console.log("currentChunk", currentChunk);
-                            controller.enqueue(currentChunk);
-                        }
-                    }
-                }
-            }
-            if (chunkEndIdx === this.fileSize) {
-                console.log("END OF STREAM");
-                controller.close();
-                this.chunksLeft = false;
-                return;
-            }
-            await this.sleep(3000);
-            this.i += 1;
-        }
-    }
-
-    cancel() {
-        this.isCancelled = true;
-        console.log("Cancelling existing stream for ", this.path);
-        // This is called if the reader cancels.
-        clearInterval(this.#interval);
-    }
 }
 
 class AudioPlayer {
@@ -202,226 +80,42 @@ class AudioPlayer {
     sourceBuffer: SourceBuffer;
     readCancelled = false;
     readableStream: ReadableStream;
+    gainNode: GainNode;
+    fileStreamSource: FileStreamSource;
+
+    private _audioContext: AudioContext;
+
+    audioElement: HTMLAudioElement;
+    audioElement2: HTMLAudioElement;
+
+    // Nodes
+    oscillatorNode: OscillatorNode;
+    audioSourceNode: AudioWorkletNode;
+    resamplerNode: AudioWorkletNode;
+    private _audioSource: AudioBufferSourceNode;
+    private _audioSource2: MediaElementAudioSourceNode;
+    audioAnalyser: AnalyserNode;
+    private _gainNode: GainNode;
+    private _gainNode2: GainNode;
+
+    buffered = 0;
+
+    // Worklet stuff
+    hasBufferReachedEnd = false;
+    currentTimestamp = 0;
 
     private constructor() {
-        // let AudioContext = window.AudioContext || window.webkitAudioContext;
-        // const audioCtx: AudioContext = new AudioContext();
-        // this.gainNode = audioCtx.createGain();
-        // this.gainNode.gain.value = 1;
-        // this.gainNode.connect(audioCtx.destination);
-
         this.audioFile = new Audio();
         this.audioFile2 = new Audio();
         this.audioFile.crossOrigin = "anonymous";
         this.audioFile2.crossOrigin = "anonymous";
         this.mediaSource = new MediaSource();
+        this.fileStreamSource = new FileStreamSource();
 
-        this.mediaSource.addEventListener("sourceopen", async () => {
-            console.log("mse: sourceopen");
-            if (!this.currentSong.file.match(/\.(mp3)$/i)) {
-                return; // Only mp3 support for now
-            }
-            if (MediaSource.isTypeSupported("audio/mpeg")) {
-                console.info("Mimetype is", "audio/mpeg");
-                // TODO ...
-            } else {
-                console.error("Mimetype not supported", "audio/mpeg");
-                return;
-            }
+        this.mediaSource.addEventListener("sourceopen", async () =>
+            this.onMediaSourceOpen()
+        );
 
-            // Reset
-            if (this.currentStreamSrc !== this.prevStreamSrc) {
-                // Remove all source buffers
-                for (let buffer of this.mediaSource.activeSourceBuffers) {
-                    this.mediaSource.removeSourceBuffer(buffer);
-                }
-                this.removeStream(this.activeStream);
-
-                // Add source buffer
-                this.sourceBuffer =
-                    this.mediaSource.addSourceBuffer("audio/mpeg");
-                this.sourceBuffer.onerror = function (ev) {
-                    console.error("SOURCE BUFFER err", ev);
-                };
-            }
-            this.prevStreamSrc = this.currentStreamSrc;
-
-            this.readableStream = new ReadableStream(
-                new TimestampSource(
-                    this.currentStreamSrc,
-                    this.currentSong.path
-                ),
-                new ByteLengthQueuingStrategy({
-                    highWaterMark: 1024 * 1024
-                })
-            );
-
-            this.setActiveStream(this.readableStream);
-
-            // Retrieve an audio segment via XHR.  For simplicity, we're retrieving the
-            // entire segment at once, but we could also retrieve it in chunks and append
-            // each chunk separately.  MSE will take care of assembling the pieces.
-            // let response = await fetch();
-
-            const stream = this.getActiveStream();
-            const streamId = this.activeStream.slice();
-            const reader = stream.getReader();
-            let hasMore = true;
-            let chunkIdx = 0;
-            try {
-                while (hasMore) {
-                    // Check if stream changed
-                    if (
-                        this.abortStreamIfNecessary(
-                            this.readableStream,
-                            reader,
-                            streamId,
-                            this.sourceBuffer
-                        )
-                    ) {
-                        return;
-                    }
-
-                    const { done, value } = await reader.read();
-
-                    // Check again.
-                    if (
-                        this.abortStreamIfNecessary(
-                            stream,
-                            reader,
-                            streamId,
-                            this.sourceBuffer
-                        )
-                    ) {
-                        return;
-                    }
-
-                    if (value) {
-                        // Append the ArrayBuffer data into our new SourceBuffer.
-                        console.log("data", value);
-                        console.log("sourcebuffer", this.sourceBuffer);
-                        let appendTime = 0;
-
-                        for (
-                            let i = 0;
-                            i < this.sourceBuffer.buffered.length;
-                            i++
-                        ) {
-                            console.log(
-                                "start:",
-                                this.sourceBuffer.buffered.start(i),
-                                "end",
-                                this.sourceBuffer.buffered.end(i)
-                            );
-                            appendTime =
-                                chunkIdx > 0
-                                    ? this.sourceBuffer.buffered.end(i)
-                                    : 0;
-                        }
-                        this.sourceBuffer.appendWindowStart = appendTime;
-                        // this.sourceBuffer.appendWindowEnd =
-                        //     appendTime + gaplessMetadata.audioDuration;
-
-                        console.log(
-                            "appendTime",
-                            this.sourceBuffer.appendWindowStart
-                        );
-
-                        console.log("buffered", this.sourceBuffer.buffered);
-                        this.sourceBuffer.timestampOffset = appendTime;
-
-                        try {
-                            if (this.sourceBuffer.updating) {
-                                this.sourceBuffer.addEventListener(
-                                    "updateend",
-                                    () => {
-                                        if (streamId === this.activeStream) {
-                                            console.log("APPENDING BUFFER");
-                                            this.sourceBuffer.appendBuffer(
-                                                value
-                                            );
-                                        } else {
-                                            hasMore = false;
-                                            this.abortStreamIfNecessary(
-                                                stream,
-                                                reader,
-                                                streamId,
-                                                this.sourceBuffer
-                                            );
-                                            return;
-                                        }
-                                    }
-                                );
-                            } else {
-                                console.log(
-                                    "activeStreamId",
-                                    this.activeStream
-                                );
-                                console.log("streamId", streamId);
-                                if (streamId === this.activeStream) {
-                                    console.log("APPENDING BUFFER");
-                                    this.sourceBuffer.appendBuffer(value);
-                                } else {
-                                    hasMore = false;
-                                    this.abortStreamIfNecessary(
-                                        stream,
-                                        reader,
-                                        streamId,
-                                        this.sourceBuffer
-                                    );
-                                    return;
-                                }
-                            }
-                        } catch (err) {
-                            console.log("handling err", err);
-                        }
-                    }
-                    if (done) {
-                        if (this.sourceBuffer) {
-                            this.sourceBuffer.addEventListener(
-                                "updateend",
-                                () => {
-                                    if (
-                                        this.abortStreamIfNecessary(
-                                            stream,
-                                            reader,
-                                            streamId,
-                                            this.sourceBuffer
-                                        )
-                                    ) {
-                                        hasMore = false;
-                                        return;
-                                    }
-
-                                    console.log("Stream complete");
-                                    this.mediaSource.endOfStream();
-                                }
-                            );
-                        } else {
-                            if (
-                                this.abortStreamIfNecessary(
-                                    stream,
-                                    reader,
-                                    streamId,
-                                    this.sourceBuffer
-                                )
-                            ) {
-                                hasMore = false;
-                                return;
-                            }
-                            console.log("Stream complete");
-                            this.mediaSource.endOfStream();
-                        }
-                        hasMore = false;
-                        return;
-                    }
-                    chunkIdx++;
-                }
-            } finally {
-                reader.releaseLock();
-            }
-            URL.revokeObjectURL(this.getCurrentAudioFile().src);
-        });
         // this.source = audioCtx.createMediaElementSource(this.audioFile);
         // this.source.connect(this.gainNode);
 
@@ -548,11 +242,61 @@ class AudioPlayer {
         });
 
         volume.subscribe((vol) => {
-            this.getCurrentAudioFile().volume = vol * 0.75;
+            if (this.gainNode) this.gainNode.gain.value = vol * 0.75;
             localStorage.setItem("volume", String(vol));
         });
 
         // this.setupAnalyserAudio();
+    }
+
+    /**
+     * Only set up the audio context once we know the sample rate to set
+     * i.e the track has been clicked
+     * @param sampleRate The source file sample rate
+     */
+    async setupAudioContext(sampleRate) {
+        this.tearDownAudioContext();
+        let AudioContext = window.AudioContext || window.webkitAudioContext;
+        this._audioContext = new AudioContext({
+            sampleRate,
+            latencyHint: "interactive"
+        });
+
+        console.log(
+            "AudioPlayer::sample rate is " + this._audioContext.sampleRate
+        );
+        this.gainNode = this._audioContext.createGain();
+        this.gainNode.gain.value = get(volume);
+        // Buffer which will hold the chunk to play
+
+        // this._audioSource = this._audioContext.createBufferSource();
+        // this._audioSource.connect(this.gainNode);
+        this.gainNode.connect(this._audioContext.destination);
+        await this.loadWorkletModules();
+        this.setupAnalyserAudio();
+    }
+
+    async tearDownAudioContext() {
+        // Tear down existing audio context
+        if (
+            this._audioContext?.state === "running" ||
+            this._audioContext?.state === "suspended"
+        ) {
+            this.gainNode.disconnect();
+            this.audioSourceNode.disconnect();
+            await this._audioContext.close();
+        }
+    }
+
+    async loadWorkletModules() {
+        await this._audioContext.audioWorklet.addModule(AudioSourceWorkletUrl);
+        await this._audioContext.audioWorklet.addModule(
+            LibSamplerateWorkletUrl
+        );
+        await this._audioContext.audioWorklet.addModule(
+            AudioResamplerWorkletUrl
+        );
+        console.log("loaded modules");
     }
 
     getActiveStream() {
@@ -585,6 +329,225 @@ class AudioPlayer {
             return true;
         }
         return false;
+    }
+
+    async onMediaSourceOpen() {
+        console.log("mse: sourceopen");
+        if (!this.currentSong.file.match(/\.(mp3)$/i)) {
+            return; // Only mp3 support for now
+        }
+        if (MediaSource.isTypeSupported("audio/mpeg")) {
+            console.info("Mimetype is", "audio/mpeg");
+            // TODO ...
+        } else {
+            console.error("Mimetype not supported", "audio/mpeg");
+            return;
+        }
+
+        // Reset
+        if (this.currentStreamSrc !== this.prevStreamSrc) {
+            // Remove all source buffers
+            for (let buffer of this.mediaSource.activeSourceBuffers) {
+                this.mediaSource.removeSourceBuffer(buffer);
+            }
+            this.removeStream(this.activeStream);
+
+            // Add source buffer
+            this.sourceBuffer = this.mediaSource.addSourceBuffer("audio/mpeg");
+            this.sourceBuffer.onerror = function (ev) {
+                console.error("SOURCE BUFFER err", ev);
+            };
+        }
+
+        // Fetch first chunk
+        const firstChunk = await this.fileStreamSource.queueFile(
+            this.currentStreamSrc,
+            this.currentSong.path,
+            "audio/mpeg"
+        );
+        await this.appendChunk(firstChunk);
+    }
+
+    async webAudioSourceOpen() {
+        console.log("webaudio: sourceopen");
+        if (!this.currentSong.file.match(/\.(mp3)$/i)) {
+            return; // Only mp3 support for now
+        }
+        if (MediaSource.isTypeSupported("audio/mpeg")) {
+            console.info("Mimetype is", "audio/mpeg");
+            // TODO ...
+        } else {
+            console.error("Mimetype not supported", "audio/mpeg");
+            return;
+        }
+
+        await this.fileStreamSource.reset();
+
+        // Fetch first chunk
+        const firstChunk = await this.fileStreamSource.queueFile(
+            this.currentStreamSrc,
+            this.currentSong.path,
+            "audio/mpeg"
+        );
+        console.log("firstChunk", firstChunk);
+        if (firstChunk.channelData) {
+            const buffer = new AudioBuffer({
+                numberOfChannels: firstChunk.channelData.length,
+                length: firstChunk.samplesDecoded,
+                sampleRate: firstChunk.sampleRate
+            });
+            this.buffered = buffer.length / buffer.sampleRate; // in seconds
+            for (let i = 0; i <= firstChunk.channelData.length - 1; i++) {
+                buffer.getChannelData(i).set(firstChunk.channelData[i]);
+            }
+
+            if (!this._audioSource.buffer) {
+                // Set the buffer in the AudioBufferSourceNode
+                this._audioSource.buffer = buffer;
+            }
+
+            this._audioSource.onended = async () => {
+                console.log("White noise finished.");
+            };
+        }
+    }
+    async workletSourceOpen() {
+        console.log("worklet: sourceopen");
+        if (!this.currentSong.file.match(/\.(mp3)$/i)) {
+            return; // Only mp3 support for now
+        }
+        if (MediaSource.isTypeSupported("audio/mpeg")) {
+            console.info("Mimetype is", "audio/mpeg");
+            // TODO ...
+        } else {
+            console.error("Mimetype not supported", "audio/mpeg");
+            return;
+        }
+
+        if (this.gainNode) {
+            this.gainNode.gain.value = 0; // Avoid clicks during switch
+        }
+
+        // Fetch first chunk
+        const firstChunk = await this.fileStreamSource.queueFile(
+            this.currentStreamSrc,
+            this.currentSong.path,
+            "audio/mpeg"
+        );
+        console.log("firstChunk", firstChunk);
+        if (firstChunk?.channelData) {
+            // const buffer = new AudioBuffer({
+            //     numberOfChannels: firstChunk.channelData.length,
+            //     length: firstChunk.samplesDecoded,
+            //     sampleRate: firstChunk.sampleRate
+            // });
+            // this.buffered = buffer.length / buffer.sampleRate; // in seconds
+            // for (let i = 0; i <= firstChunk.channelData.length - 1; i++) {
+            //     buffer.getChannelData(i).set(firstChunk.channelData[i]);
+            // }
+
+            await this.startAudioNodes(firstChunk);
+        }
+    }
+
+    async startAudioNodes(chunk) {
+        await this.setupAudioContext(chunk.sampleRate);
+        console.log("worklet:module loaded");
+        // this.oscillatorNode = this._audioContext.createOscillator();
+
+        // this.oscillatorNode.type = "square";
+        // this.oscillatorNode.frequency.setValueAtTime(
+        //     440,
+        //     this._audioContext.currentTime
+        // ); // value in hertz
+        // this.oscillatorNode.connect(this.gainNode);
+
+        this.audioSourceNode = new AudioWorkletNode(
+            this._audioContext,
+            "audio-source-processor",
+            {
+                numberOfInputs: 0,
+                numberOfOutputs: 1,
+                outputChannelCount: [2],
+                processorOptions: {
+                    initialSamples: chunk.channelData,
+                    loopStartSample: 0,
+                    totalSamples: chunk.samplesDecoded,
+                    inputSampleRate: chunk.sampleRate,
+                    shouldLoop: false,
+                    trackDescriptions: [{ numberChannels: 2 }],
+                    trackStates: [true]
+                }
+            }
+        );
+        this.resamplerNode = new AudioWorkletNode(
+            this._audioContext,
+            "resampler-processor",
+            {
+                numberOfInputs: 1,
+                numberOfOutputs: 1,
+                outputChannelCount: [2],
+                processorOptions: {
+                    inputSampleRate: chunk.sampleRate,
+                    outputSampleRate: this._audioContext.sampleRate,
+                    trackDescriptions: [{ numberChannels: 2 }]
+                }
+            }
+        );
+        if (this.audioSourceNode.port) {
+            this.audioSourceNode.port.addEventListener(
+                "message",
+                (ev: MessageEvent) => {
+                    switch (ev.data.type) {
+                        case "BUFFER_LOOPED": {
+                            console.log("[AudioPlayer]", ev.data.type);
+                            break;
+                        }
+                        case "BUFFER_ENDED": {
+                            console.log("[AudioPlayer]", ev.data.type);
+                            this.pause();
+                            this.hasBufferReachedEnd = true;
+                            break;
+                        }
+                        case "LOGGER": {
+                            console.log("[AudioPlayer]", ev.data.payload);
+                            break;
+                        }
+                        case "TIMESTAMP_REPLY": {
+                            console.log(
+                                "[AudioPlayer]",
+                                ev.data.payload.timestamp
+                            );
+                            this.onTimeUpdate(
+                                ev.data.payload.timestamp as number
+                            );
+                            break;
+                        }
+                    }
+                }
+            );
+
+            if (this.resamplerNode.port) {
+                this.resamplerNode.port.addEventListener(
+                    "message",
+                    (ev: MessageEvent) => {
+                        switch (ev.data.type) {
+                            case "LOGGER": {
+                                console.log(
+                                    "[AudioResampler]",
+                                    ev.data.payload
+                                );
+                                break;
+                            }
+                        }
+                    }
+                );
+            }
+            this.audioSourceNode.port.start();
+            // this.resamplerNode.port.start();
+            this.audioSourceNode.connect(this.gainNode);
+            // this.resamplerNode.connect(this.gainNode);
+        }
     }
 
     shuffle() {
@@ -623,18 +586,14 @@ class AudioPlayer {
         volume.set(vol);
     }
 
-    onPlay(player: number) {
-        if (player === this.currentAudioFile) {
-            isPlaying.set(true);
-        }
+    onPlay() {
+        isPlaying.set(true);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "playing";
     }
 
-    onPause(player: number) {
-        if (player === this.currentAudioFile) {
-            isPlaying.set(false);
-        }
+    onPause() {
+        isPlaying.set(false);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "paused";
     }
@@ -651,63 +610,28 @@ class AudioPlayer {
         }
     }
 
-    async onTimeUpdate(player: number, ended = false) {
-        // console.log("player 1 time: " + this.audioFile.currentTime);
-        // console.log("player 2 time: " + this.audioFile2.currentTime);
+    async appendChunk(chunk: Uint8Array) {
+        if (this.sourceBuffer.updating) {
+            this.sourceBuffer.addEventListener("updateend", () => {
+                console.log("mse:onupdateend:appendBuffer");
+                this.sourceBuffer.appendBuffer(chunk);
+            });
+        } else {
+            console.log("mse:appendBuffer");
+            this.sourceBuffer.appendBuffer(chunk);
+        }
+    }
 
-        const currentTime =
-            this.currentAudioFile === 1
-                ? this.audioFile.currentTime
-                : this.audioFile2.currentTime;
-        const duration =
-            this.currentAudioFile === 1
-                ? this.audioFile.duration
-                : this.audioFile2.duration;
+    lastChunkDropTime = 0;
 
+    async onTimeUpdate(time: number) {
+        console.log("player 1 time: " + this.audioFile.currentTime);
+        console.log("buffered", this.sourceBuffer.buffered.end(0));
         // Reached the end of the playlist, exit here
         if (this.currentSongIdx === this.playlist.length - 1) {
             return;
         }
-
-        /*
-         * Playing a short sample - don't try to do gapless
-         * because the sample won't play in its entirety
-         */
-        if (duration < 30 && !this.isRunningTransition && ended) {
-            this.currentSongIdx = this.currentSongIdx + 1;
-            currentSongIdx.set(get(currentSongIdx) + 1);
-            playerTime.set(0);
-            currentSong.set(get(nextUpSong));
-            this.currentSong = get(nextUpSong);
-            this.setMediaSessionData();
-            this.isRunningTransition = false;
-            this.playCurrent();
-        } else if (
-            /*
-             * For long audios (songs), attempt to do gapless.
-             * It's not perfect since we don't have control over the
-             * buffer and sample-level precision.
-             */
-            duration > 30 &&
-            currentTime > duration - 1.1 &&
-            !this.isRunningTransition
-        ) {
-            this.isRunningTransition = true;
-
-            const chunk = 0.3;
-            let diff = duration - currentTime;
-            console.log("2 SECS LEFT! STARTING TRANSITION...");
-            console.log("diff", diff);
-            console.log("duration", duration);
-            console.log("currentTime", currentTime);
-
-            // setTimeout(async () => {
-            //     this.getOtherAudioFile().volume = 0;
-            //     this.getCurrentAudioFile().volume = get(volume);
-            // }, (diff - 0.177) * 1000);
-
-            this.queueGapless(diff);
-        }
+        
     }
 
     async queueGapless(diff) {
@@ -870,8 +794,8 @@ class AudioPlayer {
     }
 
     // MEDIA
-    async msePlaySong(song: Song, position = 0, play = true) {
-        console.log("mse: playSong", song);
+    async webAudioPlaySong(song: Song, position = 0, play = true) {
+        console.log("webaudio: playSong", song, play);
         if (this.getCurrentAudioFile() && song) {
             this.pause();
             this.getCurrentAudioFile().currentTime = 0;
@@ -887,13 +811,15 @@ class AudioPlayer {
 
             if (fileSrc !== this.currentStreamSrc) {
                 this.currentStreamSrc = fileSrc;
-
-                this.getCurrentAudioFile().src = URL.createObjectURL(
-                    this.mediaSource
-                );
+                // this.getCurrentAudioFile().src = URL.createObjectURL(
+                //     this.mediaSource
+                // );
             }
 
-            play && this.play();
+            if (play) {
+                await this.workletSourceOpen();
+                await this.play();
+            }
             this.shouldPlay = play;
             let newCurrentSongIdx = this.playlist.findIndex(
                 (s) => s.id === this.currentSong?.id
@@ -917,7 +843,7 @@ class AudioPlayer {
 
     async playSong(song: Song, position = 0, play = true) {
         console.log("playSong", song);
-        this.msePlaySong(song, position, play);
+        this.webAudioPlaySong(song, position, play);
         return;
         if (this.getCurrentAudioFile() && song) {
             this.pause();
@@ -949,21 +875,31 @@ class AudioPlayer {
         }
     }
 
-    play(other: boolean = false) {
-        if (this.getCurrentAudioFile()) {
-            this.getCurrentAudioFile().play();
+    async play() {
+        if (this._audioContext?.state === "suspended" && this.audioSourceNode) {
+            this.audioSourceNode.onprocessorerror = (ev) => console.error(ev);
+            await this._audioContext.resume();
+            // this.oscillatorNode.start();
             this.ticker = setInterval(() => {
+                this.audioSourceNode.port.postMessage({
+                    type: "TIMESTAMP_QUERY"
+                });
                 lastPlayedInfo.set({
                     songId: this.currentSong.id,
                     position: this.getCurrentAudioFile().currentTime
                 });
                 playerTime.set(this.getCurrentAudioFile().currentTime);
             }, 1000);
+            this.onPlay();
         }
     }
 
-    pause(other: boolean = false) {
-        this.getCurrentAudioFile().pause();
+    async pause() {
+        // this._audioSource.stop();
+        this._audioContext?.state === "running" &&
+            (await this._audioContext.suspend());
+        // this.oscillatorNode.stop();
+        this.onPause();
     }
 
     togglePlay() {
@@ -979,67 +915,43 @@ class AudioPlayer {
         this.playSong(song, lastPlayed.position, false);
     }
 
-    private _audioContext: AudioContext;
-
-    audioElement: HTMLAudioElement;
-    audioElement2: HTMLAudioElement;
-
-    // Nodes
-    private _audioSource: MediaElementAudioSourceNode;
-    private _audioSource2: MediaElementAudioSourceNode;
-    audioAnalyser: AnalyserNode;
-    private _gainNode: GainNode;
-    private _gainNode2: GainNode;
-
     /**
      * Connect the nodes together, so sound is flowing
      * into the analyser node from the source node
      */
     setupAnalyserAudio() {
-        this.audioElement = this.getCurrentAudioFile();
-        this.audioElement2 = this.getOtherAudioFile();
-        let AudioContext = window.AudioContext || window.webkitAudioContext;
-        this._audioContext = new AudioContext({ sampleRate: 48000 });
-        this._audioSource = this._audioContext.createMediaElementSource(
-            this.audioElement
-        );
+        // this.audioElement = this.getCurrentAudioFile();
+        // this.audioElement2 = this.getOtherAudioFile();
+        // let AudioContext = window.AudioContext || window.webkitAudioContext;
+        // this._audioContext = new AudioContext({ sampleRate: 48000 });
+        // this._audioSource = this._audioContext.createMediaElementSource(
+        //     this.audioElement
+        // );
 
-        this._audioSource2 = this._audioContext.createMediaElementSource(
-            this.audioElement2
-        );
+        // this._audioSource2 = this._audioContext.createMediaElementSource(
+        //     this.audioElement2
+        // );
         this.audioAnalyser = new AnalyserNode(this._audioContext, {
             fftSize: 2048,
             smoothingTimeConstant: 0.9
         });
-        this._gainNode = new GainNode(this._audioContext, {
-            gain: get(volume)
-        });
-        this._gainNode2 = new GainNode(this._audioContext, {
-            gain: get(volume)
-        });
-        this._audioSource.mediaElement.volume = get(volume);
-        this._audioSource2.mediaElement.volume = get(volume);
+        // this._audioSource.mediaElement.volume = get(volume);
+        // this._audioSource2.mediaElement.volume = get(volume);
         // Source -> Gain -> Analyser -> Destination (master)
-        this._audioSource.connect(this._gainNode);
-        this._audioSource2.connect(this._gainNode2);
-        this._gainNode.connect(this.audioAnalyser);
-        this._gainNode2.connect(this.audioAnalyser);
+        // this._audioSource.connect(this._gainNode); // DONE WHEN WORKLET IS AVAILABLE
+        this.gainNode.connect(this.audioAnalyser);
         this.audioAnalyser.connect(this._audioContext.destination);
     }
     doPlay = (number) => {
-        console.log('doplay ', number);
+        console.log("doplay ", number);
         if (number === 1) {
-            this._audioSource.mediaElement.play();
-        } else {
-            this._audioSource2.mediaElement.play();
+            this._audioSource.start();
         }
     };
     doPause = (number) => {
-        console.log('dopause ', number);
+        console.log("dopause ", number);
         if (number === 1) {
-            this._audioSource.mediaElement.pause();
-        } else {
-            this._audioSource2.mediaElement.pause();
+            this._audioSource.stop();
         }
     };
 }
