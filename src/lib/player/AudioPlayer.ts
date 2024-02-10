@@ -27,6 +27,12 @@ import FileStreamSource from "./FileStreamSource";
 import AudioSourceWorkletUrl from "../../AudioSourceWorker?url";
 import AudioResamplerWorkletUrl from "../../AudioResamplerWorker?url";
 import LibSamplerateWorkletUrl from "@alexanderolsen/libsamplerate-js/dist/libsamplerate.worklet?url";
+import {
+    AudioWriter,
+    ParameterReader,
+    ParameterWriter,
+    RingBuffer
+} from "./ringbuf";
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
         const reader = this.getReader();
@@ -103,6 +109,9 @@ class AudioPlayer {
     // Worklet stuff
     hasBufferReachedEnd = false;
     currentTimestamp = 0;
+    audioWriter: AudioWriter;
+    paramReader: ParameterReader;
+    paramWriter: ParameterWriter;
 
     private constructor() {
         this.audioFile = new Audio();
@@ -283,6 +292,7 @@ class AudioPlayer {
             this._audioContext?.state === "suspended"
         ) {
             this.gainNode.disconnect();
+            this.audioSourceNode.port.close();
             this.audioSourceNode.disconnect();
             await this._audioContext.close();
         }
@@ -461,6 +471,17 @@ class AudioPlayer {
         //     this._audioContext.currentTime
         // ); // value in hertz
         // this.oscillatorNode.connect(this.gainNode);
+        // 50ms of buffer, increase in case of glitches
+        // const sab = RingBuffer.getStorageForCapacity(
+        //     this._audioContext.sampleRate / 20,
+        //     Float32Array
+        // );
+        // const rb = new RingBuffer(sab, Float32Array);
+        // this.audioWriter = new AudioWriter(rb);
+
+        // const sab2 = RingBuffer.getStorageForCapacity(31, Uint8Array);
+        // const rb2 = new RingBuffer(sab2, Uint8Array);
+        // this.paramWriter = new ParameterWriter(rb2);
 
         this.audioSourceNode = new AudioWorkletNode(
             this._audioContext,
@@ -625,13 +646,32 @@ class AudioPlayer {
     lastChunkDropTime = 0;
 
     async onTimeUpdate(time: number) {
-        console.log("player 1 time: " + this.audioFile.currentTime);
-        console.log("buffered", this.sourceBuffer.buffered.end(0));
+        console.log("AudioPlayer::player time: " + time);
+        console.log("FileStreamer (bytes)", this.fileStreamSource.bytePos);
+        console.log("FileStreamer (time)", this.fileStreamSource.timePos);
+
+        lastPlayedInfo.set({
+            songId: this.currentSong.id,
+            position: time
+        });
+        playerTime.set(time);
+
         // Reached the end of the playlist, exit here
         if (this.currentSongIdx === this.playlist.length - 1) {
             return;
         }
-        
+
+        if (
+            this.fileStreamSource.timePos - time < 5 &&
+            !this.fileStreamSource.isFetchingChunk
+        ) {
+            // Fetch the next chunk
+            const chunk = await this.fileStreamSource.getNextChunk();
+            this.audioSourceNode.port.postMessage({
+                type: "ADD_SAMPLES",
+                payload: { samples: chunk.channelData }
+            });
+        }
     }
 
     async queueGapless(diff) {
@@ -806,9 +846,10 @@ class AudioPlayer {
             playerTime.set(this.getCurrentAudioFile().currentTime);
 
             let fileSrc = convertFileSrc(
-                this.currentSong.path.replace("?", "%3F")
+                this.currentSong.path.replace("?", "%3F"),
+                "stream"
             );
-
+            console.log("YO ARE WER HERE");
             if (fileSrc !== this.currentStreamSrc) {
                 this.currentStreamSrc = fileSrc;
                 // this.getCurrentAudioFile().src = URL.createObjectURL(
@@ -884,12 +925,7 @@ class AudioPlayer {
                 this.audioSourceNode.port.postMessage({
                     type: "TIMESTAMP_QUERY"
                 });
-                lastPlayedInfo.set({
-                    songId: this.currentSong.id,
-                    position: this.getCurrentAudioFile().currentTime
-                });
-                playerTime.set(this.getCurrentAudioFile().currentTime);
-            }, 1000);
+            }, 500);
             this.onPlay();
         }
     }

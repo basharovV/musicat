@@ -48,6 +48,7 @@
     "tsparticles-slim": "^2.12.0",
     "typescript": "^4.6.4",
     "vite": "^4.5.1",
+    "wavefile": "^11.0.0",
     "wikibase-sdk": "^9.2.4"
   },
   "dependencies": {

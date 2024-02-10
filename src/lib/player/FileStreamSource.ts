@@ -2,7 +2,10 @@ import { invoke } from "@tauri-apps/api/tauri";
 import type { GetFileSizeResponse } from "../../App";
 import { MPEGDecoderWebWorker } from "mpg123-decoder";
 import { create, ConverterType } from "@alexanderolsen/libsamplerate-js";
+import { WaveFile } from 'wavefile';
+let wav = new WaveFile();
 
+// import { fetch } from '@tauri-apps/api/http'
 /**
  * This class is responsible for fetching chunks of encoded audio,
  * directly from the file using request headers (supported by Tauri's asset protocol).
@@ -18,18 +21,23 @@ export default class FileStreamSource {
     prevChunkSize = 0;
     chunksLeft = true;
     chunkIdx = 0; // Chunk counter.
+    bytePos = 0; // Fetched so far
+    timePos = 0; // In seconds
+    sampleRate = 0; // Of the last fetched chunk
+    samplesDecoded = 0;
     fileSize = 0;
     isFetchingChunk = false;
     decoder;
-
+    samples: Float32Array[][];
+    
     constructor() {}
 
-    async queueFile(src, path, mimeType) {
+    async queueFile(src, path, mimeType, wholeFile = false) {
         this.isCancelled = false;
         this.src = src; // To fetch via asset protocol (converted to asset://[URL encoded file path])
         this.path = path; // To get file size from Rust backend
         if (mimeType === "audio/mpeg" && !this.decoder) {
-            this.decoder = new MPEGDecoderWebWorker();
+            this.decoder = new MPEGDecoderWebWorker({enableGapless: true});
             // wait for the WASM to be compiled
             await this.decoder.ready;
         }
@@ -56,8 +64,9 @@ export default class FileStreamSource {
         return await this.getNextChunk(this.firstChunkSize);
     }
 
-    async getNextChunk(size) {
+    async getNextChunk(size?:number) {
         if (!size) size = this.desiredSize;
+        let decodedChunk;
         console.log("FileStreamSource::getNextChunk()", this.path);
         console.log("size", size);
         this.isFetchingChunk = true;
@@ -66,18 +75,15 @@ export default class FileStreamSource {
         }
 
         if (this.fileSize) {
-            let chunkEndIdx = Math.min(
-                this.fileSize,
-                this.chunkIdx + size
-            );
+            let chunkEndIdx = Math.min(this.fileSize, this.bytePos + size);
             let response = await fetch(this.src, {
                 headers: {
-                    "Range": `bytes=${this.chunkIdx}-${chunkEndIdx}`
+                    "Range": `bytes=${this.bytePos}-${chunkEndIdx}`
                 }
             });
             console.log("chunk response", response);
             this.prevChunkSize = Number(response.headers.get("Content-Length"));
-            console.log("chunkIdx", this.chunkIdx, "size", this.prevChunkSize);
+            console.log("bytePos", this.bytePos, "size", this.prevChunkSize);
             if (response.ok) {
                 for await (const { done, value } of response.body) {
                     if (value) {
@@ -87,7 +93,7 @@ export default class FileStreamSource {
                             console.log("currentChunk", currentChunk);
 
                             // Decode the chunk according to current codec
-                            const decodedChunk =
+                            decodedChunk =
                                 await this.decoder.decode(currentChunk);
                             await this.decoder.reset();
 
@@ -105,11 +111,12 @@ export default class FileStreamSource {
                             // src.destroy(); // clean up
 
                             console.log("decodedChunk", decodedChunk);
+                            this.sampleRate = decodedChunk.sampleRate;
+                            this.samplesDecoded = decodedChunk.samplesDecoded;
                             this.isFetchingChunk = false;
                             if (this.isCancelled) {
                                 return null;
                             }
-                            return decodedChunk;
                         }
                     }
                 }
@@ -120,11 +127,16 @@ export default class FileStreamSource {
                 this.isFetchingChunk = false;
                 return null;
             }
-            await this.sleep(3000);
-            this.chunkIdx += 1;
-        }
 
-        this.isFetchingChunk = false;
+            this.chunkIdx += 1;
+            this.bytePos += this.prevChunkSize;
+            this.timePos = this.samplesDecoded / this.sampleRate;
+            console.log('samplesDecoded', this.samplesDecoded);
+            this.isFetchingChunk = false;
+            if (decodedChunk) {
+                return decodedChunk;
+            }
+        }
     }
 
     cancel() {

@@ -249,4 +249,4 @@ function clamp(value, min, max) {
     return value <= min ? min : value >= max ? max : value;
 }
 
-registerProcessor("audio-source-processor", AudioSourceNode);
+registerProcessor("ringbuf-audio-source-processor", AudioSourceNode);

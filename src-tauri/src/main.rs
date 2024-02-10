@@ -24,6 +24,8 @@ use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Event, Manager};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
+mod file_chunk_streamer;
+mod decoder;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct MetadataEntry {
@@ -680,7 +682,6 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
     // println("title:")
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct GetFileSizeRequest {
     path: Option<String>,
@@ -695,8 +696,8 @@ struct GetFileSizeResponse {
 fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
     if let Ok(metadata) = fs::metadata(event.path.unwrap()) {
         return GetFileSizeResponse {
-            file_size: Some(metadata.len())
-        }
+            file_size: Some(metadata.len()),
+        };
     }
     return GetFileSizeResponse { file_size: None };
 }
@@ -750,6 +751,20 @@ fn main() {
             get_lyrics,
             get_file_size
         ])
+        .register_uri_scheme_protocol("stream", move |_app, request| {
+            let boundary_id = Arc::new(Mutex::new(0));
+
+            let result = file_chunk_streamer::FileChunkHandler::get_stream_response(
+                request,
+                &boundary_id,
+            );
+            // println!("File chunk handler: response: {:?}", result);
+
+            if let Some(e) = &result.as_ref().err() {
+                println!("File chunk handler: Error: {:?}", e);
+            }
+            result
+        })
         .plugin(tauri_plugin_fs_watch::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
