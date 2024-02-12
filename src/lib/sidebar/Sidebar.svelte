@@ -1,25 +1,25 @@
 <script lang="ts">
-    import { window as tauriWindow } from "@tauri-apps/api";
-    import { convertFileSrc } from "@tauri-apps/api/tauri";
+    import { invoke, window as tauriWindow } from "@tauri-apps/api";
     import {
-        appWindow,
-        currentMonitor,
         LogicalSize,
-        PhysicalPosition
+        PhysicalPosition,
+        appWindow,
+        currentMonitor
     } from "@tauri-apps/api/window";
+    import { Buffer } from "buffer";
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
-    import * as musicMetadata from "music-metadata-browser";
     import { onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
     import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
-    import type { Playlist } from "../../App";
-    import { db } from "../../data/db";
+    import type { Playlist, Song } from "../../App";
     import { lookForArt } from "../../data/LibraryImporter";
+    import SmartQueries from "../../data/SmartQueries";
+    import { db } from "../../data/db";
     import {
         currentSong,
         currentSongArtworkSrc,
@@ -32,7 +32,6 @@
         isPlaying,
         isShuffleEnabled,
         isSmartQueryBuilderOpen,
-        isSmartQueryUiOpen,
         isTrackInfoPopupOpen,
         os,
         playlist,
@@ -48,15 +47,13 @@
         userSettings,
         volume
     } from "../../data/store";
-    import audioPlayer from "../player/AudioPlayer";
-    import Input from "../ui/Input.svelte";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
-    import Seekbar from "./Seekbar.svelte";
-    import SpectrumAnalyzer from "../player/SpectrumAnalyzer.svelte";
+    import audioPlayer from "../player/AudioPlayer";
     import "../tippy.css";
     import Icon from "../ui/Icon.svelte";
-    import SmartQueries from "../../data/SmartQueries";
+    import Input from "../ui/Input.svelte";
+    import Seekbar from "./Seekbar.svelte";
 
     // What to show in the sidebar
     let title;
@@ -88,24 +85,22 @@
 
     currentSong.subscribe(async (song) => {
         if (song) {
-            const metadata = await musicMetadata.fetchFromUrl(
-                convertFileSrc(song.path)
-            );
-            console.log("metadata", metadata);
-            title = metadata.common?.title?.length
-                ? metadata.common.title
-                : null;
+            const songWithArtwork = await invoke<Song>("get_song_metadata", {
+                event: { path: song.path }
+            });
+            console.log("test", songWithArtwork);
+            title = songWithArtwork.title;
             fileName = song.file;
-            artist = metadata.common.artist;
-            album = metadata.common.album;
-            codec = metadata.format.codec;
-            stereo = metadata.format.numberOfChannels === 2;
-            bitrate = metadata.format.bitsPerSample;
-            sampleRate = metadata.format.sampleRate;
-            duration = metadata.format.duration;
-            if (metadata.common.picture?.length) {
-                artworkFormat = metadata.common.picture[0].format;
-                artworkBuffer = metadata.common.picture[0].data;
+            artist = songWithArtwork.artist;
+            album = songWithArtwork.album;
+            codec = songWithArtwork.fileInfo.codec;
+            stereo = songWithArtwork.fileInfo.channels === 2;
+            bitrate = songWithArtwork.fileInfo.bitDepth;
+            sampleRate = songWithArtwork.fileInfo.sampleRate;
+            duration = songWithArtwork.fileInfo.duration;
+            if (songWithArtwork.artwork) {
+                artworkFormat = songWithArtwork.artwork.format;
+                artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                 artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                     "base64"
                 )}`;
@@ -114,8 +109,8 @@
                     src: artworkSrc,
                     format: artworkFormat,
                     size: {
-                        width: metadata.common.picture[0]["width"],
-                        height: metadata.common.picture[0]["height"]
+                        width: 200,
+                        height: 200
                     }
                 };
             } else {

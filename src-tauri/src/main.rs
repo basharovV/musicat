@@ -232,6 +232,24 @@ struct ToImportEvent {
     progress: u8,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct GetSongMetadataEvent {
+    path: String,
+}
+
+#[tauri::command]
+async fn get_song_metadata(event: GetSongMetadataEvent, app_handle: tauri::AppHandle) -> Option<Song> {
+    let path = Path::new(event.path.as_str());
+
+    if path.is_file() {
+        // println!("{:?}", entry.path());
+        if let Some(song) = extract_metadata(&path) {
+            return Some(song);
+        }
+    }
+    None
+}
+
 #[tauri::command]
 async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
@@ -727,7 +745,8 @@ fn main() {
             write_metadata,
             write_metadatas,
             scan_paths,
-            get_lyrics
+            get_song_metadata,
+            get_lyrics,
         ])
         .plugin(tauri_plugin_fs_watch::init())
         .run(tauri::generate_context!())

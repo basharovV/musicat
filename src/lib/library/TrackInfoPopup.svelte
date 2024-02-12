@@ -46,6 +46,8 @@
     } from "../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
+
+    import { Buffer } from "buffer";
     // optional
 
     const ALBUM_FIELDS = ["album", "artist", "date"];
@@ -151,20 +153,27 @@
     let artworkFocused = false;
 
     async function getArtwork() {
-        if (!$rightClickedTrack || !$rightClickedTracks[0]) {
+        if ($rightClickedTrack === null && !$rightClickedTracks.length) {
             return;
-        }
+        }       
+         console.log('getting artwork', $rightClickedTrack, $rightClickedTracks);
+
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
-            const metadata = await musicMetadata.fetchFromUrl(
-                convertFileSrc(path)
-            );
-            if (metadata.common.picture?.length) {
-                artworkFormat = metadata.common.picture[0].format;
-                artworkBuffer = metadata.common.picture[0].data;
+            
+            const songWithArtwork = await invoke<Song>("get_song_metadata", {
+                event: { path }
+            });
+            if (songWithArtwork.artwork) {
+                console.log('artwork');
+                artworkFormat =songWithArtwork.artwork.format;
+                artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                 artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                     "base64"
                 )}`;
+
+                previousArtworkFormat = artworkFormat;
+                    previousArtworkSrc = artworkSrc;
             } else {
                 foundArtwork = await lookForArt(
                     ($rightClickedTrack || $rightClickedTracks[0]).path,
