@@ -14,6 +14,7 @@
         isSettingsOpen,
         isTrackInfoPopupOpen,
         isWelcomeSeen,
+        os,
         uiView,
         userSettings
     } from "./data/store";
@@ -186,7 +187,7 @@
     <Dropzone />
 {/if}
 
-<main class:mini-player={$isMiniPlayer}>
+<main class:mini-player={$isMiniPlayer} class:transparent={$os === 'Darwin'}>
     <div class="sidebar">
         {#if $isWelcomeSeen}
             <Sidebar />
@@ -218,7 +219,11 @@
         height: 100vh;
         opacity: 1;
         position: relative;
-        background-color: #242026c2;
+            background-color: #242026;
+
+        &.transparent {
+            background-color: #242026c2;
+        }
 
         &.mini-player {
             border-radius: 5px;

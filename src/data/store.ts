@@ -151,7 +151,7 @@ const defaultSettings: UserSettings = {
 
 export const userSettings: Writable<UserSettings> = writable(
     { ...defaultSettings, ...JSON.parse(localStorage.getItem("settings")) } ||
-        defaultSettings
+    defaultSettings
 );
 
 export const foldersToWatch = derived(
@@ -202,20 +202,9 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 async function getOs() {
-    const os = await type();
-    let explorerName;
-    switch (os) {
-        case "Darwin":
-            explorerName = "Finder";
-            break;
-        case "Windows_NT":
-            explorerName = "Explorer";
-            break;
-        case "Linux":
-            explorerName = "File manager";
-            break;
-    }
-    return explorerName;
+    const osType = await type();
+
+    os.set(osType);
 }
 
 getOs();
