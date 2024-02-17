@@ -5,6 +5,7 @@
         "useDefineForClassFields": true,
         "module": "ESNext",
         "resolveJsonModule": true,
+        "moduleResolution": "Node",
         "baseUrl": ".",
         /**
          * Typecheck JS in `.svelte` and `.js` files by default.
