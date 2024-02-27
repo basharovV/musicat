@@ -290,3 +290,17 @@ interface AudioSourceNodeOptions {
         outputSampleRate: number;
     }
 }
+
+
+interface StreamStatus {
+    isOpen: boolean;
+}
+
+interface StreamInfo {
+    bytesReceived: number,
+    receiveRate: number, // in KB/s
+    bufferedSamples: number,
+    playedSamples: number,
+    timestamp: number // in s
+    
+}

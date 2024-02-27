@@ -1,4 +1,4 @@
-pub mod AudioDecoder {
+pub mod audio_decoder {
     use std::env;
     use std::fs::File;
     use std::path::Path;

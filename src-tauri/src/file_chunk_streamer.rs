@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-pub mod FileChunkHandler {
+pub mod file_chunk_handler {
 
     use http_range::HttpRange;
     use std::sync::{Arc, Mutex};

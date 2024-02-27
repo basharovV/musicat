@@ -26,6 +26,7 @@
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import BottomBar from "../library/BottomBar.svelte";
     import audioPlayer from "../player/AudioPlayer";
+    import Icon from "../ui/Icon.svelte";
 
     let isLoading = true;
 
@@ -286,9 +287,9 @@
                         >
                             <p>{idx + 1}.</p>
                             <p>{track.title}</p>
-                            {#if $currentSong.id === track.id}<iconify-icon
-                                    icon="heroicons-solid:volume-up"
-                                />{/if}
+                            {#if $currentSong.id === track.id}
+                                <Icon icon="heroicons-solid:volume-up" color="7f61dd" size={14}/>
+                            {/if}
                         </div>
                     {/each}
                 </div>
@@ -568,9 +569,6 @@
             &.playing {
                 color: #dad4ed;
                 font-weight: bold;
-                iconify-icon {
-                    color: #7f61dd;
-                }
             }
             &:not(:nth-child(1)) {
                 border-top: 1px solid rgba(255, 255, 255, 0.05);

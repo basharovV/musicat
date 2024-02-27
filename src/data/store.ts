@@ -12,6 +12,7 @@ import type {
     LastPlayedInfo,
     SidebarItem,
     Song,
+    StreamInfo,
     UserSettings
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
@@ -217,5 +218,13 @@ async function getOs() {
     }
     return explorerName;
 }
+
+export const streamInfo: Writable<StreamInfo> = writable({
+    bytesReceived: 0,
+    receiveRate: 0,
+    bufferedSamples: 0,
+    playedSamples: 0,
+    timestamp: 0 
+});
 
 getOs();

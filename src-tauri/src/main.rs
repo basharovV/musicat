@@ -6,8 +6,8 @@
 use chksum_md5::MD5;
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{
-    read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, Tag,
-    TagItem, TagType, TaggedFileExt,
+    read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, TagItem,
+    TagType, TaggedFileExt,
 };
 use rayon::prelude::*;
 use reqwest;
@@ -16,17 +16,22 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::error::Error;
 use std::fs::{self, File};
-use std::io::{BufReader, SeekFrom};
+use std::future::IntoFuture;
+use std::io::BufReader;
 use std::ops::{Deref, Mul};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
-use tauri::{Event, Manager};
+use tauri::{Manager, State};
+use tokio::join;
+use tokio::runtime::Handle;
+use tokio_util::sync::CancellationToken;
+use webrtc_streamer::web_rtcstreamer::{self, AudioStreamer};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
-mod file_chunk_streamer;
 mod decoder;
-
+mod file_chunk_streamer;
+mod webrtc_streamer;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct MetadataEntry {
     id: String,
@@ -116,7 +121,7 @@ async fn write_metadata(event: WriteMetatadaEvent, app_handle: tauri::AppHandle)
     match write_result {
         Ok(()) => {
             let song = extract_metadata(Path::new(&event.file_path));
-            if (song.is_some()) {
+            if song.is_some() {
                 songs.lock().unwrap().push(song.unwrap());
             }
             // Emit result back to client
@@ -137,7 +142,7 @@ async fn write_metadata(event: WriteMetatadaEvent, app_handle: tauri::AppHandle)
 #[tauri::command]
 async fn write_metadatas(
     event: WriteMetatadasEvent,
-    app_handle: tauri::AppHandle,
+    _app_handle: tauri::AppHandle,
 ) -> ToImportEvent {
     println!("{:?}", event);
     // let payload: &str = event.payload().unwrap();
@@ -150,7 +155,7 @@ async fn write_metadatas(
             Ok(()) => {
                 // Emit result back to client
                 let song = extract_metadata(Path::new(&track.file_path));
-                if (song.is_some()) {
+                if song.is_some() {
                     songs.lock().unwrap().push(song.unwrap());
                 }
                 println!("Wrote metadata")
@@ -344,7 +349,7 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                 || ext_str.eq_ignore_ascii_case("ape")
                 || ext_str.eq_ignore_ascii_case("ogg")
             {
-                if let Ok(taggedFile) = read_from_path(&file_path) {
+                if let Ok(tagged_file) = read_from_path(&file_path) {
                     let id = MD5::hash(file_path.to_str().unwrap().as_bytes()).to_hex_lowercase();
                     let path = file_path.to_string_lossy().into_owned();
                     let file = file_path.file_name()?.to_string_lossy().into_owned();
@@ -360,20 +365,20 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                     let mut file_info = FileInfo::new();
                     let mut artwork = None;
 
-                    if (taggedFile.tags().is_empty()) {
+                    if (tagged_file.tags().is_empty()) {
                         title = file.to_string();
                     }
                     file_info = FileInfo {
-                        duration: Some(taggedFile.properties().duration().as_secs()),
-                        channels: taggedFile.properties().channels(),
-                        bit_depth: taggedFile.properties().bit_depth().or(Some(16)),
-                        sample_rate: taggedFile.properties().sample_rate(),
-                        audio_bitrate: taggedFile.properties().audio_bitrate(),
-                        overall_bitrate: taggedFile.properties().overall_bitrate(),
+                        duration: Some(tagged_file.properties().duration().as_secs()),
+                        channels: tagged_file.properties().channels(),
+                        bit_depth: tagged_file.properties().bit_depth().or(Some(16)),
+                        sample_rate: tagged_file.properties().sample_rate(),
+                        audio_bitrate: tagged_file.properties().audio_bitrate(),
+                        overall_bitrate: tagged_file.properties().overall_bitrate(),
                         lossless: vec![FileType::Flac, FileType::Wav]
                             .iter()
-                            .any(|f| f.eq(&taggedFile.file_type())),
-                        tagType: if let Some(tag) = taggedFile.primary_tag() {
+                            .any(|f| f.eq(&tagged_file.file_type())),
+                        tagType: if let Some(tag) = tagged_file.primary_tag() {
                             match tag.tag_type() {
                                 TagType::VorbisComments => Some("vorbis".to_string()),
                                 TagType::Id3v1 => Some("ID3v1".to_string()),
@@ -385,7 +390,7 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                                 _ => todo!(),
                             }
                         } else {
-                            match taggedFile.file_type() {
+                            match tagged_file.file_type() {
                                 FileType::Flac | FileType::Wav | FileType::Vorbis => {
                                     Some("vorbis".to_string())
                                 }
@@ -394,7 +399,7 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                                 _ => None,
                             }
                         },
-                        codec: match taggedFile.file_type() {
+                        codec: match tagged_file.file_type() {
                             FileType::Flac => Some("FLAC".to_string()),
                             FileType::Mpeg => Some("MPEG".to_string()),
                             FileType::Aiff => Some("AIFF".to_string()),
@@ -408,11 +413,11 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                     };
 
                     if (duration.is_empty()) {
-                        duration = seconds_to_hms(taggedFile.properties().duration().as_secs());
+                        duration = seconds_to_hms(tagged_file.properties().duration().as_secs());
                     }
 
                     // println!("Tag properties {:?}", file_info);
-                    taggedFile.tags().iter().for_each(|tag| {
+                    tagged_file.tags().iter().for_each(|tag| {
                         // println!("Tag type {:?}", tag.tag_type());
                         // println!("Tag items {:?}", tag.items());
                         if (title.is_empty()) {
@@ -448,8 +453,8 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                         }
                     });
 
-                    if (taggedFile.primary_tag().is_some()) {
-                        if let Some(pic) = taggedFile.primary_tag().unwrap().pictures().first() {
+                    if (tagged_file.primary_tag().is_some()) {
+                        if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),
                                 format: pic.mime_type().to_string(),
@@ -574,10 +579,10 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
             let mut tag_type_value = tag_type.unwrap();
             let probe = Probe::open(&v.file_path).unwrap().guess_file_type()?;
             // &probe.guess_file_type();
-            let fileType = &probe.file_type();
-            println!("fileType: {:?}", &fileType);
+            let file_type = &probe.file_type();
+            println!("fileType: {:?}", &file_type);
             let mut tag = read_from_path(&v.file_path).unwrap();
-            let tagFileType = tag.file_type();
+            let tag_file_type = tag.file_type();
             let mut to_write = lofty::Tag::new(tag_type.unwrap());
 
             tag.primary_tag()
@@ -587,7 +592,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                 .enumerate()
                 .for_each(|(idx, pic)| to_write.set_picture(idx, pic.clone()));
 
-            println!("tag fileType: {:?}", &tagFileType);
+            println!("tag fileType: {:?}", &tag_file_type);
 
             // let primary_tag = tag.primary_tag_mut().unwrap();
             for item in v.metadata.iter() {
@@ -626,8 +631,8 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                         if (item.value.is_null()) {
                             let mut exists = false;
 
-                            for tagItem in tag.tags() {
-                                for tg in tagItem.items() {
+                            for tag_item in tag.tags() {
+                                for tg in tag_item.items() {
                                     if tg.key().eq(&item_key) {
                                         exists = true;
                                     }
@@ -658,14 +663,14 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                 to_write.set_picture(0, picture.unwrap());
             }
 
-            for tagItem in tag.tags() {
-                for tag in tagItem.items() {
+            for tag_item in tag.tags() {
+                for tag in tag_item.items() {
                     println!("{:?}", tag);
                 }
             }
             let mut file = File::options().read(true).write(true).open(&v.file_path)?;
             println!("{:?}", file);
-            println!("FILETYPE: {:?}", fileType);
+            println!("FILETYPE: {:?}", file_type);
 
             // Keep picture, overwrite everything else
             let pictures = to_write.pictures();
@@ -702,11 +707,68 @@ fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
     return GetFileSizeResponse { file_size: None };
 }
 
-fn main() {
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct StreamFileRequest {
+    path: Option<String>,
+    seek: Option<f64>
+}
+
+#[tauri::command]
+fn stream_file(event: StreamFileRequest, state: State<AudioStreamer>) {
+    println!("Stream file {:?}", event);
+    state.start_data_channel(event.path.unwrap(), event.seek);
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+struct StreamStatus {
+    is_open: bool,
+}
+
+#[tauri::command]
+async fn init_streamer(
+    event: Option<String>,
+    state: State<'_, AudioStreamer<'_>>,
+    _app_handle: tauri::AppHandle,
+) -> Result<StreamStatus, ()> {
+    println!("Get stream status {:?}", event);
+
+    // Close existing connection
+    state.clone().reset().await;
+    // Create new peer connection and datachannel
+    state.clone().init(_app_handle).await;
+
+    return Ok(StreamStatus { is_open: false });
+}
+
+#[tokio::main]
+async fn main() {
+    let streamer = web_rtcstreamer::AudioStreamer::create().await.unwrap();
+
     tauri::Builder::default()
         .menu(build_menu())
+        .manage(streamer)
         .setup(|app| {
             let app_ = app.handle();
+            let app2_ = app.handle();
+            let app3_ = app.handle();
+            let state: State<web_rtcstreamer::AudioStreamer<'static>> = app.state();
+
+            // state.data_channel.on_close(Box::new(move || {
+            //     Box::pin(async move {
+            //         *is_open2.unwrap() = false;
+            //     })
+            // }));
+            // state.data_channel.on_close(Box::new(move || {
+            //     Box::pin(async move {
+            //         let mut is_open = state.is_open.lock().await;
+            //         *is_open = false;
+            //     })
+            // }));
+            let strm1 = state.inner().to_owned();
+            let strm2 = strm1.clone();
+            let strm3 = strm1.clone();
+
             let window = app.get_window("main").unwrap();
             let window_reference = window.clone();
             window.on_menu_event(move |event| {
@@ -724,16 +786,63 @@ fn main() {
             // Listen for metadata write event
             // listen to the `event-name` (emitted on any window)
 
-            let windowClone = Box::new(window.clone());
+            let window_clone = Box::new(window.clone());
 
             let _id2 = app.listen_global("show-toolbar", move |_| {
                 window.set_decorations(true).unwrap();
             });
 
             let _id2 = app.listen_global("hide-toolbar", move |_| {
-                windowClone.set_decorations(false).unwrap();
+                window_clone.set_decorations(false).unwrap();
             });
 
+            let _id3 = app.listen_global("webrtc-signal", move |event| {
+                println!("webrtc-signal {:?}", event);
+                let eventClone = event.clone();
+                let current = Handle::current();
+                let app_clone = app_.clone();
+
+                let handleClone = strm1.clone();
+                tokio::spawn(async move {
+                    // Handle client's offer
+                    let answer = handleClone.handle_signal(eventClone.payload()).await;
+                    if let Some(ans) = answer {
+                        app_clone.emit_all("webrtc-answer", ans.clone());
+                    }
+                });
+            });
+
+            let _id3 = app.listen_global("webrtc-icecandidate-server", move |event| {
+                println!("webrtc-signal {:?}", event);
+                let eventClone = event.clone();
+                let current = Handle::current();
+                let app_clone = app2_.clone();
+
+                let handleClone = strm2.clone();
+                tokio::spawn(async move {
+                    // Handle client's offer
+                    let answer = handleClone
+                        .clone()
+                        .handle_ice_candidate(eventClone.payload())
+                        .await;
+                });
+            });
+
+            // tokio::spawn(async move {
+            //     let handleClone = strm3.clone();
+            //     // Listen for ICE candidates
+            //     handleClone
+            //         .peer_connection
+            //         .on_ice_candidate(Box::new(move |c| {
+            //             println!("on_ice_candidate {:?}", c);
+            //             if let Some(cand) = c {
+            //                 // let candidate = serde_json::to_string(&cand.to_json().unwrap());
+
+            //                 app3_.emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
+            //             }
+            //             Box::pin(async {})
+            //         }));
+            // });
             // #[cfg(target_os = "macos")]
             // apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow)
             //   .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
@@ -749,15 +858,15 @@ fn main() {
             write_metadatas,
             scan_paths,
             get_lyrics,
-            get_file_size
+            get_file_size,
+            stream_file,
+            init_streamer
         ])
         .register_uri_scheme_protocol("stream", move |_app, request| {
             let boundary_id = Arc::new(Mutex::new(0));
 
-            let result = file_chunk_streamer::FileChunkHandler::get_stream_response(
-                request,
-                &boundary_id,
-            );
+            let result =
+                file_chunk_streamer::file_chunk_handler::get_stream_response(request, &boundary_id);
             // println!("File chunk handler: response: {:?}", result);
 
             if let Some(e) = &result.as_ref().err() {

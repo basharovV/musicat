@@ -99,15 +99,19 @@
                 {/if}
                 {#if isHovered || isPlayingCurrentAlbum}
                     <div class="play-button-container">
-                        <iconify-icon
+                        <div
                             class={$isPlaying && isPlayingCurrentAlbum
                                 ? "pause-button"
                                 : "play-button"}
                             on:click={playPauseToggle}
-                            icon={$isPlaying && isPlayingCurrentAlbum
-                                ? "fe:pause"
-                                : "fe:play"}
-                        />
+                        >
+                            <Icon
+                                icon={$isPlaying && isPlayingCurrentAlbum
+                                    ? "fe:pause"
+                                    : "fe:play"}
+                                size={25}
+                            />
+                        </div>
                     </div>
                 {/if}
             </div>

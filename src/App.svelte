@@ -37,6 +37,7 @@
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
     import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
+    import StreamDebugger from "./lib/player/StreamDebugger.svelte";
 
     startMenuListener();
     startImportListener();
@@ -185,6 +186,8 @@
 {#if showDropzone}
     <Dropzone />
 {/if}
+
+<StreamDebugger />
 
 <main class:mini-player={$isMiniPlayer}>
     <div class="sidebar">

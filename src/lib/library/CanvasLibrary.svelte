@@ -716,6 +716,7 @@
     let currentSongInView = false;
 
     function onDoubleClickSong(song, idx) {
+        AudioPlayer.shouldPlay = false;
         $currentSongIdx = idx;
         $playlist = $queriedSongs;
         $playlistIsAlbum = false;
@@ -930,6 +931,7 @@
             // 'Enter' to play highlighted track
             event.preventDefault();
             if (!$isTrackInfoPopupOpen) {
+                AudioPlayer.shouldPlay = false;
                 $playlist = $queriedSongs;
                 $playlistIsAlbum = false;
                 $currentSongIdx = highlightedSongIdx;
