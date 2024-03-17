@@ -301,6 +301,7 @@ interface StreamInfo {
     receiveRate: number, // in KB/s
     bufferedSamples: number,
     playedSamples: number,
-    timestamp: number // in s
+    timestamp: number, // in s
+    sampleIdx: number
     
 }

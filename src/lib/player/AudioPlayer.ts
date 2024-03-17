@@ -22,6 +22,7 @@ import { shuffleArray } from "../../utils/ArrayUtils";
 import FileStreamSource from "./FileStreamSource";
 
 import WebRTCReceiver from "./WebRTCReceiver";
+import { appWindow } from "@tauri-apps/api/window";
 
 const LOG_DATA = true;
 
@@ -113,6 +114,7 @@ class AudioPlayer {
         packetReceivedCounter: 0,
         totalPacketCounter: 0
     };
+    flowControlSendInterval;
 
     private constructor() {
         this.audioFile = new Audio();
@@ -134,42 +136,7 @@ class AudioPlayer {
         seekTime.subscribe((time) => {
             // Tell Rust to play file with seek position
             if (this.currentSong) this.playCurrent(time);
-           
         });
-
-        this.audioFile.addEventListener(
-            "pause",
-            (() => this.onPause(1)).bind(this)
-        );
-        this.audioFile.addEventListener(
-            "play",
-            (() => this.onPlay(1)).bind(this)
-        );
-        this.audioFile.addEventListener(
-            "ended",
-            (async () => this.onEnded(1)).bind(this)
-        );
-        this.audioFile.addEventListener(
-            "timeupdate",
-            (() => this.onTimeUpdate(1)).bind(this)
-        );
-
-        this.audioFile2.addEventListener(
-            "pause",
-            (() => this.onPause(2)).bind(this)
-        );
-        this.audioFile2.addEventListener(
-            "play",
-            (() => this.onPlay(2)).bind(this)
-        );
-        this.audioFile2.addEventListener(
-            "ended",
-            (() => this.onEnded(2)).bind(this)
-        );
-        this.audioFile2.addEventListener(
-            "timeupdate",
-            (async () => this.onTimeUpdate(1)).bind(this)
-        );
 
         // volume.set(this.audioFile.volume);
 
@@ -257,6 +224,20 @@ class AudioPlayer {
             localStorage.setItem("volume", String(vol));
         });
 
+        appWindow.listen(
+            "file-samples",
+            async (event) => {
+                console.log("file-samples", event);
+                console.log("audiosourcenode", this.audioSourceNode.port);
+                if (this.audioSourceNode) {
+                    // Let the worker know about the total number of samples in this track
+                    this.audioSourceNode.port.postMessage({
+                        type: "total-samples",
+                        totalSamples: event.payload
+                    });
+                }
+            }
+        );
         // this.setupAnalyserAudio();
     }
 
@@ -270,7 +251,7 @@ class AudioPlayer {
         let AudioContext = window.AudioContext || window.webkitAudioContext;
         this._audioContext = new AudioContext({
             sampleRate,
-            latencyHint: "interactive"
+            latencyHint: "playback"
         });
 
         console.log(
@@ -339,7 +320,11 @@ class AudioPlayer {
         if (this.webRTCReceiver.dataChannel?.readyState === "open") {
             this.webRTCReceiver.prepareForNewStream();
             invoke("stream_file", {
-                event: { path: this.currentSong.path, seek: position }
+                event: {
+                    path: this.currentSong.path,
+                    seek: position,
+                    file_info: this.currentSong.fileInfo
+                }
             });
         }
     }
@@ -349,7 +334,20 @@ class AudioPlayer {
     }
 
     async startAudioNodes(): Promise<boolean> {
-        if (this._audioContext) return false; // Already instantiated
+        // If the sample rate of the file is different we should recreate the audio context to match it.
+        let shouldRecreateContext =
+            this._audioContext?.sampleRate !==
+            this.currentSong.fileInfo.sampleRate;
+
+        if (shouldRecreateContext)
+            console.log(
+                "player::switching sample rate from " +
+                    this._audioContext?.sampleRate +
+                    " to " +
+                    this.currentSong.fileInfo.sampleRate
+            );
+
+        if (this._audioContext && !shouldRecreateContext) return false; // Already instantiated
 
         await this.setupAudioContext(this.currentSong.fileInfo.sampleRate);
         console.log("player::startAudioNodes()");
@@ -369,7 +367,7 @@ class AudioPlayer {
         if (this.audioSourceNode.port) {
             this.audioSourceNode.port.addEventListener(
                 "message",
-                (ev: MessageEvent) => {
+                async (ev: MessageEvent) => {
                     switch (ev.data.type) {
                         case "log":
                             console.log("audiosource::log", ev.data.text);
@@ -380,6 +378,12 @@ class AudioPlayer {
                                 ...s,
                                 bufferedSamples: ev.data.bufferedSamples
                             }));
+
+                            this.webRTCReceiver.doFlowControl(
+                                ev.data.bufferedSamples /
+                                    this.currentSong.fileInfo.sampleRate
+                            );
+
                             break;
                         case "played":
                             // console.log("audiosource::play");
@@ -389,12 +393,20 @@ class AudioPlayer {
                                     s.playedSamples + ev.data.playedSamples
                             }));
                             break;
+                        case "ended":
+                            console.log("audiosource::ended");
+                            await this.onEnded();
+                            // Play next track
+                            if (this.hasNext()) this.playNext();
+
+                            break;
                         case "timestamp":
-                            console.log("audiosource::timestamp", ev.data);
+                            // console.log("audiosource::timestamp", ev.data);
                             playerTime.set(ev.data.time);
                             streamInfo.update((s) => ({
                                 ...s,
-                                timestamp: ev.data.time
+                                timestamp: ev.data.time,
+                                sampleIdx: ev.data.sampleIdx
                             }));
                             break;
                     }
@@ -488,19 +500,6 @@ class AudioPlayer {
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "paused";
     }
-
-    onEnded(player: number) {
-        if (player === this.currentAudioFile) {
-            console.log("ENDED!");
-            isPlaying.set(false);
-            console.log("callback", this.isFinishedCallback);
-            this.isFinishedCallback && this.isFinishedCallback();
-            if (!this.isRunningTransition) this.onTimeUpdate(player, true);
-        } else {
-            // The other player has finished playing
-        }
-    }
-
     async appendChunk(chunk: Uint8Array) {
         if (this.sourceBuffer.updating) {
             this.sourceBuffer.addEventListener("updateend", () => {
@@ -567,6 +566,10 @@ class AudioPlayer {
 
     playCurrent(seek: number = 0) {
         this.playSong(this.playlist[this.currentSongIdx], seek);
+    }
+
+    hasNext() {
+        return this.currentSongIdx + 1 < this.playlist.length;
     }
 
     playNext() {
@@ -770,14 +773,41 @@ class AudioPlayer {
         }
     }
 
-    async play() {
+    async play(isResume: boolean) {
         if (this.audioSourceNode) {
             if (this._audioContext?.state === "suspended")
                 await this._audioContext.resume();
+            this.gainNode.gain.setTargetAtTime(
+                get(volume),
+                this._audioContext.currentTime,
+                0.015
+            );
+
             // this.oscillatorNode.start();
+            if (isResume) {
+                invoke("decode_control", {
+                    event: {
+                        decoding_active: true
+                    }
+                });
+            }
+            // Clear intervals first
+            if (this.ticker) clearInterval(this.ticker);
+            if (this.flowControlSendInterval)
+                clearInterval(this.flowControlSendInterval);
+
             this.ticker = setInterval(() => {
                 this.audioSourceNode.port.postMessage({
                     type: "timestamp-query"
+                });
+            }, 500);
+            this.flowControlSendInterval = setInterval(async () => {
+                // Send the bitrate to the sender for flow control
+                let receiveRate = get(streamInfo).receiveRate;
+                await invoke("flow_control", {
+                    event: {
+                        client_bitrate: receiveRate
+                    }
                 });
             }, 500);
             this.onPlay();
@@ -786,18 +816,48 @@ class AudioPlayer {
 
     async pause() {
         // this._audioSource.stop();
+        if (this._audioContext && this.gainNode) {
+            this.gainNode.gain.setTargetAtTime(
+                0,
+                this._audioContext.currentTime,
+                0.015
+            );
+        }
+        setTimeout(async () => {
+            this._audioContext?.state === "running" &&
+                (await this._audioContext.suspend());
+        }, 0.015);
+        
+        // this.oscillatorNode.stop();
+        invoke("decode_control", {
+            event: {
+                decoding_active: false
+            }
+        });
+        if (this.ticker) clearInterval(this.ticker);
+        if (this.flowControlSendInterval)
+            clearInterval(this.flowControlSendInterval);
+        this.onPause();
+    }
+
+    async onEnded() {
         this._audioContext?.state === "running" &&
             (await this._audioContext.suspend());
-        // this.oscillatorNode.stop();
         if (this.ticker) clearInterval(this.ticker);
-        this.onPause();
+        if (this.flowControlSendInterval)
+            clearInterval(this.flowControlSendInterval);
+        this.gainNode.gain.setTargetAtTime(
+            0,
+            this._audioContext.currentTime,
+            0.015
+        );
     }
 
     togglePlay() {
         if (get(isPlaying)) {
             this.pause();
         } else {
-            this.play();
+            this.play(true);
         }
     }
 

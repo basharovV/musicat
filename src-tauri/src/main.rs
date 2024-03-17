@@ -181,7 +181,7 @@ struct ScanPathsEvent {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-struct FileInfo {
+pub struct FileInfo {
     duration: Option<u64>, //s
     overall_bitrate: Option<u32>,
     audio_bitrate: Option<u32>,
@@ -240,13 +240,14 @@ struct ToImportEvent {
 
 #[tauri::command]
 async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
+    // println!("scan_paths", event);
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
 
     event.paths.par_iter().for_each(|p| {
         let path = Path::new(p.as_str());
+        println!("{:?}", path);
 
         if path.is_file() {
-            // println!("{:?}", entry.path());
             if let Some(song) = extract_metadata(&path) {
                 songs.lock().unwrap().push(song);
             }
@@ -368,6 +369,7 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                     if (tagged_file.tags().is_empty()) {
                         title = file.to_string();
                     }
+                    // println!("bit depth {:?}", tagged_file.properties().bit_depth());
                     file_info = FileInfo {
                         duration: Some(tagged_file.properties().duration().as_secs()),
                         channels: tagged_file.properties().channels(),
@@ -457,7 +459,7 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                         if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),
-                                format: pic.mime_type().to_string(),
+                                format: pic.mime_type().unwrap().to_string(),
                             })
                         }
                     }
@@ -708,15 +710,53 @@ fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct StreamFileRequest {
+pub struct StreamFileRequest {
     path: Option<String>,
-    seek: Option<f64>
+    seek: Option<f64>,
+    file_info: FileInfo,
 }
 
 #[tauri::command]
-fn stream_file(event: StreamFileRequest, state: State<AudioStreamer>) {
+fn stream_file(
+    event: StreamFileRequest,
+    state: State<AudioStreamer>,
+    _app_handle: tauri::AppHandle,
+) {
     println!("Stream file {:?}", event);
-    state.start_data_channel(event.path.unwrap(), event.seek);
+    state.stream_file(event, _app_handle);
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct FlowControlEvent {
+    client_bitrate: Option<f64>,
+    decoding_active: Option<bool>,
+}
+
+#[tauri::command]
+fn flow_control(event: FlowControlEvent, state: State<AudioStreamer>) {
+    println!("Received flow_control event");
+    match state.flow_control_sender.send(event) {
+        Ok(_) => {
+            // println!("Sent control flow info");
+        }
+        Err(err) => {
+            println!("Error sending flow control info (channel inactive");
+        }
+    }
+}
+
+#[tauri::command]
+fn decode_control(event: FlowControlEvent, state: State<AudioStreamer>) {
+    println!("Received decode control event: {:?}", event);
+    match event.decoding_active {
+        Some(true) => {
+            state.resume();
+        }
+        Some(false) => {
+            state.pause();
+        }
+        None => {}
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -860,7 +900,9 @@ async fn main() {
             get_lyrics,
             get_file_size,
             stream_file,
-            init_streamer
+            init_streamer,
+            flow_control,
+            decode_control
         ])
         .register_uri_scheme_protocol("stream", move |_app, request| {
             let boundary_id = Arc::new(Mutex::new(0));

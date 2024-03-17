@@ -3,15 +3,24 @@ import { appWindow } from "@tauri-apps/api/window";
 import type { StreamStatus } from "../../App";
 import { streamInfo } from "../../data/store";
 
+const THROUGHPUT_SAMPLE_SIZE = 10;
+
 export default class WebRTCReceiver {
     playerConnection: RTCPeerConnection;
     remoteConnection: RTCPeerConnection;
     dataChannel: RTCDataChannel;
     onSampleData: (samples: Uint8Array) => void;
     shouldRestart = false;
-    last10Packets: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    throughputSample: number[] = Array(THROUGHPUT_SAMPLE_SIZE).fill(0);
     lastSnapshotTime;
     packetCount = 0;
+
+    // Flow control (based on resume/pause decoding signals)
+    maxBufferSizeSeconds = 10; // When buffer goes past this length, pause decoding
+    minBufferSizeSeconds = 5; // When buffer decreases to this length, resume decoding
+    isFillingBuffer = true; // While decoding
+    currentBufferedSeconds = 0;
+
     constructor() {
         this.playerConnection = new RTCPeerConnection();
         this.init();
@@ -49,12 +58,12 @@ export default class WebRTCReceiver {
                     this.onSampleData && this.onSampleData(event.data);
 
                     // Calculate throughput
-                    this.last10Packets[this.packetCount] =
+                    this.throughputSample[this.packetCount] =
                         event.data.byteLength;
 
-                    if (this.packetCount === 9) {
+                    if (this.packetCount === THROUGHPUT_SAMPLE_SIZE - 1) {
                         // Calculate
-                        let totalBytes = this.last10Packets.reduce(
+                        let totalBytes = this.throughputSample.reduce(
                             (sum, p) => (sum += p),
                             0
                         );
@@ -62,11 +71,15 @@ export default class WebRTCReceiver {
                             performance.now() - this.lastSnapshotTime;
                         // If 148 bytes took 1.405s to send, that means the rate is
                         // 148 / 1405 = bytes per millisecond,  * 1000 = bytes per 1s
+                        // Times 8 to get kbits/sec
+                        console.log("total bytes", totalBytes, timeToSend);
+                        let receiveBitrate =
+                            ((totalBytes * 8) / timeToSend) * 1000;
                         streamInfo.update((s) => ({
                             ...s,
-                            receiveRate:
-                                (totalBytes / (timeToSend * 1000)) * 1024
+                            receiveRate: receiveBitrate
                         }));
+
                         this.packetCount = 0;
                         this.lastSnapshotTime = performance.now();
                     } else {
@@ -182,7 +195,7 @@ export default class WebRTCReceiver {
     }
 
     prepareForNewStream() {
-        this.last10Packets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        this.throughputSample = Array(THROUGHPUT_SAMPLE_SIZE).fill(0);
         this.packetCount = 0;
         streamInfo.update((s) => ({
             ...s,
@@ -191,5 +204,31 @@ export default class WebRTCReceiver {
             playedSamples: 0,
             bufferedSamples: 0
         }));
+    }
+
+    doFlowControl(bufferedTimeSeconds: number) {
+        if (
+            this.isFillingBuffer &&
+            bufferedTimeSeconds > this.maxBufferSizeSeconds
+        ) {
+            // Pause decoding for a bit
+            invoke("decode_control", {
+                event: {
+                    decoding_active: false
+                }
+            });
+            this.isFillingBuffer = false;
+        } else if (
+            !this.isFillingBuffer &&
+            bufferedTimeSeconds < this.minBufferSizeSeconds
+        ) {
+            // Resume decoding again
+            invoke("decode_control", {
+                event: {
+                    decoding_active: true
+                }
+            });
+            this.isFillingBuffer = true;
+        }
     }
 }

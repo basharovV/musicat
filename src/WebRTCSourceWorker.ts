@@ -25,9 +25,9 @@ function convertUInt8ToFloat32(buffer: ArrayBuffer) {
         // var uint16Value = (uint8Array[i + 1] << 8) + uint8Array[i];
         // var normalized = uint16Value / 0x8000;
         // if (normalized < 0x8000) {
+        // Convert to a float value in the range of -1 to 1
     }
-    // Convert to a float value in the range of -1 to 1
-    float32Array[i] = float32Array[floatIdx] / 0x8000;
+    // float32Array[i] = float32Array[i] / 0x8000;
 
     floatIdx++;
 
@@ -58,8 +58,10 @@ class WebRTCReceiverProcessor extends AudioWorkletProcessor {
     ringBuffer: RingBuffer = new RingBuffer(44100 * 2 * 200, 2);
     shouldStart = false;
     sampleIdx = 0; // Multiply by sample rate to get the current timestamp
-    sampleRate = 0; 
-
+    sampleRate = 0;
+    totalSamples = 0;
+    sampleCounter = 0;
+    sampleCounterInterval = 30;
     constructor(options: AudioSourceNodeOptions) {
         super(options);
         try {
@@ -82,10 +84,6 @@ class WebRTCReceiverProcessor extends AudioWorkletProcessor {
                         if (this.ringBuffer.framesAvailable >= 1024) {
                             this.shouldStart = true;
                         }
-                        this.port.postMessage({
-                            type: "buffer",
-                            bufferedSamples: this.ringBuffer.framesAvailable
-                        });
                         break;
                     case "reset":
                         this.shouldStart = false;
@@ -95,9 +93,17 @@ class WebRTCReceiverProcessor extends AudioWorkletProcessor {
                     case "timestamp-query":
                         this.port.postMessage({
                             type: "timestamp",
-                            time: (this.sampleIdx / this.sampleRate)
-                        })
-
+                            time: this.sampleIdx / this.sampleRate,
+                            sampleIdx: this.sampleIdx
+                        });
+                        this.port.postMessage({
+                            type: "buffer",
+                            bufferedSamples: this.ringBuffer.framesAvailable
+                        });
+                        break;
+                    case "total-samples":
+                        this.totalSamples = obj.totalSamples;
+                        break;
                     default:
                     // Nothing to do
                 }
@@ -141,21 +147,36 @@ class WebRTCReceiverProcessor extends AudioWorkletProcessor {
         try {
             if (this.shouldStart && this.ringBuffer.framesAvailable >= 128) {
                 this.ringBuffer.pull(output);
-
-                this.port.postMessage({
-                    type: "played",
-                    playedSamples: 128
-                });
+                this.sampleCounter =
+                    this.sampleCounter + 1 === this.sampleCounterInterval
+                        ? 0
+                        : this.sampleCounter + 1;
+                if (this.sampleCounter === this.sampleCounterInterval - 1) {
+                    this.port.postMessage({
+                        type: "played",
+                        playedSamples: 128
+                    });
+                }
                 // this.port.postMessage({
                 //     type: "log",
                 //     text: "playing: " + outputs[0]
                 // });
                 this.sampleIdx = this.sampleIdx + 128;
-            } else {
-                for (let i = 0; i < 128; i++) {
-                    output[0][i] = 0;
-                    output[1][i] = 0;
-                }
+            } else if (
+                this.shouldStart &&
+                this.ringBuffer.framesAvailable < 128
+            ) {
+                this.ringBuffer.pull(output);
+                this.shouldStart = false;
+                this.port.postMessage({
+                    type: "log",
+                    text: `sample: ${this.sampleIdx}, total: ${this.totalSamples}`
+                });
+            }
+            if (this.sampleIdx > this.totalSamples) {
+                this.port.postMessage({
+                    type: "ended"
+                });
             }
         } catch (err) {
             this.port.postMessage({

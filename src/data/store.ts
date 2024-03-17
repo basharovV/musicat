@@ -224,7 +224,8 @@ export const streamInfo: Writable<StreamInfo> = writable({
     receiveRate: 0,
     bufferedSamples: 0,
     playedSamples: 0,
-    timestamp: 0 
+    timestamp: 0 ,
+    sampleIdx: 0
 });
 
 getOs();
