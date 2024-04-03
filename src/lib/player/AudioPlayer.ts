@@ -219,25 +219,33 @@ class AudioPlayer {
             this.currentSongIdx = idx;
         });
 
-        volume.subscribe((vol) => {
-            if (this.gainNode) this.gainNode.gain.value = vol * 0.75;
+        volume.subscribe(async (vol) => {
+            // if (this.gainNode) this.gainNode.gain.value = vol * 0.75;
+            await invoke("volume_control", {
+                event: {
+                    volume: vol * 0.75
+                }
+            });
             localStorage.setItem("volume", String(vol));
         });
 
-        appWindow.listen(
-            "file-samples",
-            async (event) => {
-                console.log("file-samples", event);
-                console.log("audiosourcenode", this.audioSourceNode.port);
-                if (this.audioSourceNode) {
-                    // Let the worker know about the total number of samples in this track
-                    this.audioSourceNode.port.postMessage({
-                        type: "total-samples",
-                        totalSamples: event.payload
-                    });
-                }
+        // TODO: Remove
+        appWindow.listen("file-samples", async (event) => {
+            console.log("file-samples", event);
+            console.log("audiosourcenode", this.audioSourceNode.port);
+            if (this.audioSourceNode) {
+                // Let the worker know about the total number of samples in this track
+                this.audioSourceNode.port.postMessage({
+                    type: "total-samples",
+                    totalSamples: event.payload
+                });
             }
-        );
+        });
+
+        appWindow.listen("timestamp", async (event) => {
+            console.log("timestamp", event);
+            playerTime.set(event.payload);
+        });
         // this.setupAnalyserAudio();
     }
 
@@ -402,7 +410,7 @@ class AudioPlayer {
                             break;
                         case "timestamp":
                             // console.log("audiosource::timestamp", ev.data);
-                            playerTime.set(ev.data.time);
+                            // playerTime.set(ev.data.time);
                             streamInfo.update((s) => ({
                                 ...s,
                                 timestamp: ev.data.time,
@@ -827,7 +835,7 @@ class AudioPlayer {
             this._audioContext?.state === "running" &&
                 (await this._audioContext.suspend());
         }, 0.015);
-        
+
         // this.oscillatorNode.stop();
         invoke("decode_control", {
             event: {

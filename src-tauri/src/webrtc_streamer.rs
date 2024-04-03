@@ -30,7 +30,7 @@ pub mod web_rtcstreamer {
     use symphonia::core::meta::MetadataOptions;
     use symphonia::core::probe::{Hint, Probe};
     use symphonia::core::units::Time;
-    use symphonia::default::register_enabled_formats;
+    use symphonia::default::{get_probe, register_enabled_formats};
     use tauri::{AppHandle, Manager};
     use tokio::select;
     use tokio::sync::Mutex;
@@ -53,7 +53,7 @@ pub mod web_rtcstreamer {
     use webrtc::peer_connection::{math_rand_alpha, RTCPeerConnection};
 
     use crate::output::{self, AudioOutput};
-    use crate::{FileInfo, FlowControlEvent, StreamFileRequest};
+    use crate::{FileInfo, FlowControlEvent, SampleOffsetEvent, StreamFileRequest, VolumeControlEvent};
 
     enum SeekPosition {
         Time(f64),
@@ -76,12 +76,15 @@ pub mod web_rtcstreamer {
         pub flow_control_sender: Sender<FlowControlEvent>,
         pub decoding_active: Arc<AtomicU32>,
         pub audio_output: Arc<Mutex<Option<Box<dyn output::AudioOutput + Send + Sync>>>>,
+        pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
+        pub volume_control_sender: Sender<VolumeControlEvent>,
     }
 
     impl<'a> AudioStreamer<'a> {
         pub async fn create() -> Result<AudioStreamer<'a>, Box<dyn std::error::Error + Send + Sync>>
         {
             let (sender_tx, receiver_rx) = std::sync::mpsc::channel();
+            let (sender_vol, receiver_vol) = std::sync::mpsc::channel();
 
             Ok(AudioStreamer {
                 peer_connection: Arc::new(Mutex::new(None)),
@@ -95,6 +98,8 @@ pub mod web_rtcstreamer {
                 flow_control_sender: sender_tx,
                 decoding_active: Arc::new(AtomicU32::new(ACTIVE)),
                 audio_output: Arc::new(Mutex::new(None)),
+                volume_control_receiver: Arc::new(Mutex::new(receiver_vol)),
+                volume_control_sender: sender_vol,
             })
         }
 
@@ -227,6 +232,7 @@ pub mod web_rtcstreamer {
             tokens.insert(path.clone(), token.clone());
             let decoding_active = self.decoding_active.clone();
             let receiver = self.flow_control_receiver.clone();
+            let vol_receiver = self.volume_control_receiver.clone();
 
             tokio::spawn(async move {
                 decoding_active.store(ACTIVE, std::sync::atomic::Ordering::Relaxed);
@@ -248,6 +254,7 @@ pub mod web_rtcstreamer {
                     request.seek,
                     request.file_info,
                     receiver,
+                    vol_receiver,
                     decoding_active,
                     app_handle,
                 )
@@ -342,6 +349,7 @@ pub mod web_rtcstreamer {
         seek: Option<f64>,
         file_info: FileInfo,
         flow_control_receiver: Arc<Mutex<Receiver<FlowControlEvent>>>,
+        volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
         decoding_active: Arc<AtomicU32>,
         app_handle: AppHandle,
     ) -> symphonia::core::errors::Result<i32> {
@@ -372,8 +380,8 @@ pub mod web_rtcstreamer {
 
         // Use the default options for metadata readers.
         let metadata_opts: MetadataOptions = MetadataOptions {
-            limit_metadata_bytes: symphonia::core::meta::Limit::Maximum(32),
-            limit_visual_bytes: symphonia::core::meta::Limit::Maximum(32),
+            limit_metadata_bytes: symphonia::core::meta::Limit::Maximum(0),
+            limit_visual_bytes: symphonia::core::meta::Limit::Maximum(0),
         };
 
         // Get the value of the track option, if provided.
@@ -381,9 +389,9 @@ pub mod web_rtcstreamer {
         println!("probing {:?}", hint);
         println!("opts {:?}", format_opts);
         println!("meta {:?}", metadata_opts);
-        let mut probe: Probe = Default::default();
-        register_enabled_formats(&mut probe);
-        let probe_result = probe.format(&hint, mss, &format_opts, &metadata_opts);
+        // let mut probe: Probe = Default::default();
+        // register_enabled_formats(&mut probe);
+        let probe_result = get_probe().format(&hint, mss, &format_opts, &metadata_opts);
         println!("probe format {:?}", probe_result.is_ok());
 
         // Verify-only mode decodes and verifies the audio, but does not play it.
@@ -407,6 +415,7 @@ pub mod web_rtcstreamer {
                     seek,
                     file_info,
                     flow_control_receiver,
+                    volume_control_receiver,
                     decoding_active,
                     app_handle
                 ) => {
@@ -432,6 +441,7 @@ pub mod web_rtcstreamer {
         seek: Option<f64>,
         file_info: FileInfo,
         flow_control_receiver: Arc<Mutex<Receiver<FlowControlEvent>>>,
+        volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
         decoding_active: Arc<AtomicU32>,
         app_handle: AppHandle,
     ) -> symphonia::core::errors::Result<()> {
@@ -513,6 +523,12 @@ pub mod web_rtcstreamer {
 
         let mut audio_output = None;
 
+        let mut last_ticker_time = Instant::now();
+        let (sender_sample_offset, receiver_sample_offset) = std::sync::mpsc::channel();
+
+        sender_sample_offset.send(SampleOffsetEvent { sample_offset: Some(seek_ts * file_info.channels.unwrap() as u64) });
+        let sample_offset_receiver = Arc::new(Mutex::new(receiver_sample_offset));
+
         // Decode all packets, ignoring all decode errors.
         let result = loop {
             atomic_wait::wait(&decoding_active, PAUSED); // waits while the value is PAUSED (0)
@@ -546,10 +562,15 @@ pub mod web_rtcstreamer {
                     // length! The capacity of the decoded buffer is constant for the life of the
                     // decoder, but the length is not.
                     let duration = _decoded.capacity() as u64;
-
                     if audio_output.is_none() {
                         // Try to open the audio output.
-                        audio_output.replace(output::try_open(spec, duration));
+                        audio_output.replace(output::try_open(
+                            spec,
+                            duration,
+                            volume_control_receiver.clone(),
+                            sample_offset_receiver.clone(),
+                            app_handle.clone()
+                        ));
                     }
 
                     let frames = _decoded.frames();
@@ -573,6 +594,8 @@ pub mod web_rtcstreamer {
 
                     // Calculate decode/send rate
                     let elapsed = last_sent_time.elapsed();
+                    let ticker_elapsed = last_ticker_time.elapsed();
+
                     if (packet_counter % 20 == 0) {
                         if (is_first_packet) {
                             // Target time between packets = bitrate
@@ -607,43 +630,6 @@ pub mod web_rtcstreamer {
                             "decode rate (seconds): {:.2} kb/s",
                             decode_rate_second / 1000f64
                         );
-
-                        // Adjust the send interval based on signals from the client
-                        match flow_control_receiver.try_lock().unwrap().try_recv() {
-                            Ok(ev) => {
-                                // Calculate the ratio between the playback bitrate
-                                // and the receive rate on the client
-                                let ratio = (ev.client_bitrate.unwrap()) / target_bitrate as f64;
-                                println!("Received client bitrate: {:?}", ev);
-                                println!("Client is receiving at {:.2}x the playback speed", ratio);
-
-                                // Adjust the send interval
-                                // Saturate at 0 instead of overflowing to negative - this means the client is receiving slower than we can send
-                                // and we can't send faster than the decoder is decoding, so the interval is zero.
-
-                                println!(
-                                    "Send interval is {:?} microseconds",
-                                    send_interval.as_micros()
-                                );
-                                send_interval = send_interval.mul_f64(ratio);
-
-                                println!(
-                                    "New Send interval is {:?} microseconds",
-                                    send_interval.as_micros()
-                                );
-                                send_interval = send_interval
-                                    .min(fastest_send_interval)
-                                    .max(slowest_send_interval);
-
-                                println!(
-                                    "Limited interval is {:?} microseconds",
-                                    send_interval.as_micros()
-                                );
-                            }
-                            Err(err) => {
-                                println!("Error receiving client bitrate: {:?}", err);
-                            }
-                        }
                     }
 
                     last_sent_time = Instant::now();

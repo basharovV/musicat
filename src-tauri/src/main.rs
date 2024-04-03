@@ -31,9 +31,9 @@ use webrtc_streamer::web_rtcstreamer::{self, AudioStreamer};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 mod decoder;
 mod file_chunk_streamer;
-mod webrtc_streamer;
 mod output;
 mod resampler;
+mod webrtc_streamer;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct MetadataEntry {
@@ -729,6 +729,30 @@ fn stream_file(
     state.stream_file(event, _app_handle);
 }
 
+    
+#[derive(Clone, Debug)]
+pub struct SampleOffsetEvent {
+    pub sample_offset: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VolumeControlEvent {
+    volume: Option<f64>, // 0 to 1
+}
+
+#[tauri::command]
+fn volume_control(event: VolumeControlEvent, state: State<AudioStreamer>) {
+    println!("Received volume_control event");
+    match state.volume_control_sender.send(event) {
+        Ok(_) => {
+            // println!("Sent control flow info");
+        }
+        Err(err) => {
+            println!("Error sending volume control info (channel inactive");
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FlowControlEvent {
     client_bitrate: Option<f64>,
@@ -737,15 +761,15 @@ pub struct FlowControlEvent {
 
 #[tauri::command]
 fn flow_control(event: FlowControlEvent, state: State<AudioStreamer>) {
-    println!("Received flow_control event");
-    match state.flow_control_sender.send(event) {
-        Ok(_) => {
-            // println!("Sent control flow info");
-        }
-        Err(err) => {
-            println!("Error sending flow control info (channel inactive");
-        }
-    }
+    // println!("Received flow_control event");
+    // match state.flow_control_sender.send(event) {
+    //     Ok(_) => {
+    //         // println!("Sent control flow info");
+    //     }
+    //     Err(err) => {
+    //         println!("Error sending flow control info (channel inactive");
+    //     }
+    // }
 }
 
 #[tauri::command]
@@ -905,7 +929,8 @@ async fn main() {
             stream_file,
             init_streamer,
             flow_control,
-            decode_control
+            decode_control,
+            volume_control
         ])
         .register_uri_scheme_protocol("stream", move |_app, request| {
             let boundary_id = Arc::new(Mutex::new(0));

@@ -167,20 +167,25 @@ mod pulseaudio {
 
 #[cfg(not(target_os = "linux"))]
 mod cpal {
-    use std::sync::Arc;
+    use std::ops::Mul;
+    use std::sync::mpsc::Receiver;
+    use std::sync::{Arc, RwLock};
+    use std::time::Duration;
 
     use crate::resampler::Resampler;
+    use crate::{SampleOffsetEvent, VolumeControlEvent};
 
     use super::{AudioOutput, AudioOutputError, Result};
 
     use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
     use symphonia::core::conv::{ConvertibleSample, IntoSample};
-    use symphonia::core::units::Duration;
+    use symphonia::core::units::TimeBase;
 
     use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
     use rb::*;
 
     use log::{error, info};
+    use tauri::{AppHandle, Manager};
     use tokio::sync::Mutex;
 
     pub struct CpalAudioOutput;
@@ -203,7 +208,10 @@ mod cpal {
     impl CpalAudioOutput {
         pub fn try_open(
             spec: SignalSpec,
-            duration: Duration,
+            duration: symphonia::core::units::Duration,
+            volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
+            sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
+            app_handle: AppHandle
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             // Get default host.
             let host = cpal::default_host();
@@ -229,16 +237,42 @@ mod cpal {
 
             // Select proper playback routine based on sample format.
             match config.sample_format() {
-                cpal::SampleFormat::F32 => {
-                    CpalAudioOutputImpl::<f32>::try_open(spec, duration, &device)
-                }
-                cpal::SampleFormat::I16 => {
-                    CpalAudioOutputImpl::<i16>::try_open(spec, duration, &device)
-                }
-                cpal::SampleFormat::U16 => {
-                    CpalAudioOutputImpl::<u16>::try_open(spec, duration, &device)
-                }
-                _ => CpalAudioOutputImpl::<f32>::try_open(spec, duration, &device),
+                cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::try_open(
+                    spec,
+                    duration,
+                    &device,
+                    volume_control_receiver,
+                    sample_offset_receiver,
+                    |packet, volume| ((packet as f64) * volume) as f32,
+                    app_handle
+                ),
+                cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(
+                    spec,
+                    duration,
+                    &device,
+                    volume_control_receiver,
+                    sample_offset_receiver,
+                    |packet, volume| ((packet as f64) * volume) as i16,
+                    app_handle
+                ),
+                cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(
+                    spec,
+                    duration,
+                    &device,
+                    volume_control_receiver,
+                    sample_offset_receiver,
+                    |packet, volume| ((packet as f64) * volume) as u16,
+                    app_handle
+                ),
+                _ => CpalAudioOutputImpl::<f32>::try_open(
+                    spec,
+                    duration,
+                    &device,
+                    volume_control_receiver,
+                    sample_offset_receiver,
+                    |packet, volume| ((packet as f64) * volume) as f32,
+                    app_handle
+                ),
             }
         }
     }
@@ -253,11 +287,24 @@ mod cpal {
         resampler: Option<Resampler<T>>,
     }
 
+    fn change_volume<T>(data: &mut [T], volume: Option<f64>)
+    where
+        T: Mul<f64, Output = T> + Copy,
+    {
+        for d in data {
+            *d = *d * volume.unwrap_or(0.5f64);
+        }
+    }
+
     impl<T: AudioOutputSample + Send + Sync> CpalAudioOutputImpl<T> {
         pub fn try_open(
             spec: SignalSpec,
-            duration: Duration,
+            duration: symphonia::core::units::Duration,
             device: &cpal::Device,
+            volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
+            sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
+            volume_change: fn(T, f64) -> T,
+            app_handle: AppHandle
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
 
@@ -276,18 +323,78 @@ mod cpal {
                     .config()
             };
 
+            let time_base = TimeBase {
+                numer: 1,
+                denom: config.sample_rate.0 * config.channels as u32,
+            };
+
             // Create a ring buffer with a capacity for up-to 200ms of audio.
             let ring_len = ((200 * config.sample_rate.0 as usize) / 1000) * num_channels;
 
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
+            // States
+            let volume_state = Arc::new(RwLock::new(0.5f64));
+            let frame_idx_state = Arc::new(RwLock::new(0));
+            let elapsed_time_state = Arc::new(RwLock::new(0));
+
             let stream_result = device.build_output_stream(
                 &config,
                 move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
+                    // Get volume
+                    let volume = volume_control_receiver.try_lock().unwrap().try_recv();
+                    if let Ok(vol) = volume {
+                        println!("Got volume: {:?}", vol);
+                        let mut current_volume = volume_state.write().unwrap();
+                        *current_volume = vol.volume.unwrap();
+                    }
+
+                    let current_volume = { *volume_state.read().unwrap() };
+                    // println!("Current volume: {:?}", current_volume);
+
                     // Write out as many samples as possible from the ring buffer to the audio
                     // output.
                     let written = ring_buf_consumer.read(data).unwrap_or(0);
+
+                    let sample_offset = sample_offset_receiver.try_lock().unwrap().try_recv();
+
+                    if let Ok(offset) = sample_offset {
+                        println!("Got sample offset: {:?}", offset);
+                        let mut current_sample_offset = frame_idx_state.write().unwrap();
+                        *current_sample_offset = offset.sample_offset.unwrap();
+                    }
+
+                    let mut i = 0;
+                    for d in &mut *data {
+                        *d = volume_change(*d, current_volume);
+                        i += 1;
+                    }
+
+                    // new offset
+                    let new_sample_offset = {
+                        let mut sample_offset = frame_idx_state.write().unwrap();
+                        *sample_offset += i;
+                        *sample_offset
+                    };
+                    // new duration
+                    let next_duration = time_base.calc_time(new_sample_offset as u64).seconds;
+                    // println!("Next duration: {:?}", next_duration);
+
+                    let prev_duration = { *elapsed_time_state.read().unwrap() };
+
+                    // update duration if seconds changed
+                    if prev_duration != next_duration {
+                        let new_duration = Duration::from_secs(next_duration);
+
+                        app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
+
+                        // if let Some(stream_tx) = stream_tx.as_ref() {
+                        //     let _ = stream_tx.send(StreamEvent::Progress(new_duration));
+                        // }
+                        let mut duration = elapsed_time_state.write().unwrap();
+                        *duration = new_duration.as_secs();
+                    }
 
                     // Mute any remaining samples.
                     data[written..].iter_mut().for_each(|s| *s = T::MID);
@@ -388,6 +495,20 @@ pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOut
 pub fn try_open(
     spec: SignalSpec,
     duration: Duration,
+    volume_control_receiver: std::sync::Arc<
+        tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::VolumeControlEvent>>,
+    >,
+    sample_offset_receiver: std::sync::Arc<
+        tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::SampleOffsetEvent>>,
+    >,
+    app_handle: tauri::AppHandle
 ) -> Result<std::sync::Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
-    cpal::CpalAudioOutput::try_open(spec, duration)
+
+    cpal::CpalAudioOutput::try_open(
+        spec,
+        duration,
+        volume_control_receiver,
+        sample_offset_receiver,
+        app_handle
+    )
 }
