@@ -39,6 +39,10 @@ bytes = "1.5.0"
 tokio-util = "0.7.10"
 ringbuffer = "0.15.0"
 atomic-wait = "1.1.0"
+cpal = "0.15.3"
+rb = "0.4.1"
+rubato = "0.15.0"
+arrayvec = "0.7.4"
 
 [features]
 # by default Tauri runs in production mode

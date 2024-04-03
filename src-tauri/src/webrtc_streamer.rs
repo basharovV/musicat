@@ -22,7 +22,7 @@ pub mod web_rtcstreamer {
     use atomic_wait::{wake_all, wake_one};
     use bytes::Bytes;
     use log::{error, info, warn};
-    use symphonia::core::audio::RawSampleBuffer;
+    use symphonia::core::audio::{Layout, RawSampleBuffer, SignalSpec};
     use symphonia::core::codecs::{DecoderOptions, FinalizeResult, CODEC_TYPE_NULL};
     use symphonia::core::errors::Error::ResetRequired;
     use symphonia::core::formats::{FormatOptions, FormatReader, SeekTo, Track};
@@ -52,6 +52,7 @@ pub mod web_rtcstreamer {
     use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
     use webrtc::peer_connection::{math_rand_alpha, RTCPeerConnection};
 
+    use crate::output::{self, AudioOutput};
     use crate::{FileInfo, FlowControlEvent, StreamFileRequest};
 
     enum SeekPosition {
@@ -74,6 +75,7 @@ pub mod web_rtcstreamer {
         pub flow_control_receiver: Arc<Mutex<Receiver<FlowControlEvent>>>,
         pub flow_control_sender: Sender<FlowControlEvent>,
         pub decoding_active: Arc<AtomicU32>,
+        pub audio_output: Arc<Mutex<Option<Box<dyn output::AudioOutput + Send + Sync>>>>,
     }
 
     impl<'a> AudioStreamer<'a> {
@@ -92,6 +94,7 @@ pub mod web_rtcstreamer {
                 flow_control_receiver: Arc::new(Mutex::new(receiver_rx)),
                 flow_control_sender: sender_tx,
                 decoding_active: Arc::new(AtomicU32::new(ACTIVE)),
+                audio_output: Arc::new(Mutex::new(None)),
             })
         }
 
@@ -224,6 +227,7 @@ pub mod web_rtcstreamer {
             tokens.insert(path.clone(), token.clone());
             let decoding_active = self.decoding_active.clone();
             let receiver = self.flow_control_receiver.clone();
+
             tokio::spawn(async move {
                 decoding_active.store(ACTIVE, std::sync::atomic::Ordering::Relaxed);
 
@@ -507,6 +511,8 @@ pub mod web_rtcstreamer {
         let mut is_first_packet = true;
         let mut send_interval = Duration::from_millis(1); // Initial send interval
 
+        let mut audio_output = None;
+
         // Decode all packets, ignoring all decode errors.
         let result = loop {
             atomic_wait::wait(&decoding_active, PAUSED); // waits while the value is PAUSED (0)
@@ -527,9 +533,25 @@ pub mod web_rtcstreamer {
             if packet.track_id() != track_id {
                 continue;
             }
+
             // Decode the packet into audio samples.
             match decoder.decode(&packet) {
                 Ok(_decoded) => {
+                    // If the audio output is not open, try to open it.
+                    // Get the audio buffer specification. This is a description of the decoded
+                    // audio buffer's sample format and sample rate.
+                    let spec = *_decoded.spec();
+
+                    // Get the capacity of the decoded buffer. Note that this is capacity, not
+                    // length! The capacity of the decoded buffer is constant for the life of the
+                    // decoder, but the length is not.
+                    let duration = _decoded.capacity() as u64;
+
+                    if audio_output.is_none() {
+                        // Try to open the audio output.
+                        audio_output.replace(output::try_open(spec, duration));
+                    }
+
                     let frames = _decoded.frames();
                     // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
                     let mut sample_buf =
@@ -537,7 +559,7 @@ pub mod web_rtcstreamer {
 
                     // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
                     // any required conversions.
-                    sample_buf.copy_interleaved_ref(_decoded);
+                    // sample_buf.copy_interleaved_ref(_decoded);
 
                     // The interleaved f32 samples can be accessed as a slice of bytes as follows.
                     // sample_buf.as_bytes().to_vec().iter().for_each(|b| {
@@ -631,18 +653,29 @@ pub mod web_rtcstreamer {
                         && !cancel_token.is_cancelled())
                     {
                         thread::sleep(send_interval);
-                        match data_channel
-                            .send(&Bytes::from(sample_buf.as_bytes().to_vec()))
-                            .await
-                        {
-                            Ok(packet) => {
-                                // Sent! Can clear to_send now for the next chunk
-                                to_send.clear();
+                        // Write the decoded audio samples to the audio output if the presentation timestamp
+                        // for the packet is >= the seeked position (0 if not seeking).
+                        if packet.ts() >= seek_ts {
+                            if let Some(ref audio_result) = audio_output {
+                                if let Ok(audio_guard) = audio_result {
+                                    if let Ok(mut audio_out) = audio_guard.try_lock() {
+                                        audio_out.write(_decoded).unwrap()
+                                    }
+                                }
                             }
-                            Err(err) => {
-                                println!("Error sending {:?}", err);
-                            }
-                        };
+                        }
+                        // match data_channel
+                        //     .send(&Bytes::from(sample_buf.as_bytes().to_vec()))
+                        //     .await
+                        // {
+                        //     Ok(packet) => {
+                        //         // Sent! Can clear to_send now for the next chunk
+                        //         to_send.clear();
+                        //     }
+                        //     Err(err) => {
+                        //         println!("Error sending {:?}", err);
+                        //     }
+                        // };
                     }
 
                     continue;

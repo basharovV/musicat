@@ -32,6 +32,9 @@ use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 mod decoder;
 mod file_chunk_streamer;
 mod webrtc_streamer;
+mod output;
+mod resampler;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct MetadataEntry {
     id: String,
@@ -459,7 +462,7 @@ fn extract_metadata(file_path: &Path) -> Option<Song> {
                         if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),
-                                format: pic.mime_type().unwrap().to_string(),
+                                format: pic.mime_type().to_string(),
                             })
                         }
                     }
