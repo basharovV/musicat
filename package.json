@@ -53,7 +53,9 @@
     "@tauri-apps/api": "^1.5.1",
     "@tauri-apps/cli-win32-x64-msvc": "^1.5.9",
     "is-dark-color": "^1.2.0",
+    "mousetrap": "^1.6.5",
     "music-metadata-browser": "^2.5.8",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "svrollbar": "^0.12.0"
   }
 }
