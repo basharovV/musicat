@@ -201,6 +201,8 @@ export const isLyricsOpen = writable(false);
 export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
+export const isQueueOpen = writable(false);
+
 async function getOs() {
     const osType = await type();
 

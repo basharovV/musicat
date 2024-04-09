@@ -11,11 +11,14 @@
         importStatus,
         isFolderWatchUpdate,
         isLyricsOpen,
+        isQueueOpen,
         nextUpSong
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
     import SpectrumAnalyzer from "../player/SpectrumAnalyzer.svelte";
+    import { liveQuery } from "dexie";
+    import { db } from "../../data/db";
 
     export let counts;
 
@@ -28,6 +31,20 @@
 
     let showVisualiser = true;
     let visualiserWidth = 0;
+
+
+    $: counts = liveQuery(() => {
+        return db.transaction("r", db.songs, async () => {
+            const artists = await (
+                await db.songs.orderBy("artist").uniqueKeys()
+            ).length;
+            const albums = await (
+                await db.songs.orderBy("album").uniqueKeys()
+            ).length;
+            const songs = await db.songs.count();
+            return { songs, artists, albums };
+        });
+    });
 
     function onResize() {
         // calculate remaining space for spectroscope visualizer
@@ -47,7 +64,18 @@
     <div class="left" data-tauri-drag-region>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div
-            class="lyrics"
+            class="toggle-button"
+            class:selected={$isQueueOpen}
+            on:click={() => {
+                $isQueueOpen = !$isQueueOpen;
+            }}
+        >
+            <Icon icon="mdi:playlist-music" size={14} />
+            <p>Queue</p>
+        </div>
+        <div
+            class="toggle-button"
+            class:selected={$isLyricsOpen}
             on:click={() => {
                 $isLyricsOpen = !$isLyricsOpen;
             }}
@@ -206,7 +234,7 @@
                 }
             }
 
-            .lyrics {
+            .toggle-button {
                 display: flex;
                 flex-direction: row;
                 align-items: center;
@@ -217,15 +245,30 @@
                 border-radius: 4px;
                 padding: 0 4px;
                 margin-right: 8px;
+                position: relative;
                 &:hover {
                     background-color: rgba(128, 128, 128, 0.191);
                 }
                 &:active {
                     background-color: rgba(128, 128, 128, 0.391);
                 }
+                &.selected {
+                    border: 1px solid white;
+                    ::before {
+                      
+                        position: absolute;
+                        top: -11px;
+                        left: 0;
+                        right: 0;
+                        margin:0 auto;
+                        height: 10px;
+                        width: 1.5px;
+                        background-color: white;
+                    }
+                }
                 p {
                     color: rgb(224, 218, 218);
-                    margin: 0;
+                    margin: 0 0 1px 0;
                     line-height: normal;
                 }
             }

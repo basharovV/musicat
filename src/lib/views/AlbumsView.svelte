@@ -66,19 +66,6 @@
         }
     }
 
-    $: counts = liveQuery(() => {
-        return db.transaction("r", db.songs, async () => {
-            const artists = await (
-                await db.songs.orderBy("artist").uniqueKeys()
-            ).length;
-            const albums = await (
-                await db.songs.orderBy("album").uniqueKeys()
-            ).length;
-            const songs = await db.songs.count();
-            return { songs, artists, albums };
-        });
-    });
-
     let isCurrentAlbumInView = false;
     let currentAlbum: Album;
     let currentAlbumElement: HTMLDivElement;
@@ -100,8 +87,8 @@
             .anyOf(currentAlbum.tracksIds)
             .sortBy("trackNumber");
 
-        $albumPlaylist = tracks;
-        $playlistIsAlbum = true;
+        // $albumPlaylist = tracks;
+        // $playlistIsAlbum = true;
 
         // Scroll to album
         currentAlbumElement = document.querySelector(
@@ -195,7 +182,7 @@
         };
     }
 
-    let minWidth = 220;
+    let minWidth = 200;
 
     $: count = $query.query?.length ? queriedAlbums?.length : $albums?.length;
 
@@ -267,33 +254,6 @@
                 /></label
             >
         </div>
-
-        {#if $playlist?.length && $playlistIsAlbum}
-            <div class="now-playing" in:fly={{ duration: 200, x: -200 }}>
-                <h1>Now playing</h1>
-                <div class="album-info">
-                    <p>{$currentSong.album}</p>
-                    <p>{$currentSong.artist}</p>
-                </div>
-                <div class="tracks">
-                    {#each $albumPlaylist as track, idx}
-                        <div
-                            class="track"
-                            class:playing={$currentSong.id === track.id}
-                            on:click={() => {
-                                audioPlayer.playSong(track);
-                            }}
-                        >
-                            <p>{idx + 1}.</p>
-                            <p>{track.title}</p>
-                            {#if $currentSong.id === track.id}<iconify-icon
-                                    icon="heroicons-solid:volume-up"
-                                />{/if}
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        {/if}
 
         {#if isLoading}
             <div
@@ -367,10 +327,6 @@
             </div>
         {/if}
     </div>
-
-    <div class="bottom-bar">
-        <BottomBar {counts} />
-    </div>
 </div>
 
 <style lang="scss">
@@ -378,8 +334,8 @@
         position: relative;
         display: grid;
         grid-template-columns: 1fr;
-        grid-template-rows: 1fr auto;
-        margin: 5px 5px 5px 0;
+        grid-template-rows: 1fr;
+        margin: 5px 5px 0 0;
         row-gap: 5px;
         border-radius: 5px;
         box-sizing: border-box;
@@ -395,7 +351,7 @@
         width: 100%;
         position: relative;
         grid-template-rows: auto 1fr;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: 1fr;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
         border-left: 0.7px solid #ffffff2a;
@@ -425,7 +381,7 @@
         }
     }
     .grid {
-        grid-column: 2;
+        grid-column: 1;
         grid-row: 2;
         width: 100%;
         display: none;
@@ -485,98 +441,6 @@
             height: 4px;
         }
     }
-    .now-playing {
-        h1 {
-            font-family: "Snake";
-            margin: 0 0.5em 0.5em;
-            text-align: left;
-        }
-        display: flex;
-        flex-direction: column;
-        /* background: rgba(36, 34, 34, 0.943); */
-        backdrop-filter: blur(8px);
-        /* border: 1px solid rgba(128, 128, 128, 0.117); */
-        border-right: 1px solid rgba(128, 128, 128, 0.117);
-        /* box-shadow: -40px 20px 30px 30px rgba(0, 0, 0, 0.159); */
-        /* box-shadow: 2px 2px 50px 100px rgba(72, 16, 128, 0.181); */
-
-        color: white;
-        bottom: 0;
-        border-radius: 4px;
-        z-index: 11;
-        grid-column: 1;
-        grid-row: 2;
-        /* min-width: 180px;
-        width: max-content; */
-        height: 100vh;
-        max-width: 300px;
-        width: 300px;
-        top: 0;
-        overflow-y: auto;
-        position: sticky;
-        padding-top: 2em;
-        padding-bottom: 2em;
-
-        .album-info {
-            display: flex;
-            flex-direction: column;
-            margin: 0 1em 1em;
-            p {
-                margin: 0;
-                text-align: left;
-                &:nth-child(2) {
-                    opacity: 0.6;
-                    position: relative;
-                    &:before {
-                        content: "by ";
-                        opacity: 0.4;
-                    }
-                }
-            }
-        }
-    }
-
-    .tracks {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-evenly;
-        /* background-color: rgb(36, 32, 38); */
-
-        .track {
-            padding: 0.35em 1em;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 4px;
-            user-select: none;
-            border-radius: 3px;
-            color: #bab5cb;
-            cursor: default;
-            p {
-                margin: 0;
-                text-align: left;
-                &:nth-child(1) {
-                    opacity: 0.4;
-                    width: 20px;
-                }
-            }
-
-            &:hover {
-                background-color: rgba(0, 0, 0, 0.087);
-            }
-
-            &.playing {
-                color: #dad4ed;
-                font-weight: bold;
-                iconify-icon {
-                    color: #7f61dd;
-                }
-            }
-            &:not(:nth-child(1)) {
-                border-top: 1px solid rgba(255, 255, 255, 0.05);
-            }
-        }
-    }
 
     .loading {
         top: 0;
@@ -591,14 +455,6 @@
         p {
             opacity: 0.6;
         }
-    }
-
-    .bottom-bar {
-        position: relative;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 15;
     }
 
     .scroll-now-playing {

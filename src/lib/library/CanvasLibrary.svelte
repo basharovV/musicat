@@ -36,6 +36,7 @@
         forceRefreshLibrary,
         importStatus,
         isPlaying,
+        isQueueOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
@@ -327,6 +328,19 @@
             // Slightly reduce the ratio for better performance
             // Konva.pixelRatio = 1.8;
         }
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            // We're only watching one element
+            const entry = entries.at(0);
+
+            //Get the block size
+            drawSongDataGrid();
+        });
+
+        resizeObserver.observe(libraryContainer);
+
+        // This callback cleans up the observer
+        return () => resizeObserver.unobserve(libraryContainer);
     });
 
     function init() {
@@ -429,7 +443,10 @@
     function calculateCanvasSize() {
         contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
         let area = contentHeight - viewportHeight;
-        console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
+        console.log(
+            "scrollContainer.clientWidth",
+            scrollContainer?.offsetWidth
+        );
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
         // Set canvas size to fill the parent
         viewportHeight = libraryContainer.getBoundingClientRect().height;
@@ -1144,7 +1161,7 @@
     }
 </script>
 
-<svelte:window on:resize={debounce(onResize, 5)} />
+<!-- <svelte:window on:resize={debounce(onResize, 5)} /> -->
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->

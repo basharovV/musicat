@@ -19,7 +19,7 @@
     console.log("highlight", highlighted);
     let isHovered = false;
     async function playPauseToggle() {
-        if ($currentSong?.album === album.title) {
+        if ($playlistIsAlbum && $currentSong?.album === album.title) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
@@ -97,14 +97,14 @@
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
-                {#if isHovered || isPlayingCurrentAlbum}
+                {#if isHovered || ($playlistIsAlbum && isPlayingCurrentAlbum)}
                     <div class="play-button-container">
                         <iconify-icon
-                            class={$isPlaying && isPlayingCurrentAlbum
+                            class={$playlistIsAlbum && $isPlaying && isPlayingCurrentAlbum
                                 ? "pause-button"
                                 : "play-button"}
                             on:click={playPauseToggle}
-                            icon={$isPlaying && isPlayingCurrentAlbum
+                            icon={$playlistIsAlbum && $isPlaying && isPlayingCurrentAlbum
                                 ? "fe:pause"
                                 : "fe:play"}
                         />
