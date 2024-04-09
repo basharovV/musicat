@@ -79,6 +79,8 @@
             color: rgb(188, 188, 188);
             border: 1px solid rgba(128, 128, 128, 0.159);
             border-radius: 4px;
+            padding-bottom: 1px;
+            
 
             &:hover {
                 background-color: rgba(128, 128, 128, 0.191);

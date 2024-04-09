@@ -248,6 +248,24 @@ struct ToImportEvent {
     progress: u8,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct GetSongMetadataEvent {
+    path: String,
+}
+
+#[tauri::command]
+async fn get_song_metadata(event: GetSongMetadataEvent, app_handle: tauri::AppHandle) -> Option<Song> {
+    let path = Path::new(event.path.as_str());
+
+    if path.is_file() {
+        // println!("{:?}", entry.path());
+        if let Some(song) = extract_metadata(&path) {
+            return Some(song);
+        }
+    }
+    None
+}
+
 #[tauri::command]
 async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
     // println!("scan_paths", event);
@@ -950,7 +968,8 @@ async fn main() {
             init_streamer,
             flow_control,
             decode_control,
-            volume_control
+            volume_control,
+            get_song_metadata
         ])
         .register_uri_scheme_protocol("stream", move |_app, request| {
             let boundary_id = Arc::new(Mutex::new(0));

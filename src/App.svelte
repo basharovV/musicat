@@ -11,9 +11,11 @@
         isFolderWatchUpdate,
         isInfoPopupOpen,
         isMiniPlayer,
+        isQueueOpen,
         isSettingsOpen,
         isTrackInfoPopupOpen,
         isWelcomeSeen,
+        os,
         uiView,
         userSettings
     } from "./data/store";
@@ -38,6 +40,9 @@
     import { startMenuListener } from "./window/EventListener";
     import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
     import StreamDebugger from "./lib/player/StreamDebugger.svelte";
+    import QueueView from "./lib/views/QueueView.svelte";
+    import BottomBar from "./lib/library/BottomBar.svelte";
+    import { fly } from "svelte/transition";
 
     startMenuListener();
     startImportListener();
@@ -187,50 +192,71 @@
     <Dropzone />
 {/if}
 
-<!-- <StreamDebugger /> -->
-
-<main class:mini-player={$isMiniPlayer}>
+<main class:mini-player={$isMiniPlayer} class:transparent={$os === "Darwin"}>
     <div class="sidebar">
         {#if $isWelcomeSeen}
             <Sidebar />
         {/if}
     </div>
 
-    {#if !$isWelcomeSeen}
-        <WelcomeView />
-    {:else if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
-        <CanvasLibraryView />
-    {:else if $uiView === "playlists"}
-        <CanvasLibraryView />
-    {:else if $uiView === "albums"}
-        <AlbumView />
-    {:else if $uiView === "your-music"}
-        <ArtistsToolkitView />
-    {:else if $uiView === "map"}
-        <MapView />
-    {:else if $uiView === "analytics"}
-        <AnalyticsView />
-    {/if}
+    <div class="queue">
+        {#if $isQueueOpen}
+            <div
+                class="queue-container"
+                transition:fly={{ duration: 200, x: -200 }}
+            >
+                <QueueView />
+            </div>
+        {/if}
+    </div>
+
+    <div class="panel">
+        {#if !$isWelcomeSeen}
+            <WelcomeView />
+        {:else if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
+            <CanvasLibraryView />
+        {:else if $uiView === "playlists"}
+            <CanvasLibraryView />
+        {:else if $uiView === "albums"}
+            <AlbumView />
+        {:else if $uiView === "your-music"}
+            <ArtistsToolkitView />
+        {:else if $uiView === "map"}
+            <MapView />
+        {:else if $uiView === "analytics"}
+            <AnalyticsView />
+        {/if}
+    </div>
+
+    <div class="bottom-bar">
+        <BottomBar />
+    </div>
 </main>
 
 <style lang="scss">
     main {
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: auto auto 1fr;
+        grid-template-rows: 1fr auto;
         width: 100vw;
         height: 100vh;
         opacity: 1;
         position: relative;
-        background-color: #242026c2;
+        background-color: #242026;
+
+        &.transparent {
+            background-color: #242026c2;
+        }
 
         &.mini-player {
             border-radius: 5px;
             overflow: hidden;
         }
 
-        .sidebar { 
-            width: 120px;
-            display: contents;
+        .sidebar {
+            width: 100%;
+            grid-row: 1 / 3;
+            grid-column: 1;
         }
 
         @media only screen and (max-width: 320px) {
@@ -242,6 +268,40 @@
                 display: none;
             }
             padding-top: 2em;
+        }
+
+        .bottom-bar {
+            position: relative;
+            width: 100%;
+            z-index: 15;
+            grid-row: 2;
+            grid-column: 2 / 4;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .queue {
+            grid-row: 1;
+            grid-column: 2;
+            overflow: hidden;
+            height: 100%;
+
+            .queue-container {
+                height: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
+                border-bottom: 0.7px solid #ffffff36;
+                border-radius: 5px;
+                margin: 0px 7.5px 0 0;
+                /* display: grid; */
+            }
+        }
+
+        .panel {
+            grid-row: 1;
+            grid-column: 3;
+            display: grid;
+            overflow: hidden;
         }
     }
 

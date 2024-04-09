@@ -3,6 +3,41 @@
         <h3>Release Notes</h3>
 
         <section>
+            <h3>📦 0.6.0</h3>
+            <li>
+                <b>Library v2. </b> The library is now rendered on a canvas, only rendering the visible rows. 
+                Scrolling through large libraries is much faster and more responsive, as is resizing the window. 
+            </li>
+            <li>
+                <b>Faster and sleeker import UX.</b> Import is now almost 10x faster, enabled by multithreading the metadata parsing in the Rust backend. 
+                Also, a nice cassete animation while you wait :)
+            </li>
+            <li>
+                <b>Lyrics view</b>. You can now view lyrics for the current song (requires Genius API key in settings).
+            </li>
+            <li>
+                <b>Spectroscope visualizer</b> The visualizer is now positioned in the bottom bar (when enough space is available)
+            </li>
+            <li>
+                <b>Pick up where you left off</b>. The player remembers the last song and seek position when opening the app. 
+            </li>
+            <li>
+                <b>Add country data to your entire library at once</b>. When you don't have any origin country data, add it in bulk from the map view. 
+            </li>
+            <li>
+                Drag and drop library columns to re-order.  
+            </li>
+            <li>
+                <b>Auto-watch folders for changes.</b> Configure the paths to watch in settings. 
+            </li>
+            <li>
+                ID3v1 is now supported in the tagger (will be upgraded to ID3v2.4 on write)
+            </li>
+            <li>
+                You can now <b>Fetch album art</b> from Wikipedia from the track info overlay. 
+            </li>
+        </section>
+        <section>
             <h3>📦 0.5.0</h3>
             <li>
                 <b>A brand new Map view!</b> Click on the "MAP" view to display your
