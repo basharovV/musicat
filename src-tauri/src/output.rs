@@ -401,6 +401,7 @@ mod cpal {
             let dc = Arc::new(data_channel);
 
             let mut rt = tokio::runtime::Runtime::new().unwrap();
+            let mut viz_data = Vec::with_capacity(1024);
 
             let stream_result = device.build_output_stream(
                 &config,
@@ -435,11 +436,15 @@ mod cpal {
                     }
 
                     let length = data.len();
-                    let mut viz_data = Vec::with_capacity(data.len());
 
                     let mut u = 0;
+                    let mut should_send = false;
                     for d in &mut *data {
-                        viz_data.push(*d);
+                        if (viz_data.len() < length * 3) {
+                            viz_data.push(*d);
+                        } else {
+                            should_send = true;
+                        }
                         u += 1;
                     }
 
@@ -471,13 +476,16 @@ mod cpal {
                             let mut duration = elapsed_time_state.write().unwrap();
                             *duration = new_duration.as_secs();
                         }
-
+                        let viz = viz_data.clone();
                         // Every x samples - send viz data to frontend
-                        if let Ok(dc_guard) = dc.try_lock() {
-                            if let Some(dc1) = dc_guard.as_ref().cloned() {
-                                rt.spawn(async move {
-                                    dc1.send(&get_viz_bytes(viz_data)).await;
-                                });
+                        if should_send {
+                            viz_data.clear();
+                            if let Ok(dc_guard) = dc.try_lock() {
+                                if let Some(dc1) = dc_guard.as_ref().cloned() {
+                                    rt.spawn(async move {
+                                        dc1.send(&get_viz_bytes(viz)).await;
+                                    });
+                                }
                             }
                         }
                     }
@@ -654,19 +662,26 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
         }
     }
 
+    let interpolated_signal: Vec<f32> = time_domain_signal.windows(2)
+    .flat_map(|pair| {
+        let (x0, x1) = (pair[0], pair[1]);
+        (0..1).map(move |i| linear_interpolate(x0, x1, i as f32 / 1.0))
+    })
+    .collect();
+
     let mut interleaved_bytes: Vec<u8> = Vec::new();
 
     // Iterate through each complex number in the FFT result
-    for i in 0..time_domain_signal.len() {
+    for i in 0..interpolated_signal.len() {
         // Every 2nd sample, sum the last two together and divide by two
-        if i % 2 == 0 && i + 1 < time_domain_signal.len() {
-            let freq1 = time_domain_signal[i];
-            let freq2 = time_domain_signal[i + 1];
+        if i % 2 == 0 && i + 1 < interpolated_signal.len() {
+            let freq1 = interpolated_signal[i];
+            let freq2 = interpolated_signal[i + 1];
 
             // Calculate magnitude of the complex number
             // let magnitude1 = (freq1.re.powi(2) + freq1.im.powi(2)).sqrt();
             // let magnitude2 = (freq2.re.powi(2) + freq2.im.powi(2)).sqrt();
-            let summed = (((freq1 - freq2) * 0.8 / 2.0) + 128.0) as u8;
+            let summed = (((freq1 - freq2) * 0.2 / 2.0) + 128.0) as u8;
             // println!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
 
             // Split the f32 into its individual bytes
@@ -681,4 +696,8 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
     }
 
     interleaved_bytes
+}
+
+fn linear_interpolate(x0: f32, x1: f32, t: f32) -> f32 {
+    x0 * (1.0 - t) + x1 * t
 }

@@ -1,7 +1,5 @@
-import { get } from "svelte/store";
-import { isPlaying, volume } from "../../data/store";
+import { isPlaying } from "../../data/store";
 import audioPlayer from "./AudioPlayer";
-import { convertUInt8ToFloat32 } from "../../utils/DSPUtils";
 
 export interface IAnimation {
     draw: (
