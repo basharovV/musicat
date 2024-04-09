@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { isPlaying, volume } from "../../data/store";
 import audioPlayer from "./AudioPlayer";
+import { convertUInt8ToFloat32 } from "../../utils/DSPUtils";
 
 export interface IAnimation {
     draw: (
@@ -41,6 +42,33 @@ export class AudioVisualiser {
         this._canvasContext = canvas.getContext("2d");
     }
 
+    setupAnalyserAnimation() {
+        // this.freqDomain = new Uint8Array(
+        //     audioPlayer.audioAnalyser.frequencyBinCount
+        // );
+        this.timeDomain = new Uint8Array([
+            128, 128, 128, 128, 128, 128, 128, 128, 128, 128
+        ]);
+
+        // Append new messages to the box of incoming messages
+        if (audioPlayer.webRTCReceiver) {
+            audioPlayer.webRTCReceiver.onSampleData = (samples) => {
+                // Get the ArrayBuffer
+                // console.log("samples", samples);
+                this.timeDomain = new Uint8Array(samples);
+            };
+        }
+
+        let tick = () => {
+            this.clearCanvas();
+            if (!this.shouldStopAnimation) {
+                this.drawOscilloscope();
+                window.requestAnimationFrame(tick);
+            }
+        };
+        tick();
+    }
+
     /**
      * Draw an oscilloscope
      */
@@ -49,16 +77,16 @@ export class AudioVisualiser {
 
         this._canvasContext.beginPath();
         // drawing loop (skipping every second record)
-        for (let i = 0; i < this.timeDomain.length; i += 2) {
+        for (let i = 0; i < this.timeDomain.length; i += 1) {
             const percent = this.timeDomain[i] / 256;
             const x = i * step;
-            const y = this._canvasContext.canvas.height * percent;
+            const yL = this._canvasContext.canvas.height * percent;
             this._canvasContext.shadowColor = "#14D8BD";
             this._canvasContext.shadowBlur = 10;
             this._canvasContext.shadowOffsetX = 2;
             this._canvasContext.shadowOffsetY = 2;
             this._canvasContext.strokeStyle = "#14D8BD";
-            this._canvasContext.lineTo(x, y);
+            this._canvasContext.lineTo(x, yL);
         }
 
         this._canvasContext.stroke();
@@ -71,28 +99,6 @@ export class AudioVisualiser {
             this._canvasContext.canvas.clientWidth,
             this._canvasContext.canvas.clientHeight
         );
-    }
-    
-    setupAnalyserAnimation() {
-        if (audioPlayer.audioAnalyser) {
-            this.freqDomain = new Uint8Array(
-                audioPlayer.audioAnalyser.frequencyBinCount
-            );
-            this.timeDomain = new Uint8Array(audioPlayer.audioAnalyser.fftSize);
-
-            let tick = () => {
-                audioPlayer.audioAnalyser.getByteFrequencyData(this.freqDomain);
-                audioPlayer.audioAnalyser.getByteTimeDomainData(
-                    this.timeDomain
-                );
-                this.clearCanvas();
-                if (!this.shouldStopAnimation) {
-                    this.drawOscilloscope();
-                    window.requestAnimationFrame(tick);
-                }
-            };
-            tick();
-        }
     }
 
     public addAnimation(animation: IAnimation): void {

@@ -14,6 +14,11 @@ use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use symphonia::core::formats::FormatOptions;
+use symphonia::core::io::MediaSourceStream;
+use symphonia::core::meta::MetadataOptions;
+use symphonia::core::probe::Hint;
+use symphonia::default::get_probe;
 use std::error::Error;
 use std::fs::{self, File};
 use std::future::IntoFuture;
@@ -29,6 +34,8 @@ use tokio::runtime::Handle;
 use tokio_util::sync::CancellationToken;
 use webrtc_streamer::web_rtcstreamer::{self, AudioStreamer};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
+
+use crate::webrtc_streamer::web_rtcstreamer::ACTIVE;
 mod decoder;
 mod file_chunk_streamer;
 mod output;
@@ -716,7 +723,7 @@ fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
 pub struct StreamFileRequest {
     path: Option<String>,
     seek: Option<f64>,
-    file_info: FileInfo,
+    file_info: Option<FileInfo>,
 }
 
 #[tauri::command]
@@ -726,10 +733,20 @@ fn stream_file(
     _app_handle: tauri::AppHandle,
 ) {
     println!("Stream file {:?}", event);
-    state.stream_file(event, _app_handle);
+    state.resume();
+    state.player_control_sender.send(web_rtcstreamer::PlayerControlEvent::StreamFile(event));
 }
 
-    
+#[tauri::command]
+fn queue_next(
+    event: StreamFileRequest,
+    state: State<AudioStreamer>,
+    _app_handle: tauri::AppHandle,
+) {
+    println!("Queue next file {:?}", event);
+    state.next_track_sender.send(event);
+}
+
 #[derive(Clone, Debug)]
 pub struct SampleOffsetEvent {
     pub sample_offset: Option<u64>,
@@ -799,18 +816,20 @@ async fn init_streamer(
     _app_handle: tauri::AppHandle,
 ) -> Result<StreamStatus, ()> {
     println!("Get stream status {:?}", event);
-
     // Close existing connection
     state.clone().reset().await;
-    // Create new peer connection and datachannel
-    state.clone().init(_app_handle).await;
 
+    state.init_webrtc(_app_handle).await;
+    
     return Ok(StreamStatus { is_open: false });
 }
 
 #[tokio::main]
 async fn main() {
-    let streamer = web_rtcstreamer::AudioStreamer::create().await.unwrap();
+    // std::env::set_var("RUST_LOG", "debug");
+    env_logger::init();
+
+    let streamer = web_rtcstreamer::AudioStreamer::create().unwrap();
 
     tauri::Builder::default()
         .menu(build_menu())
@@ -819,8 +838,8 @@ async fn main() {
             let app_ = app.handle();
             let app2_ = app.handle();
             let app3_ = app.handle();
-            let state: State<web_rtcstreamer::AudioStreamer<'static>> = app.state();
-
+            let mut state: State<web_rtcstreamer::AudioStreamer<'static>> = app.state();
+            state.init(app_);
             // state.data_channel.on_close(Box::new(move || {
             //     Box::pin(async move {
             //         *is_open2.unwrap() = false;
@@ -867,7 +886,7 @@ async fn main() {
                 println!("webrtc-signal {:?}", event);
                 let eventClone = event.clone();
                 let current = Handle::current();
-                let app_clone = app_.clone();
+                let app_clone = app2_.clone();
 
                 let handleClone = strm1.clone();
                 tokio::spawn(async move {
@@ -883,7 +902,7 @@ async fn main() {
                 println!("webrtc-signal {:?}", event);
                 let eventClone = event.clone();
                 let current = Handle::current();
-                let app_clone = app2_.clone();
+                let app_clone = app3_.clone();
 
                 let handleClone = strm2.clone();
                 tokio::spawn(async move {
@@ -927,6 +946,7 @@ async fn main() {
             get_lyrics,
             get_file_size,
             stream_file,
+            queue_next,
             init_streamer,
             flow_control,
             decode_control,

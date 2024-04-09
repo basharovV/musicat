@@ -72,7 +72,7 @@ export default class WebRTCReceiver {
                         // If 148 bytes took 1.405s to send, that means the rate is
                         // 148 / 1405 = bytes per millisecond,  * 1000 = bytes per 1s
                         // Times 8 to get kbits/sec
-                        console.log("total bytes", totalBytes, timeToSend);
+                        // console.log("total bytes", totalBytes, timeToSend);
                         let receiveBitrate =
                             ((totalBytes * 8) / timeToSend) * 1000;
                         streamInfo.update((s) => ({

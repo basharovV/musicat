@@ -242,9 +242,54 @@ class AudioPlayer {
             }
         });
 
-        appWindow.listen("timestamp", async (event) => {
-            console.log("timestamp", event);
+        appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
+
+            // TODO: Do this in a better way eg. send current song info from Rust
+            if (this.isRunningTransition && event.payload < 3) {
+                console.log("currentidx", this.currentSongIdx);
+                let nextUp =
+                    this.currentSongIdx + 1 < this.playlist?.length
+                        ? this.playlist[this.currentSongIdx + 1]
+                        : null;
+
+                this.currentSongIdx+=1;
+                currentSongIdx.set(this.currentSongIdx);
+                console.log("currentidx", this.currentSongIdx);
+
+                // Bring next song to current
+                currentSong.set(nextUp);
+                this.currentSong = nextUp;
+                
+                this.setNextUpSong();
+                this.isRunningTransition = false;
+            }
+
+            console.log("timestamp", event.payload);
+            console.log("duration", get(currentSong).fileInfo.duration);
+
+            // Gapless setup here
+            if (
+                !this.isRunningTransition &&
+                event.payload < get(currentSong).fileInfo.duration &&
+                event.payload > get(currentSong).fileInfo.duration - 5
+            ) {
+                console.log("Running transition...");
+                this.isRunningTransition = true;
+                let nextUp =
+                    this.currentSongIdx + 1 < this.playlist?.length
+                        ? this.playlist[this.currentSongIdx + 1]
+                        : null;
+                if (nextUp) {
+                    invoke("queue_next", {
+                        event: {
+                            path: nextUp.path,
+                            seek: 0,
+                            file_info: nextUp.fileInfo
+                        }
+                    });
+                }
+            }
         });
         // this.setupAnalyserAudio();
     }
@@ -325,16 +370,14 @@ class AudioPlayer {
             this.webRTCReceiver.dataChannel?.readyState
         );
         // If the WebRTC receiver is ready to receive data, invoke the streamer
-        if (this.webRTCReceiver.dataChannel?.readyState === "open") {
-            this.webRTCReceiver.prepareForNewStream();
-            invoke("stream_file", {
-                event: {
-                    path: this.currentSong.path,
-                    seek: position,
-                    file_info: this.currentSong.fileInfo
-                }
-            });
-        }
+        this.webRTCReceiver.prepareForNewStream();
+        invoke("stream_file", {
+            event: {
+                path: this.currentSong.path,
+                seek: position,
+                file_info: this.currentSong.fileInfo
+            }
+        });
     }
 
     async setupBuffers() {
@@ -387,10 +430,10 @@ class AudioPlayer {
                                 bufferedSamples: ev.data.bufferedSamples
                             }));
 
-                            this.webRTCReceiver.doFlowControl(
-                                ev.data.bufferedSamples /
-                                    this.currentSong.fileInfo.sampleRate
-                            );
+                            // this.webRTCReceiver.doFlowControl(
+                            //     ev.data.bufferedSamples /
+                            //         this.currentSong.fileInfo.sampleRate
+                            // );
 
                             break;
                         case "played":
@@ -403,10 +446,7 @@ class AudioPlayer {
                             break;
                         case "ended":
                             console.log("audiosource::ended");
-                            await this.onEnded();
-                            // Play next track
-                            if (this.hasNext()) this.playNext();
-
+                           
                             break;
                         case "timestamp":
                             // console.log("audiosource::timestamp", ev.data);
@@ -422,37 +462,6 @@ class AudioPlayer {
             );
 
             this.audioSourceNode.onprocessorerror = (ev) => console.error(ev);
-
-            // Append new messages to the box of incoming messages
-            this.webRTCReceiver.onSampleData = (samples) => {
-                // Get the ArrayBuffer
-
-                // Get packet number
-                this.packet_n++;
-                // If packet_n is >= last packet received => send it to the processor
-                // Otherwise drop it (to save time)
-                if (true) {
-                    if (LOG_DATA) {
-                        // Save the time at which we receive data
-                        performance.mark(`data-received-${this.packet_n}`);
-                    }
-                    // console.log("audio::onSampleData()", samples);
-
-                    // Process data (tranfer of ownership)
-                    let message = {
-                        type: "packet",
-                        data: samples
-                    };
-                    this.audioSourceNode.port.postMessage(message);
-                    this.stats.packetReceivedCounter++;
-                } else {
-                    if (LOG_DATA) {
-                        // Save the time at which we discard data
-                        performance.mark(`data-discarded-${this.packet_n}`);
-                    }
-                    this.stats.packetDropCounter++;
-                }
-            };
 
             // this.resamplerNode.port.start();
             this.audioSourceNode.connect(this.gainNode);
@@ -688,21 +697,9 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
-        if (this.getCurrentAudioFile().src) {
-            if (this.currentSongIdx + 1 < this.playlist.length) {
-                const nextSong = this.playlist[this.currentSongIdx + 1];
-                nextUpSong.set(nextSong);
-
-                // Set up gapless playback
-                this.getOtherAudioFile().src = convertFileSrc(
-                    nextSong.path.replace("?", "%3F")
-                );
-                this.getOtherAudioFile().preload = "auto";
-                this.getOtherAudioFile().load();
-                this.getOtherAudioFile().currentTime = 0.00001;
-            } else {
-                nextUpSong.set(null);
-            }
+        if (this.currentSongIdx + 1 < this.playlist?.length) {
+            const nextSong = this.playlist[this.currentSongIdx + 1];
+            nextUpSong.set(nextSong);
         } else {
             nextUpSong.set(null);
         }
@@ -736,7 +733,7 @@ class AudioPlayer {
                 newCurrentSongIdx = 0;
             }
             currentSongIdx.set(newCurrentSongIdx);
-            // this.setNextUpSong();
+            this.setNextUpSong();
             this.setMediaSessionData();
             this.incrementPlayCounter(song);
 

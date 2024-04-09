@@ -7,10 +7,15 @@
 
 //! Platform-dependant Audio Outputs
 
+use std::f32::consts::PI;
 use std::result;
+
+use rustfft::{num_complex::Complex, FftPlanner};
+use std::sync::Arc;
 
 use symphonia::core::audio::{AudioBufferRef, SignalSpec};
 use symphonia::core::units::Duration;
+use webrtc::data_channel::RTCDataChannel;
 
 pub trait AudioOutput {
     fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()>;
@@ -167,16 +172,20 @@ mod pulseaudio {
 
 #[cfg(not(target_os = "linux"))]
 mod cpal {
+    use std::io::Read;
     use std::ops::Mul;
     use std::sync::mpsc::Receiver;
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
+    use crate::output::{fft, ifft};
     use crate::resampler::Resampler;
     use crate::{SampleOffsetEvent, VolumeControlEvent};
 
     use super::{AudioOutput, AudioOutputError, Result};
 
+    use bytes::Bytes;
+    use rayon::iter::IntoParallelRefIterator;
     use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
     use symphonia::core::conv::{ConvertibleSample, IntoSample};
     use symphonia::core::units::TimeBase;
@@ -187,6 +196,7 @@ mod cpal {
     use log::{error, info};
     use tauri::{AppHandle, Manager};
     use tokio::sync::Mutex;
+    use webrtc::data_channel::RTCDataChannel;
 
     pub struct CpalAudioOutput;
 
@@ -211,7 +221,9 @@ mod cpal {
             duration: symphonia::core::units::Duration,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
-            app_handle: AppHandle
+            playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
+            data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+            app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             // Get default host.
             let host = cpal::default_host();
@@ -243,8 +255,17 @@ mod cpal {
                     &device,
                     volume_control_receiver,
                     sample_offset_receiver,
+                    playback_state_receiver,
+                    data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
-                    app_handle
+                    |data| {
+                        let fft_result = fft(&data);
+
+                        let time_domain_signal = ifft(&fft_result);
+
+                        Bytes::from(time_domain_signal)
+                    },
+                    app_handle,
                 ),
                 cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(
                     spec,
@@ -252,8 +273,21 @@ mod cpal {
                     &device,
                     volume_control_receiver,
                     sample_offset_receiver,
+                    playback_state_receiver,
+                    data_channel,
                     |packet, volume| ((packet as f64) * volume) as i16,
-                    app_handle
+                    |data| {
+                        let length = data.len();
+                        let mut byte_array = Vec::with_capacity(data.len());
+
+                        let mut i = 0;
+                        for d in &mut data.iter() {
+                            byte_array.push(*d as u8);
+                            i += 1;
+                        }
+                        Bytes::from(byte_array)
+                    },
+                    app_handle,
                 ),
                 cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(
                     spec,
@@ -261,8 +295,21 @@ mod cpal {
                     &device,
                     volume_control_receiver,
                     sample_offset_receiver,
+                    playback_state_receiver,
+                    data_channel,
                     |packet, volume| ((packet as f64) * volume) as u16,
-                    app_handle
+                    |data| {
+                        let length = data.len();
+                        let mut byte_array = Vec::with_capacity(data.len());
+
+                        let mut i = 0;
+                        for d in &mut data.iter() {
+                            byte_array.push(*d as u8);
+                            i += 1;
+                        }
+                        Bytes::from(byte_array)
+                    },
+                    app_handle,
                 ),
                 _ => CpalAudioOutputImpl::<f32>::try_open(
                     spec,
@@ -270,8 +317,17 @@ mod cpal {
                     &device,
                     volume_control_receiver,
                     sample_offset_receiver,
+                    playback_state_receiver,
+                    data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
-                    app_handle
+                    |data| {
+                        let fft_result = fft(&data);
+
+                        let time_domain_signal = ifft(&fft_result);
+
+                        Bytes::from(time_domain_signal)
+                    },
+                    app_handle,
                 ),
             }
         }
@@ -303,8 +359,11 @@ mod cpal {
             device: &cpal::Device,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
+            playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
+            data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             volume_change: fn(T, f64) -> T,
-            app_handle: AppHandle
+            get_viz_bytes: fn(Vec<T>) -> Bytes,
+            app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
 
@@ -338,6 +397,10 @@ mod cpal {
             let volume_state = Arc::new(RwLock::new(0.5f64));
             let frame_idx_state = Arc::new(RwLock::new(0));
             let elapsed_time_state = Arc::new(RwLock::new(0));
+            let playback_state = Arc::new(RwLock::new(true));
+            let dc = Arc::new(data_channel);
+
+            let mut rt = tokio::runtime::Runtime::new().unwrap();
 
             let stream_result = device.build_output_stream(
                 &config,
@@ -371,29 +434,52 @@ mod cpal {
                         i += 1;
                     }
 
-                    // new offset
-                    let new_sample_offset = {
-                        let mut sample_offset = frame_idx_state.write().unwrap();
-                        *sample_offset += i;
-                        *sample_offset
-                    };
-                    // new duration
-                    let next_duration = time_base.calc_time(new_sample_offset as u64).seconds;
-                    // println!("Next duration: {:?}", next_duration);
+                    let length = data.len();
+                    let mut viz_data = Vec::with_capacity(data.len());
 
-                    let prev_duration = { *elapsed_time_state.read().unwrap() };
+                    let mut u = 0;
+                    for d in &mut *data {
+                        viz_data.push(*d);
+                        u += 1;
+                    }
+
+                    let playing = playback_state_receiver.try_lock().unwrap().try_recv();
+                    if let Ok(pl) = playing {
+                        let mut current_playing = playback_state.write().unwrap();
+                        *current_playing = pl;
+                    }
 
                     // update duration if seconds changed
-                    if prev_duration != next_duration {
-                        let new_duration = Duration::from_secs(next_duration);
+                    if (*playback_state.try_read().unwrap()) {
+                        // new offset
+                        let new_sample_offset = {
+                            let mut sample_offset = frame_idx_state.write().unwrap();
+                            *sample_offset += i;
+                            *sample_offset
+                        };
+                        // new duration
+                        let next_duration = time_base.calc_time(new_sample_offset as u64).seconds;
+                        // println!("Next duration: {:?}", next_duration);
 
-                        app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
+                        let prev_duration = { *elapsed_time_state.read().unwrap() };
 
-                        // if let Some(stream_tx) = stream_tx.as_ref() {
-                        //     let _ = stream_tx.send(StreamEvent::Progress(new_duration));
-                        // }
-                        let mut duration = elapsed_time_state.write().unwrap();
-                        *duration = new_duration.as_secs();
+                        if prev_duration != next_duration {
+                            let new_duration = Duration::from_secs(next_duration);
+
+                            app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
+
+                            let mut duration = elapsed_time_state.write().unwrap();
+                            *duration = new_duration.as_secs();
+                        }
+
+                        // Every x samples - send viz data to frontend
+                        if let Ok(dc_guard) = dc.try_lock() {
+                            if let Some(dc1) = dc_guard.as_ref().cloned() {
+                                rt.spawn(async move {
+                                    dc1.send(&get_viz_bytes(viz_data)).await;
+                                });
+                            }
+                        }
                     }
 
                     // Mute any remaining samples.
@@ -495,20 +581,104 @@ pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOut
 pub fn try_open(
     spec: SignalSpec,
     duration: Duration,
-    volume_control_receiver: std::sync::Arc<
+    volume_control_receiver: Arc<
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::VolumeControlEvent>>,
     >,
-    sample_offset_receiver: std::sync::Arc<
+    sample_offset_receiver: Arc<
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::SampleOffsetEvent>>,
     >,
-    app_handle: tauri::AppHandle
-) -> Result<std::sync::Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
-
+    playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
+    data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+    app_handle: tauri::AppHandle,
+) -> Result<Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
     cpal::CpalAudioOutput::try_open(
         spec,
         duration,
         volume_control_receiver,
         sample_offset_receiver,
-        app_handle
+        playback_state_receiver,
+        data_channel,
+        app_handle,
     )
+}
+
+fn hanning_window(n: usize, N: usize) -> f32 {
+    0.5 * (1.0 - ((2.0 * PI * n as f32) / (N as f32 - 1.0)).cos())
+}
+
+fn hamming_window(n: usize, N: usize) -> f32 {
+    0.54 - 0.46 * ((2.0 * std::f32::consts::PI * n as f32) / (N as f32 - 1.0)).cos()
+}
+
+fn fft(input: &[f32]) -> Vec<Complex<f32>> {
+    let len = input.len();
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(len);
+
+    // Apply Hanning window
+    // let windowed_input: Vec<f32> = input
+    //     .iter()
+    //     .enumerate()
+    //     .map(|(i, &x)| x * hamming_window(i, len))
+    //     .collect();
+
+    // Convert input into complex numbers
+    let mut complex_input: Vec<Complex<f32>> = input
+        .iter()
+        .map(|&x| Complex::new(x, 0.0))
+        .collect();
+
+    // Perform FFT
+    fft.process(&mut complex_input);
+
+    complex_input
+}
+
+fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
+    let len = input.len();
+    let mut planner = FftPlanner::new();
+    let ifft = planner.plan_fft_inverse(len);
+
+    let mut output: Vec<Complex<f32>> = input.to_vec();
+
+    // Perform inverse FFT
+    ifft.process(&mut output);
+
+    // Extract real parts and scale
+    let mut time_domain_signal = output.iter().map(|&freq| freq.re).collect::<Vec<f32>>();
+
+    // Remove any residual imaginary part due to precision issues
+    for val in time_domain_signal.iter_mut() {
+        if val.abs() < 1e-6 {
+            *val = 0.0;
+        }
+    }
+
+    let mut interleaved_bytes: Vec<u8> = Vec::new();
+
+    // Iterate through each complex number in the FFT result
+    for i in 0..time_domain_signal.len() {
+        // Every 2nd sample, sum the last two together and divide by two
+        if i % 2 == 0 && i + 1 < time_domain_signal.len() {
+            let freq1 = time_domain_signal[i];
+            let freq2 = time_domain_signal[i + 1];
+
+            // Calculate magnitude of the complex number
+            // let magnitude1 = (freq1.re.powi(2) + freq1.im.powi(2)).sqrt();
+            // let magnitude2 = (freq2.re.powi(2) + freq2.im.powi(2)).sqrt();
+            let summed = (((freq1 - freq2) * 0.8 / 2.0) + 128.0) as u8;
+            // println!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
+
+            // Split the f32 into its individual bytes
+            // let bytes = summed.to_ne_bytes();
+            interleaved_bytes.push(summed);
+
+            // Interleave the bytes
+            // for &byte in bytes.iter() {
+            //     interleaved_bytes.push(byte);
+            // }
+        }
+    }
+
+    interleaved_bytes
 }

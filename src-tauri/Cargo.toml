@@ -43,6 +43,8 @@ cpal = "0.15.3"
 rb = "0.4.1"
 rubato = "0.15.0"
 arrayvec = "0.7.4"
+env_logger = "0.11.3"
+rustfft = "6.2.0"
 
 [features]
 # by default Tauri runs in production mode

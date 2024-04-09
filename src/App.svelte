@@ -187,7 +187,7 @@
     <Dropzone />
 {/if}
 
-<StreamDebugger />
+<!-- <StreamDebugger /> -->
 
 <main class:mini-player={$isMiniPlayer}>
     <div class="sidebar">
