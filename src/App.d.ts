@@ -303,5 +303,8 @@ interface StreamInfo {
     playedSamples: number,
     timestamp: number, // in s
     sampleIdx: number
-    
+}
+
+interface SongChangeEvent {
+    songId: string;
 }

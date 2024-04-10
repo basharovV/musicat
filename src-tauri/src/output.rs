@@ -223,6 +223,7 @@ mod cpal {
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+            vol: Option<f64>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             // Get default host.
@@ -265,6 +266,7 @@ mod cpal {
 
                         Bytes::from(time_domain_signal)
                     },
+                    vol,
                     app_handle,
                 ),
                 cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(
@@ -287,6 +289,7 @@ mod cpal {
                         }
                         Bytes::from(byte_array)
                     },
+                    vol,
                     app_handle,
                 ),
                 cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(
@@ -309,6 +312,7 @@ mod cpal {
                         }
                         Bytes::from(byte_array)
                     },
+                    vol,
                     app_handle,
                 ),
                 _ => CpalAudioOutputImpl::<f32>::try_open(
@@ -327,6 +331,7 @@ mod cpal {
 
                         Bytes::from(time_domain_signal)
                     },
+                    vol,
                     app_handle,
                 ),
             }
@@ -363,6 +368,7 @@ mod cpal {
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             volume_change: fn(T, f64) -> T,
             get_viz_bytes: fn(Vec<T>) -> Bytes,
+            vol: Option<f64>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
@@ -394,7 +400,7 @@ mod cpal {
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
             // States
-            let volume_state = Arc::new(RwLock::new(0.5f64));
+            let volume_state = Arc::new(RwLock::new(vol.unwrap()));
             let frame_idx_state = Arc::new(RwLock::new(0));
             let elapsed_time_state = Arc::new(RwLock::new(0));
             let playback_state = Arc::new(RwLock::new(true));
@@ -597,6 +603,7 @@ pub fn try_open(
     >,
     playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+    vol: Option<f64>,
     app_handle: tauri::AppHandle,
 ) -> Result<Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
     cpal::CpalAudioOutput::try_open(
@@ -606,6 +613,7 @@ pub fn try_open(
         sample_offset_receiver,
         playback_state_receiver,
         data_channel,
+        vol,
         app_handle,
     )
 }
@@ -631,10 +639,8 @@ fn fft(input: &[f32]) -> Vec<Complex<f32>> {
     //     .collect();
 
     // Convert input into complex numbers
-    let mut complex_input: Vec<Complex<f32>> = input
-        .iter()
-        .map(|&x| Complex::new(x, 0.0))
-        .collect();
+    let mut complex_input: Vec<Complex<f32>> =
+        input.iter().map(|&x| Complex::new(x, 0.0)).collect();
 
     // Perform FFT
     fft.process(&mut complex_input);
@@ -662,12 +668,13 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
         }
     }
 
-    let interpolated_signal: Vec<f32> = time_domain_signal.windows(2)
-    .flat_map(|pair| {
-        let (x0, x1) = (pair[0], pair[1]);
-        (0..1).map(move |i| linear_interpolate(x0, x1, i as f32 / 1.0))
-    })
-    .collect();
+    let interpolated_signal: Vec<f32> = time_domain_signal
+        .windows(2)
+        .flat_map(|pair| {
+            let (x0, x1) = (pair[0], pair[1]);
+            (0..1).map(move |i| linear_interpolate(x0, x1, i as f32 / 1.0))
+        })
+        .collect();
 
     let mut interleaved_bytes: Vec<u8> = Vec::new();
 

@@ -167,7 +167,10 @@ pub mod web_rtcstreamer {
             wake_one(self.decoding_active.as_ref());
         }
 
-        pub async fn init_webrtc(&self, app_handle: AppHandle) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        pub async fn init_webrtc(
+            &self,
+            app_handle: AppHandle,
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // Create a MediaEngine object to configure the supported codec
             let mut m = MediaEngine::default();
 
@@ -350,32 +353,8 @@ pub mod web_rtcstreamer {
 
         wake_all(decoding_active.as_ref());
 
-        start_decoder(
-            vol_receiver,
-            player_control_receiver,
-            next_track_receiver,
-            decoding_active,
-            data_channel,
-            app_handle,
-        );
-    }
-
-    // SYmphonia stuff
-    fn start_decoder(
-        volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
-        player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
-        next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
-        decoding_active: Arc<AtomicU32>,
-        data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
-        app_handle: &AppHandle,
-    ) -> () {
-        println!("stream_file");
-
-        // No request yet - wait until we have one.
-        // Once we are in the decoder loop, we will also check for a message for change in stream source, volume, etc
-
         decode_loop(
-            volume_control_receiver,
+            vol_receiver,
             player_control_receiver,
             next_track_receiver,
             decoding_active,
@@ -399,6 +378,7 @@ pub mod web_rtcstreamer {
         // These will be reset when changing tracks
         let mut path_str: Option<String> = None;
         let mut seek = None;
+        let mut volume = None;
         let mut file = Arc::new(Mutex::new(None));
         let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
 
@@ -419,6 +399,7 @@ pub mod web_rtcstreamer {
                             println!("audio: got file request! {:?}", request);
                             path_str.replace(request.path.unwrap());
                             seek.replace(request.seek.unwrap());
+                            volume.replace(request.volume.unwrap());
                             file.try_lock().unwrap().replace(request.file_info.unwrap());
                         }
                         PlayerControlEvent::Pause => {
@@ -569,6 +550,7 @@ pub mod web_rtcstreamer {
                                 println!("audio: source changed during decoding! {:?}", request);
                                 path_str.replace(request.path.unwrap());
                                 seek.replace(request.seek.unwrap());
+                                volume.replace(request.volume.unwrap());
                                 file.try_lock().unwrap().replace(request.file_info.unwrap());
                                 cancel_token.cancel();
                             }
@@ -626,6 +608,7 @@ pub mod web_rtcstreamer {
                                     sample_offset_receiver.clone(),
                                     playback_state.clone(),
                                     data_channel.clone(),
+                                    volume.clone(),
                                     app_handle.clone(),
                                 ));
                             }
@@ -731,10 +714,19 @@ pub mod web_rtcstreamer {
                         // TODO: Gapless here
                         let next_track = next_track_receiver.try_lock().unwrap().try_recv();
                         if let Ok(request) = next_track {
+                            let path = request.path.clone().unwrap();
+
                             println!("audio: source changed during decoding! {:?}", request);
                             path_str.replace(request.path.unwrap());
                             seek.replace(request.seek.unwrap());
+                            volume.replace(request.volume.unwrap());
                             file.try_lock().unwrap().replace(request.file_info.unwrap());
+
+                            // Read metadata and send to UI
+                            let p = Path::new(path.as_str());
+                            if let Some(song) = crate::metadata::extract_metadata(&p) {
+                                app_handle.emit_all("song_change", Some(song));
+                            }
                         }
                         // Do not treat "end of stream" as a fatal error. It's the currently only way a
                         // format reader can indicate the media is complete.

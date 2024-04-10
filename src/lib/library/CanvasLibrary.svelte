@@ -37,6 +37,7 @@
         importStatus,
         isPlaying,
         isQueueOpen,
+        isShuffleEnabled,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
@@ -49,6 +50,7 @@
         rightClickedTrack,
         rightClickedTracks,
         shouldFocusFind,
+        shuffledPlaylist,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
@@ -135,6 +137,23 @@
                     }
                     status.state.previousAlbum = s?.album;
                     status.state.previousArtist = s?.artist;
+
+                    // If currently in album mode, then the current song index doesn't match the library index,
+                    // and we need to find it
+                    if (
+                        ($playlistIsAlbum && s.id === $currentSong.id) ||
+                        ($isShuffleEnabled && s.id === $currentSong.id)
+                    ) {
+                        console.log("found song:", idx);
+
+                        currentSongY = idx * ROW_HEIGHT;
+                        currentSongInView =
+                            idx >= songsStartSlice && idx <= songsEndSlice;
+                        currentSongScrollIdx = idx;
+                    } else {
+                        currentSongScrollIdx = null;
+                    }
+
                     return {
                         songs: songsArray,
                         state: status.state
@@ -682,9 +701,11 @@
 
         if (scrollContainer && stage) {
             calculateSongSlice();
-            currentSongInView =
-                $currentSongIdx >= songsStartSlice &&
-                $currentSongIdx <= songsEndSlice;
+            let idx =
+                currentSongScrollIdx !== null
+                    ? currentSongScrollIdx
+                    : $currentSongIdx;
+            currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         }
 
         // Only save/restore scroll pos in main library view, not on playlists
@@ -694,18 +715,20 @@
     }
 
     let currentSongY = 0;
-    $: if ($currentSongIdx) {
-        currentSongY = $currentSongIdx * ROW_HEIGHT;
-
-        currentSongInView =
-            $currentSongIdx >= songsStartSlice &&
-            $currentSongIdx <= songsEndSlice;
-
+    $: if (
+        !$playlistIsAlbum &&
+        !$isShuffleEnabled &&
+        $currentSongIdx !== null
+    ) {
+        let idx = $currentSongIdx;
+        currentSongY = idx * ROW_HEIGHT;
+        currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         // console.log("currentSongY", currentSongY);
     }
 
     function scrollToCurrentSong() {
         // console.log("y", currentSongY);
+
         let adjustedPos = currentSongY;
         if (currentSongY > viewportHeight / 2.3) {
             adjustedPos -= viewportHeight / 2.3;
@@ -728,6 +751,7 @@
     let showTrackMenu = false;
     let menuPos;
     let currentSongInView = false;
+    let currentSongScrollIdx = null;
 
     function onDoubleClickSong(song, idx) {
         AudioPlayer.shouldPlay = false;

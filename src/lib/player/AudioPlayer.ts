@@ -1,7 +1,6 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/tauri";
-import type { ArtworkSrc, LastPlayedInfo, Song } from "src/App";
+import { invoke } from "@tauri-apps/api/tauri";
 import { get } from "svelte/store";
-import AudioSourceWorkletUrl from "../../WebRTCSourceWorker?url";
+import type { ArtworkSrc, LastPlayedInfo, Song } from "../../App";
 import { db } from "../../data/db";
 import {
     currentSong,
@@ -15,18 +14,13 @@ import {
     playlist,
     seekTime,
     shuffledPlaylist,
-    streamInfo,
     volume
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
-import FileStreamSource from "./FileStreamSource";
 
-import WebRTCReceiver from "./WebRTCReceiver";
+import type { Event } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
-
-const LOG_DATA = true;
-
-const MAX_PACKETS = 50;
+import WebRTCReceiver from "./WebRTCReceiver";
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
@@ -57,7 +51,6 @@ class AudioPlayer {
     audioFile: HTMLAudioElement;
     audioFile2: HTMLAudioElement; // for gapless playback
 
-    mediaSource: MediaSource;
 
     currentAudioFile: 1 | 2 = 1;
     // source: MediaElementAudioSourceNode;
@@ -74,38 +67,7 @@ class AudioPlayer {
     shouldRestoreLastPlayed: LastPlayedInfo;
     isRunningTransition = false;
     isInit = true;
-    currentStreamSrc = null; // To see if a stream needs to be loaded
-    prevStreamSrc = null;
-    fileStreams: { [key: string]: ReadableStream } = {};
-    activeStream: string = null;
-    sourceBuffer: SourceBuffer;
-    readCancelled = false;
-    readableStream: ReadableStream;
-    gainNode: GainNode;
-    fileStreamSource: FileStreamSource;
-
-    private _audioContext: AudioContext;
-
-    audioElement: HTMLAudioElement;
-    audioElement2: HTMLAudioElement;
-
-    // Nodes
-    oscillatorNode: OscillatorNode;
-    audioSourceNode: AudioWorkletNode;
-    resamplerNode: AudioWorkletNode;
-    private _audioSource: AudioBufferSourceNode;
-    private _audioSource2: MediaElementAudioSourceNode;
-    audioAnalyser: AnalyserNode;
-    private _gainNode: GainNode;
-    private _gainNode2: GainNode;
-
-    buffered = 0;
-
-    // Worklet stuff
-    hasBufferReachedEnd = false;
-    currentTimestamp = 0;
-    audioWriter: AudioWriter;
-
+    isStopped = true;
     // WebRTC
     webRTCReceiver: WebRTCReceiver;
     packet_n: number = 0;
@@ -117,28 +79,12 @@ class AudioPlayer {
     flowControlSendInterval;
 
     private constructor() {
-        this.audioFile = new Audio();
-        this.audioFile2 = new Audio();
-        this.audioFile.crossOrigin = "anonymous";
-        this.audioFile2.crossOrigin = "anonymous";
-        this.mediaSource = new MediaSource();
-        this.fileStreamSource = new FileStreamSource();
-
-        this.mediaSource.addEventListener("sourceopen", async () =>
-            this.onMediaSourceOpen()
-        );
-
         this.webRTCReceiver = new WebRTCReceiver();
-
-        // this.source = audioCtx.createMediaElementSource(this.audioFile);
-        // this.source.connect(this.gainNode);
 
         seekTime.subscribe((time) => {
             // Tell Rust to play file with seek position
             if (this.currentSong) this.playCurrent(time);
         });
-
-        // volume.set(this.audioFile.volume);
 
         this.setupMediaSession();
         currentSongArtworkSrc.subscribe((artwork) => {
@@ -220,7 +166,6 @@ class AudioPlayer {
         });
 
         volume.subscribe(async (vol) => {
-            // if (this.gainNode) this.gainNode.gain.value = vol * 0.75;
             await invoke("volume_control", {
                 event: {
                     volume: vol * 0.75
@@ -229,41 +174,18 @@ class AudioPlayer {
             localStorage.setItem("volume", String(vol));
         });
 
-        // TODO: Remove
-        appWindow.listen("file-samples", async (event) => {
-            console.log("file-samples", event);
-            console.log("audiosourcenode", this.audioSourceNode.port);
-            if (this.audioSourceNode) {
-                // Let the worker know about the total number of samples in this track
-                this.audioSourceNode.port.postMessage({
-                    type: "total-samples",
-                    totalSamples: event.payload
-                });
+        appWindow.listen("song_change", async (event: Event<Song>) => {
+            if (this.isRunningTransition) {
+                currentSong.set(event.payload);
+                this.currentSongIdx += 1;
+                currentSongIdx.set(this.currentSongIdx);
+                this.setNextUpSong();
+                this.isRunningTransition = false;
             }
         });
 
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
-
-            // TODO: Do this in a better way eg. send current song info from Rust
-            if (this.isRunningTransition && event.payload < 3) {
-                console.log("currentidx", this.currentSongIdx);
-                let nextUp =
-                    this.currentSongIdx + 1 < this.playlist?.length
-                        ? this.playlist[this.currentSongIdx + 1]
-                        : null;
-
-                this.currentSongIdx+=1;
-                currentSongIdx.set(this.currentSongIdx);
-                console.log("currentidx", this.currentSongIdx);
-
-                // Bring next song to current
-                currentSong.set(nextUp);
-                this.currentSong = nextUp;
-                
-                this.setNextUpSong();
-                this.isRunningTransition = false;
-            }
 
             console.log("timestamp", event.payload);
             console.log("duration", get(currentSong).fileInfo.duration);
@@ -276,16 +198,14 @@ class AudioPlayer {
             ) {
                 console.log("Running transition...");
                 this.isRunningTransition = true;
-                let nextUp =
-                    this.currentSongIdx + 1 < this.playlist?.length
-                        ? this.playlist[this.currentSongIdx + 1]
-                        : null;
+                let nextUp = get(nextUpSong);
                 if (nextUp) {
                     invoke("queue_next", {
                         event: {
                             path: nextUp.path,
                             seek: 0,
-                            file_info: nextUp.fileInfo
+                            file_info: nextUp.fileInfo,
+                            volume: get(volume)
                         }
                     });
                 }
@@ -294,180 +214,8 @@ class AudioPlayer {
         // this.setupAnalyserAudio();
     }
 
-    /**
-     * Only set up the audio context once we know the sample rate to set
-     * i.e the track has been clicked
-     * @param sampleRate The source file sample rate
-     */
-    async setupAudioContext(sampleRate) {
-        await this.tearDownAudioContext();
-        let AudioContext = window.AudioContext || window.webkitAudioContext;
-        this._audioContext = new AudioContext({
-            sampleRate,
-            latencyHint: "playback"
-        });
-
-        console.log(
-            "AudioPlayer::sample rate is " + this._audioContext.sampleRate
-        );
-        this.gainNode = this._audioContext.createGain();
-        this.gainNode.gain.value = get(volume);
-        this.gainNode.connect(this._audioContext.destination);
-        await this.loadWorkletModules();
-        this.setupAnalyserAudio();
-    }
-
-    async tearDownAudioContext() {
-        // Tear down existing audio context
-        if (
-            this._audioContext?.state === "running" ||
-            this._audioContext?.state === "suspended"
-        ) {
-            this.gainNode.disconnect();
-            this.audioSourceNode.port.close();
-            this.audioSourceNode.disconnect();
-            await this._audioContext.close();
-        }
-    }
-
-    async loadWorkletModules() {
-        await this._audioContext.audioWorklet.addModule(AudioSourceWorkletUrl);
-        console.log("loaded modules");
-    }
-
-    async workletSourceOpen(position: number) {
-        console.log("player: sourceopen");
-
-        let fileSrc = convertFileSrc(
-            this.currentSong.path.replace("?", "%3F"),
-            "stream"
-        );
-        if (fileSrc !== this.currentStreamSrc) {
-            this.currentStreamSrc = fileSrc;
-        }
-
-        // if (this.gainNode) {
-        //     this.gainNode.gain.value = 0; // Avoid clicks during switch
-        // }
-
-        // Set up audio nodes to be able to play PCM stream
-        // Set up ring buffer
-        let initialSetup = await this.startAudioNodes();
-        if (!initialSetup) {
-            this.audioSourceNode.port.postMessage({
-                type: "reset"
-            });
-        }
-
-        this.audioSourceNode.port.postMessage({
-            type: "samplerate",
-            sampleRate: this.currentSong.fileInfo.sampleRate,
-            time: position
-        });
-
-        console.log(
-            "audioplayer::datachannel::",
-            this.webRTCReceiver.dataChannel?.readyState
-        );
-        // If the WebRTC receiver is ready to receive data, invoke the streamer
-        this.webRTCReceiver.prepareForNewStream();
-        invoke("stream_file", {
-            event: {
-                path: this.currentSong.path,
-                seek: position,
-                file_info: this.currentSong.fileInfo
-            }
-        });
-    }
-
     async setupBuffers() {
         console.log("player::setupBuffers()");
-    }
-
-    async startAudioNodes(): Promise<boolean> {
-        // If the sample rate of the file is different we should recreate the audio context to match it.
-        let shouldRecreateContext =
-            this._audioContext?.sampleRate !==
-            this.currentSong.fileInfo.sampleRate;
-
-        if (shouldRecreateContext)
-            console.log(
-                "player::switching sample rate from " +
-                    this._audioContext?.sampleRate +
-                    " to " +
-                    this.currentSong.fileInfo.sampleRate
-            );
-
-        if (this._audioContext && !shouldRecreateContext) return false; // Already instantiated
-
-        await this.setupAudioContext(this.currentSong.fileInfo.sampleRate);
-        console.log("player::startAudioNodes()");
-
-        this.audioSourceNode = new AudioWorkletNode(
-            this._audioContext,
-            "webrtc-receiver-processor",
-            {
-                numberOfInputs: 1,
-                numberOfOutputs: 1,
-                channelCount: 2,
-                outputChannelCount: [2]
-            }
-        );
-        this.audioSourceNode.port.start();
-
-        if (this.audioSourceNode.port) {
-            this.audioSourceNode.port.addEventListener(
-                "message",
-                async (ev: MessageEvent) => {
-                    switch (ev.data.type) {
-                        case "log":
-                            console.log("audiosource::log", ev.data.text);
-                            break;
-                        case "buffer":
-                            // console.log("audiosource::play");
-                            streamInfo.update((s) => ({
-                                ...s,
-                                bufferedSamples: ev.data.bufferedSamples
-                            }));
-
-                            // this.webRTCReceiver.doFlowControl(
-                            //     ev.data.bufferedSamples /
-                            //         this.currentSong.fileInfo.sampleRate
-                            // );
-
-                            break;
-                        case "played":
-                            // console.log("audiosource::play");
-                            streamInfo.update((s) => ({
-                                ...s,
-                                playedSamples:
-                                    s.playedSamples + ev.data.playedSamples
-                            }));
-                            break;
-                        case "ended":
-                            console.log("audiosource::ended");
-                           
-                            break;
-                        case "timestamp":
-                            // console.log("audiosource::timestamp", ev.data);
-                            // playerTime.set(ev.data.time);
-                            streamInfo.update((s) => ({
-                                ...s,
-                                timestamp: ev.data.time,
-                                sampleIdx: ev.data.sampleIdx
-                            }));
-                            break;
-                    }
-                }
-            );
-
-            this.audioSourceNode.onprocessorerror = (ev) => console.error(ev);
-
-            // this.resamplerNode.port.start();
-            this.audioSourceNode.connect(this.gainNode);
-            // this.resamplerNode.connect(this.gainNode);
-        }
-        return true;
     }
 
     shuffle() {
@@ -483,29 +231,6 @@ class AudioPlayer {
         isShuffleEnabled.set(false);
     }
 
-    getCurrentAudioFile() {
-        if (this.currentAudioFile === 1) return this.audioFile;
-        return this.audioFile2;
-    }
-
-    getOtherAudioFile() {
-        if (this.currentAudioFile === 1) return this.audioFile2;
-        return this.audioFile;
-    }
-
-    switchAudioFile() {
-        if (this.currentAudioFile === 1) {
-            this.currentAudioFile = 2;
-        } else {
-            this.currentAudioFile = 1;
-        }
-    }
-
-    setVolume(vol) {
-        // this.audioFile.volume = volume;
-        volume.set(vol);
-    }
-
     onPlay() {
         isPlaying.set(true);
         if (navigator.mediaSession)
@@ -516,69 +241,6 @@ class AudioPlayer {
         isPlaying.set(false);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "paused";
-    }
-    async appendChunk(chunk: Uint8Array) {
-        if (this.sourceBuffer.updating) {
-            this.sourceBuffer.addEventListener("updateend", () => {
-                console.log("mse:onupdateend:appendBuffer");
-                this.sourceBuffer.appendBuffer(chunk);
-            });
-        } else {
-            console.log("mse:appendBuffer");
-            this.sourceBuffer.appendBuffer(chunk);
-        }
-    }
-
-    lastChunkDropTime = 0;
-
-    async onTimeUpdate(time: number) {
-        console.log("AudioPlayer::player time: " + time);
-        console.log("FileStreamer (bytes)", this.fileStreamSource.bytePos);
-        console.log("FileStreamer (time)", this.fileStreamSource.timePos);
-
-        lastPlayedInfo.set({
-            songId: this.currentSong.id,
-            position: time
-        });
-        playerTime.set(time);
-
-        // Reached the end of the playlist, exit here
-        if (this.currentSongIdx === this.playlist.length - 1) {
-            return;
-        }
-
-        if (
-            this.fileStreamSource.timePos - time < 5 &&
-            !this.fileStreamSource.isFetchingChunk
-        ) {
-            // Fetch the next chunk
-            const chunk = await this.fileStreamSource.getNextChunk();
-            this.audioSourceNode.port.postMessage({
-                type: "ADD_SAMPLES",
-                payload: { samples: chunk.channelData }
-            });
-        }
-    }
-
-    async queueGapless(diff) {
-        const playDelay = 0.1;
-        setTimeout(
-            async () => {
-                this.pause(true);
-                this.switchAudioFile();
-                console.log("currentAudioFile", this.currentAudioFile);
-                console.log("currentAudioFile switched", this.currentAudioFile);
-                currentSongIdx.set(get(currentSongIdx) + 1);
-                playerTime.set(0);
-                currentSong.set(get(nextUpSong));
-                this.currentSong = get(nextUpSong);
-                this.setMediaSessionData();
-                this.play(false);
-                this.setNextUpSong();
-                this.isRunningTransition = false;
-            },
-            (diff - 0.41) * 1000
-        );
     }
 
     playCurrent(seek: number = 0) {
@@ -712,18 +374,32 @@ class AudioPlayer {
     }
 
     // MEDIA
-    async webAudioPlaySong(song: Song, position = 0, play = true) {
-        console.log("webaudio: playSong", console.trace());
+
+    async playSong(song: Song, position = 0, play = true) {
+        console.log("playSong", console.trace());
         if (song) {
             // this.pause();
+
             currentSong.set(song);
             this.currentSong = song;
 
-            playerTime.set(this.getCurrentAudioFile().currentTime);
-
             if (play) {
-                await this.workletSourceOpen(position);
-                await this.play();
+                await this.play(false);
+                playerTime.set(position);
+                console.log(
+                    "audioplayer::datachannel::",
+                    this.webRTCReceiver.dataChannel?.readyState
+                );
+                // If the WebRTC receiver is ready to receive data, invoke the streamer
+                this.webRTCReceiver.prepareForNewStream();
+                invoke("stream_file", {
+                    event: {
+                        path: this.currentSong.path,
+                        seek: position,
+                        file_info: this.currentSong.fileInfo,
+                        volume: get(volume)
+                    }
+                });
             }
             this.shouldPlay = play;
             let newCurrentSongIdx = this.playlist.findIndex(
@@ -744,125 +420,38 @@ class AudioPlayer {
         }
     }
 
-    async playSong(song: Song, position = 0, play = true) {
-        console.log("playSong", song);
-        this.webAudioPlaySong(song, position, play);
-        return;
-        if (this.getCurrentAudioFile() && song) {
-            this.pause();
-            this.getCurrentAudioFile().currentTime = 0;
-            playerTime.set(this.getCurrentAudioFile().currentTime);
-            this.getCurrentAudioFile().src = convertFileSrc(
-                song.path.replace("?", "%3F")
-            );
-            play && this.play();
-            currentSong.set(song);
-            this.currentSong = song;
-            let newCurrentSongIdx = this.playlist.findIndex(
-                (s) => s.id === this.currentSong?.id
-            );
-            if (newCurrentSongIdx === -1) {
-                newCurrentSongIdx = 0;
-            }
-            currentSongIdx.set(newCurrentSongIdx);
-            this.setNextUpSong();
-            this.setMediaSessionData();
-            this.incrementPlayCounter(song);
-            if (position > 0) {
-                seekTime.set(position);
-            }
-            lastPlayedInfo.set({
-                songId: this.currentSong.id,
-                position: 0
+    async play(isResume: boolean) {
+        this.isStopped = false;
+        if (isResume) {
+            invoke("decode_control", {
+                event: {
+                    decoding_active: true
+                }
             });
         }
-    }
-
-    async play(isResume: boolean) {
-        if (this.audioSourceNode) {
-            if (this._audioContext?.state === "suspended")
-                await this._audioContext.resume();
-            this.gainNode.gain.setTargetAtTime(
-                get(volume),
-                this._audioContext.currentTime,
-                0.015
-            );
-
-            // this.oscillatorNode.start();
-            if (isResume) {
-                invoke("decode_control", {
-                    event: {
-                        decoding_active: true
-                    }
-                });
-            }
-            // Clear intervals first
-            if (this.ticker) clearInterval(this.ticker);
-            if (this.flowControlSendInterval)
-                clearInterval(this.flowControlSendInterval);
-
-            this.ticker = setInterval(() => {
-                this.audioSourceNode.port.postMessage({
-                    type: "timestamp-query"
-                });
-            }, 500);
-            this.flowControlSendInterval = setInterval(async () => {
-                // Send the bitrate to the sender for flow control
-                let receiveRate = get(streamInfo).receiveRate;
-                await invoke("flow_control", {
-                    event: {
-                        client_bitrate: receiveRate
-                    }
-                });
-            }, 500);
-            this.onPlay();
-        }
+        this.onPlay();
     }
 
     async pause() {
-        // this._audioSource.stop();
-        if (this._audioContext && this.gainNode) {
-            this.gainNode.gain.setTargetAtTime(
-                0,
-                this._audioContext.currentTime,
-                0.015
-            );
-        }
-        setTimeout(async () => {
-            this._audioContext?.state === "running" &&
-                (await this._audioContext.suspend());
-        }, 0.015);
-
-        // this.oscillatorNode.stop();
         invoke("decode_control", {
             event: {
                 decoding_active: false
             }
         });
-        if (this.ticker) clearInterval(this.ticker);
-        if (this.flowControlSendInterval)
-            clearInterval(this.flowControlSendInterval);
         this.onPause();
     }
 
-    async onEnded() {
-        this._audioContext?.state === "running" &&
-            (await this._audioContext.suspend());
-        if (this.ticker) clearInterval(this.ticker);
-        if (this.flowControlSendInterval)
-            clearInterval(this.flowControlSendInterval);
-        this.gainNode.gain.setTargetAtTime(
-            0,
-            this._audioContext.currentTime,
-            0.015
-        );
-    }
+    async onEnded() {}
 
     togglePlay() {
         if (get(isPlaying)) {
             this.pause();
         } else {
-            this.play(true);
+            if (this.isStopped) {
+                this.playCurrent();
+            } else {
+                this.play(true);
+            }
         }
     }
 
@@ -870,46 +459,6 @@ class AudioPlayer {
         const song = await db.songs.get(lastPlayed.songId);
         this.playSong(song, lastPlayed.position, false);
     }
-
-    /**
-     * Connect the nodes together, so sound is flowing
-     * into the analyser node from the source node
-     */
-    setupAnalyserAudio() {
-        // this.audioElement = this.getCurrentAudioFile();
-        // this.audioElement2 = this.getOtherAudioFile();
-        // let AudioContext = window.AudioContext || window.webkitAudioContext;
-        // this._audioContext = new AudioContext({ sampleRate: 48000 });
-        // this._audioSource = this._audioContext.createMediaElementSource(
-        //     this.audioElement
-        // );
-
-        // this._audioSource2 = this._audioContext.createMediaElementSource(
-        //     this.audioElement2
-        // );
-        this.audioAnalyser = new AnalyserNode(this._audioContext, {
-            fftSize: 2048,
-            smoothingTimeConstant: 0.9
-        });
-        // this._audioSource.mediaElement.volume = get(volume);
-        // this._audioSource2.mediaElement.volume = get(volume);
-        // Source -> Gain -> Analyser -> Destination (master)
-        // this._audioSource.connect(this._gainNode); // DONE WHEN WORKLET IS AVAILABLE
-        this.gainNode.connect(this.audioAnalyser);
-        this.audioAnalyser.connect(this._audioContext.destination);
-    }
-    doPlay = (number) => {
-        console.log("doplay ", number);
-        if (number === 1) {
-            this._audioSource.start();
-        }
-    };
-    doPause = (number) => {
-        console.log("dopause ", number);
-        if (number === 1) {
-            this._audioSource.stop();
-        }
-    };
 }
 
 const audioPlayer = AudioPlayer.Instance;
