@@ -606,7 +606,7 @@
         position: relative;
         cursor: grab;
         border: 0.7px solid #ffffff2a;
-        margin: 5px 5px 5px 0;
+        margin: 5px 0 0 0;
         border-radius: 5px;
         overflow: hidden;
         background-color: #0d0c0c2a;

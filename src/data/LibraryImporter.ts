@@ -330,62 +330,24 @@ export async function importPaths(
     }
     console.log("toImport called");
 
-    const toImport = await invoke<ToImport>("scan_paths", {
+    await invoke<ToImport>("scan_paths", {
         event: {
             paths: selected
         }
     });
-    console.log("toImport result", toImport);
 
-    // Or otherwise it's done in chunks - on 'import_chunk' event
-    importStatus.update((importStatus) => ({
-        ...importStatus,
-        totalTracks: toImport.songs.length,
-        currentFolder: selected[0],
-        status: "Adding to library",
-        isImporting: !background,
-        backgroundImport: background,
-        percent: toImport.progress
-    }));
     if (background) {
         bottomBarNotification.set({
             text: "Adding to library",
             timeout: 2000
         });
     }
-
-    // Import in one go
-    if (toImport.songs.length && toImport.progress === 100) {
-        const worker = new ImportWorker();
-        worker.postMessage({ function: "handleImport", toImport: toImport });
-        worker.onmessage = async (ev) => {
-            switch (ev.data) {
-                case "handleImport":
-                    await addArtworksToAllAlbums(
-                        toImport.songs,
-                        background,
-                        worker
-                    );
-                    break;
-                case "bulkAlbumPut":
-                    importStatus.update((importStatus) => ({
-                        ...importStatus,
-                        status: "Processing albums",
-                        isImporting: false,
-                        backgroundImport: false,
-                        percent: 100
-                    }));
-
-                    bottomBarNotification.set(null);
-                    worker.terminate();
-                    break;
-            }
-        };
-    }
 }
 
 export async function startImportListener() {
-    const allSongs: Song[] = [];
+    let allSongs: Song[] = [];
+    let chunksToProcess: ToImport[] = []; // progress numbers
+    let gotAllChunks = false;
     await appWindow.listen<ToImport>("import_chunk", async (event) => {
         let isBackground = false;
         importStatus.update((importStatus) => {
@@ -402,8 +364,9 @@ export async function startImportListener() {
             });
         }
         const toImport = event.payload;
-
+        gotAllChunks = event.payload.progress === 100;
         if (toImport.songs.length) {
+            chunksToProcess.push(toImport);
             allSongs.push(...toImport.songs);
             const worker = new ImportWorker();
 
@@ -411,19 +374,19 @@ export async function startImportListener() {
                 function: "handleImport",
                 toImport: toImport
             });
+
             worker.onmessage = async (ev) => {
-                switch (ev.data) {
+                switch (ev.data.event) {
                     case "handleImport":
-                        if (toImport.progress === 100) {
-                            // worker.postMessage({
-                            //     function: "addArtworksToAllAlbums",
-                            //     songs: allSongs
-                            // });
-                            await addArtworksToAllAlbums(
-                                allSongs,
-                                isBackground,
-                                worker
-                            );
+                        // Import chunk completed
+                        chunksToProcess.splice(
+                            chunksToProcess.findIndex(
+                                (c) => c.progress === ev.data.progress
+                            ),
+                            1
+                        );
+                        if (chunksToProcess.length === 0 && gotAllChunks) {
+                            await addArtworksToAllAlbums(allSongs, isBackground, worker);
                         }
                         break;
                     // Last step - finish after this
@@ -438,9 +401,16 @@ export async function startImportListener() {
 
                         bottomBarNotification.set(null);
                         worker.terminate();
+
+                        // Reset stuff
+                        gotAllChunks = false;
+                        allSongs = [];
+                        chunksToProcess = [];
                         break;
                 }
             };
+        } else if (toImport.songs.length === 0 && toImport.progress === 100) {
+            await addArtworksToAllAlbums(allSongs, isBackground);
         }
     });
 }
@@ -528,7 +498,7 @@ export async function lookForArt(
             console.error("Couldn't find artwork " + err);
         }
     }
-    // console.log("found result", foundResult);
+    // console.log("found result:", foundResult !== null, songFileName);
     return foundResult;
 }
 
@@ -607,6 +577,8 @@ export async function addArtworksToAllAlbums(
                     albumsToPut[existingAlbum.id] = existingAlbum;
                 }
                 // Re-order trackIds in album order?
+            } else {
+                // console.error("Couldn't find album: ", song.album)
             }
         }, {})
     );
@@ -633,6 +605,7 @@ export async function addArtworksToAllAlbums(
         function: "bulkAlbumPut",
         albums: albumsToPut
     });
+    // console.log("albums to put: ", albumsToPut);
 }
 export async function runScan() {
     const settings = get(userSettings);

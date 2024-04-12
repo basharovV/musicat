@@ -70,6 +70,7 @@
     import TrackMenu from "./TrackMenu.svelte";
     import { getQueryPart } from "../smart-query/QueryParts";
     import { UserQueryPart } from "../smart-query/UserQueryPart";
+    import Konva from "konva";
 
     export let allSongs = null;
     export let dim = false;
@@ -147,8 +148,6 @@
                         console.log("found song:", idx);
 
                         currentSongY = idx * ROW_HEIGHT;
-                        currentSongInView =
-                            idx >= songsStartSlice && idx <= songsEndSlice;
                         currentSongScrollIdx = idx;
                     } else {
                         currentSongScrollIdx = null;
@@ -345,7 +344,7 @@
 
         if (matchMedia(query).matches) {
             // Slightly reduce the ratio for better performance
-            // Konva.pixelRatio = 1.8;
+            Konva.pixelRatio = 1.8;
         }
 
         const resizeObserver = new ResizeObserver((entries) => {
@@ -398,12 +397,10 @@
             $smartQuery.isEmpty);
 
     // Trigger: on songs updated
-    $: {
-        if (songs !== undefined && libraryContainer) {
-            console.log("Library::songs updated", songs.length);
-            drawSongDataGrid();
-            prevSongCount = songs.length;
-        }
+    $: if (songs !== undefined && libraryContainer !== undefined) {
+        console.log("Library::songs updated", songs.length);
+        drawSongDataGrid();
+        prevSongCount = songs.length;
     }
 
     // Restore scroll position if any
@@ -694,6 +691,7 @@
     function rememberScrollPos() {
         $libraryScrollPos = scrollNormalized; // 0-1
     }
+
 
     function onScroll() {
         scrollPos = scrollContainer.scrollTop;

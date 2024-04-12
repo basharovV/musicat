@@ -51,7 +51,6 @@ class AudioPlayer {
     audioFile: HTMLAudioElement;
     audioFile2: HTMLAudioElement; // for gapless playback
 
-
     currentAudioFile: 1 | 2 = 1;
     // source: MediaElementAudioSourceNode;
     duration: number;
@@ -400,6 +399,7 @@ class AudioPlayer {
                         volume: get(volume)
                     }
                 });
+                this.incrementPlayCounter(song);
             }
             this.shouldPlay = play;
             let newCurrentSongIdx = this.playlist.findIndex(
@@ -411,7 +411,6 @@ class AudioPlayer {
             currentSongIdx.set(newCurrentSongIdx);
             this.setNextUpSong();
             this.setMediaSessionData();
-            this.incrementPlayCounter(song);
 
             lastPlayedInfo.set({
                 songId: this.currentSong.id,

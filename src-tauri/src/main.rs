@@ -268,7 +268,7 @@ async fn get_song_metadata(event: GetSongMetadataEvent, app_handle: tauri::AppHa
 }
 
 #[tauri::command]
-async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
+async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> () {
     // println!("scan_paths", event);
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -298,7 +298,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
         let enumerator = songsClone.chunks(200);
         let chunks = enumerator.len();
         enumerator.into_iter().enumerate().for_each(|(idx, slice)| {
-            thread::sleep(time::Duration::from_millis(1200));
+            thread::sleep(time::Duration::from_millis(1000));
             let progress = if (idx == chunks - 1) {
                 100
             } else {
@@ -308,7 +308,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
                 )
             };
             println!("{:?}", progress);
-            app_handle.emit_all(
+            let _ = app_handle.emit_all(
                 "import_chunk",
                 ToImportEvent {
                     songs: slice.to_vec(),
@@ -316,15 +316,14 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
                 },
             );
         });
-        ToImportEvent {
-            songs: Vec::new(),
-            progress: 100,
-        }
     } else {
-        ToImportEvent {
-            songs: songs.lock().unwrap().clone(),
-            progress: 100,
-        }
+        let _ = app_handle.emit_all(
+            "import_chunk",
+            ToImportEvent {
+                songs: songs.lock().unwrap().clone(),
+                progress: 100,
+            },
+        );
     }
 }
 
@@ -341,7 +340,7 @@ fn process_directory(
                 if let Ok(entry) = entry {
                     let path = entry.path();
 
-                    // println!("{:?}", entry.path());
+                    println!("{:?}", entry.path());
                     if path.is_file() {
                         if let Some(song) = crate::metadata::extract_metadata(&path) {
                             subsongs.lock().unwrap().push(song);

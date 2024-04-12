@@ -11,7 +11,7 @@ import { getImageFormat, isImageFile } from "./utils/FileUtils";
 export async function handleImport(toImport: ToImport) {
     await db
         .transaction("rw", db.songs, db.albums, async () => {
-            db.songs
+            await db.songs
                 .bulkPut(
                     toImport.songs.map((s) => {
                         const { artwork, ...rest } = s;
@@ -58,7 +58,7 @@ export async function handleImport(toImport: ToImport) {
                 return albums;
             }, {});
 
-            db.albums.bulkPut(Object.values(albumsToPut));
+            await db.albums.bulkPut(Object.values(albumsToPut));
         })
         .catch("BulkError", (err) => {
             //
@@ -66,6 +66,9 @@ export async function handleImport(toImport: ToImport) {
             //
 
             console.error(err.stack);
+        })
+        .then(() => {
+            console.log("Transaction completed")
         });
 }
 
@@ -160,15 +163,15 @@ async function handleMessage(e) {
     switch (e.data.function) {
         case "handleImport":
             await handleImport(e.data.toImport);
-            postMessage("handleImport");
+            postMessage({event: "handleImport", progress: e.data.toImport.progress});
             break;
         case "bulkAlbumPut":
             await bulkAlbumPut(e.data.albums);
-            postMessage("bulkAlbumPut");
+            postMessage({event: "bulkAlbumPut"});
             break;
         case "addArtworksToAllAlbums":
             await addArtworksToAllAlbums(e.data.songs, e.data.userSettings);
-            postMessage("addArtworksToAllAlbums");
+            postMessage({event: "addArtworksToAllAlbums"});
             break;
         default:
             break;
