@@ -52,12 +52,12 @@
 
     $: queriedAlbums =
         $albums && $query.query.length
-            ? $albums.filter((a) =>
-                  a.title
-                      .toString()
-                      .trim()
-                      .toLowerCase()
-                      .startsWith($query.query.trim().toLowerCase())
+            ? $albums.filter(
+                  (a) =>
+                      a.artist
+                          .toLowerCase()
+                          .includes($query.query.toLowerCase()) ||
+                      a.title.toLowerCase().includes($query.query.toLowerCase())
               )
             : [];
 

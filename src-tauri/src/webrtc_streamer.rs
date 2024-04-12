@@ -392,7 +392,7 @@ pub mod web_rtcstreamer {
                     .unwrap()
                     .recv_timeout(Duration::from_secs(1));
 
-                println!("audio: waiting for file! {:?}", event);
+                // println!("audio: waiting for file! {:?}", event);
                 if let Ok(result) = event {
                     match result {
                         PlayerControlEvent::StreamFile(request) => {
@@ -670,10 +670,10 @@ pub mod web_rtcstreamer {
 
                                 let decode_rate_micros = bits as f64 / elapsed.as_micros() as f64;
                                 let decode_rate_second = decode_rate_micros * 1000000f64;
-                                println!(
-                                    "decode rate (seconds): {:.2} kb/s",
-                                    decode_rate_second / 1000f64
-                                );
+                                // println!(
+                                //     "decode rate (seconds): {:.2} kb/s",
+                                //     decode_rate_second / 1000f64
+                                // );
                             }
 
                             last_sent_time = Instant::now();
