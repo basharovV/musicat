@@ -45,21 +45,11 @@
 
 ## Screenshots
 ![screenshot](docs/albums.jpg)
+![screenshot](docs/queue.jpg)
 ![screenshot](docs/track-info.jpg)
-![screenshot](docs/smart-query.webp)
-![screenshot](docs/map.webp)
-![screenshot](docs/stats.webp)
-![screenshot](docs/artist.webp)
-
-### For musicians
-This app has some experimental features for artists to manage their own music. 
-
--   Keep your messy ideas in the Scrapbook - audio/video clips, text files, links, etc. Tag them and easily find them later.
--   Manage your music in the Artist's toolkit
-    -   Manage your artists and musical projects
-    -   Create song entries, add info and lyrics
-    -   Attach files (or drag from the scrapbook), from cool riffs to final masters.
--   Look up chords/lyrics in DuckDuckGo, go to artist on Wikipedia
+![screenshot](docs/smart-query.jpg)
+![screenshot](docs/map.jpg)
+![screenshot](docs/stats.jpg)
 
 ## Build locally
 
