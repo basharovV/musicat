@@ -27,7 +27,7 @@
 <small>💿 a neat mini-player
 </small>
 <br/>
-<small>🪕 Artist's toolkit for musicians
+<small>🎸 U2's latest album automatically added to your library
 </small>
 <br/>
 <small>📊 Stats, album timeline
@@ -41,7 +41,11 @@
 
 ![screenshot](docs/musicat-feb-2024.jpg)
 
-⚠️ Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
+> [!WARNING]
+> musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
+
+> [!IMPORTANT]
+> musicat is moving away from WebAudio towards native playback in Rust, read more and discuss [here](https://github.com/basharovV/musicat/discussions/6)
 
 ## Screenshots
 ![screenshot](docs/albums.jpg)
