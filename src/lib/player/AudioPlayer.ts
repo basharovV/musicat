@@ -21,6 +21,7 @@ import { shuffleArray } from "../../utils/ArrayUtils";
 import type { Event } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import WebRTCReceiver from "./WebRTCReceiver";
+import { register } from "@tauri-apps/api/globalShortcut";
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
@@ -378,7 +379,7 @@ class AudioPlayer {
         console.log("playSong", console.trace());
         if (song) {
             // this.pause();
-
+            this.isRunningTransition = false;
             currentSong.set(song);
             this.currentSong = song;
 
