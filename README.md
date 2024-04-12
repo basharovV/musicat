@@ -27,7 +27,7 @@
 <small>💿 a neat mini-player
 </small>
 <br/>
-<small>🪕 Artist's toolkit for musicians
+<small>🎸 U2's latest album automatically added to your library
 </small>
 <br/>
 <small>📊 Stats, album timeline
@@ -41,7 +41,11 @@
 
 ![screenshot](docs/musicat-feb-2024.jpg)
 
-⚠️ Note: musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
+> [!WARNING]
+> musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
+
+> [!IMPORTANT]
+> musicat is moving away from WebAudio towards native playback in Rust, read more and discuss [here](https://github.com/basharovV/musicat/discussions/6)
 
 ## Screenshots
 ![screenshot](docs/albums.jpg)
@@ -51,7 +55,7 @@
 ![screenshot](docs/stats.webp)
 ![screenshot](docs/artist.webp)
 
-### For musicians
+### For musicians (experimental)
 This app has some experimental features for artists to manage their own music. 
 
 -   Keep your messy ideas in the Scrapbook - audio/video clips, text files, links, etc. Tag them and easily find them later.
