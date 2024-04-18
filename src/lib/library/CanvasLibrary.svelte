@@ -271,10 +271,10 @@
 
     $: isOrderChanged =
         JSON.stringify(
-            displayFields.filter((f) => f.show).map((f) => f.value)
+            columnOrder
         ) !==
         JSON.stringify(
-            DEFAULT_FIELDS.filter((f) => f.show).map((f) => f.value)
+            DEFAULT_FIELDS.map(f => f.value)
         );
 
     let showColumnPicker = false;
@@ -484,8 +484,17 @@
         let runningX = 0;
         let previousWidth = 0;
 
+        console.log('fields', fields);
+
+        const sortedFields = columnOrder.reduce((sorted, c, idx) => {
+            console.log('c', c);
+            sorted[idx] = fields.find(f => f.value === c);
+            return sorted;
+        }, [...fields]);
+
+        console.log('sortedFields', sortedFields);
         // Fields visible depending on window width
-        const visibleFields = fields.filter((f) => {
+        const visibleFields = sortedFields.filter((f) => {
             switch (f.value) {
                 case "duration":
                     return f.show && width > 800;
@@ -501,6 +510,7 @@
                     return f.show;
             }
         });
+
         // Calculate total width of fixed-width rectangles
         const fixedWidths = visibleFields
             .filter((f) => !f.viewProps.autoWidth)
@@ -517,6 +527,8 @@
         const autoWidth =
             availableWidth / (visibleFields.length - fixedWidths.length);
 
+        console.log("displayFields", displayFields);
+        console.log("visibleFields", visibleFields);
         // Final display fields
         displayFields = [
             ...visibleFields.map((f) => {
@@ -691,7 +703,6 @@
     function rememberScrollPos() {
         $libraryScrollPos = scrollNormalized; // 0-1
     }
-
 
     function onScroll() {
         scrollPos = scrollContainer.scrollTop;
@@ -1006,8 +1017,20 @@
 
     // Re-order columns
 
+    let columnOrder = [
+        "title",
+        "artist",
+        "composer",
+        "album",
+        "trackNumber",
+        "year",
+        "genre",
+        "originCountry",
+        "duration"
+    ];
+
     $: {
-        displayFields && calculateColumns();
+        displayFields && columnOrder && calculateColumns();
     }
 
     let dropColumnIdx = null;
@@ -1087,19 +1110,34 @@
         columnToInsertXPos = 0;
     }
     function insertColumn(oldIndex, newIndex) {
-        displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
+        console.log("insert column", oldIndex, newIndex);
+
+        const oldIdxField = displayFields[oldIndex];
+        const newIdxField = displayFields[newIndex];
+        const columnOrderOldIdx = columnOrder.findIndex(c => c === oldIdxField.value);
+        const columnOrderNewIdx = columnOrder.findIndex(c => c === newIdxField.value);
+        columnOrder = moveArrayElement(columnOrder, columnOrderOldIdx, columnOrderNewIdx);
+        console.log("column order", columnOrder);
+        // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
         resetColumnOrderUi();
     }
 
     function swapColumns(oldIndex, newIndex) {
-        console.log(oldIndex, newIndex);
-        displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
+        const oldIdxField = displayFields[oldIndex];
+        const newIdxField = displayFields[newIndex];
+        const columnOrderOldIdx = columnOrder.findIndex(c => c === oldIdxField.value);
+        const columnOrderNewIdx = columnOrder.findIndex(c => c === newIdxField.value);
+        console.log("swap column", columnOrderOldIdx, columnOrderNewIdx);
+        columnOrder = swapArrayElements(columnOrder, columnOrderOldIdx, columnOrderNewIdx);
+        // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
+        console.log("column order", columnOrder);
         resetColumnOrderUi();
     }
 
     // Sets back to default
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
+        columnOrder = DEFAULT_FIELDS.map(f => f.value);
     }
 
     // SMART QUERY
