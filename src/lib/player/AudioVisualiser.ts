@@ -20,6 +20,7 @@ export class AudioVisualiser {
     shouldStopAnimation = false;
     timeDomain: Uint8Array;
     freqDomain: Uint8Array;
+    lastTick = performance.now();
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -38,6 +39,24 @@ export class AudioVisualiser {
     setCanvas(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this._canvasContext = canvas.getContext("2d");
+    }
+
+    interpolateUint8Array(array, factor) {
+        const length = array.length;
+        const interpolatedLength = length * factor - (factor - 1);
+        const interpolatedArray = new Uint8Array(interpolatedLength);
+    
+        for (let i = 0; i < length - 1; i++) {
+            interpolatedArray[i * factor] = array[i];
+            for (let j = 1; j < factor; j++) {
+                interpolatedArray[i * factor + j] = (j * array[i] + (factor - j) * array[i + 1]) / factor;
+            }
+        }
+    
+        // Copy the last value from the original array
+        interpolatedArray[interpolatedLength - 1] = array[length - 1];
+        
+        return interpolatedArray;
     }
 
     setupAnalyserAnimation() {
@@ -71,6 +90,11 @@ export class AudioVisualiser {
      * Draw an oscilloscope
      */
     drawOscilloscope() {
+        // Assuming 44100hz, TODO: Make dynamic
+        if (this.lastTick < 0.022675737) {
+            return;
+        }
+        this.lastTick = performance.now();
         const step = this._canvasContext.canvas.width / this.timeDomain.length;
 
         this._canvasContext.beginPath();

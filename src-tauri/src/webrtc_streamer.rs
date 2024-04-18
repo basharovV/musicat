@@ -22,7 +22,7 @@ pub mod web_rtcstreamer {
     use atomic_wait::{wake_all, wake_one};
     use bytes::Bytes;
     use log::{debug, error, info, log, warn};
-    use symphonia::core::audio::{Layout, RawSampleBuffer, SignalSpec};
+    use symphonia::core::audio::{Channels, Layout, RawSampleBuffer, SignalSpec};
     use symphonia::core::codecs::{DecoderOptions, FinalizeResult, CODEC_TYPE_NULL};
     use symphonia::core::errors::Error::ResetRequired;
     use symphonia::core::formats::{FormatOptions, FormatReader, SeekTo, Track};
@@ -89,6 +89,8 @@ pub mod web_rtcstreamer {
         pub audio_output: Arc<Mutex<Option<Box<dyn output::AudioOutput + Send + Sync>>>>,
         pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
         pub volume_control_sender: Sender<VolumeControlEvent>,
+        pub prepare_transition_receiver: Arc<Mutex<Receiver<bool>>>,
+        pub prepare_transition_sender: Sender<bool>,
     }
 
     impl<'a> AudioStreamer<'a> {
@@ -106,6 +108,9 @@ pub mod web_rtcstreamer {
                 Receiver<StreamFileRequest>,
             ) = std::sync::mpsc::channel();
 
+            let (sender_transition, receiver_transition): (Sender<bool>, Receiver<bool>) =
+                std::sync::mpsc::channel();
+
             Ok(AudioStreamer {
                 peer_connection: Arc::new(Mutex::new(None)),
                 data_channel: Arc::new(Mutex::new(None)),
@@ -122,6 +127,8 @@ pub mod web_rtcstreamer {
                 audio_output: Arc::new(Mutex::new(None)),
                 volume_control_receiver: Arc::new(Mutex::new(receiver_vol)),
                 volume_control_sender: sender_vol,
+                prepare_transition_receiver: Arc::new(Mutex::new(receiver_transition)),
+                prepare_transition_sender: sender_transition,
             })
         }
 
@@ -131,6 +138,7 @@ pub mod web_rtcstreamer {
             let cancel_tokens = self.cancel_tokens.clone();
             let decoding_active = self.decoding_active.clone();
             let volume_control_receiver = self.volume_control_receiver.clone();
+            let prepare_transition_receiver = self.prepare_transition_receiver.clone();
             let data_channel = self.data_channel.clone();
 
             std::thread::spawn(move || {
@@ -142,6 +150,7 @@ pub mod web_rtcstreamer {
                     &volume_control_receiver,
                     &receiver,
                     &next_track_receiver,
+                    &prepare_transition_receiver,
                     data_channel,
                     &app_handle,
                 );
@@ -343,6 +352,7 @@ pub mod web_rtcstreamer {
         volume_control_receiver: &Arc<Mutex<Receiver<VolumeControlEvent>>>,
         player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
         next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
+        prepare_transition_receiver: &Arc<Mutex<Receiver<bool>>>,
         data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
         app_handle: &AppHandle,
     ) {
@@ -357,6 +367,7 @@ pub mod web_rtcstreamer {
             vol_receiver,
             player_control_receiver,
             next_track_receiver,
+            prepare_transition_receiver,
             decoding_active,
             data_channel,
             app_handle,
@@ -367,26 +378,43 @@ pub mod web_rtcstreamer {
         volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
         player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
         next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
+        prepare_transition_receiver: &Arc<Mutex<Receiver<bool>>>,
         decoding_active: Arc<AtomicU32>,
         data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
         app_handle: &AppHandle,
     ) {
         // Request will be None at first!
 
-        let mut cancel_token;
-
         // These will be reset when changing tracks
         let mut path_str: Option<String> = None;
         let mut seek = None;
         let mut volume = None;
         let mut file = Arc::new(Mutex::new(None));
+
+        let mut spec: SignalSpec = SignalSpec::new_with_layout(44100, Layout::Stereo);
+        let mut duration: u64 = 512;
+
         let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
+        let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
+        let (sender_sample_offset, receiver_sample_offset) = std::sync::mpsc::channel();
+        let sample_offset_receiver = Arc::new(Mutex::new(receiver_sample_offset));
 
         let playback_state = Arc::new(Mutex::new(playback_state_receiver));
+        let reset_control = Arc::new(Mutex::new(reset_control_receiver));
+
+        let mut audio_output: Option<
+            Result<Arc<Mutex<dyn AudioOutput>>, output::AudioOutputError>,
+        > = None;
+
+        let mut cancel_token;
+
+        let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
+
         // Loop here!
         loop {
             cancel_token = CancellationToken::new();
             if let None = path_str {
+                is_transition = false;
                 let event = player_control_receiver
                     .try_lock()
                     .unwrap()
@@ -410,12 +438,12 @@ pub mod web_rtcstreamer {
                         }
                     }
                 }
-            } else if let Some(ref p) = path_str {
+            } else if let Some(ref p) = path_str.clone() {
                 let path = Path::new(p.as_str());
                 let file_info = file.try_lock().unwrap().clone().unwrap();
+
                 // Create a hint to help the format registry guess what format reader is appropriate.
                 let mut hint = Hint::new();
-
                 let source = Box::new(File::open(path).unwrap());
                 println!("source {:?}", source);
 
@@ -503,6 +531,38 @@ pub mod web_rtcstreamer {
                     .make(&track.codec_params, &DecoderOptions { verify: false })
                     .unwrap();
 
+                let mut spec_changed = false;
+                let mut new_spec = SignalSpec::new_with_layout(44100, Layout::Stereo);
+                let mut new_duration = 1152;
+                if let Some(channels) = decoder.codec_params().channels {
+                    new_spec =
+                        SignalSpec::new(decoder.codec_params().sample_rate.unwrap(), channels);
+                    let max_frames = decoder.codec_params().max_frames_per_packet;
+
+                    if let Some(new_dur) = max_frames {
+                        new_duration = new_dur;
+                        // Check if spec has changed, reinit audio
+                        if (new_spec != spec) || new_dur != duration {
+                            spec_changed = true;
+                        }
+                    }
+                }
+
+                if (audio_output.is_none() || spec_changed) {
+                    // Try to open the audio output.
+                    audio_output.replace(output::try_open(
+                        new_spec,
+                        new_duration,
+                        volume_control_receiver.clone(),
+                        sample_offset_receiver.clone(),
+                        playback_state.clone(),
+                        reset_control.clone(),
+                        data_channel.clone(),
+                        volume.clone(),
+                        app_handle.clone(),
+                    ));
+                }
+
                 /*
                 We're sending the PCM as bytes in chunks of 10kb,
                 which is just below the maximum limit on Chrome (16kb per message)
@@ -511,12 +571,11 @@ pub mod web_rtcstreamer {
                 let mut to_send = Bytes::new();
                 let mut last_sent_time = Instant::now();
                 let mut packet_counter = 0;
-                let target_bitrate = file_info.bit_depth.unwrap() as u32
-                    * file_info.sample_rate.unwrap()
-                    * file_info.channels.unwrap() as u32;
-                println!("Target bits/second: {}", target_bitrate);
-                let max_packet_size = &track.codec_params.max_frames_per_packet;
-                let max_block_size = &track.codec_params.frames_per_block;
+                let target_bitrate =
+                    file_info.bit_depth.unwrap() as u32 * file_info.sample_rate.unwrap();
+                println!("Target kbits/second: {}", target_bitrate as f64 / 1000f64);
+                let max_packet_size = &decoder.codec_params().max_frames_per_packet;
+                let max_block_size = &decoder.codec_params().frames_per_block;
 
                 let mut fastest_send_interval = Duration::new(0, 0);
                 let mut slowest_send_interval = Duration::new(0, 0);
@@ -529,212 +588,245 @@ pub mod web_rtcstreamer {
                 let mut is_first_packet = true;
                 let mut send_interval = Duration::from_millis(1); // Initial send interval
 
-                let mut audio_output = None;
-
                 let mut last_ticker_time = Instant::now();
-                let (sender_sample_offset, receiver_sample_offset) = std::sync::mpsc::channel();
 
-                sender_sample_offset.send(SampleOffsetEvent {
-                    sample_offset: Some(seek_ts * file_info.channels.unwrap() as u64),
-                });
-                let sample_offset_receiver = Arc::new(Mutex::new(receiver_sample_offset));
+                if !is_transition {
+                    reset_control_sender.send(true);
+                    sender_sample_offset.send(SampleOffsetEvent {
+                        sample_offset: Some(seek_ts * file_info.channels.unwrap() as u64),
+                    });
+                }
 
                 let receiver = player_control_receiver.try_lock().unwrap();
-                // Decode all packets, ignoring all decode errors.
-                let result = loop {
-                    let event = receiver.try_recv();
-                    // debug!("audio: waiting for event {:?}", event);
-                    if let Ok(result) = event {
-                        match result {
-                            PlayerControlEvent::StreamFile(request) => {
-                                println!("audio: source changed during decoding! {:?}", request);
-                                path_str.replace(request.path.unwrap());
-                                seek.replace(request.seek.unwrap());
-                                volume.replace(request.volume.unwrap());
-                                file.try_lock().unwrap().replace(request.file_info.unwrap());
-                                cancel_token.cancel();
-                            }
-                            PlayerControlEvent::Pause => {
-                                // self.pause();
-                            }
-                            PlayerControlEvent::Play => {
-                                // self.resume();
-                            }
-                        }
-                    }
 
-                    if (decoding_active.load(std::sync::atomic::Ordering::Relaxed) == PAUSED) {
-                        playback_state_sender.send(false);
-                    } else {
-                        playback_state_sender.send(true);
-                    }
+                if let Some(ref audio) = audio_output {
+                    if let Ok(ao) = audio {
+                        if let Ok(mut guard) = ao.try_lock() {
+                            let mut transition_time = Instant::now();
+                            let mut started_transition = false;
 
-                    atomic_wait::wait(&decoding_active, PAUSED); // waits while the value is PAUSED (0)
-                    if cancel_token.is_cancelled() {
-                        break Ok(());
-                    }
-                    let packet = match reader.next_packet() {
-                        Ok(packet) => packet,
-                        Err(err) => break Err(err),
-                    };
-                    packet_counter += 1;
-
-                    // if !printed {
-                    //     println!("packet size: {:?}", packet.buf().len());
-                    // }
-                    // If the packet does not belong to the selected track, skip over it.
-                    if packet.track_id() != track_id {
-                        continue;
-                    }
-
-                    // Decode the packet into audio samples.
-                    match decoder.decode(&packet) {
-                        Ok(_decoded) => {
-                            // If the audio output is not open, try to open it.
-                            // Get the audio buffer specification. This is a description of the decoded
-                            // audio buffer's sample format and sample rate.
-                            let spec = *_decoded.spec();
-
-                            // Get the capacity of the decoded buffer. Note that this is capacity, not
-                            // length! The capacity of the decoded buffer is constant for the life of the
-                            // decoder, but the length is not.
-                            let duration = _decoded.capacity() as u64;
-                            if audio_output.is_none() {
-                                // Try to open the audio output.
-                                audio_output.replace(output::try_open(
-                                    spec,
-                                    duration,
-                                    volume_control_receiver.clone(),
-                                    sample_offset_receiver.clone(),
-                                    playback_state.clone(),
-                                    data_channel.clone(),
-                                    volume.clone(),
-                                    app_handle.clone(),
-                                ));
-                            }
-
-                            let frames = _decoded.frames();
-                            // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
-                            let mut sample_buf = RawSampleBuffer::<f32>::new(
-                                _decoded.capacity() as u64,
-                                *_decoded.spec(),
-                            );
-
-                            // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
-                            // any required conversions.
-                            // sample_buf.copy_interleaved_ref(_decoded);
-
-                            // The interleaved f32 samples can be accessed as a slice of bytes as follows.
-                            // sample_buf.as_bytes().to_vec().iter().for_each(|b| {
-                            //     byte_buf.push(*b);
-                            //     if (byte_buf.is_full()) {
-                            //         to_send = Bytes::from(byte_buf.to_vec());
-                            //         // Clear the buffer to make space for remaining bytes
-                            //         byte_buf.clear();
-                            //     }
-                            // });
-
-                            // Calculate decode/send rate
-                            let elapsed = last_sent_time.elapsed();
-                            let ticker_elapsed = last_ticker_time.elapsed();
-
-                            if (packet_counter % 20 == 0) {
-                                if (is_first_packet) {
-                                    // Target time between packets = bitrate
-                                    let frames: u32 = u32::try_from(frames).unwrap();
-                                    let bits = frames * file_info.bit_depth.unwrap() as u32;
-
-                                    // Never send frames slower than 0.75x playback!
-                                    slowest_send_interval = Duration::from_secs_f64(
-                                        bits as f64 / target_bitrate as f64,
-                                    )
-                                    .mul_f64(1.1f64);
-
-                                    // Never send faster than 3x playback
-                                    fastest_send_interval = Duration::from_secs_f64(
-                                        bits as f64 / target_bitrate as f64,
-                                    )
-                                    .div_f64(3.0f64);
-                                    send_interval = slowest_send_interval.clone();
-                                    println!(
-                                        "decode (interval): {} every {}s",
-                                        bits,
-                                        slowest_send_interval.as_secs_f64()
-                                    );
-                                    is_first_packet = false;
-                                }
-
-                                // Target time between packets = bitrate
-                                let frames: u32 = u32::try_from(frames).unwrap();
-                                let bits = frames * file_info.bit_depth.unwrap() as u32;
-
-                                let decode_rate_micros = bits as f64 / elapsed.as_micros() as f64;
-                                let decode_rate_second = decode_rate_micros * 1000000f64;
-                                // println!(
-                                //     "decode rate (seconds): {:.2} kb/s",
-                                //     decode_rate_second / 1000f64
-                                // );
-                            }
-
-                            last_sent_time = Instant::now();
-
-                            // Send packet to JS here
-                            if (!cancel_token.is_cancelled()) {
-                                thread::sleep(send_interval);
-                                // Write the decoded audio samples to the audio output if the presentation timestamp
-                                // for the packet is >= the seeked position (0 if not seeking).
-                                if packet.ts() >= seek_ts {
-                                    if let Some(ref audio_result) = audio_output {
-                                        if let Ok(audio_guard) = audio_result {
-                                            if let Ok(mut audio_out) = audio_guard.try_lock() {
-                                                audio_out.write(_decoded).unwrap()
-                                            }
+                            // Decode all packets, ignoring all decode errors.
+                            let result = loop {
+                                let event = receiver.try_recv();
+                                // debug!("audio: waiting for event {:?}", event);
+                                if let Ok(result) = event {
+                                    match result {
+                                        PlayerControlEvent::StreamFile(request) => {
+                                            println!(
+                                                "audio: source changed during decoding! {:?}",
+                                                request
+                                            );
+                                            path_str.replace(request.path.unwrap());
+                                            seek.replace(request.seek.unwrap());
+                                            volume.replace(request.volume.unwrap());
+                                            file.try_lock()
+                                                .unwrap()
+                                                .replace(request.file_info.unwrap());
+                                            cancel_token.cancel();
+                                            guard.flush();
+                                        }
+                                        PlayerControlEvent::Pause => {
+                                            // self.pause();
+                                        }
+                                        PlayerControlEvent::Play => {
+                                            // self.resume();
                                         }
                                     }
                                 }
-                            }
 
-                            continue;
+                                if (decoding_active.load(std::sync::atomic::Ordering::Relaxed)
+                                    == PAUSED)
+                                {
+                                    playback_state_sender.send(false);
+                                }
+
+                                atomic_wait::wait(&decoding_active, PAUSED); // waits while the value is PAUSED (0)
+                                playback_state_sender.send(true);
+
+                                if cancel_token.is_cancelled() {
+                                    break Ok(());
+                                }
+                                let packet = match reader.next_packet() {
+                                    Ok(packet) => packet,
+                                    Err(err) => break Err(err),
+                                };
+                                packet_counter += 1;
+
+                                // if !printed {
+                                //     println!("packet size: {:?}", packet.buf().len());
+                                // }
+                                // If the packet does not belong to the selected track, skip over it.
+                                if packet.track_id() != track_id {
+                                    continue;
+                                }
+
+                                // Decode the packet into audio samples.
+                                match decoder.decode(&packet) {
+                                    Ok(_decoded) => {
+                                        // If the audio output is not open, try to open it.
+                                        // Get the audio buffer specification. This is a description of the decoded
+                                        // audio buffer's sample format and sample rate.
+                                        let spec = *_decoded.spec();
+
+                                        // Get the capacity of the decoded buffer. Note that this is capacity, not
+                                        // length! The capacity of the decoded buffer is constant for the life of the
+                                        // decoder, but the length is not.
+                                        let duration = _decoded.capacity() as u64;
+                                        let frames = _decoded.frames();
+                                        let frames = _decoded.frames();
+                                        // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
+                                        let mut sample_buf = RawSampleBuffer::<f32>::new(
+                                            _decoded.capacity() as u64,
+                                            *_decoded.spec(),
+                                        );
+                                        let frames = _decoded.frames();
+                                        // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
+                                        let mut sample_buf = RawSampleBuffer::<f32>::new(
+                                            _decoded.capacity() as u64,
+                                            *_decoded.spec(),
+                                        );
+
+                                        // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
+                                        // any required conversions.
+                                        // sample_buf.copy_interleaved_ref(_decoded);
+
+                                        // The interleaved f32 samples can be accessed as a slice of bytes as follows.
+                                        // sample_buf.as_bytes().to_vec().iter().for_each(|b| {
+                                        //     byte_buf.push(*b);
+                                        //     if (byte_buf.is_full()) {
+                                        //         to_send = Bytes::from(byte_buf.to_vec());
+                                        //         // Clear the buffer to make space for remaining bytes
+                                        //         byte_buf.clear();
+                                        //     }
+                                        // });
+
+                                        // Calculate decode/send rate
+                                        let elapsed = last_sent_time.elapsed();
+
+                                        if (packet_counter % 20 == 0) {
+                                            if (is_first_packet) {
+                                                // Target time between packets = bitrate
+                                                let frames: u32 = u32::try_from(frames).unwrap();
+                                                let bits =
+                                                    frames * file_info.bit_depth.unwrap() as u32;
+
+                                                // Never send frames slower than 0.75x playback!
+                                                slowest_send_interval = Duration::from_secs_f64(
+                                                    bits as f64 / target_bitrate as f64,
+                                                )
+                                                .mul_f64(1.1f64);
+
+                                                // Never send faster than 3x playback
+                                                fastest_send_interval = Duration::from_secs_f64(
+                                                    bits as f64 / target_bitrate as f64,
+                                                )
+                                                .div_f64(3.0f64);
+                                                send_interval = slowest_send_interval.clone();
+                                                println!(
+                                                    "decode (interval): {} every {}s",
+                                                    bits,
+                                                    slowest_send_interval.as_secs_f64()
+                                                );
+                                                is_first_packet = false;
+                                            }
+
+                                            // Target time between packets = bitrate
+                                            let frames: u32 = u32::try_from(frames).unwrap();
+                                            let bits = frames * file_info.bit_depth.unwrap() as u32;
+
+                                            let decode_rate_micros =
+                                                bits as f64 / elapsed.as_micros() as f64;
+                                            let decode_rate_second =
+                                                decode_rate_micros * 1000000f64;
+                                            println!(
+                                                "decode rate (seconds): {:.2} kb/s",
+                                                decode_rate_second / 1000f64
+                                            );
+                                        }
+
+                                        last_sent_time = Instant::now();
+
+                                        if is_transition && !started_transition {
+                                            started_transition = true;
+                                            transition_time = last_sent_time;
+                                        } else if is_transition && started_transition {
+                                            if transition_time.elapsed().as_secs() >= 5 {
+                                                // Check if 5s have passed
+                                                if let Some(song) =
+                                                    crate::metadata::extract_metadata(&Path::new(
+                                                        &p.clone().as_str(),
+                                                    ))
+                                                {
+                                                    app_handle.emit_all("song_change", Some(song));
+
+                                                    reset_control_sender.send(true);
+                                                    sender_sample_offset.send(SampleOffsetEvent {
+                                                        sample_offset: Some(
+                                                            seek_ts
+                                                                * file_info.channels.unwrap()
+                                                                    as u64,
+                                                        ),
+                                                    });
+                                                }
+                                                is_transition = false;
+                                                started_transition = false;
+                                            }
+                                        }
+
+                                        // Send packet to JS here
+                                        if (!cancel_token.is_cancelled()) {
+                                            if !is_transition {
+                                                // thread::sleep(send_interval);
+                                            }
+                                            // Write the decoded audio samples to the audio output if the presentation timestamp
+                                            // for the packet is >= the seeked position (0 if not seeking).
+                                            if packet.ts() >= seek_ts {
+                                                guard.write(_decoded);
+                                            }
+                                        }
+
+                                        continue;
+                                    }
+                                    Err(symphonia::core::errors::Error::DecodeError(err)) => {
+                                        println!("decode error: {}", err)
+                                    }
+                                    Err(err) => break Err(err),
+                                }
+                            };
+
+                            // Return if a fatal error occured.
+                            let _ = match result {
+                                Err(symphonia::core::errors::Error::IoError(err))
+                                    if err.kind() == std::io::ErrorKind::UnexpectedEof
+                                        && err.to_string() == "end of stream" =>
+                                {
+                                    println!("End of stream!!");
+
+                                    // TODO: Gapless here
+                                    let next_track =
+                                        next_track_receiver.try_lock().unwrap().try_recv();
+                                    if let Ok(request) = next_track {
+                                        let path = request.path.clone().unwrap();
+
+                                        is_transition = true;
+                                        println!("audio: next track received! {:?}", request);
+                                        path_str.replace(request.path.unwrap());
+                                        seek.replace(request.seek.unwrap());
+                                        volume.replace(request.volume.unwrap());
+                                        file.try_lock()
+                                            .unwrap()
+                                            .replace(request.file_info.unwrap());
+                                    }
+                                    // Do not treat "end of stream" as a fatal error. It's the currently only way a
+                                    // format reader can indicate the media is complete.
+                                    Ok(())
+                                }
+                                _ => result,
+                            };
                         }
-                        Err(symphonia::core::errors::Error::DecodeError(err)) => {
-                            println!("decode error: {}", err)
-                        }
-                        Err(err) => break Err(err),
                     }
-                };
-
-                // Return if a fatal error occured.
-                let _ = match result {
-                    Err(symphonia::core::errors::Error::IoError(err))
-                        if err.kind() == std::io::ErrorKind::UnexpectedEof
-                            && err.to_string() == "end of stream" =>
-                    {
-                        println!("End of stream!!");
-
-                        // TODO: Gapless here
-                        let next_track = next_track_receiver.try_lock().unwrap().try_recv();
-                        if let Ok(request) = next_track {
-                            let path = request.path.clone().unwrap();
-
-                            println!("audio: source changed during decoding! {:?}", request);
-                            path_str.replace(request.path.unwrap());
-                            seek.replace(request.seek.unwrap());
-                            volume.replace(request.volume.unwrap());
-                            file.try_lock().unwrap().replace(request.file_info.unwrap());
-
-                            // Read metadata and send to UI
-                            let p = Path::new(path.as_str());
-                            if let Some(song) = crate::metadata::extract_metadata(&p) {
-                                app_handle.emit_all("song_change", Some(song));
-                            }
-                        }
-                        // Do not treat "end of stream" as a fatal error. It's the currently only way a
-                        // format reader can indicate the media is complete.
-                        Ok(())
-                    }
-                    _ => result,
-                };
-            }
+                }
+            };
         }
         // Finalize the decoder and return the verification result if it's been enabled.
         // do_verification(decoder.finalize())

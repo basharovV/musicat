@@ -18,8 +18,9 @@ use symphonia::core::units::Duration;
 use webrtc::data_channel::RTCDataChannel;
 
 pub trait AudioOutput {
-    fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()>;
+    fn write(&mut self, decoded: AudioBufferRef<'_>);
     fn flush(&mut self);
+    fn get_sample_rate(&self) -> u32;
 }
 
 #[allow(dead_code)]
@@ -198,7 +199,9 @@ mod cpal {
     use tokio::sync::Mutex;
     use webrtc::data_channel::RTCDataChannel;
 
-    pub struct CpalAudioOutput;
+    pub struct CpalAudioOutput {
+        sample_rate: u8,
+    }
 
     trait AudioOutputSample:
         cpal::Sample
@@ -222,6 +225,7 @@ mod cpal {
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
+            reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             vol: Option<f64>,
             app_handle: AppHandle,
@@ -257,6 +261,7 @@ mod cpal {
                     volume_control_receiver,
                     sample_offset_receiver,
                     playback_state_receiver,
+                    reset_control_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
@@ -276,6 +281,7 @@ mod cpal {
                     volume_control_receiver,
                     sample_offset_receiver,
                     playback_state_receiver,
+                    reset_control_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as i16,
                     |data| {
@@ -299,6 +305,7 @@ mod cpal {
                     volume_control_receiver,
                     sample_offset_receiver,
                     playback_state_receiver,
+                    reset_control_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as u16,
                     |data| {
@@ -322,6 +329,7 @@ mod cpal {
                     volume_control_receiver,
                     sample_offset_receiver,
                     playback_state_receiver,
+                    reset_control_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
@@ -342,10 +350,12 @@ mod cpal {
     where
         T: AudioOutputSample + Send + Sync,
     {
+        ring_buf: SpscRb<T>,
         ring_buf_producer: rb::Producer<T>,
         sample_buf: SampleBuffer<T>,
         stream: cpal::Stream,
         resampler: Option<Resampler<T>>,
+        sample_rate: u32,
     }
 
     fn change_volume<T>(data: &mut [T], volume: Option<f64>)
@@ -365,6 +375,7 @@ mod cpal {
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
+            reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             volume_change: fn(T, f64) -> T,
             get_viz_bytes: fn(Vec<T>) -> Bytes,
@@ -394,7 +405,7 @@ mod cpal {
             };
 
             // Create a ring buffer with a capacity for up-to 200ms of audio.
-            let ring_len = ((200 * config.sample_rate.0 as usize) / 1000) * num_channels;
+            let ring_len = ((5000 * config.sample_rate.0 as usize) / 1000) * num_channels;
 
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
@@ -411,7 +422,21 @@ mod cpal {
 
             let stream_result = device.build_output_stream(
                 &config,
-                move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
+                move |data: &mut [T], cb: &cpal::OutputCallbackInfo| {
+                    
+                    // If file changed, reset
+                    let reset = reset_control_receiver.try_lock().unwrap().try_recv();
+                    if let Ok(rst) = reset {
+                        if (rst) {
+                            println!("Got rst: {:?}", rst);
+                            let mut frame_idx = frame_idx_state.write().unwrap();
+                            *frame_idx = 0;
+                            let mut elapsed_time = elapsed_time_state.write().unwrap();
+                            *elapsed_time = 0;
+                            
+                        }
+                    }
+
                     // Get volume
                     let volume = volume_control_receiver.try_lock().unwrap().try_recv();
                     if let Ok(vol) = volume {
@@ -423,37 +448,6 @@ mod cpal {
                     let current_volume = { *volume_state.read().unwrap() };
                     // println!("Current volume: {:?}", current_volume);
 
-                    // Write out as many samples as possible from the ring buffer to the audio
-                    // output.
-                    let written = ring_buf_consumer.read(data).unwrap_or(0);
-
-                    let sample_offset = sample_offset_receiver.try_lock().unwrap().try_recv();
-
-                    if let Ok(offset) = sample_offset {
-                        println!("Got sample offset: {:?}", offset);
-                        let mut current_sample_offset = frame_idx_state.write().unwrap();
-                        *current_sample_offset = offset.sample_offset.unwrap();
-                    }
-
-                    let mut i = 0;
-                    for d in &mut *data {
-                        *d = volume_change(*d, current_volume);
-                        i += 1;
-                    }
-
-                    let length = data.len();
-
-                    let mut u = 0;
-                    let mut should_send = false;
-                    for d in &mut *data {
-                        if (viz_data.len() < length * 3) {
-                            viz_data.push(*d);
-                        } else {
-                            should_send = true;
-                        }
-                        u += 1;
-                    }
-
                     let playing = playback_state_receiver.try_lock().unwrap().try_recv();
                     if let Ok(pl) = playing {
                         let mut current_playing = playback_state.write().unwrap();
@@ -462,6 +456,37 @@ mod cpal {
 
                     // update duration if seconds changed
                     if (*playback_state.try_read().unwrap()) {
+                        // Write out as many samples as possible from the ring buffer to the audio
+                        // output.
+                        let written = ring_buf_consumer.read(data).unwrap_or(0);
+
+                        let sample_offset = sample_offset_receiver.try_lock().unwrap().try_recv();
+
+                        if let Ok(offset) = sample_offset {
+                            println!("Got sample offset: {:?}", offset);
+                            let mut current_sample_offset = frame_idx_state.write().unwrap();
+                            *current_sample_offset = offset.sample_offset.unwrap();
+                        }
+
+                        let mut i = 0;
+                        for d in &mut *data {
+                            *d = volume_change(*d, current_volume);
+                            i += 1;
+                        }
+
+                        let length = data.len();
+
+                        let mut u = 0;
+                        let mut should_send = false;
+                        for d in &mut *data {
+                            if (viz_data.len() < length * 3) {
+                                viz_data.push(*d);
+                            } else {
+                                should_send = true;
+                            }
+                            u += 1;
+                        }
+
                         // new offset
                         let new_sample_offset = {
                             let mut sample_offset = frame_idx_state.write().unwrap();
@@ -494,10 +519,12 @@ mod cpal {
                                 }
                             }
                         }
+                        // Mute any remaining samples.
+                        data[written..].iter_mut().for_each(|s| *s = T::MID);
+                    } else {
+                        data.iter_mut().for_each(|s| *s = T::MID);
                     }
 
-                    // Mute any remaining samples.
-                    data[written..].iter_mut().for_each(|s| *s = T::MID);
                 },
                 move |err| error!("audio output error: {}", err),
                 None,
@@ -532,27 +559,30 @@ mod cpal {
             };
 
             Ok(Arc::new(Mutex::new(CpalAudioOutputImpl {
+                ring_buf,
                 ring_buf_producer,
                 sample_buf,
                 stream,
                 resampler,
+                sample_rate: config.sample_rate.0,
             })))
         }
     }
 
     impl<T: AudioOutputSample + Send + Sync> AudioOutput for CpalAudioOutputImpl<T> {
-        fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()> {
+        fn write(&mut self, decoded: AudioBufferRef<'_>) -> () {
             // Do nothing if there are no audio frames.
             if decoded.frames() == 0 {
-                return Ok(());
+                return;
             }
 
             let mut samples = if let Some(resampler) = &mut self.resampler {
                 // Resampling is required. The resampler will return interleaved samples in the
                 // correct sample format.
+
                 match resampler.resample(decoded) {
                     Some(resampled) => resampled,
-                    None => return Ok(()),
+                    None => return,
                 }
             } else {
                 // Resampling is not required. Interleave the sample for cpal using a sample buffer.
@@ -565,8 +595,6 @@ mod cpal {
             while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
                 samples = &samples[written..];
             }
-
-            Ok(())
         }
 
         fn flush(&mut self) {
@@ -581,7 +609,12 @@ mod cpal {
             }
 
             // Flush is best-effort, ignore the returned result.
-            let _ = self.stream.pause();
+            self.sample_buf.clear();
+            self.ring_buf.clear();
+        }
+
+        fn get_sample_rate(&self) -> u32 {
+            return self.sample_rate;
         }
     }
 }
@@ -602,6 +635,7 @@ pub fn try_open(
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::SampleOffsetEvent>>,
     >,
     playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
+    reset_control_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
     vol: Option<f64>,
     app_handle: tauri::AppHandle,
@@ -612,6 +646,7 @@ pub fn try_open(
         volume_control_receiver,
         sample_offset_receiver,
         playback_state_receiver,
+        reset_control_receiver,
         data_channel,
         vol,
         app_handle,
@@ -670,9 +705,9 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
 
     let interpolated_signal: Vec<f32> = time_domain_signal
         .windows(2)
-        .flat_map(|pair| {
+        .map(|pair| {
             let (x0, x1) = (pair[0], pair[1]);
-            (0..1).map(move |i| linear_interpolate(x0, x1, i as f32 / 1.0))
+            smoothing(x0, x1, 0.8f32)
         })
         .collect();
 
@@ -707,4 +742,8 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
 
 fn linear_interpolate(x0: f32, x1: f32, t: f32) -> f32 {
     x0 * (1.0 - t) + x1 * t
+}
+
+fn smoothing(x0: f32, x1: f32, factor: f32) -> f32 {
+    x1 + ((x0 - x1) * factor)
 }

@@ -606,6 +606,7 @@ fn queue_next(
     _app_handle: tauri::AppHandle,
 ) {
     println!("Queue next file {:?}", event);
+    state.prepare_transition_sender.send(true);
     state.next_track_sender.send(event);
 }
 

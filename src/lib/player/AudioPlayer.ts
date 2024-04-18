@@ -194,7 +194,7 @@ class AudioPlayer {
             if (
                 !this.isRunningTransition &&
                 event.payload < get(currentSong).fileInfo.duration &&
-                event.payload > get(currentSong).fileInfo.duration - 5
+                event.payload > get(currentSong).fileInfo.duration - 8
             ) {
                 console.log("Running transition...");
                 this.isRunningTransition = true;
