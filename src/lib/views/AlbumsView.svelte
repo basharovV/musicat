@@ -27,6 +27,7 @@
     import BottomBar from "../library/BottomBar.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
+    import Dropdown from "../ui/Dropdown.svelte";
 
     let isLoading = true;
 
@@ -34,7 +35,7 @@
 
     $: albums = liveQuery(async () => {
         let resultsArray: Album[] = [];
-        resultsArray = await db.albums.orderBy("title").toArray();
+        resultsArray = await db.albums.orderBy(orderBy.value).toArray();
 
         isLoading = false;
         cachedAlbums = resultsArray;
@@ -222,6 +223,23 @@
             behavior: "smooth"
         });
     }
+
+    const fields = [
+        {
+            value: "title",
+            label: "Title"
+        },
+        {
+            value: "artist",
+            label: "Artist"
+        },
+        {
+            value: "year",
+            label: "Year"
+        }
+    ];
+
+    let orderBy = fields[0];
 </script>
 
 <AlbumMenu
@@ -236,24 +254,28 @@
     <div class="grid-container" on:scroll={onScroll} bind:this={container}>
         <div class="header">
             <h1>Albums</h1>
-            {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if}
-            <label
-                >show singles
-                <input type="checkbox" bind:checked={showSingles} /></label
-            >
-            <label
-                >show info
-                <input type="checkbox" bind:checked={showInfo} /></label
-            >
-            <label
-                >grid size
-                <input
-                    type="range"
-                    min={100}
-                    max={400}
-                    bind:value={minWidth}
-                /></label
-            >
+            <!-- {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if} -->
+            <div class="options">
+                <Dropdown options={fields} bind:selected={orderBy} />
+
+                <label
+                    >show singles
+                    <input type="checkbox" bind:checked={showSingles} /></label
+                >
+                <label
+                    >show info
+                    <input type="checkbox" bind:checked={showInfo} /></label
+                >
+                <label
+                    >grid size
+                    <input
+                        type="range"
+                        min={100}
+                        max={400}
+                        bind:value={minWidth}
+                    /></label
+                >
+            </div>
         </div>
 
         {#if isLoading}
@@ -380,6 +402,12 @@
             font-size: 4em;
             opacity: 0.3;
         }
+
+        .options {
+            display: flex;
+            margin-right: 5px;
+            gap: 20px;
+        }
     }
     .grid {
         grid-column: 1;
@@ -419,6 +447,7 @@
         outline: none;
         border: none;
         box-shadow: none;
+        max-width: 100px;
         &::-webkit-slider-thumb {
             appearance: none;
             background-color: rgb(132, 175, 166);
