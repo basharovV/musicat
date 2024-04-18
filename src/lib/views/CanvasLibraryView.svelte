@@ -111,13 +111,13 @@
                     (song) =>
                         song.title
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase()) ||
+                            .includes($query.query.toLowerCase()) ||
                         song.artist
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase()) ||
+                            .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase())
                 );
         } else {
             results = db.songs.orderBy(

@@ -47,7 +47,7 @@
         onClose && onClose();
     }
 
-    function deleteAlbum() {
+    async function deleteAlbum() {
         console.log("delete");
         if (!isConfirmingDelete) {
             albumId = $rightClickedAlbum?.id;
@@ -56,7 +56,8 @@
         }
         if ($rightClickedAlbum) {
             closeMenu();
-            db.songs.delete($rightClickedAlbum.id);
+            await db.songs.bulkDelete($rightClickedAlbum.tracksIds);
+            await db.albums.delete($rightClickedAlbum.id);
             $rightClickedAlbum = null;
             isConfirmingDelete = false;
         }

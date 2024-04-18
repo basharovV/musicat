@@ -37,6 +37,7 @@
         importStatus,
         isPlaying,
         isQueueOpen,
+        isShuffleEnabled,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
@@ -49,6 +50,7 @@
         rightClickedTrack,
         rightClickedTracks,
         shouldFocusFind,
+        shuffledPlaylist,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
@@ -68,6 +70,7 @@
     import TrackMenu from "./TrackMenu.svelte";
     import { getQueryPart } from "../smart-query/QueryParts";
     import { UserQueryPart } from "../smart-query/UserQueryPart";
+    import Konva from "konva";
 
     export let allSongs = null;
     export let dim = false;
@@ -135,6 +138,21 @@
                     }
                     status.state.previousAlbum = s?.album;
                     status.state.previousArtist = s?.artist;
+
+                    // If currently in album mode, then the current song index doesn't match the library index,
+                    // and we need to find it
+                    if (
+                        ($playlistIsAlbum && s.id === $currentSong.id) ||
+                        ($isShuffleEnabled && s.id === $currentSong.id)
+                    ) {
+                        console.log("found song:", idx);
+
+                        currentSongY = idx * ROW_HEIGHT;
+                        currentSongScrollIdx = idx;
+                    } else {
+                        currentSongScrollIdx = null;
+                    }
+
                     return {
                         songs: songsArray,
                         state: status.state
@@ -253,10 +271,10 @@
 
     $: isOrderChanged =
         JSON.stringify(
-            displayFields.filter((f) => f.show).map((f) => f.value)
+            columnOrder
         ) !==
         JSON.stringify(
-            DEFAULT_FIELDS.filter((f) => f.show).map((f) => f.value)
+            DEFAULT_FIELDS.map(f => f.value)
         );
 
     let showColumnPicker = false;
@@ -326,7 +344,7 @@
 
         if (matchMedia(query).matches) {
             // Slightly reduce the ratio for better performance
-            // Konva.pixelRatio = 1.8;
+            Konva.pixelRatio = 1.8;
         }
 
         const resizeObserver = new ResizeObserver((entries) => {
@@ -379,12 +397,10 @@
             $smartQuery.isEmpty);
 
     // Trigger: on songs updated
-    $: {
-        if (songs !== undefined && libraryContainer) {
-            console.log("SONGS UPDATED", songs.length);
-            drawSongDataGrid();
-            prevSongCount = songs.length;
-        }
+    $: if (songs !== undefined && libraryContainer !== undefined) {
+        console.log("Library::songs updated", songs.length);
+        drawSongDataGrid();
+        prevSongCount = songs.length;
     }
 
     // Restore scroll position if any
@@ -426,7 +442,6 @@
         calculateColumns();
         calculateSongSlice();
         shouldRender = true;
-        console.log("fields", fields);
         // drawHeaders();
         // drawRows();
     }
@@ -443,10 +458,7 @@
     function calculateCanvasSize() {
         contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
         let area = contentHeight - viewportHeight;
-        console.log(
-            "scrollContainer.clientWidth",
-            scrollContainer?.offsetWidth
-        );
+        // console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
         // Set canvas size to fill the parent
         viewportHeight = libraryContainer.getBoundingClientRect().height;
@@ -459,7 +471,7 @@
 
         scrollableArea = area;
         isScrollable = scrollableArea > 0;
-        console.log("scrollableArea", scrollableArea);
+        // console.log("scrollableArea", scrollableArea);
 
         setTimeout(() => {
             width =
@@ -472,8 +484,17 @@
         let runningX = 0;
         let previousWidth = 0;
 
+        console.log('fields', fields);
+
+        const sortedFields = columnOrder.reduce((sorted, c, idx) => {
+            console.log('c', c);
+            sorted[idx] = fields.find(f => f.value === c);
+            return sorted;
+        }, [...fields]);
+
+        console.log('sortedFields', sortedFields);
         // Fields visible depending on window width
-        const visibleFields = fields.filter((f) => {
+        const visibleFields = sortedFields.filter((f) => {
             switch (f.value) {
                 case "duration":
                     return f.show && width > 800;
@@ -489,6 +510,7 @@
                     return f.show;
             }
         });
+
         // Calculate total width of fixed-width rectangles
         const fixedWidths = visibleFields
             .filter((f) => !f.viewProps.autoWidth)
@@ -505,6 +527,8 @@
         const autoWidth =
             availableWidth / (visibleFields.length - fixedWidths.length);
 
+        console.log("displayFields", displayFields);
+        console.log("visibleFields", visibleFields);
         // Final display fields
         displayFields = [
             ...visibleFields.map((f) => {
@@ -686,9 +710,11 @@
 
         if (scrollContainer && stage) {
             calculateSongSlice();
-            currentSongInView =
-                $currentSongIdx >= songsStartSlice &&
-                $currentSongIdx <= songsEndSlice;
+            let idx =
+                currentSongScrollIdx !== null
+                    ? currentSongScrollIdx
+                    : $currentSongIdx;
+            currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         }
 
         // Only save/restore scroll pos in main library view, not on playlists
@@ -698,18 +724,20 @@
     }
 
     let currentSongY = 0;
-    $: if ($currentSongIdx) {
-        currentSongY = $currentSongIdx * ROW_HEIGHT;
-
-        currentSongInView =
-            $currentSongIdx >= songsStartSlice &&
-            $currentSongIdx <= songsEndSlice;
-
+    $: if (
+        !$playlistIsAlbum &&
+        !$isShuffleEnabled &&
+        $currentSongIdx !== null
+    ) {
+        let idx = $currentSongIdx;
+        currentSongY = idx * ROW_HEIGHT;
+        currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         // console.log("currentSongY", currentSongY);
     }
 
     function scrollToCurrentSong() {
-        console.log("y", currentSongY);
+        // console.log("y", currentSongY);
+
         let adjustedPos = currentSongY;
         if (currentSongY > viewportHeight / 2.3) {
             adjustedPos -= viewportHeight / 2.3;
@@ -732,8 +760,10 @@
     let showTrackMenu = false;
     let menuPos;
     let currentSongInView = false;
+    let currentSongScrollIdx = null;
 
     function onDoubleClickSong(song, idx) {
+        AudioPlayer.shouldPlay = false;
         $currentSongIdx = idx;
         $playlist = $queriedSongs;
         $playlistIsAlbum = false;
@@ -745,7 +775,7 @@
             highlightSong(song, idx, false);
         }
 
-        console.log("songIdsHighlighted", songsHighlighted);
+        // console.log("songIdsHighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
             $rightClickedTracks = songsHighlighted;
             $rightClickedTrack = null;
@@ -789,7 +819,7 @@
         isKeyboardArrows: boolean,
         isDefault = false
     ) {
-        console.log("highlighted", song, idx);
+        // console.log("highlighted", song, idx);
         if (!isKeyboardArrows && isShiftPressed) {
             if (rangeStartSongIdx === null) {
                 rangeStartSongIdx = idx;
@@ -809,7 +839,7 @@
                 rangeStartSongIdx = null;
                 rangeEndSongIdx = null;
                 $rightClickedTrack = null;
-                console.log("highlighted2", songsHighlighted);
+                // console.log("highlighted2", songsHighlighted);
             }
         } else if (
             (isKeyboardArrows && isShiftPressed) ||
@@ -848,8 +878,8 @@
     }
 
     function onSongDragStart(song: Song) {
-        console.log("dragstart", song);
-        console.log("songshighlighted", songsHighlighted);
+        // console.log("dragstart", song);
+        // console.log("songshighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
             $draggedSongs = songsHighlighted;
         } else {
@@ -948,6 +978,7 @@
             // 'Enter' to play highlighted track
             event.preventDefault();
             if (!$isTrackInfoPopupOpen) {
+                AudioPlayer.shouldPlay = false;
                 $playlist = $queriedSongs;
                 $playlistIsAlbum = false;
                 $currentSongIdx = highlightedSongIdx;
@@ -986,8 +1017,20 @@
 
     // Re-order columns
 
+    let columnOrder = [
+        "title",
+        "artist",
+        "composer",
+        "album",
+        "trackNumber",
+        "year",
+        "genre",
+        "originCountry",
+        "duration"
+    ];
+
     $: {
-        displayFields && calculateColumns();
+        displayFields && columnOrder && calculateColumns();
     }
 
     let dropColumnIdx = null;
@@ -1067,19 +1110,34 @@
         columnToInsertXPos = 0;
     }
     function insertColumn(oldIndex, newIndex) {
-        displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
+        console.log("insert column", oldIndex, newIndex);
+
+        const oldIdxField = displayFields[oldIndex];
+        const newIdxField = displayFields[newIndex];
+        const columnOrderOldIdx = columnOrder.findIndex(c => c === oldIdxField.value);
+        const columnOrderNewIdx = columnOrder.findIndex(c => c === newIdxField.value);
+        columnOrder = moveArrayElement(columnOrder, columnOrderOldIdx, columnOrderNewIdx);
+        console.log("column order", columnOrder);
+        // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
         resetColumnOrderUi();
     }
 
     function swapColumns(oldIndex, newIndex) {
-        console.log(oldIndex, newIndex);
-        displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
+        const oldIdxField = displayFields[oldIndex];
+        const newIdxField = displayFields[newIndex];
+        const columnOrderOldIdx = columnOrder.findIndex(c => c === oldIdxField.value);
+        const columnOrderNewIdx = columnOrder.findIndex(c => c === newIdxField.value);
+        console.log("swap column", columnOrderOldIdx, columnOrderNewIdx);
+        columnOrder = swapArrayElements(columnOrder, columnOrderOldIdx, columnOrderNewIdx);
+        // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
+        console.log("column order", columnOrder);
         resetColumnOrderUi();
     }
 
     // Sets back to default
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
+        columnOrder = DEFAULT_FIELDS.map(f => f.value);
     }
 
     // SMART QUERY
@@ -1114,7 +1172,7 @@
 
     function filterByField(fieldName: string, fieldValue: any) {
         let queryPart;
-        console.log("filter", fieldName, fieldValue);
+        // console.log("filter", fieldName, fieldValue);
         switch (fieldName) {
             case "genre":
                 queryPart = getQueryPart("CONTAINS_GENRE");
@@ -1281,7 +1339,7 @@
                                         on:dblclick={() =>
                                             onDoubleClickSong(song, songIdx)}
                                         on:click={(e) => {
-                                            console.log("e", e);
+                                            // console.log("e", e);
                                             if (e.detail.evt.button === 0) {
                                                 toggleHighlight(
                                                     song,

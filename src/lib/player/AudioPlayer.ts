@@ -1,5 +1,7 @@
-import type { ArtworkSrc, LastPlayedInfo, Song } from "src/App";
+import { invoke } from "@tauri-apps/api/tauri";
 import { get } from "svelte/store";
+import type { ArtworkSrc, LastPlayedInfo, Song } from "../../App";
+import { db } from "../../data/db";
 import {
     currentSong,
     currentSongArtworkSrc,
@@ -10,14 +12,34 @@ import {
     nextUpSong,
     playerTime,
     playlist,
-    queriedSongs,
     seekTime,
     shuffledPlaylist,
     volume
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
-import { db } from "../../data/db";
-import { convertFileSrc } from "@tauri-apps/api/tauri";
+
+import type { Event } from "@tauri-apps/api/event";
+import { appWindow } from "@tauri-apps/api/window";
+import WebRTCReceiver from "./WebRTCReceiver";
+import { register } from "@tauri-apps/api/globalShortcut";
+
+if (!ReadableStream.prototype[Symbol.asyncIterator]) {
+    ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
+        const reader = this.getReader();
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    yield { done, value };
+                    return;
+                }
+                yield { done, value };
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    };
+}
 
 class AudioPlayer {
     private static _instance: AudioPlayer;
@@ -29,6 +51,7 @@ class AudioPlayer {
 
     audioFile: HTMLAudioElement;
     audioFile2: HTMLAudioElement; // for gapless playback
+
     currentAudioFile: 1 | 2 = 1;
     // source: MediaElementAudioSourceNode;
     duration: number;
@@ -44,63 +67,24 @@ class AudioPlayer {
     shouldRestoreLastPlayed: LastPlayedInfo;
     isRunningTransition = false;
     isInit = true;
+    isStopped = true;
+    // WebRTC
+    webRTCReceiver: WebRTCReceiver;
+    packet_n: number = 0;
+    stats = {
+        packetDropCounter: 0,
+        packetReceivedCounter: 0,
+        totalPacketCounter: 0
+    };
+    flowControlSendInterval;
 
     private constructor() {
-        // let AudioContext = window.AudioContext || window.webkitAudioContext;
-        // const audioCtx: AudioContext = new AudioContext();
-        // this.gainNode = audioCtx.createGain();
-        // this.gainNode.gain.value = 1;
-        // this.gainNode.connect(audioCtx.destination);
-
-        this.audioFile = new Audio();
-        this.audioFile2 = new Audio();
-        this.audioFile.crossOrigin = "anonymous";
-        this.audioFile2.crossOrigin = "anonymous";
-        // this.source = audioCtx.createMediaElementSource(this.audioFile);
-        // this.source.connect(this.gainNode);
+        this.webRTCReceiver = new WebRTCReceiver();
 
         seekTime.subscribe((time) => {
-            if (this.getCurrentAudioFile()) {
-                this.getCurrentAudioFile().currentTime = time;
-                playerTime.set(time);
-            }
+            // Tell Rust to play file with seek position
+            if (this.currentSong) this.playCurrent(time);
         });
-
-        this.audioFile.addEventListener(
-            "pause",
-            (() => this.onPause(1)).bind(this)
-        );
-        this.audioFile.addEventListener(
-            "play",
-            (() => this.onPlay(1)).bind(this)
-        );
-        this.audioFile.addEventListener(
-            "ended",
-            (async () => this.onEnded(1)).bind(this)
-        );
-        this.audioFile.addEventListener(
-            "timeupdate",
-            (() => this.onTimeUpdate(1)).bind(this)
-        );
-
-        this.audioFile2.addEventListener(
-            "pause",
-            (() => this.onPause(2)).bind(this)
-        );
-        this.audioFile2.addEventListener(
-            "play",
-            (() => this.onPlay(2)).bind(this)
-        );
-        this.audioFile2.addEventListener(
-            "ended",
-            (() => this.onEnded(2)).bind(this)
-        );
-        this.audioFile2.addEventListener(
-            "timeupdate",
-            (async () => this.onTimeUpdate(1)).bind(this)
-        );
-
-        // volume.set(this.audioFile.volume);
 
         this.setupMediaSession();
         currentSongArtworkSrc.subscribe((artwork) => {
@@ -180,7 +164,58 @@ class AudioPlayer {
         currentSongIdx.subscribe((idx) => {
             this.currentSongIdx = idx;
         });
-        this.setupAnalyserAudio();
+
+        volume.subscribe(async (vol) => {
+            await invoke("volume_control", {
+                event: {
+                    volume: vol * 0.75
+                }
+            });
+            localStorage.setItem("volume", String(vol));
+        });
+
+        appWindow.listen("song_change", async (event: Event<Song>) => {
+            if (this.isRunningTransition) {
+                currentSong.set(event.payload);
+                this.currentSongIdx += 1;
+                currentSongIdx.set(this.currentSongIdx);
+                this.setNextUpSong();
+                this.isRunningTransition = false;
+            }
+        });
+
+        appWindow.listen("timestamp", async (event: any) => {
+            playerTime.set(event.payload);
+
+            console.log("timestamp", event.payload);
+            console.log("duration", get(currentSong).fileInfo.duration);
+
+            // Gapless setup here
+            if (
+                !this.isRunningTransition &&
+                event.payload < get(currentSong).fileInfo.duration &&
+                event.payload > get(currentSong).fileInfo.duration - 8
+            ) {
+                console.log("Running transition...");
+                this.isRunningTransition = true;
+                let nextUp = get(nextUpSong);
+                if (nextUp) {
+                    invoke("queue_next", {
+                        event: {
+                            path: nextUp.path,
+                            seek: 0,
+                            file_info: nextUp.fileInfo,
+                            volume: get(volume)
+                        }
+                    });
+                }
+            }
+        });
+        // this.setupAnalyserAudio();
+    }
+
+    async setupBuffers() {
+        console.log("player::setupBuffers()");
     }
 
     shuffle() {
@@ -196,139 +231,24 @@ class AudioPlayer {
         isShuffleEnabled.set(false);
     }
 
-    getCurrentAudioFile() {
-        if (this.currentAudioFile === 1) return this.audioFile;
-        return this.audioFile2;
-    }
-
-    getOtherAudioFile() {
-        if (this.currentAudioFile === 1) return this.audioFile2;
-        return this.audioFile;
-    }
-
-    switchAudioFile() {
-        if (this.currentAudioFile === 1) {
-            this.currentAudioFile = 2;
-        } else {
-            this.currentAudioFile = 1;
-        }
-    }
-
-    setVolume(vol) {
-        // this.audioFile.volume = volume;
-        volume.set(vol);
-    }
-
-    onPlay(player: number) {
-        if (player === this.currentAudioFile) {
-            isPlaying.set(true);
-        }
+    onPlay() {
+        isPlaying.set(true);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "playing";
     }
 
-    onPause(player: number) {
-        if (player === this.currentAudioFile) {
-            isPlaying.set(false);
-        }
+    onPause() {
+        isPlaying.set(false);
         if (navigator.mediaSession)
             navigator.mediaSession.playbackState = "paused";
     }
 
-    onEnded(player: number) {
-        if (player === this.currentAudioFile) {
-            console.log("ENDED!");
-            isPlaying.set(false);
-            console.log("callback", this.isFinishedCallback);
-            this.isFinishedCallback && this.isFinishedCallback();
-            if (!this.isRunningTransition) this.onTimeUpdate(player, true);
-        } else {
-            // The other player has finished playing
-        }
+    playCurrent(seek: number = 0) {
+        this.playSong(this.playlist[this.currentSongIdx], seek);
     }
 
-    async onTimeUpdate(player: number, ended = false) {
-        // console.log("player 1 time: " + this.audioFile.currentTime);
-        // console.log("player 2 time: " + this.audioFile2.currentTime);
-
-        const currentTime =
-            this.currentAudioFile === 1
-                ? this.audioFile.currentTime
-                : this.audioFile2.currentTime;
-        const duration =
-            this.currentAudioFile === 1
-                ? this.audioFile.duration
-                : this.audioFile2.duration;
-
-        // Reached the end of the playlist, exit here
-        if (this.currentSongIdx === this.playlist.length - 1) {
-            return;
-        }
-
-        /*
-         * Playing a short sample - don't try to do gapless
-         * because the sample won't play in its entirety
-         */
-        if (duration < 30 && !this.isRunningTransition && ended) {
-            this.currentSongIdx = this.currentSongIdx + 1;
-            currentSongIdx.set(get(currentSongIdx) + 1);
-            playerTime.set(0);
-            currentSong.set(get(nextUpSong));
-            this.currentSong = get(nextUpSong);
-            this.setMediaSessionData();
-            this.isRunningTransition = false;
-            this.playCurrent();
-        } else if (
-            /*
-             * For long audios (songs), attempt to do gapless.
-             * It's not perfect since we don't have control over the
-             * buffer and sample-level precision.
-             */
-            duration > 30 &&
-            currentTime > duration - 1.1 &&
-            !this.isRunningTransition
-        ) {
-            this.isRunningTransition = true;
-
-            const chunk = 0.3;
-            let diff = duration - currentTime;
-            console.log("2 SECS LEFT! STARTING TRANSITION...");
-            console.log("diff", diff);
-            console.log("duration", duration);
-            console.log("currentTime", currentTime);
-
-            // setTimeout(async () => {
-            //     this.getOtherAudioFile().volume = 0;
-            //     this.getCurrentAudioFile().volume = get(volume);
-            // }, (diff - 0.177) * 1000);
-
-            this.queueGapless(diff);
-        }
-    }
-
-    async queueGapless(diff) {
-        const playDelay = 0.1;
-        setTimeout(
-            async () => {
-                this.pause(true);
-                this.switchAudioFile();
-                console.log("currentAudioFile", this.currentAudioFile);
-                console.log("currentAudioFile switched", this.currentAudioFile);
-                currentSongIdx.set(get(currentSongIdx) + 1);
-                playerTime.set(0);
-                currentSong.set(get(nextUpSong));
-                this.currentSong = get(nextUpSong);
-                this.setMediaSessionData();
-                this.play(false);
-                this.setNextUpSong();
-                this.isRunningTransition = false;
-            },
-            (diff - 0.41) * 1000
-        );
-    }
-
-    playCurrent() {
-        this.playSong(this.playlist[this.currentSongIdx]);
+    hasNext() {
+        return this.currentSongIdx + 1 < this.playlist.length;
     }
 
     playNext() {
@@ -439,21 +359,9 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
-        if (this.getCurrentAudioFile().src) {
-            if (this.currentSongIdx + 1 < this.playlist.length) {
-                const nextSong = this.playlist[this.currentSongIdx + 1];
-                nextUpSong.set(nextSong);
-
-                // Set up gapless playback
-                this.getOtherAudioFile().src = convertFileSrc(
-                    nextSong.path.replace("?", "%3F")
-                );
-                this.getOtherAudioFile().preload = "auto";
-                this.getOtherAudioFile().load();
-                this.getOtherAudioFile().currentTime = 0.00001;
-            } else {
-                nextUpSong.set(null);
-            }
+        if (this.currentSongIdx + 1 < this.playlist?.length) {
+            const nextSong = this.playlist[this.currentSongIdx + 1];
+            nextUpSong.set(nextSong);
         } else {
             nextUpSong.set(null);
         }
@@ -466,18 +374,35 @@ class AudioPlayer {
     }
 
     // MEDIA
+
     async playSong(song: Song, position = 0, play = true) {
-        console.log("playSong", song);
-        if (this.getCurrentAudioFile() && song) {
-            this.pause();
-            this.getCurrentAudioFile().currentTime = 0;
-            playerTime.set(this.getCurrentAudioFile().currentTime);
-            this.getCurrentAudioFile().src = convertFileSrc(
-                song.path.replace("?", "%3F")
-            );
-            play && this.play();
+        console.log("playSong", console.trace());
+        if (song) {
+            // this.pause();
+            this.isRunningTransition = false;
             currentSong.set(song);
             this.currentSong = song;
+
+            if (play) {
+                await this.play(false);
+                playerTime.set(position);
+                console.log(
+                    "audioplayer::datachannel::",
+                    this.webRTCReceiver.dataChannel?.readyState
+                );
+                // If the WebRTC receiver is ready to receive data, invoke the streamer
+                this.webRTCReceiver.prepareForNewStream();
+                invoke("stream_file", {
+                    event: {
+                        path: this.currentSong.path,
+                        seek: position,
+                        file_info: this.currentSong.fileInfo,
+                        volume: get(volume)
+                    }
+                });
+                this.incrementPlayCounter(song);
+            }
+            this.shouldPlay = play;
             let newCurrentSongIdx = this.playlist.findIndex(
                 (s) => s.id === this.currentSong?.id
             );
@@ -487,10 +412,7 @@ class AudioPlayer {
             currentSongIdx.set(newCurrentSongIdx);
             this.setNextUpSong();
             this.setMediaSessionData();
-            this.incrementPlayCounter(song);
-            if (position > 0) {
-                seekTime.set(position);
-            }
+
             lastPlayedInfo.set({
                 songId: this.currentSong.id,
                 position: 0
@@ -498,46 +420,38 @@ class AudioPlayer {
         }
     }
 
-    play(other: boolean = false) {
-        if (other) {
-            this.doPlay(this.currentAudioFile === 1 ? 2 : 1);
-            this.ticker = setInterval(() => {
-                lastPlayedInfo.set({
-                    songId: this.currentSong.id,
-                    position: this.getCurrentAudioFile().currentTime
-                });
-                playerTime.set(this.getCurrentAudioFile().currentTime);
-            }, 1000);
-        } else {
-            if (this.getCurrentAudioFile()) {
-                this.doPlay(this.currentAudioFile);
-
-                this.ticker = setInterval(() => {
-                    lastPlayedInfo.set({
-                        songId: this.currentSong.id,
-                        position: this.getCurrentAudioFile().currentTime
-                    });
-                    playerTime.set(this.getCurrentAudioFile().currentTime);
-                }, 1000);
-            }
+    async play(isResume: boolean) {
+        this.isStopped = false;
+        if (isResume) {
+            invoke("decode_control", {
+                event: {
+                    decoding_active: true
+                }
+            });
         }
+        this.onPlay();
     }
 
-    pause(other: boolean = false) {
-        if (other && this.getOtherAudioFile()) {
-            this.doPause(this.currentAudioFile === 1 ? 2 : 1);
-        } else {
-            if (this.getCurrentAudioFile()) {
-                this.doPause(this.currentAudioFile);
+    async pause() {
+        invoke("decode_control", {
+            event: {
+                decoding_active: false
             }
-        }
+        });
+        this.onPause();
     }
+
+    async onEnded() {}
 
     togglePlay() {
         if (get(isPlaying)) {
             this.pause();
         } else {
-            this.play();
+            if (this.isStopped) {
+                this.playCurrent();
+            } else {
+                this.play(true);
+            }
         }
     }
 
@@ -545,76 +459,6 @@ class AudioPlayer {
         const song = await db.songs.get(lastPlayed.songId);
         this.playSong(song, lastPlayed.position, false);
     }
-
-    private _audioContext: AudioContext;
-
-    audioElement: HTMLAudioElement;
-    audioElement2: HTMLAudioElement;
-
-    // Nodes
-    private _audioSource: MediaElementAudioSourceNode;
-    private _audioSource2: MediaElementAudioSourceNode;
-    audioAnalyser: AnalyserNode;
-    private _gainNode: GainNode;
-    private _gainNode2: GainNode;
-
-    /**
-     * Connect the nodes together, so sound is flowing
-     * into the analyser node from the source node
-     */
-    setupAnalyserAudio() {
-        this.audioElement = this.getCurrentAudioFile();
-        this.audioElement2 = this.getOtherAudioFile();
-        let AudioContext = window.AudioContext || window.webkitAudioContext;
-        this._audioContext = new AudioContext({ sampleRate: 48000 });
-        this._audioSource = this._audioContext.createMediaElementSource(
-            this.audioElement
-        );
-
-        this._audioSource2 = this._audioContext.createMediaElementSource(
-            this.audioElement2
-        );
-        this.audioAnalyser = new AnalyserNode(this._audioContext, {
-            fftSize: 2048,
-            smoothingTimeConstant: 0.9
-        });
-        this._gainNode = new GainNode(this._audioContext, {
-            gain: get(volume)
-        });
-        this._gainNode2 = new GainNode(this._audioContext, {
-            gain: get(volume)
-        });
-        this._audioSource.mediaElement.volume = get(volume);
-        this._audioSource2.mediaElement.volume = get(volume);
-        // Source -> Gain -> Analyser -> Destination (master)
-        this._audioSource.connect(this._gainNode);
-        this._audioSource2.connect(this._gainNode2);
-        this._gainNode.connect(this.audioAnalyser);
-        this._gainNode2.connect(this.audioAnalyser);
-        this.audioAnalyser.connect(this._audioContext.destination);
-
-        volume.subscribe((vol) => {
-            this._gainNode.gain.value = vol * 0.75;
-            this._gainNode2.gain.value = vol * 0.75;
-            localStorage.setItem("volume", String(vol));
-        });
-    }
-    doPlay = (number) => {
-        console.log('doplay ', number);
-        if (number === 1) {
-            this._audioSource.mediaElement.play();
-        } else {
-            this._audioSource2.mediaElement.play();
-        }
-    };
-    doPause = (number) => {
-        console.log('dopause ', number);
-        if (number === 1) {
-            this._audioSource.mediaElement.pause();
-        } else {
-            this._audioSource2.mediaElement.pause();
-        }
-    };
 }
 
 const audioPlayer = AudioPlayer.Instance;

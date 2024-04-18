@@ -8,11 +8,13 @@
 
     import {
         bottomBarNotification,
+        foldersToWatch,
         importStatus,
         isFolderWatchUpdate,
         isLyricsOpen,
         isQueueOpen,
-        nextUpSong
+        nextUpSong,
+        userSettings
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -32,18 +34,15 @@
     let showVisualiser = true;
     let visualiserWidth = 0;
 
-
-    $: counts = liveQuery(() => {
-        return db.transaction("r", db.songs, async () => {
-            const artists = await (
-                await db.songs.orderBy("artist").uniqueKeys()
-            ).length;
-            const albums = await (
-                await db.songs.orderBy("album").uniqueKeys()
-            ).length;
-            const songs = await db.songs.count();
-            return { songs, artists, albums };
-        });
+    $: counts = liveQuery(async () => {
+        const artists = await (
+            await db.songs.orderBy("artist").uniqueKeys()
+        ).length;
+        const albums = await (
+            await db.songs.orderBy("album").uniqueKeys()
+        ).length;
+        const songs = await db.songs.count();
+        return { songs, artists, albums };
     });
 
     function onResize() {
@@ -110,22 +109,25 @@
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="right" bind:this={right}>
-        <div
-            class="refresh-icon"
-            class:scanning={$importStatus.isImporting || $isFolderWatchUpdate}
-            use:tippy={{
-                content: scanningStatusText,
-                placement: "top"
-            }}
-        >
-            <Icon
-                icon="tabler:refresh"
-                size={15}
-                onClick={() => {
-                    runScan();
+        {#if $userSettings.foldersToWatch.length}
+            <div
+                class="refresh-icon"
+                class:scanning={$importStatus.isImporting ||
+                    $isFolderWatchUpdate}
+                use:tippy={{
+                    content: scanningStatusText,
+                    placement: "top"
                 }}
-            />
-        </div>
+            >
+                <Icon
+                    icon="tabler:refresh"
+                    size={15}
+                    onClick={() => {
+                        runScan();
+                    }}
+                />
+            </div>
+        {/if}
         {#if $counts !== undefined}
             <div
                 class="stats"
@@ -255,12 +257,11 @@
                 &.selected {
                     border: 1px solid white;
                     ::before {
-                      
                         position: absolute;
                         top: -11px;
                         left: 0;
                         right: 0;
-                        margin:0 auto;
+                        margin: 0 auto;
                         height: 10px;
                         width: 1.5px;
                         background-color: white;

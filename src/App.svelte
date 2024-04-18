@@ -39,6 +39,7 @@
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
     import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
+    import StreamDebugger from "./lib/player/StreamDebugger.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
     import BottomBar from "./lib/library/BottomBar.svelte";
     import { fly } from "svelte/transition";
