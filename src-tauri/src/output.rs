@@ -433,6 +433,7 @@ mod cpal {
                             *frame_idx = 0;
                             let mut elapsed_time = elapsed_time_state.write().unwrap();
                             *elapsed_time = 0;
+                            app_handle.emit_all("timestamp", Some(0f64));
                             
                         }
                     }

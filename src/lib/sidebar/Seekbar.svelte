@@ -22,9 +22,10 @@
         .toString()
         .padStart(2, "0")}`;
 
-    $: playheadPos = ($playerTime / duration) * 100;
+    $: playheadPos = Math.min(($playerTime / duration) * 100, 100);
 
-    // $: console.log(playheadPos);
+    // $: console.log("Duration", duration);
+    // $: console.log("Playhead", playheadPos);
     
     $: hoverheadPosPx = 0;
 
