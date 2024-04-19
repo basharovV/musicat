@@ -186,11 +186,6 @@
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
     <CanvasLibrary allSongs={songs} {isLoading} dim={$isLyricsHovered} />
-    {#if $isLyricsOpen}
-        <div class="lyrics" transition:fade={{ duration: 150 }}>
-            <LyricsView />
-        </div>
-    {/if}
 </div>
 
 <style lang="scss">

@@ -10,6 +10,7 @@
         hoveredFiles,
         isFolderWatchUpdate,
         isInfoPopupOpen,
+        isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
         isSettingsOpen,
@@ -42,7 +43,8 @@
     import StreamDebugger from "./lib/player/StreamDebugger.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
     import BottomBar from "./lib/library/BottomBar.svelte";
-    import { fly } from "svelte/transition";
+    import { fade, fly } from "svelte/transition";
+    import LyricsView from "./lib/library/LyricsView.svelte";
 
     startMenuListener();
     startImportListener();
@@ -227,6 +229,12 @@
             <AnalyticsView />
         {/if}
     </div>
+    
+    {#if $isLyricsOpen}
+        <div class="lyrics" transition:fade={{ duration: 150 }}>
+            <LyricsView />
+        </div>
+    {/if}
 
     <div class="bottom-bar">
         <BottomBar />
