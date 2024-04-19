@@ -1,20 +1,17 @@
+import { exists } from "@tauri-apps/api/fs";
+import md5 from "md5";
 import { get } from "svelte/store";
 import {
-    watch,
-    type DebouncedEvent,
     watchImmediate
 } from "tauri-plugin-fs-watch-api";
+import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
+import { addSong, importPaths } from "./LibraryImporter";
+import { db } from "./db";
 import {
     bottomBarNotification,
     isFolderWatchUpdate,
     userSettings
 } from "./store";
-import toast from "svelte-french-toast";
-import md5 from "md5";
-import { db } from "./db";
-import { addSong } from "./LibraryImporter";
-import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
-import { exists } from "@tauri-apps/api/fs";
 
 // can also watch an array of paths
 export async function startWatching() {
@@ -74,13 +71,30 @@ export async function startWatching() {
                             const songsToDelete = await db.songs
                                 .where("path")
                                 .startsWith(path);
+                            // Check if album needs to be deleted too
+                            const songsToCheck = await songsToDelete.toArray();
                             const keys = await songsToDelete.primaryKeys();
                             await db.songs.bulkDelete(keys);
+                            if (
+                                songsToCheck.every(
+                                    (s) => s.album === songsToCheck[0].album
+                                )
+                            ) {
+                                const song = songsToCheck[0];
+                                const albumPath = song.path.replace(
+                                    `/${song.file}`,
+                                    ""
+                                );
+
+                                let id = md5(`${albumPath} - ${song.album}`);
+                                await db.albums.delete(id);
+                            }
                         } else {
                             bottomBarNotification.set({
                                 text: "Folder watcher: Folder added - updating library...",
                                 timeout: 2000
                             });
+                            await importPaths([path], true);
                         }
                     }
                 }

@@ -2,19 +2,22 @@ import type { ContentFileType } from "src/App";
 
 export function isFileOrDirectory(path) {
     const lastChar = path.slice(-1);
-  
+
     // If the path ends with a slash, assume it's a directory
-    if (lastChar === '/' || lastChar === '\\') {
-      return 'directory';
+    if (lastChar === "/" || lastChar === "\\") {
+        return "directory";
     }
-  
+
     // If there's a dot in the last part of the path, assume it's a file
-    if (path.split('/').pop().includes('.') || path.split('\\').pop().includes('.')) {
-      return 'file';
+    if (
+        (path.split("/").pop() !== path && path.split("/").pop().includes(".")) ||
+        (path.split(/\\/).pop()  !== path && path.split(/\\/).pop().includes("."))
+    ) {
+        return "file";
     }
-  
-    return 'directory';
-  }
+
+    return "directory";
+}
 
 export function isAudioFile(filename: string): boolean {
     return filename.match(/\.(mp3|ogg|aac|flac|wav|m4a)$/i) !== null;
