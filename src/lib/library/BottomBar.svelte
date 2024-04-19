@@ -35,6 +35,9 @@
     let visualiserWidth = 0;
 
     $: counts = liveQuery(async () => {
+        if ($importStatus.isImporting) {
+            return undefined;
+        }
         const artists = await (
             await db.songs.orderBy("artist").uniqueKeys()
         ).length;
@@ -97,14 +100,6 @@
         <div class="spectrum">
             <SpectrumAnalyzer show={showVisualiser} width={visualiserWidth} />
         </div>
-
-        {#if $bottomBarNotification}
-            <div class="notification">
-                <p>
-                    {$bottomBarNotification.text}
-                </p>
-            </div>
-        {/if}
     </div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -143,6 +138,22 @@
             </div>
         {:else}
             <p>...</p>
+        {/if}
+
+        {#if $bottomBarNotification}
+            <div
+                class="notification"
+                transition:fly={{
+                    y: 30,
+                    duration: 150,
+                    easing: cubicInOut
+                }}
+            >
+                <p>
+                    <!-- Folder updated blab alb alfkbafadfoijadsofi -->
+                    {$bottomBarNotification.text}
+                </p>
+            </div>
         {/if}
     </div>
 </bottom-bar>
@@ -310,19 +321,19 @@
 
         .notification {
             position: absolute;
-            right: 0;
+            right: -6px;
             top: 0;
             bottom: 0;
-            padding: 0 1em;
+            padding: 0 1em 0 5em;
             margin: 0;
-            background: linear-gradient(
-                90deg,
-                rgba(0, 0, 0, 0) 0%,
-                rgba(28, 26, 26, 0.25) 10%,
-                rgba(54, 22, 56, 0.65) 50%,
-                rgba(0, 0, 0, 0) 100%
-            );
             height: 100%;
+            border-radius: 7px;
+            background: linear-gradient(
+                to right,
+                transparent 0%,
+                #242026e5 14%,
+                #242026fb 100%
+            );
             display: flex;
             align-items: center;
             width: max-content;
