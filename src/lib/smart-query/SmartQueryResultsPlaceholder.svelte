@@ -2,7 +2,7 @@
 </script>
 
 <div>
-    <h2>Smart query results will appear here</h2>
+    <h2>Smart playlist results will appear here</h2>
     <small>Happy searching!</small>
 </div>
 

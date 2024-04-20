@@ -256,8 +256,10 @@
             <h1>Albums</h1>
             <!-- {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if} -->
             <div class="options">
-                <Dropdown options={fields} bind:selected={orderBy} />
-
+                <div class="order-by">
+                    <p>order by</p>
+                    <Dropdown options={fields} bind:selected={orderBy} />
+                </div>
                 <label
                     >show singles
                     <input type="checkbox" bind:checked={showSingles} /></label
@@ -407,6 +409,12 @@
             display: flex;
             margin-right: 5px;
             gap: 20px;
+
+            .order-by {
+                display: flex;
+                gap: 3px;
+                color: #949c9f;
+            }
         }
     }
     .grid {

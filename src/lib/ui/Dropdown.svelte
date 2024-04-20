@@ -82,7 +82,7 @@
             position: absolute;
             bottom: 0.5em;
             left: -0.5em;
-            z-index: 2;
+            z-index: 20;
         }
 
         * {

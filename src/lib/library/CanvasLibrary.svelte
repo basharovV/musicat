@@ -484,15 +484,11 @@
         let runningX = 0;
         let previousWidth = 0;
 
-        console.log('fields', fields);
-
         const sortedFields = columnOrder.reduce((sorted, c, idx) => {
-            console.log('c', c);
             sorted[idx] = fields.find(f => f.value === c);
             return sorted;
         }, [...fields]);
 
-        console.log('sortedFields', sortedFields);
         // Fields visible depending on window width
         const visibleFields = sortedFields.filter((f) => {
             switch (f.value) {
@@ -527,8 +523,6 @@
         const autoWidth =
             availableWidth / (visibleFields.length - fixedWidths.length);
 
-        console.log("displayFields", displayFields);
-        console.log("visibleFields", visibleFields);
         // Final display fields
         displayFields = [
             ...visibleFields.map((f) => {

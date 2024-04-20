@@ -213,7 +213,7 @@
                     deleteTrack($selectedPlaylistId);
                 }
             }}
-            text={$rightClickedTrack ? "Delete track" : "Delete tracks"}
+            text={$rightClickedTrack ? "Remove track from library" : "Remove tracks from library"}
             confirmText="Click again to confirm"
         />
         {#if $selectedPlaylistId}

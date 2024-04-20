@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-pub mod web_rtcstreamer {
+pub mod file_streamer {
     use std::sync::mpsc::{Receiver, Sender};
     use std::time::Instant;
 

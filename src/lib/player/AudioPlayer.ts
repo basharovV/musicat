@@ -187,8 +187,8 @@ class AudioPlayer {
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
 
-            console.log("timestamp", event.payload);
-            console.log("duration", get(currentSong).fileInfo.duration);
+            // console.log("timestamp", event.payload);
+            // console.log("duration", get(currentSong).fileInfo.duration);
 
             // Gapless setup here
             if (
@@ -376,7 +376,6 @@ class AudioPlayer {
     // MEDIA
 
     async playSong(song: Song, position = 0, play = true) {
-        console.log("playSong", console.trace());
         if (song) {
             // this.pause();
             this.isRunningTransition = false;

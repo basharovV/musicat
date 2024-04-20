@@ -3,25 +3,20 @@
     windows_subsystem = "windows"
 )]
 
-use chksum_md5::MD5;
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{
     read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, TagItem,
     TagType, TaggedFileExt,
 };
+use player::file_streamer::AudioStreamer;
 use rayon::prelude::*;
 use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use symphonia::core::formats::FormatOptions;
-use symphonia::core::io::MediaSourceStream;
-use symphonia::core::meta::MetadataOptions;
-use symphonia::core::probe::Hint;
-use symphonia::default::get_probe;
+use tokio::runtime::Handle;
 use std::error::Error;
 use std::fs::{self, File};
-use std::future::IntoFuture;
 use std::io::BufReader;
 use std::ops::{Deref, Mul};
 use std::path::Path;
@@ -29,19 +24,12 @@ use std::sync::{Arc, Mutex};
 use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Manager, State};
-use tokio::join;
-use tokio::runtime::Handle;
-use tokio_util::sync::CancellationToken;
-use webrtc_streamer::web_rtcstreamer::{self, AudioStreamer};
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
-use crate::webrtc_streamer::web_rtcstreamer::ACTIVE;
-mod decoder;
-mod file_chunk_streamer;
-mod output;
-mod resampler;
-mod webrtc_streamer;
 mod metadata;
+mod output;
+mod player;
+mod resampler;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct MetadataEntry {
@@ -49,11 +37,6 @@ struct MetadataEntry {
     value: Value,
 }
 
-// struct BlockPicture {
-//   #[serde(with = "serde_bytes")]
-//   data: Vec<u8>,
-//   format: String
-// }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct WriteMetatadaEvent {
@@ -255,7 +238,10 @@ struct GetSongMetadataEvent {
 }
 
 #[tauri::command]
-async fn get_song_metadata(event: GetSongMetadataEvent, app_handle: tauri::AppHandle) -> Option<Song> {
+async fn get_song_metadata(
+    event: GetSongMetadataEvent,
+    app_handle: tauri::AppHandle,
+) -> Option<Song> {
     let path = Path::new(event.path.as_str());
 
     if path.is_file() {
@@ -596,7 +582,9 @@ fn stream_file(
 ) {
     println!("Stream file {:?}", event);
     state.resume();
-    state.player_control_sender.send(web_rtcstreamer::PlayerControlEvent::StreamFile(event));
+    state
+        .player_control_sender
+        .send(player::file_streamer::PlayerControlEvent::StreamFile(event));
 }
 
 #[tauri::command]
@@ -683,7 +671,7 @@ async fn init_streamer(
     state.clone().reset().await;
 
     state.init_webrtc(_app_handle).await;
-    
+
     return Ok(StreamStatus { is_open: false });
 }
 
@@ -692,7 +680,7 @@ async fn main() {
     // std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
-    let streamer = web_rtcstreamer::AudioStreamer::create().unwrap();
+    let streamer = player::file_streamer::AudioStreamer::create().unwrap();
 
     tauri::Builder::default()
         .menu(build_menu())
@@ -701,7 +689,7 @@ async fn main() {
             let app_ = app.handle();
             let app2_ = app.handle();
             let app3_ = app.handle();
-            let mut state: State<web_rtcstreamer::AudioStreamer<'static>> = app.state();
+            let mut state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
             state.init(app_);
             // state.data_channel.on_close(Box::new(move || {
             //     Box::pin(async move {
@@ -777,29 +765,6 @@ async fn main() {
                 });
             });
 
-            // tokio::spawn(async move {
-            //     let handleClone = strm3.clone();
-            //     // Listen for ICE candidates
-            //     handleClone
-            //         .peer_connection
-            //         .on_ice_candidate(Box::new(move |c| {
-            //             println!("on_ice_candidate {:?}", c);
-            //             if let Some(cand) = c {
-            //                 // let candidate = serde_json::to_string(&cand.to_json().unwrap());
-
-            //                 app3_.emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
-            //             }
-            //             Box::pin(async {})
-            //         }));
-            // });
-            // #[cfg(target_os = "macos")]
-            // apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow)
-            //   .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-
-            // #[cfg(target_os = "windows")]
-            // apply_blur(&window, Some((18, 18, 18, 125)))
-            //   .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -816,18 +781,6 @@ async fn main() {
             volume_control,
             get_song_metadata
         ])
-        .register_uri_scheme_protocol("stream", move |_app, request| {
-            let boundary_id = Arc::new(Mutex::new(0));
-
-            let result =
-                file_chunk_streamer::file_chunk_handler::get_stream_response(request, &boundary_id);
-            // println!("File chunk handler: response: {:?}", result);
-
-            if let Some(e) = &result.as_ref().err() {
-                println!("File chunk handler: Error: {:?}", e);
-            }
-            result
-        })
         .plugin(tauri_plugin_fs_watch::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

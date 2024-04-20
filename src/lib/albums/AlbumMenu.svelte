@@ -112,7 +112,7 @@
             isDestructive={true}
             isConfirming={isConfirmingDelete}
             onClick={deleteAlbum}
-            text="Delete album"
+            text="Remove album from library"
             confirmText="Click again to confirm"
         />
         {#if $rightClickedAlbum}
