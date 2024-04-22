@@ -336,22 +336,23 @@
 
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
-        {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
-            <div
-                in:fly={{ duration: 150, y: 30 }}
-                out:fly={{ duration: 150, y: 30 }}
-                class="scroll-now-playing"
-                on:click={scrollToCurrentAlbum}
-            >
-                <div class="eq">
-                    <span class="eq1" />
-                    <span class="eq2" />
-                    <span class="eq3" />
-                </div>
-                <p>Scroll to Now playing</p>
-            </div>
-        {/if}
+  
     </div>
+    {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
+    <div
+        in:fly={{ duration: 150, y: 30 }}
+        out:fly={{ duration: 150, y: 30 }}
+        class="scroll-now-playing"
+        on:click={scrollToCurrentAlbum}
+    >
+        <div class="eq">
+            <span class="eq1" />
+            <span class="eq2" />
+            <span class="eq3" />
+        </div>
+        <p>Scroll to Now playing</p>
+    </div>
+{/if}
 </div>
 
 <style lang="scss">
@@ -496,8 +497,8 @@
     }
 
     .scroll-now-playing {
-        position: fixed;
-        bottom: 4.3em;
+        position: absolute;
+        bottom: 0.5em;
         grid-column: 1 / 4;
         left: 0;
         right: 0;

@@ -47,6 +47,12 @@
         const songs = await db.songs.count();
         return { songs, artists, albums };
     });
+    
+    nextUpSong.subscribe(nextUp => {
+        setTimeout(() => {
+            onResize();
+        }, 200);
+    });
 
     function onResize() {
         // calculate remaining space for spectroscope visualizer
@@ -54,8 +60,8 @@
         const rightXPos = right.getBoundingClientRect().left;
         const diff = Math.abs(nextUpRight - rightXPos);
         console.log("diff", diff);
-        visualiserWidth = Math.min(200, diff - 13);
-        showVisualiser = window.innerWidth > 900 && diff > 140;
+        visualiserWidth = Math.min(150, diff - 13);
+        showVisualiser = window.innerWidth > 900 && diff > 150;
     }
 </script>
 

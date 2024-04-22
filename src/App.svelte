@@ -195,50 +195,50 @@
 {/if}
 
 <main class:mini-player={$isMiniPlayer} class:transparent={$os === "Darwin"}>
-    <div class="sidebar">
-        {#if $isWelcomeSeen}
+    {#if !$isWelcomeSeen}
+        <WelcomeView />
+    {:else}
+        <div class="sidebar">
             <Sidebar />
-        {/if}
-    </div>
+        </div>
 
-    <div class="queue">
-        {#if $isQueueOpen}
-            <div
-                class="queue-container"
-                transition:fly={{ duration: 200, x: -200 }}
-            >
-                <QueueView />
+        <div class="queue">
+            {#if $isQueueOpen}
+                <div
+                    class="queue-container"
+                    transition:fly={{ duration: 200, x: -200 }}
+                >
+                    <QueueView />
+                </div>
+            {/if}
+        </div>
+
+        <div class="panel">
+            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
+                <CanvasLibraryView />
+            {:else if $uiView === "playlists"}
+                <CanvasLibraryView />
+            {:else if $uiView === "albums"}
+                <AlbumView />
+            {:else if $uiView === "your-music"}
+                <ArtistsToolkitView />
+            {:else if $uiView === "map"}
+                <MapView />
+            {:else if $uiView === "analytics"}
+                <AnalyticsView />
+            {/if}
+        </div>
+
+        {#if $isLyricsOpen}
+            <div class="lyrics" transition:fade={{ duration: 150 }}>
+                <LyricsView />
             </div>
         {/if}
-    </div>
 
-    <div class="panel">
-        {#if !$isWelcomeSeen}
-            <WelcomeView />
-        {:else if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
-            <CanvasLibraryView />
-        {:else if $uiView === "playlists"}
-            <CanvasLibraryView />
-        {:else if $uiView === "albums"}
-            <AlbumView />
-        {:else if $uiView === "your-music"}
-            <ArtistsToolkitView />
-        {:else if $uiView === "map"}
-            <MapView />
-        {:else if $uiView === "analytics"}
-            <AnalyticsView />
-        {/if}
-    </div>
-    
-    {#if $isLyricsOpen}
-        <div class="lyrics" transition:fade={{ duration: 150 }}>
-            <LyricsView />
+        <div class="bottom-bar">
+            <BottomBar />
         </div>
     {/if}
-
-    <div class="bottom-bar">
-        <BottomBar />
-    </div>
 </main>
 
 <style lang="scss">
