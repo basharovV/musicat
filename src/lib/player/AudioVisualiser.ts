@@ -98,7 +98,6 @@ export class AudioVisualiser {
         const step = this._canvasContext.canvas.width / this.timeDomain.length;
 
         this._canvasContext.beginPath();
-        // drawing loop (skipping every second record)
         for (let i = 0; i < this.timeDomain.length; i += 1) {
             const percent = this.timeDomain[i] / 256;
             const x = i * step;
@@ -118,8 +117,8 @@ export class AudioVisualiser {
         this._canvasContext.clearRect(
             0,
             0,
-            this._canvasContext.canvas.clientWidth,
-            this._canvasContext.canvas.clientHeight
+            this.canvas.clientWidth,
+            this.canvas.clientHeight
         );
     }
 
@@ -131,3 +130,4 @@ export class AudioVisualiser {
         this._activeAnimations = [];
     }
 }
+

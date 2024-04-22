@@ -423,7 +423,6 @@ mod cpal {
             let stream_result = device.build_output_stream(
                 &config,
                 move |data: &mut [T], cb: &cpal::OutputCallbackInfo| {
-                    
                     // If file changed, reset
                     let reset = reset_control_receiver.try_lock().unwrap().try_recv();
                     if let Ok(rst) = reset {
@@ -434,7 +433,6 @@ mod cpal {
                             let mut elapsed_time = elapsed_time_state.write().unwrap();
                             *elapsed_time = 0;
                             app_handle.emit_all("timestamp", Some(0f64));
-                            
                         }
                     }
 
@@ -480,7 +478,7 @@ mod cpal {
                         let mut u = 0;
                         let mut should_send = false;
                         for d in &mut *data {
-                            if (viz_data.len() < length * 3) {
+                            if (viz_data.len() < length) {
                                 viz_data.push(*d);
                             } else {
                                 should_send = true;
@@ -525,7 +523,6 @@ mod cpal {
                     } else {
                         data.iter_mut().for_each(|s| *s = T::MID);
                     }
-
                 },
                 move |err| error!("audio output error: {}", err),
                 None,
@@ -708,7 +705,7 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
         .windows(2)
         .map(|pair| {
             let (x0, x1) = (pair[0], pair[1]);
-            smoothing(x0, x1, 0.8f32)
+            smoothing(x0, x1, 0.2f32)
         })
         .collect();
 
@@ -724,7 +721,7 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
             // Calculate magnitude of the complex number
             // let magnitude1 = (freq1.re.powi(2) + freq1.im.powi(2)).sqrt();
             // let magnitude2 = (freq2.re.powi(2) + freq2.im.powi(2)).sqrt();
-            let summed = (((freq1 - freq2) * 0.2 / 2.0) + 128.0) as u8;
+            let summed = (((freq1 - freq2) * 0.8 / 2.0) + 128.0) as u8;
             // println!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
 
             // Split the f32 into its individual bytes
