@@ -14,7 +14,6 @@ use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::runtime::Handle;
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::BufReader;
@@ -24,6 +23,7 @@ use std::sync::{Arc, Mutex};
 use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Manager, State};
+use tokio::runtime::Handle;
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
 mod metadata;
@@ -36,7 +36,6 @@ struct MetadataEntry {
     id: String,
     value: Value,
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct WriteMetatadaEvent {
@@ -171,6 +170,7 @@ async fn write_metadatas(
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct ScanPathsEvent {
     paths: Vec<String>,
+    recursive: bool
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -254,7 +254,7 @@ async fn get_song_metadata(
 }
 
 #[tauri::command]
-async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> () {
+async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
     // println!("scan_paths", event);
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -267,7 +267,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> () {
                 songs.lock().unwrap().push(song);
             }
         } else if path.is_dir() {
-            if let Some(sub_songs) = process_directory(Path::new(path), &songs) {
+            if let Some(sub_songs) = process_directory(Path::new(path), &songs, event.recursive) {
                 songs.lock().unwrap().extend(sub_songs);
             }
         }
@@ -279,7 +279,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> () {
     // }
 
     let length = songs.lock().unwrap().clone().len();
-    if length > 1000 {
+    if length > 500 {
         let songsClone = songs.lock().unwrap();
         let enumerator = songsClone.chunks(200);
         let chunks = enumerator.len();
@@ -302,6 +302,10 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> () {
                 },
             );
         });
+        ToImportEvent {
+            songs: songs.lock().unwrap().clone(),
+            progress: 100,
+        }
     } else {
         let _ = app_handle.emit_all(
             "import_chunk",
@@ -310,12 +314,17 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> () {
                 progress: 100,
             },
         );
+        ToImportEvent {
+            songs: songs.lock().unwrap().clone(),
+            progress: 100,
+        }
     }
 }
 
 fn process_directory(
     directory_path: &Path,
     songs: &Arc<std::sync::Mutex<Vec<Song>>>,
+    recursive: bool
 ) -> Option<Vec<Song>> {
     let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -331,8 +340,8 @@ fn process_directory(
                         if let Some(song) = crate::metadata::extract_metadata(&path) {
                             subsongs.lock().unwrap().push(song);
                         }
-                    } else if path.is_dir() {
-                        if let Some(sub_songs) = process_directory(&path, songs) {
+                    } else if path.is_dir() && recursive {
+                        if let Some(sub_songs) = process_directory(&path, songs, true) {
                             songs.lock().unwrap().extend(sub_songs);
                         }
                     }

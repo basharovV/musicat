@@ -8,7 +8,9 @@
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import { addArtworksToAllAlbums } from "../../data/LibraryImporter";
+    import { addArtworksToAllAlbums, rescanAlbumArtwork } from "../../data/LibraryImporter";
+    import type { ToImport } from "../../App";
+    import { invoke } from "@tauri-apps/api";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -97,8 +99,7 @@
     }
 
     async function rescanLocalArtwork() {
-        const songs = await db.songs.bulkGet($rightClickedAlbum.tracksIds);
-        await addArtworksToAllAlbums(songs);
+        rescanAlbumArtwork($rightClickedAlbum);
     }
 </script>
 

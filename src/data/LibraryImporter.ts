@@ -332,7 +332,8 @@ export async function importPaths(
 
     await invoke<ToImport>("scan_paths", {
         event: {
-            paths: selected
+            paths: selected,
+            recursive: true
         }
     });
 
@@ -386,7 +387,12 @@ export async function startImportListener() {
                             1
                         );
                         if (chunksToProcess.length === 0 && gotAllChunks) {
-                            await addArtworksToAllAlbums(allSongs, isBackground, worker);
+                            await addArtworksToAllAlbums(
+                                allSongs,
+                                isBackground,
+                                false,
+                                worker
+                            );
                         }
                         break;
                     // Last step - finish after this
@@ -410,7 +416,7 @@ export async function startImportListener() {
                 }
             };
         } else if (toImport.songs.length === 0 && toImport.progress === 100) {
-            await addArtworksToAllAlbums(allSongs, isBackground);
+            await addArtworksToAllAlbums(allSongs, isBackground, false);
         }
     });
 }
@@ -537,6 +543,58 @@ async function addAlbumArtworkFromSong(song: Song, newAlbum: Album) {
     }
 }
 
+export async function rescanAlbumArtwork(album: Album) {
+    // console.log("adding artwork from song", song, newAlbum);
+
+    const response = await invoke<ToImport>("scan_paths", {
+        event: {
+            paths: [album.path],
+            recursive: false
+        }
+    });
+
+    const artwork = await lookForArt(
+        response.songs[0].path,
+        response.songs[0].file
+    );
+    if (artwork) {
+        const artworkSrc = artwork.artworkSrc;
+        const artworkFormat = artwork.artworkFormat;
+        album.artwork = {
+            src: artworkSrc,
+            format: artworkFormat,
+            size: {
+                width: 200,
+                height: 200
+            }
+        };
+    } else {
+        Promise.all(
+            response.songs.map(async (song) => {
+                if (song.artwork?.data && song.artwork?.format) {
+                    const artworkFormat = song.artwork.format;
+
+                    const path = await cacheArtwork(
+                        Uint8Array.from(song.artwork.data),
+                        album.id,
+                        song.artwork.format
+                    );
+
+                    // console.log("artworkSrc", artworkSrc);
+                    album.artwork = {
+                        src: convertFileSrc(path),
+                        format: artworkFormat,
+                        size: {
+                            width: 200,
+                            height: 200
+                        }
+                    };
+                }
+            })
+        );
+    }
+}
+
 /**
  * To improve performance, we process the album artworks (including looking in folders as fallbacks)
  * after the songs have been imported, and the albums have been added.
@@ -545,6 +603,7 @@ async function addAlbumArtworkFromSong(song: Song, newAlbum: Album) {
 export async function addArtworksToAllAlbums(
     songs: Song[],
     isBackground = false,
+    override = false,
     worker: Worker = null
 ) {
     const albumsToPut = {};
