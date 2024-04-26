@@ -778,6 +778,7 @@ pub mod file_streamer {
     pub fn get_peaks(
         event: GetWaveformRequest,
         app_handle: &AppHandle,
+        cancel_token: CancellationToken
     ) -> Result<Vec<f32>, symphonia::core::errors::Error> {
         let binding = event.path.unwrap();
         let path = Path::new(binding.as_str());
@@ -866,6 +867,9 @@ pub mod file_streamer {
             // Decode the packet into audio samples.
             match decoder.decode(&packet) {
                 Ok(_decoded) => {
+                    if (cancel_token.is_cancelled()) {
+                        break Err(symphonia::core::errors::Error::LimitError("cancelled"));
+                    }
                     // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
                     let mut sample_buf =
                         SampleBuffer::<f32>::new(_decoded.capacity() as u64, *_decoded.spec());

@@ -26,7 +26,7 @@
     let isMounted = false;
     let wavesurfer: WaveSurfer;
     let wsRegions: RegionsPlugin;
-    let song = $currentSong;
+    let song = null;
 
     let pxPerSec = 0;
     let isZoomed = false;
@@ -82,10 +82,6 @@
             }
         };
 
-        wsRegions.enableDragSelection({
-            minLength: 5,
-            maxLength: 60
-        });
         wsRegions.on("region-created", (region) => {
             console.log("region", region);
             if (region.start !== region.end) {
@@ -99,7 +95,11 @@
                     });
 
                 // Set loop parameters
-                if (region.start !== $waveformPeaks.loopStartPos) {
+                if (
+                    region.start !== $waveformPeaks.loopStartPos &&
+                    region.end !== $waveformPeaks.loopEndPos
+                ) {
+                    console.log("NEW REGION", region);
                     invoke("loop_region", {
                         event: {
                             enabled: true,
@@ -137,13 +137,33 @@
                 $waveformPeaks.loopEnabled = false;
             }
         });
+
+        wsRegions.on("region-updated", (region) => {
+            if (region.start !== region.end) {
+                console.log("updated Loop", region);
+                invoke("loop_region", {
+                    event: {
+                        enabled: true,
+                        start_pos: region.start,
+                        end_pos: region.end
+                    }
+                });
+
+                $waveformPeaks.loopEnabled = true;
+                $waveformPeaks.loopStartPos = region.start;
+                $waveformPeaks.loopEndPos = region.end;
+            }
+        });
+
         wsRegions.on("region-double-clicked", (region, ev) => {
             ev.stopPropagation();
             console.log("region-dblclicked");
         });
+
         wsRegions.enableDragSelection({
             color: "rgba(220, 188, 255, 0.229)"
         });
+
         wavesurfer.on("click", (pos) => {
             console.log("interaction", pos);
             let posSeconds = $currentSong.fileInfo.duration * pos;
@@ -172,14 +192,13 @@
 
         wavesurfer.on("zoom", (px) => {
             isZoomed = px > pxPerSec;
-            console.log("izZoomed", px, pxPerSec);
         });
 
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
             // console.log("waveform", event);
-            wavesurfer.load(
+            await wavesurfer.load(
                 null,
                 event.payload.data,
                 $currentSong.fileInfo.duration
@@ -187,6 +206,7 @@
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
+                    ...$waveformPeaks,
                     songId: $currentSong.id,
                     data: event.payload.data
                 };
@@ -263,7 +283,7 @@
         // console.log("result", result);
     }
 
-    $: if (isMounted && $currentSong?.path && wavesurfer) {
+    $: if (isMounted && $currentSong?.path !== song?.path && wavesurfer) {
         getWaveform();
         console.log(
             "$currentSong.fileInfo.duration",
@@ -271,25 +291,16 @@
         );
         wavesurfer.setOptions({ duration: $currentSong.fileInfo.duration });
 
+        if (wavesurfer.getDecodedData()) {
+            wavesurfer.zoom(false);
+        }
+
         console.log("duration", wavesurfer.getDuration());
     }
 
     let hoverPos = 0;
     let hoverTime = "";
     let showHoverhead = false;
-
-    function onHover(ev: MouseEvent) {
-        let percent = ev.offsetX / container.clientWidth;
-        hoverPos = ev.offsetX;
-        let duration = $currentSong?.fileInfo?.duration;
-        if (duration) {
-            hoverTime = `${(~~((duration * percent) / 60))
-                .toString()
-                .padStart(2, "0")}:${(~~((duration * percent) % 60))
-                .toString()
-                .padStart(2, "0")}`;
-        }
-    }
 </script>
 
 <div class="container">
@@ -314,7 +325,7 @@
         position: relative;
         .waveform {
             margin: auto;
-            max-height: 80px;
+            max-height: 70px;
 
             &.zoomed {
                 mask-image: linear-gradient(

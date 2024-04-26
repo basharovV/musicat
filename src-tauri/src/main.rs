@@ -13,6 +13,7 @@ use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tokio_util::sync::CancellationToken;
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::BufReader;
@@ -641,9 +642,22 @@ fn get_waveform(
 ) -> () {
     println!("Get waveform {:?}", event);
 
+    let evt = event.clone();
+    let token = CancellationToken::new();
+    let token_clone = token.clone();
+    if let Ok(mut tokens) = state.cancel_tokens.try_lock() {
+        // Cancel all existing waveform threads
+        tokens.iter().filter(|t| {
+            t.0 != &event.clone().path.unwrap()
+        }).for_each(|t| {
+            t.1.cancel();
+        });
+        tokens.insert(event.path.unwrap(), token);
+    }
+
     std::thread::spawn(move || {
         // Handle client's offer
-        let result = player::file_streamer::get_peaks(event, &_app_handle);
+        let result = player::file_streamer::get_peaks(evt, &_app_handle, token_clone);
         // println!("Waveform: {:?}", result);
     });
 }

@@ -7,6 +7,7 @@
         isLyricsHovered,
         isLyricsOpen,
         isSettingsOpen,
+        isWaveformOpen,
         userSettings
     } from "../../data/store";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
@@ -119,6 +120,7 @@
 <div
     class="container"
     class:full-screen={isFullScreen}
+    class:extra-space={$isWaveformOpen}
     on:mouseenter={() => {
         $isLyricsHovered = true;
     }}
@@ -225,7 +227,7 @@
     .container {
         position: absolute;
         bottom: 3.5em;
-        right: 1.5em;
+        right: 2em;
         max-height: 400px;
         text-align: center;
         min-width: 330px;
@@ -238,6 +240,10 @@
         background: rgba(53, 50, 54, 0.8);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
         backdrop-filter: blur(8px);
+
+        &.extra-space {
+            bottom: 9.5em;
+        }
 
         .credits {
             margin-top: -3.8em;

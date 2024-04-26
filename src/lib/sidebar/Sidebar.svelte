@@ -1115,7 +1115,14 @@
                 />
             </div>
 
-            <div class="visualizer-icon">
+            <div
+                class="visualizer-icon"
+                use:tippy={{
+                    content:
+                        "waveform, loop region, marker editor",
+                    placement: "top"
+                }}
+            >
                 <Icon
                     icon="ph:wave-sine-duotone"
                     onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
@@ -1729,6 +1736,9 @@
         align-items: center;
         gap: 10px;
 
+        .visualizer-icon {
+            position: relative;
+        }
         .track-info-icon,
         .visualizer-icon {
             display: flex;

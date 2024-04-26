@@ -9,16 +9,16 @@
 
 <style lang="scss">
     div {
-        min-height: 80px;
+        min-height: 70px;
         border-radius: 5px;
-        border: 0.7px solid #ffffff1f;
+        border-left: inset 0.7px solid #ffffff1f;
+        border-bottom: 0.7px solid #ffffff1f;
         margin: 5px 5px 0 0;
-        background-color: rgba(54, 48, 57, 0.164);
-        /* box-shadow: inset darken(#3e3b3b49, 15%) 0 0.5em 0px 0; */
+        background-color: #9c86b10f;
 
 
         &:hover {
-            background-color: #9c86b10f;
+            background-color: #9c86b11c;
         }
     }
 </style>
