@@ -1,9 +1,6 @@
 use crate::{Artwork, FileInfo, Song};
 use chksum_md5::MD5;
-use lofty::{
-    read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, TagItem,
-    TagType, TaggedFileExt,
-};
+use lofty::{read_from_path, Accessor, AudioFile, FileType, ItemKey, TagType, TaggedFileExt};
 use std::path::Path;
 
 pub fn extract_metadata(file_path: &Path) -> Option<Song> {
@@ -32,7 +29,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                     let mut file_info = FileInfo::new();
                     let mut artwork = None;
 
-                    if (tagged_file.tags().is_empty()) {
+                    if tagged_file.tags().is_empty() {
                         title = file.to_string();
                     }
                     // println!("bit depth {:?}", tagged_file.properties().bit_depth());
@@ -46,7 +43,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         lossless: vec![FileType::Flac, FileType::Wav]
                             .iter()
                             .any(|f| f.eq(&tagged_file.file_type())),
-                        tagType: if let Some(tag) = tagged_file.primary_tag() {
+                        tag_type: if let Some(tag) = tagged_file.primary_tag() {
                             match tag.tag_type() {
                                 TagType::VorbisComments => Some("vorbis".to_string()),
                                 TagType::Id3v1 => Some("ID3v1".to_string()),
@@ -80,7 +77,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         },
                     };
 
-                    if (duration.is_empty()) {
+                    if duration.is_empty() {
                         duration = seconds_to_hms(tagged_file.properties().duration().as_secs());
                     }
 
@@ -88,40 +85,40 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                     tagged_file.tags().iter().for_each(|tag| {
                         // println!("Tag type {:?}", tag.tag_type());
                         // println!("Tag items {:?}", tag.items());
-                        if (title.is_empty()) {
+                        if title.is_empty() {
                             title = tag
                                 .title()
                                 .filter(|x| !x.is_empty())
                                 .unwrap_or(std::borrow::Cow::Borrowed(&file))
                                 .to_string();
                         }
-                        if (artist.is_empty()) {
+                        if artist.is_empty() {
                             artist = tag.artist().unwrap_or_default().to_string();
                         }
-                        if (album.is_empty()) {
+                        if album.is_empty() {
                             album = tag.album().unwrap_or_default().to_string();
                         }
-                        if (genre.is_empty()) {
+                        if genre.is_empty() {
                             genre = tag.genre().map_or_else(Vec::new, |g| {
                                 g.split('/').map(String::from).collect()
                             });
                         }
-                        if (year == 0) {
+                        if year == 0 {
                             year = tag.year().unwrap_or(0) as i32;
                         }
-                        if (composer.is_empty()) {
+                        if composer.is_empty() {
                             composer = tag
                                 .get_items(&ItemKey::Composer)
                                 .map(|c| c.value().to_owned().into_string().unwrap_or_default())
                                 .clone()
                                 .collect()
                         }
-                        if (track_number == -1) {
+                        if track_number == -1 {
                             track_number = tag.track().unwrap_or(0) as i32;
                         }
                     });
 
-                    if (tagged_file.primary_tag().is_some()) {
+                    if tagged_file.primary_tag().is_some() {
                         if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),
@@ -156,7 +153,7 @@ fn seconds_to_hms(seconds: u64) -> String {
     let hours = seconds / 3600;
     let minutes = (seconds % 3600) / 60;
     let seconds = seconds % 60;
-    if (hours == 0) {
+    if hours == 0 {
         format!("{:02}:{:02}", minutes, seconds)
     } else {
         format!("{:02}:{:02}:{:02}", hours, minutes, seconds)

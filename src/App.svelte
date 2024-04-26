@@ -1,32 +1,33 @@
 <script lang="ts">
     import { Toaster } from "svelte-french-toast";
     import {
-        dragGhostReset,
         draggedScrapbookItems,
         draggedSongs,
         droppedFiles,
         emptyDropEvent,
         foldersToWatch,
         hoveredFiles,
-        isFolderWatchUpdate,
         isInfoPopupOpen,
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
         isSettingsOpen,
         isTrackInfoPopupOpen,
+        isWaveformOpen,
         isWelcomeSeen,
         os,
-        uiView,
-        userSettings
+        uiView
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
+    import { fade, fly } from "svelte/transition";
     import { startWatching } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryImporter";
+    import BottomBar from "./lib/library/BottomBar.svelte";
     import Dropzone from "./lib/library/Dropzone.svelte";
+    import LyricsView from "./lib/library/LyricsView.svelte";
     import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
@@ -35,16 +36,12 @@
     import AlbumView from "./lib/views/AlbumsView.svelte";
     import AnalyticsView from "./lib/views/AnalyticsView.svelte";
     import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
-    import LibraryView from "./lib/views/LibraryView.svelte";
+    import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
     import MapView from "./lib/views/MapView.svelte";
+    import NotesView from "./lib/views/NotesView.svelte";
+    import QueueView from "./lib/views/QueueView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
-    import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
-    import StreamDebugger from "./lib/player/StreamDebugger.svelte";
-    import QueueView from "./lib/views/QueueView.svelte";
-    import BottomBar from "./lib/library/BottomBar.svelte";
-    import { fade, fly } from "svelte/transition";
-    import LyricsView from "./lib/library/LyricsView.svelte";
 
     startMenuListener();
     startImportListener();
@@ -235,6 +232,12 @@
             </div>
         {/if}
 
+        {#if $isWaveformOpen}
+            <div class="notes" transition:fly={{ duration: 200, y: 50 }}>
+                <NotesView />
+            </div>
+        {/if}
+
         <div class="bottom-bar">
             <BottomBar />
         </div>
@@ -245,7 +248,7 @@
     main {
         display: grid;
         grid-template-columns: auto auto 1fr;
-        grid-template-rows: 1fr auto;
+        grid-template-rows: 1fr auto auto;
         width: 100vw;
         height: 100vh;
         opacity: 1;
@@ -282,10 +285,15 @@
             position: relative;
             width: 100%;
             z-index: 15;
-            grid-row: 2;
+            grid-row: 3;
             grid-column: 2 / 4;
             margin-top: 5px;
             margin-bottom: 5px;
+        }
+
+        .notes {
+            grid-row: 2;
+            grid-column: 2 / 4;
         }
 
         .queue {

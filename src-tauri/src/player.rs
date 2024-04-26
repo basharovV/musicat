@@ -6,67 +6,50 @@ pub mod file_streamer {
     use std::sync::mpsc::{Receiver, Sender};
     use std::time::Instant;
 
-    use std::cell::Cell;
     use std::collections::HashMap;
-    use std::error::Error;
     use std::fs::File;
-    use std::io::{SeekFrom, Write};
     use std::marker::PhantomData;
-    use std::ops::{Deref, DerefMut};
     use std::path::Path;
-    use std::rc::Rc;
     use std::sync::atomic::{AtomicBool, AtomicU32};
     use std::sync::Arc;
-    use std::{cmp, thread};
 
     use atomic_wait::{wake_all, wake_one};
-    use bytes::Bytes;
-    use log::{debug, error, info, log, warn};
-    use symphonia::core::audio::{Channels, Layout, RawSampleBuffer, SignalSpec};
+    use log::warn;
+    use symphonia::core::audio::{Layout, RawSampleBuffer, SampleBuffer, SignalSpec};
     use symphonia::core::codecs::{DecoderOptions, FinalizeResult, CODEC_TYPE_NULL};
-    use symphonia::core::errors::Error::ResetRequired;
-    use symphonia::core::formats::{FormatOptions, FormatReader, SeekTo, Track};
+    use symphonia::core::errors::Error::{self, ResetRequired};
+    use symphonia::core::formats::{FormatOptions, SeekTo, Track};
     use symphonia::core::io::MediaSourceStream;
     use symphonia::core::meta::MetadataOptions;
-    use symphonia::core::probe::{Hint, Probe, ProbeResult};
+    use symphonia::core::probe::Hint;
     use symphonia::core::units::Time;
-    use symphonia::default::{get_probe, register_enabled_formats};
+    use symphonia::default::get_probe;
     use tauri::{AppHandle, Manager};
-    use tokio::select;
     use tokio::sync::Mutex;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::Duration;
 
-    use ringbuffer::{AllocRingBuffer, RingBuffer};
     use tokio_util::sync::CancellationToken;
     use webrtc::api::interceptor_registry::register_default_interceptors;
     use webrtc::api::media_engine::MediaEngine;
     use webrtc::api::APIBuilder;
-    use webrtc::data_channel::data_channel_message::DataChannelMessage;
-    use webrtc::data_channel::data_channel_state::RTCDataChannelState;
     use webrtc::data_channel::RTCDataChannel;
     use webrtc::ice_transport::ice_candidate::RTCIceCandidateInit;
-    use webrtc::ice_transport::ice_server::RTCIceServer;
     use webrtc::interceptor::registry::Registry;
     use webrtc::peer_connection::configuration::RTCConfiguration;
     use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
     use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
-    use webrtc::peer_connection::{math_rand_alpha, RTCPeerConnection};
+    use webrtc::peer_connection::RTCPeerConnection;
 
     use crate::output::{self, AudioOutput};
     use crate::{
-        FileInfo, FlowControlEvent, SampleOffsetEvent, StreamFileRequest, VolumeControlEvent,
+        GetWaveformRequest, GetWaveformResponse, LoopRegionRequest, SampleOffsetEvent,
+        StreamFileRequest, VolumeControlEvent,
     };
-
-    enum SeekPosition {
-        Time(f64),
-        Timetamp(u64),
-    }
 
     #[derive(Debug)]
     pub enum PlayerControlEvent {
         StreamFile(StreamFileRequest), // path, seekpos
-        Play,
-        Pause,
+        LoopRegion(LoopRegionRequest),
     }
 
     pub const PAUSED: u32 = 0;
@@ -164,13 +147,13 @@ pub mod file_streamer {
         }
 
         pub fn pause(&self) {
-            &self
+            let _ = &self
                 .decoding_active
                 .store(PAUSED, std::sync::atomic::Ordering::Relaxed);
         }
 
         pub fn resume(&self) {
-            &self
+            let _ = &self
                 .decoding_active
                 .store(ACTIVE, std::sync::atomic::Ordering::Relaxed);
             wake_one(self.decoding_active.as_ref());
@@ -237,7 +220,8 @@ pub mod file_streamer {
                 if let Some(cand) = c {
                     // let candidate = serde_json::to_string(&cand.to_json().unwrap());
 
-                    app_handle.emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
+                    let _ =
+                        app_handle.emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
                 }
                 Box::pin(async {})
             }));
@@ -283,9 +267,9 @@ pub mod file_streamer {
 
                 if let Ok(pc_mutex) = self.peer_connection.try_lock() {
                     if let Some(pc) = pc_mutex.clone().or(None) {
-                        pc.set_remote_description(parsed_description).await;
+                        let _ = pc.set_remote_description(parsed_description).await;
                         let ans = Some(pc.create_answer(None).await.unwrap());
-                        pc.set_local_description(ans.clone().unwrap()).await;
+                        let _ = pc.set_local_description(ans.clone().unwrap()).await;
                         return ans;
                     }
                 }
@@ -383,11 +367,10 @@ pub mod file_streamer {
         data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
         app_handle: &AppHandle,
     ) {
-        // Request will be None at first!
-
         // These will be reset when changing tracks
         let mut path_str: Option<String> = None;
         let mut seek = None;
+        let mut end_pos = None; // for loop region
         let mut volume = None;
         let mut file = Arc::new(Mutex::new(None));
 
@@ -430,11 +413,11 @@ pub mod file_streamer {
                             volume.replace(request.volume.unwrap());
                             file.try_lock().unwrap().replace(request.file_info.unwrap());
                         }
-                        PlayerControlEvent::Pause => {
-                            // self.pause();
-                        }
-                        PlayerControlEvent::Play => {
-                            // self.resume();
+                        PlayerControlEvent::LoopRegion(request) => {
+                            println!("audio: loop region! {:?}", request);
+                            seek.replace(request.start_pos.unwrap());
+                            end_pos.replace(request.end_pos.unwrap());
+                            cancel_token.cancel();
                         }
                     }
                 }
@@ -480,7 +463,8 @@ pub mod file_streamer {
                 println!("probe format {:?}", probe_result.is_ok());
 
                 if probe_result.is_err() {
-                    return;
+                    path_str = None;
+                    continue;
                 }
                 let mut reader = probe_result.unwrap().format;
 
@@ -524,7 +508,6 @@ pub mod file_streamer {
                 };
 
                 println!("codec params: {:?}", &track.codec_params);
-                let mut printed = false;
 
                 // Create a decoder for the track.
                 let mut decoder = symphonia::default::get_codecs()
@@ -563,39 +546,27 @@ pub mod file_streamer {
                     ));
                 }
 
-                /*
-                We're sending the PCM as bytes in chunks of 10kb,
-                which is just below the maximum limit on Chrome (16kb per message)
-                */
-                let mut byte_buf: AllocRingBuffer<u8> = AllocRingBuffer::new(1024 * 10); // 10KB
-                let mut to_send = Bytes::new();
                 let mut last_sent_time = Instant::now();
-                let mut packet_counter = 0;
                 let target_bitrate =
                     file_info.bit_depth.unwrap() as u32 * file_info.sample_rate.unwrap();
-                println!("Target kbits/second: {}", target_bitrate as f64 / 1000f64);
                 let max_packet_size = &decoder.codec_params().max_frames_per_packet;
                 let max_block_size = &decoder.codec_params().frames_per_block;
-
-                let mut fastest_send_interval = Duration::new(0, 0);
-                let mut slowest_send_interval = Duration::new(0, 0);
-
+                println!("Target kbits/second: {}", target_bitrate as f64 / 1000f64);
                 println!("Max packet size: {:?} frames", max_packet_size);
                 println!("Max block size: {:?} frames", max_block_size);
-                // data_channel.on_buffered_amount_low(|f| {
-
-                // });
-                let mut is_first_packet = true;
-                let mut send_interval = Duration::from_millis(1); // Initial send interval
-
-                let mut last_ticker_time = Instant::now();
 
                 if !is_transition {
-                    reset_control_sender.send(true);
-                    sender_sample_offset.send(SampleOffsetEvent {
+                    let _ = reset_control_sender.send(true);
+                    let _ = sender_sample_offset.send(SampleOffsetEvent {
                         sample_offset: Some(seek_ts * file_info.channels.unwrap() as u64),
                     });
                 }
+
+                let end_pos_frame_idx = if end_pos.is_some() {
+                    (end_pos.unwrap() * track.codec_params.sample_rate.unwrap() as f64) as u64
+                } else {
+                    0
+                };
 
                 let receiver = player_control_receiver.try_lock().unwrap();
 
@@ -618,6 +589,7 @@ pub mod file_streamer {
                                             );
                                             path_str.replace(request.path.unwrap());
                                             seek.replace(request.seek.unwrap());
+                                            end_pos = None;
                                             volume.replace(request.volume.unwrap());
                                             file.try_lock()
                                                 .unwrap()
@@ -625,11 +597,16 @@ pub mod file_streamer {
                                             cancel_token.cancel();
                                             guard.flush();
                                         }
-                                        PlayerControlEvent::Pause => {
-                                            // self.pause();
-                                        }
-                                        PlayerControlEvent::Play => {
-                                            // self.resume();
+                                        PlayerControlEvent::LoopRegion(request) => {
+                                            println!("audio: loop region! {:?}", request);
+                                            if (request.enabled.unwrap()) {
+                                                seek.replace(request.start_pos.unwrap());
+                                                end_pos.replace(request.end_pos.unwrap());
+                                            } else {
+                                                end_pos = None;
+                                            }
+                                            cancel_token.cancel();
+                                            guard.flush();
                                         }
                                     }
                                 }
@@ -637,11 +614,13 @@ pub mod file_streamer {
                                 if (decoding_active.load(std::sync::atomic::Ordering::Relaxed)
                                     == PAUSED)
                                 {
-                                    playback_state_sender.send(false);
+                                    let _ = playback_state_sender.send(false);
                                 }
 
-                                atomic_wait::wait(&decoding_active, PAUSED); // waits while the value is PAUSED (0)
-                                playback_state_sender.send(true);
+                                // waits while the value is PAUSED (0)
+                                atomic_wait::wait(&decoding_active, PAUSED);
+
+                                let _ = playback_state_sender.send(true);
 
                                 if cancel_token.is_cancelled() {
                                     break Ok(());
@@ -650,108 +629,63 @@ pub mod file_streamer {
                                     Ok(packet) => packet,
                                     Err(err) => break Err(err),
                                 };
-                                packet_counter += 1;
 
-                                // if !printed {
-                                //     println!("packet size: {:?}", packet.buf().len());
-                                // }
                                 // If the packet does not belong to the selected track, skip over it.
                                 if packet.track_id() != track_id {
                                     continue;
                                 }
 
+                                // Loop region mode: If this packet is past the loop region,
+                                // seek the reader back to the start point
+                                if (end_pos.is_some() && packet.ts > end_pos_frame_idx) {
+                                    let seek_to = SeekTo::Time {
+                                        time: Time::from(seek.unwrap()),
+                                        track_id: Some(track_id),
+                                    };
+                                    match reader
+                                        .seek(symphonia::core::formats::SeekMode::Accurate, seek_to)
+                                    {
+                                        Ok(seeked_to) => seeked_to.required_ts,
+                                        Err(ResetRequired) => {
+                                            // Don't give-up on a seek error.
+                                            warn!("reset required:");
+                                            0
+                                        }
+                                        Err(err) => {
+                                            // Don't give-up on a seek error.
+                                            warn!("seek error: {}", err);
+                                            0
+                                        }
+                                    };
+                                    is_transition = true; // To delay sending sample offset by 5s
+                                }
+
                                 // Decode the packet into audio samples.
                                 match decoder.decode(&packet) {
                                     Ok(_decoded) => {
-                                        // If the audio output is not open, try to open it.
-                                        // Get the audio buffer specification. This is a description of the decoded
-                                        // audio buffer's sample format and sample rate.
-                                        let spec = *_decoded.spec();
-
-                                        // Get the capacity of the decoded buffer. Note that this is capacity, not
-                                        // length! The capacity of the decoded buffer is constant for the life of the
-                                        // decoder, but the length is not.
-                                        let duration = _decoded.capacity() as u64;
-                                        let frames = _decoded.frames();
-                                        let frames = _decoded.frames();
-                                        // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
-                                        let mut sample_buf = RawSampleBuffer::<f32>::new(
-                                            _decoded.capacity() as u64,
-                                            *_decoded.spec(),
-                                        );
-                                        let frames = _decoded.frames();
-                                        // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
-                                        let mut sample_buf = RawSampleBuffer::<f32>::new(
-                                            _decoded.capacity() as u64,
-                                            *_decoded.spec(),
-                                        );
-
-                                        // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
-                                        // any required conversions.
-                                        // sample_buf.copy_interleaved_ref(_decoded);
-
-                                        // The interleaved f32 samples can be accessed as a slice of bytes as follows.
-                                        // sample_buf.as_bytes().to_vec().iter().for_each(|b| {
-                                        //     byte_buf.push(*b);
-                                        //     if (byte_buf.is_full()) {
-                                        //         to_send = Bytes::from(byte_buf.to_vec());
-                                        //         // Clear the buffer to make space for remaining bytes
-                                        //         byte_buf.clear();
-                                        //     }
-                                        // });
-
-                                        // Calculate decode/send rate
-                                        let elapsed = last_sent_time.elapsed();
-
-                                        if (packet_counter % 20 == 0) {
-                                            if (is_first_packet) {
-                                                // Target time between packets = bitrate
-                                                let frames: u32 = u32::try_from(frames).unwrap();
-                                                let bits =
-                                                    frames * file_info.bit_depth.unwrap() as u32;
-
-                                                // Never send frames slower than 0.75x playback!
-                                                slowest_send_interval = Duration::from_secs_f64(
-                                                    bits as f64 / target_bitrate as f64,
-                                                )
-                                                .mul_f64(1.1f64);
-
-                                                // Never send faster than 3x playback
-                                                fastest_send_interval = Duration::from_secs_f64(
-                                                    bits as f64 / target_bitrate as f64,
-                                                )
-                                                .div_f64(3.0f64);
-                                                send_interval = slowest_send_interval.clone();
-                                                println!(
-                                                    "decode (interval): {} every {}s",
-                                                    bits,
-                                                    slowest_send_interval.as_secs_f64()
-                                                );
-                                                is_first_packet = false;
-                                            }
-
-                                            // Target time between packets = bitrate
-                                            let frames: u32 = u32::try_from(frames).unwrap();
-                                            let bits = frames * file_info.bit_depth.unwrap() as u32;
-
-                                            let decode_rate_micros =
-                                                bits as f64 / elapsed.as_micros() as f64;
-                                            let decode_rate_second =
-                                                decode_rate_micros * 1000000f64;
-                                            println!(
-                                                "decode rate (seconds): {:.2} kb/s",
-                                                decode_rate_second / 1000f64
-                                            );
-                                        }
-
                                         last_sent_time = Instant::now();
 
+                                        /*
+                                        The transition is 5 seconds long, since that is the size of the buffer.
+                                        So decoding starts 5 seconds before playback, and we can delay the song
+                                        change in the UI by this time.
+                                         */
                                         if is_transition && !started_transition {
                                             started_transition = true;
                                             transition_time = last_sent_time;
                                         } else if is_transition && started_transition {
                                             if transition_time.elapsed().as_secs() >= 5 {
-                                                // Check if 5s have passed
+                                                if (end_pos.is_some()) {
+                                                    let _ = sender_sample_offset.send(
+                                                        SampleOffsetEvent {
+                                                            sample_offset: Some(
+                                                                seek_ts
+                                                                    * file_info.channels.unwrap()
+                                                                        as u64,
+                                                            ),
+                                                        },
+                                                    );
+                                                }
                                                 if let Some(song) =
                                                     crate::metadata::extract_metadata(&Path::new(
                                                         &p.clone().as_str(),
@@ -759,25 +693,29 @@ pub mod file_streamer {
                                                 {
                                                     app_handle.emit_all("song_change", Some(song));
 
-                                                    reset_control_sender.send(true);
-                                                    sender_sample_offset.send(SampleOffsetEvent {
-                                                        sample_offset: Some(
-                                                            seek_ts
-                                                                * file_info.channels.unwrap()
-                                                                    as u64,
-                                                        ),
-                                                    });
+                                                    let _ = reset_control_sender.send(true);
+                                                    let _ = sender_sample_offset.send(
+                                                        SampleOffsetEvent {
+                                                            sample_offset: Some(
+                                                                seek_ts
+                                                                    * file_info.channels.unwrap()
+                                                                        as u64,
+                                                            ),
+                                                        },
+                                                    );
                                                 }
                                                 is_transition = false;
                                                 started_transition = false;
                                             }
                                         }
 
-                                        // Send packet to JS here
+                                        /*
+                                        Write packet to audio ring buffer here
+                                        Because the audio playback uses the ringbuffer, we are effectively
+                                        "slowing down" decoding to allow the audio stream to read from the
+                                        buffer as it's playing.
+                                         */
                                         if (!cancel_token.is_cancelled()) {
-                                            if !is_transition {
-                                                // thread::sleep(send_interval);
-                                            }
                                             // Write the decoded audio samples to the audio output if the presentation timestamp
                                             // for the packet is >= the seeked position (0 if not seeking).
                                             if packet.ts() >= seek_ts {
@@ -802,7 +740,6 @@ pub mod file_streamer {
                                 {
                                     println!("End of stream!!");
 
-                                    // TODO: Gapless here
                                     let next_track =
                                         next_track_receiver.try_lock().unwrap().try_recv();
                                     if let Ok(request) = next_track {
@@ -838,16 +775,158 @@ pub mod file_streamer {
             .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
     }
 
-    fn do_verification(finalization: FinalizeResult) -> symphonia::core::errors::Result<i32> {
-        match finalization.verify_ok {
-            Some(is_ok) => {
-                // Got a verification result.
-                println!("verification: {}", if is_ok { "passed" } else { "failed" });
+    pub fn get_peaks(
+        event: GetWaveformRequest,
+        app_handle: &AppHandle,
+    ) -> Result<Vec<f32>, symphonia::core::errors::Error> {
+        let binding = event.path.unwrap();
+        let path = Path::new(binding.as_str());
 
-                Ok(i32::from(!is_ok))
+        // Create a hint to help the format registry guess what format reader is appropriate.
+        let mut hint = Hint::new();
+        let source = Box::new(File::open(path).unwrap());
+        println!("source {:?}", source);
+
+        // Provide the file extension as a hint.
+        println!("extension: {:?}", path.extension());
+        if let Some(extension) = path.extension() {
+            if let Some(extension_str) = extension.to_str() {
+                hint.with_extension(extension_str);
             }
-            // Verification not enabled by user, or unsupported by the codec.
-            _ => Ok(0),
         }
+
+        // Create the media source stream using the boxed media source from above.
+        let mut mss = MediaSourceStream::new(source, Default::default());
+
+        // Use the default options for format readers other than for gapless playback.
+        let format_opts = FormatOptions {
+            enable_gapless: false,
+            ..Default::default()
+        };
+
+        // Use the default options for metadata readers.
+        let metadata_opts: MetadataOptions = MetadataOptions {
+            limit_metadata_bytes: symphonia::core::meta::Limit::Maximum(50),
+            limit_visual_bytes: symphonia::core::meta::Limit::Maximum(0),
+        };
+
+        // Get the value of the track option, if provided.
+        let track: Option<Track> = None;
+        println!("probing {:?}", hint);
+        println!("opts {:?}", format_opts);
+        println!("meta {:?}", metadata_opts);
+
+        let probe_result = get_probe().format(&hint, mss, &format_opts, &metadata_opts);
+        println!("probe format {:?}", probe_result.is_ok());
+
+        if probe_result.is_err() {
+            return Err(probe_result.err().unwrap());
+        }
+        let mut reader = probe_result.unwrap().format;
+
+        let track = reader.default_track().unwrap().clone();
+
+        let mut track_id = track.id;
+
+        let seek_ts = 0;
+
+        println!("codec params: {:?}", &track.codec_params);
+
+        // Create a decoder for the track.
+        let mut decoder = symphonia::default::get_codecs()
+            .make(&track.codec_params, &DecoderOptions { verify: false })
+            .unwrap();
+
+        let mut spec_changed = false;
+        let mut new_spec = SignalSpec::new_with_layout(44100, Layout::Stereo);
+        let mut new_duration = 1152;
+
+        let expected_peaks_size = (track.codec_params.n_frames.unwrap()
+            * new_spec.channels.count() as u64
+            / 512) as usize;
+        let mut peaks: Vec<f32> = Vec::new();
+
+        let mut avg = 0f32;
+        let mut total = 0f32;
+        let mut count = 0;
+        let mut total_count = 0;
+        let mut n_frames = 0;
+        let mut n_adds = 0;
+
+        let result = loop {
+            let packet = match reader.next_packet() {
+                Ok(packet) => packet,
+                Err(err) => break Err(err),
+            };
+
+            // If the packet does not belong to the selected track, skip over it.
+            if packet.track_id() != track_id {
+                continue;
+            }
+            // Decode the packet into audio samples.
+            match decoder.decode(&packet) {
+                Ok(_decoded) => {
+                    // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
+                    let mut sample_buf =
+                        SampleBuffer::<f32>::new(_decoded.capacity() as u64, *_decoded.spec());
+
+                    // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
+                    // any required conversions.
+                    sample_buf.copy_interleaved_ref(_decoded);
+                    let mut i = 0;
+                    sample_buf.samples().iter().for_each(|f| {
+                        if (i % 2 == 0) {
+                            total += f;
+                            count += 1;
+                            n_frames += 1;
+                        }
+                        if (n_frames % 512 == 0) {
+                            avg = total / count as f32;
+                            peaks.push(avg);
+                            total = 0f32;
+                            count = 0;
+                            n_adds += 1;
+                        }
+                        i += 1;
+                    });
+
+                    total_count += 1;
+                    if (total_count > 100) {
+                        total_count = 0;
+                        let len = expected_peaks_size.saturating_sub(peaks.len());
+                        // println!("expected peaks size: {}, len: {}, n_adds: {}", expected_peaks_size, peaks.len(), n_adds);
+                        let cln = [peaks.clone().as_slice(), vec![0f32; len].as_slice()].concat();
+                        app_handle.emit_all("waveform", GetWaveformResponse { data: Some(cln) });
+                    }
+
+                    // Get waveform here
+                    continue;
+                }
+                Err(symphonia::core::errors::Error::DecodeError(err)) => {
+                    println!("decode error: {}", err)
+                }
+                Err(err) => break Err(err),
+            }
+        };
+
+        // Return if a fatal error occured.
+        let res = match result {
+            Err(symphonia::core::errors::Error::IoError(err))
+                if err.kind() == std::io::ErrorKind::UnexpectedEof
+                    && err.to_string() == "end of stream" =>
+            {
+                println!("End of stream!!");
+                println!(
+                    "Number of frames: {} (actual), {} (expected)",
+                    n_frames,
+                    track.codec_params.n_frames.unwrap()
+                );
+                // Do not treat "end of stream" as a fatal error. It's the currently only way a
+                // format reader can indicate the media is complete.
+                Ok(peaks)
+            }
+            _ => result,
+        };
+        res
     }
 }

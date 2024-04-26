@@ -13,9 +13,10 @@ import type {
     SidebarItem,
     Song,
     StreamInfo,
-    UserSettings
+    UserSettings,
+    WaveformPlayerState
 } from "src/App";
-import { derived, get, writable, type Writable } from "svelte/store";
+import { derived, writable, type Writable } from "svelte/store";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
 
@@ -203,6 +204,18 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 export const isQueueOpen = writable(false);
+
+export const isCmdOrCtrlPressed = writable(false);
+
+export const isWaveformOpen = writable(false);
+export const waveformPeaks: Writable<WaveformPlayerState> = writable({
+    songId: null,
+    data: [],
+    markers: [],
+    loopEnabled: false,
+    loopEndPos: 0,
+    loopStartPos: 0
+});
 
 async function getOs() {
     const osType = await type();

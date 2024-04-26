@@ -5,8 +5,7 @@
 
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{
-    read_from_path, Accessor, AudioFile, FileType, ItemKey, ItemValue, Picture, Probe, TagItem,
-    TagType, TaggedFileExt,
+    read_from_path, AudioFile, ItemKey, ItemValue, Picture, Probe, TagItem, TagType, TaggedFileExt,
 };
 use player::file_streamer::AudioStreamer;
 use rayon::prelude::*;
@@ -66,7 +65,7 @@ struct GetLyricsResponse {
 }
 
 #[tauri::command]
-async fn get_lyrics(event: GetLyricsEvent, app_handle: tauri::AppHandle) -> GetLyricsResponse {
+async fn get_lyrics(event: GetLyricsEvent) -> GetLyricsResponse {
     let lyrics = fetch_lyrics(event.url.as_str()).await;
     return GetLyricsResponse {
         lyrics: lyrics.map_or(None, |l| Some(l)),
@@ -170,7 +169,7 @@ async fn write_metadatas(
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct ScanPathsEvent {
     paths: Vec<String>,
-    recursive: bool
+    recursive: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -183,7 +182,7 @@ pub struct FileInfo {
     bit_depth: Option<u8>,
     channels: Option<u8>,
     lossless: bool,
-    tagType: Option<String>,
+    tag_type: Option<String>,
     codec: Option<String>,
 }
 impl FileInfo {
@@ -196,7 +195,7 @@ impl FileInfo {
             bit_depth: None,
             channels: None,
             lossless: false,
-            tagType: None,
+            tag_type: None,
             codec: None,
         }
     }
@@ -238,10 +237,7 @@ struct GetSongMetadataEvent {
 }
 
 #[tauri::command]
-async fn get_song_metadata(
-    event: GetSongMetadataEvent,
-    app_handle: tauri::AppHandle,
-) -> Option<Song> {
+async fn get_song_metadata(event: GetSongMetadataEvent) -> Option<Song> {
     let path = Path::new(event.path.as_str());
 
     if path.is_file() {
@@ -280,12 +276,12 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
 
     let length = songs.lock().unwrap().clone().len();
     if length > 500 {
-        let songsClone = songs.lock().unwrap();
-        let enumerator = songsClone.chunks(200);
+        let songs_clone = songs.lock().unwrap();
+        let enumerator = songs_clone.chunks(200);
         let chunks = enumerator.len();
         enumerator.into_iter().enumerate().for_each(|(idx, slice)| {
             thread::sleep(time::Duration::from_millis(1000));
-            let progress = if (idx == chunks - 1) {
+            let progress = if idx == chunks - 1 {
                 100
             } else {
                 u8::min(
@@ -324,7 +320,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
 fn process_directory(
     directory_path: &Path,
     songs: &Arc<std::sync::Mutex<Vec<Song>>>,
-    recursive: bool
+    recursive: bool,
 ) -> Option<Vec<Song>> {
     let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -435,7 +431,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
         if !v.metadata.is_empty() {
             // println!("{:?}", v.metadata);
             let mut tag_type: Option<TagType> = None;
-            let mut tag_type_evt = v.tag_type.as_deref().unwrap();
+            let tag_type_evt = v.tag_type.as_deref().unwrap();
             match tag_type_evt {
                 "vorbis" => tag_type = Some(TagType::VorbisComments),
                 "ID3v1" => tag_type = Some(TagType::Id3v2),
@@ -444,7 +440,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                 "ID3v2.4" => tag_type = Some(TagType::Id3v2),
                 _ => println!("Unhandled tag type: {:?}", v.tag_type),
             }
-            let mut tag_type_value = tag_type.unwrap();
+            let tag_type_value = tag_type.unwrap();
             let probe = Probe::open(&v.file_path).unwrap().guess_file_type()?;
             // &probe.guess_file_type();
             let file_type = &probe.file_type();
@@ -474,7 +470,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                             println!("Upgrading v1 to v2.4 tag: {}", tag_key);
                             let item_keyv4 = map_id3v1_to_id3v2_4(&tag_key);
                             println!("Result v4: {:?}", item_keyv4);
-                            if (item_keyv4.is_some()) {
+                            if item_keyv4.is_some() {
                                 tag_key = item_keyv4.unwrap().to_string();
                                 println!("Upgraded ID3v1 tag to ID3v2.4: {}", tag_key);
                             }
@@ -482,7 +478,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                             println!("Upgrading v2.2 to v2.3 tag: {}", tag_key);
                             let item_keyv4 = upgrade_v2(tag_key.as_str());
                             println!("Result v4: {:?}", item_keyv4);
-                            if (item_keyv4.is_some()) {
+                            if item_keyv4.is_some() {
                                 tag_key = item_keyv4.unwrap().to_string();
                                 println!("Upgraded ID3v2.2 tag to ID3v2.4: {}", tag_key);
                             }
@@ -496,7 +492,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                         }
                         let item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
 
-                        if (item.value.is_null()) {
+                        if item.value.is_null() {
                             let mut exists = false;
 
                             for tag_item in tag.tags() {
@@ -506,7 +502,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                                     }
                                 }
                             }
-                            if (exists) {
+                            if exists {
                                 to_write.remove_key(&item_key);
                             }
                         } else {
@@ -583,6 +579,24 @@ pub struct StreamFileRequest {
     volume: Option<f64>, // 0 to 1
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LoopRegionRequest {
+    enabled: Option<bool>,
+    start_pos: Option<f64>,
+    end_pos: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GetWaveformRequest {
+    path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GetWaveformResponse {
+    data: Option<Vec<f32>>,
+}
+
 #[tauri::command]
 fn stream_file(
     event: StreamFileRequest,
@@ -591,7 +605,7 @@ fn stream_file(
 ) {
     println!("Stream file {:?}", event);
     state.resume();
-    state
+    let _ = state
         .player_control_sender
         .send(player::file_streamer::PlayerControlEvent::StreamFile(event));
 }
@@ -603,8 +617,35 @@ fn queue_next(
     _app_handle: tauri::AppHandle,
 ) {
     println!("Queue next file {:?}", event);
-    state.prepare_transition_sender.send(true);
-    state.next_track_sender.send(event);
+    let _ = state.prepare_transition_sender.send(true);
+    let _ = state.next_track_sender.send(event);
+}
+
+#[tauri::command]
+fn loop_region(
+    event: LoopRegionRequest,
+    state: State<AudioStreamer>,
+    _app_handle: tauri::AppHandle,
+) {
+    println!("Loop region{:?}", event);
+    let _ = state
+        .player_control_sender
+        .send(player::file_streamer::PlayerControlEvent::LoopRegion(event));
+}
+
+#[tauri::command]
+fn get_waveform(
+    event: GetWaveformRequest,
+    state: State<AudioStreamer>,
+    _app_handle: tauri::AppHandle,
+) -> () {
+    println!("Get waveform {:?}", event);
+
+    std::thread::spawn(move || {
+        // Handle client's offer
+        let result = player::file_streamer::get_peaks(event, &_app_handle);
+        // println!("Waveform: {:?}", result);
+    });
 }
 
 #[derive(Clone, Debug)]
@@ -624,7 +665,7 @@ fn volume_control(event: VolumeControlEvent, state: State<AudioStreamer>) {
         Ok(_) => {
             // println!("Sent control flow info");
         }
-        Err(err) => {
+        Err(_err) => {
             println!("Error sending volume control info (channel inactive");
         }
     }
@@ -634,19 +675,6 @@ fn volume_control(event: VolumeControlEvent, state: State<AudioStreamer>) {
 pub struct FlowControlEvent {
     client_bitrate: Option<f64>,
     decoding_active: Option<bool>,
-}
-
-#[tauri::command]
-fn flow_control(event: FlowControlEvent, state: State<AudioStreamer>) {
-    // println!("Received flow_control event");
-    // match state.flow_control_sender.send(event) {
-    //     Ok(_) => {
-    //         // println!("Sent control flow info");
-    //     }
-    //     Err(err) => {
-    //         println!("Error sending flow control info (channel inactive");
-    //     }
-    // }
 }
 
 #[tauri::command]
@@ -679,7 +707,7 @@ async fn init_streamer(
     // Close existing connection
     state.clone().reset().await;
 
-    state.init_webrtc(_app_handle).await;
+    let _ = state.init_webrtc(_app_handle).await;
 
     return Ok(StreamStatus { is_open: false });
 }
@@ -697,23 +725,10 @@ async fn main() {
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app.handle();
-            let app3_ = app.handle();
-            let mut state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
+            let state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
             state.init(app_);
-            // state.data_channel.on_close(Box::new(move || {
-            //     Box::pin(async move {
-            //         *is_open2.unwrap() = false;
-            //     })
-            // }));
-            // state.data_channel.on_close(Box::new(move || {
-            //     Box::pin(async move {
-            //         let mut is_open = state.is_open.lock().await;
-            //         *is_open = false;
-            //     })
-            // }));
             let strm1 = state.inner().to_owned();
             let strm2 = strm1.clone();
-            let strm3 = strm1.clone();
 
             let window = app.get_window("main").unwrap();
             let window_reference = window.clone();
@@ -744,32 +759,28 @@ async fn main() {
 
             let _id3 = app.listen_global("webrtc-signal", move |event| {
                 println!("webrtc-signal {:?}", event);
-                let eventClone = event.clone();
-                let current = Handle::current();
+                let event_clone = event.clone();
                 let app_clone = app2_.clone();
 
-                let handleClone = strm1.clone();
+                let handle_clone = strm1.clone();
                 tokio::spawn(async move {
                     // Handle client's offer
-                    let answer = handleClone.handle_signal(eventClone.payload()).await;
+                    let answer = handle_clone.handle_signal(event_clone.payload()).await;
                     if let Some(ans) = answer {
-                        app_clone.emit_all("webrtc-answer", ans.clone());
+                        let _ = app_clone.emit_all("webrtc-answer", ans.clone());
                     }
                 });
             });
 
             let _id3 = app.listen_global("webrtc-icecandidate-server", move |event| {
                 println!("webrtc-signal {:?}", event);
-                let eventClone = event.clone();
-                let current = Handle::current();
-                let app_clone = app3_.clone();
-
-                let handleClone = strm2.clone();
+                let event_clone = event.clone();
+                let handle_clone = strm2.clone();
                 tokio::spawn(async move {
                     // Handle client's offer
-                    let answer = handleClone
+                    let _answer = handle_clone
                         .clone()
-                        .handle_ice_candidate(eventClone.payload())
+                        .handle_ice_candidate(event_clone.payload())
                         .await;
                 });
             });
@@ -785,10 +796,11 @@ async fn main() {
             stream_file,
             queue_next,
             init_streamer,
-            flow_control,
             decode_control,
             volume_control,
-            get_song_metadata
+            get_song_metadata,
+            get_waveform,
+            loop_region
         ])
         .plugin(tauri_plugin_fs_watch::init())
         .run(tauri::generate_context!())

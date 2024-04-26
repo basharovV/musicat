@@ -33,6 +33,7 @@
         isShuffleEnabled,
         isSmartQueryBuilderOpen,
         isTrackInfoPopupOpen,
+        isWaveformOpen,
         os,
         playlist,
         queriedSongs,
@@ -1117,9 +1118,8 @@
             <div class="visualizer-icon">
                 <Icon
                     icon="ph:wave-sine-duotone"
-                    onClick={() =>
-                        ($isFullScreenVisualiser = !$isFullScreenVisualiser)}
-                    color="#474747"
+                    onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+                    color={$isWaveformOpen ? "#da69ff" : "#474747"}
                 />
             </div>
         </div>

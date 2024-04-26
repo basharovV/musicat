@@ -47,21 +47,23 @@
         const songs = await db.songs.count();
         return { songs, artists, albums };
     });
-    
-    nextUpSong.subscribe(nextUp => {
+
+    nextUpSong.subscribe((nextUp) => {
         setTimeout(() => {
             onResize();
         }, 200);
     });
 
     function onResize() {
-        // calculate remaining space for spectroscope visualizer
-        const nextUpRight = nextUp.getBoundingClientRect().right;
-        const rightXPos = right.getBoundingClientRect().left;
-        const diff = Math.abs(nextUpRight - rightXPos);
-        console.log("diff", diff);
-        visualiserWidth = Math.min(150, diff - 13);
-        showVisualiser = window.innerWidth > 900 && diff > 150;
+        if (nextUp?.getBoundingClientRect()) {
+            // calculate remaining space for spectroscope visualizer
+            const nextUpRight = nextUp?.getBoundingClientRect()?.right;
+            const rightXPos = right?.getBoundingClientRect()?.left;
+            const diff = Math.abs(nextUpRight - rightXPos);
+            console.log("diff", diff);
+            visualiserWidth = Math.min(150, diff - 13);
+            showVisualiser = window.innerWidth > 900 && diff > 150;
+        }
     }
 </script>
 

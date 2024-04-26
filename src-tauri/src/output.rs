@@ -173,8 +173,6 @@ mod pulseaudio {
 
 #[cfg(not(target_os = "linux"))]
 mod cpal {
-    use std::io::Read;
-    use std::ops::Mul;
     use std::sync::mpsc::Receiver;
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
@@ -186,7 +184,6 @@ mod cpal {
     use super::{AudioOutput, AudioOutputError, Result};
 
     use bytes::Bytes;
-    use rayon::iter::IntoParallelRefIterator;
     use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
     use symphonia::core::conv::{ConvertibleSample, IntoSample};
     use symphonia::core::units::TimeBase;
@@ -200,7 +197,6 @@ mod cpal {
     use webrtc::data_channel::RTCDataChannel;
 
     pub struct CpalAudioOutput {
-        sample_rate: u8,
     }
 
     trait AudioOutputSample:
@@ -285,13 +281,10 @@ mod cpal {
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as i16,
                     |data| {
-                        let length = data.len();
                         let mut byte_array = Vec::with_capacity(data.len());
 
-                        let mut i = 0;
                         for d in &mut data.iter() {
                             byte_array.push(*d as u8);
-                            i += 1;
                         }
                         Bytes::from(byte_array)
                     },
@@ -309,13 +302,10 @@ mod cpal {
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as u16,
                     |data| {
-                        let length = data.len();
                         let mut byte_array = Vec::with_capacity(data.len());
 
-                        let mut i = 0;
                         for d in &mut data.iter() {
                             byte_array.push(*d as u8);
-                            i += 1;
                         }
                         Bytes::from(byte_array)
                     },
@@ -356,15 +346,6 @@ mod cpal {
         stream: cpal::Stream,
         resampler: Option<Resampler<T>>,
         sample_rate: u32,
-    }
-
-    fn change_volume<T>(data: &mut [T], volume: Option<f64>)
-    where
-        T: Mul<f64, Output = T> + Copy,
-    {
-        for d in data {
-            *d = *d * volume.unwrap_or(0.5f64);
-        }
     }
 
     impl<T: AudioOutputSample + Send + Sync> CpalAudioOutputImpl<T> {
@@ -417,22 +398,22 @@ mod cpal {
             let playback_state = Arc::new(RwLock::new(true));
             let dc = Arc::new(data_channel);
 
-            let mut rt = tokio::runtime::Runtime::new().unwrap();
+            let rt = tokio::runtime::Runtime::new().unwrap();
             let mut viz_data = Vec::with_capacity(1024);
 
             let stream_result = device.build_output_stream(
                 &config,
-                move |data: &mut [T], cb: &cpal::OutputCallbackInfo| {
+                move |data: &mut [T], _cb: &cpal::OutputCallbackInfo| {
                     // If file changed, reset
                     let reset = reset_control_receiver.try_lock().unwrap().try_recv();
                     if let Ok(rst) = reset {
-                        if (rst) {
+                        if rst {
                             println!("Got rst: {:?}", rst);
                             let mut frame_idx = frame_idx_state.write().unwrap();
                             *frame_idx = 0;
                             let mut elapsed_time = elapsed_time_state.write().unwrap();
                             *elapsed_time = 0;
-                            app_handle.emit_all("timestamp", Some(0f64));
+                            let _ = app_handle.emit_all("timestamp", Some(0f64));
                         }
                     }
 
@@ -454,7 +435,7 @@ mod cpal {
                     }
 
                     // update duration if seconds changed
-                    if (*playback_state.try_read().unwrap()) {
+                    if *playback_state.try_read().unwrap() {
                         // Write out as many samples as possible from the ring buffer to the audio
                         // output.
                         let written = ring_buf_consumer.read(data).unwrap_or(0);
@@ -478,7 +459,7 @@ mod cpal {
                         let mut u = 0;
                         let mut should_send = false;
                         for d in &mut *data {
-                            if (viz_data.len() < length) {
+                            if viz_data.len() < length {
                                 viz_data.push(*d);
                             } else {
                                 should_send = true;
@@ -501,7 +482,7 @@ mod cpal {
                         if prev_duration != next_duration {
                             let new_duration = Duration::from_secs(next_duration);
 
-                            app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
+                            let _ = app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
 
                             let mut duration = elapsed_time_state.write().unwrap();
                             *duration = new_duration.as_secs();
@@ -513,7 +494,7 @@ mod cpal {
                             if let Ok(dc_guard) = dc.try_lock() {
                                 if let Some(dc1) = dc_guard.as_ref().cloned() {
                                     rt.spawn(async move {
-                                        dc1.send(&get_viz_bytes(viz)).await;
+                                        let _ = dc1.send(&get_viz_bytes(viz)).await;
                                     });
                                 }
                             }

@@ -35,6 +35,7 @@
         fileDropHandler,
         forceRefreshLibrary,
         importStatus,
+        isCmdOrCtrlPressed,
         isPlaying,
         isQueueOpen,
         isShuffleEnabled,
@@ -270,12 +271,8 @@
     let hoveredField = null;
 
     $: isOrderChanged =
-        JSON.stringify(
-            columnOrder
-        ) !==
-        JSON.stringify(
-            DEFAULT_FIELDS.map(f => f.value)
-        );
+        JSON.stringify(columnOrder) !==
+        JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
 
     let showColumnPicker = false;
     let columnPickerPos;
@@ -484,10 +481,13 @@
         let runningX = 0;
         let previousWidth = 0;
 
-        const sortedFields = columnOrder.reduce((sorted, c, idx) => {
-            sorted[idx] = fields.find(f => f.value === c);
-            return sorted;
-        }, [...fields]);
+        const sortedFields = columnOrder.reduce(
+            (sorted, c, idx) => {
+                sorted[idx] = fields.find((f) => f.value === c);
+                return sorted;
+            },
+            [...fields]
+        );
 
         // Fields visible depending on window width
         const visibleFields = sortedFields.filter((f) => {
@@ -746,7 +746,6 @@
 
     // LIBRARY FUNCTIONALITY
 
-    let isCmdOrCtrlPressed = false;
     let isShiftPressed = false;
     let rangeStartSongIdx = null;
     let rangeEndSongIdx = null;
@@ -837,7 +836,6 @@
             }
         } else if (
             (isKeyboardArrows && isShiftPressed) ||
-            isCmdOrCtrlPressed ||
             hotkeys.isPressed(91)
         ) {
             songsHighlighted.push(song);
@@ -882,16 +880,6 @@
     }
 
     // Shortcuts
-
-    if ($os === "Darwin") {
-        hotkeys("cmd", function (event, handler) {
-            isCmdOrCtrlPressed = true;
-        });
-    } else if ($os === "Windows_NT" || $os === "Linux") {
-        hotkeys("ctrl", function (event, handler) {
-            isCmdOrCtrlPressed = true;
-        });
-    }
 
     hotkeys("esc", function (event, handler) {
         if ($isSmartQueryBuilderOpen) {
@@ -1108,9 +1096,17 @@
 
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const columnOrderOldIdx = columnOrder.findIndex(c => c === oldIdxField.value);
-        const columnOrderNewIdx = columnOrder.findIndex(c => c === newIdxField.value);
-        columnOrder = moveArrayElement(columnOrder, columnOrderOldIdx, columnOrderNewIdx);
+        const columnOrderOldIdx = columnOrder.findIndex(
+            (c) => c === oldIdxField.value
+        );
+        const columnOrderNewIdx = columnOrder.findIndex(
+            (c) => c === newIdxField.value
+        );
+        columnOrder = moveArrayElement(
+            columnOrder,
+            columnOrderOldIdx,
+            columnOrderNewIdx
+        );
         console.log("column order", columnOrder);
         // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
         resetColumnOrderUi();
@@ -1119,10 +1115,18 @@
     function swapColumns(oldIndex, newIndex) {
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const columnOrderOldIdx = columnOrder.findIndex(c => c === oldIdxField.value);
-        const columnOrderNewIdx = columnOrder.findIndex(c => c === newIdxField.value);
+        const columnOrderOldIdx = columnOrder.findIndex(
+            (c) => c === oldIdxField.value
+        );
+        const columnOrderNewIdx = columnOrder.findIndex(
+            (c) => c === newIdxField.value
+        );
         console.log("swap column", columnOrderOldIdx, columnOrderNewIdx);
-        columnOrder = swapArrayElements(columnOrder, columnOrderOldIdx, columnOrderNewIdx);
+        columnOrder = swapArrayElements(
+            columnOrder,
+            columnOrderOldIdx,
+            columnOrderNewIdx
+        );
         // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
         console.log("column order", columnOrder);
         resetColumnOrderUi();
@@ -1131,7 +1135,7 @@
     // Sets back to default
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
-        columnOrder = DEFAULT_FIELDS.map(f => f.value);
+        columnOrder = DEFAULT_FIELDS.map((f) => f.value);
     }
 
     // SMART QUERY

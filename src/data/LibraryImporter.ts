@@ -110,7 +110,8 @@ export async function getSongFromMetadata(
             metadata: metadataMapped,
             fileInfo: metadata.format,
             isFavourite: false,
-            playCount: 0
+            playCount: 0,
+            markers: []
         };
         console.log("song: ", songToAdd);
         // Remove image, too large

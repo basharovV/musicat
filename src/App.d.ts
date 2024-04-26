@@ -69,6 +69,7 @@ interface Song {
         data: number[];
         format: string;
     };
+    markers: Marker[];
 }
 
 interface Album {
@@ -307,4 +308,21 @@ interface StreamInfo {
 
 interface SongChangeEvent {
     songId: string;
+}
+interface Waveform {
+    data: number[];
+}
+
+interface WaveformPlayerState {
+    data: number[];
+    songId: string;
+    loopEnabled: boolean;
+    loopStartPos: number;
+    loopEndPos: number;
+    markers: Marker[];
+}
+
+interface Marker {
+    pos: number; // seconds
+    title: string;
 }
