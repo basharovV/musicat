@@ -23,7 +23,7 @@
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
-                audioPlayer.play();
+                audioPlayer.play(true);
             }
         } else {
             let tracks = await db.songs

@@ -222,6 +222,8 @@
                     margin: 0;
                     white-space: nowrap;
                     font-size: 0.9em;
+                    user-select: none;
+                    cursor: default;
                 }
             }
 
@@ -356,6 +358,10 @@
             display: inline-flex;
             gap: 10px;
             white-space: nowrap;
+            p {
+                user-select: none;
+                cursor: default;
+            }
 
             @media only screen and (max-width: 730px) {
                 .albums {

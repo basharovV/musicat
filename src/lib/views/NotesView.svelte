@@ -11,8 +11,10 @@
     div {
         min-height: 70px;
         border-radius: 5px;
-        border-left: inset 0.7px solid #ffffff1f;
+        border-left: 0.7px solid #ffffff13;
+        border-right: 0.7px solid #ffffff09;
         border-bottom: 0.7px solid #ffffff1f;
+        border-top: 0.7px solid #ffffff0e;
         margin: 5px 5px 0 0;
         background-color: #9c86b10f;
 

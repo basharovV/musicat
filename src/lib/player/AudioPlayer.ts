@@ -186,15 +186,15 @@ class AudioPlayer {
 
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
-
+            isPlaying.set(true);
             // console.log("timestamp", event.payload);
             // console.log("duration", get(currentSong).fileInfo.duration);
 
             // Gapless setup here
             if (
                 !this.isRunningTransition &&
-                event.payload < get(currentSong).fileInfo.duration &&
-                event.payload > get(currentSong).fileInfo.duration - 8
+                event.payload < get(currentSong)?.fileInfo?.duration &&
+                event.payload > get(currentSong)?.fileInfo?.duration - 8
             ) {
                 console.log("Running transition...");
                 this.isRunningTransition = true;
