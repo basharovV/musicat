@@ -26,6 +26,7 @@
 
     import {
         bottomBarNotification,
+        columnOrder,
         compressionSelected,
         currentSong,
         currentSongIdx,
@@ -271,7 +272,7 @@
     let hoveredField = null;
 
     $: isOrderChanged =
-        JSON.stringify(columnOrder) !==
+        JSON.stringify($columnOrder) !==
         JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
 
     let showColumnPicker = false;
@@ -481,29 +482,27 @@
         let runningX = 0;
         let previousWidth = 0;
 
-        const sortedFields = columnOrder.reduce(
-            (sorted, c, idx) => {
-                sorted[idx] = fields.find((f) => f.value === c);
-                return sorted;
-            },
-            [...fields]
-        );
+        const sortedFields = $columnOrder.map(c => fields.find((f) => f.value === c));
 
         // Fields visible depending on window width
         const visibleFields = sortedFields.filter((f) => {
             switch (f.value) {
                 case "duration":
-                    return f.show && width > 800;
+                    return width > 800;
                 case "genre":
-                    return f.show && width > 700;
+                    return width > 700;
                 case "year":
-                    return f.show && width > 650;
+                    return width > 650;
                 case "trackNumber":
-                    return f.show && width > 500;
+                    return width > 500;
                 case "album":
-                    return f.show && width > 450;
+                    return width > 450;
+                case "composer":
+                    return width > 650;
+                case "originCountry":
+                    return width > 650;
                 default:
-                    return f.show;
+                    return true;
             }
         });
 
@@ -999,20 +998,9 @@
 
     // Re-order columns
 
-    let columnOrder = [
-        "title",
-        "artist",
-        "composer",
-        "album",
-        "trackNumber",
-        "year",
-        "genre",
-        "originCountry",
-        "duration"
-    ];
 
     $: {
-        displayFields && columnOrder && calculateColumns();
+        displayFields && $columnOrder && calculateColumns();
     }
 
     let dropColumnIdx = null;
@@ -1096,18 +1084,18 @@
 
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const columnOrderOldIdx = columnOrder.findIndex(
+        const $columnOrderOldIdx = $columnOrder.findIndex(
             (c) => c === oldIdxField.value
         );
-        const columnOrderNewIdx = columnOrder.findIndex(
+        const $columnOrderNewIdx = $columnOrder.findIndex(
             (c) => c === newIdxField.value
         );
-        columnOrder = moveArrayElement(
-            columnOrder,
-            columnOrderOldIdx,
-            columnOrderNewIdx
+        $columnOrder = moveArrayElement(
+            $columnOrder,
+            $columnOrderOldIdx,
+            $columnOrderNewIdx
         );
-        console.log("column order", columnOrder);
+        console.log("column order", $columnOrder);
         // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
         resetColumnOrderUi();
     }
@@ -1115,27 +1103,27 @@
     function swapColumns(oldIndex, newIndex) {
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const columnOrderOldIdx = columnOrder.findIndex(
+        const $columnOrderOldIdx = $columnOrder.findIndex(
             (c) => c === oldIdxField.value
         );
-        const columnOrderNewIdx = columnOrder.findIndex(
+        const $columnOrderNewIdx = $columnOrder.findIndex(
             (c) => c === newIdxField.value
         );
-        console.log("swap column", columnOrderOldIdx, columnOrderNewIdx);
-        columnOrder = swapArrayElements(
-            columnOrder,
-            columnOrderOldIdx,
-            columnOrderNewIdx
+        console.log("swap column", $columnOrderOldIdx, $columnOrderNewIdx);
+        $columnOrder = swapArrayElements(
+            $columnOrder,
+            $columnOrderOldIdx,
+            $columnOrderNewIdx
         );
         // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
-        console.log("column order", columnOrder);
+        console.log("column order", $columnOrder);
         resetColumnOrderUi();
     }
 
     // Sets back to default
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
-        columnOrder = DEFAULT_FIELDS.map((f) => f.value);
+        $columnOrder = DEFAULT_FIELDS.map((f) => f.value);
     }
 
     // SMART QUERY

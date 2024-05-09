@@ -232,4 +232,25 @@ export const streamInfo: Writable<StreamInfo> = writable({
     sampleIdx: 0
 });
 
+let defaultColumnOrder = [
+    "title",
+    "artist",
+    "composer",
+    "album",
+    "trackNumber",
+    "year",
+    "genre",
+    "originCountry",
+    "duration"
+];
+
+export const columnOrder = writable(
+    JSON.parse(localStorage.getItem("columnOrder")) || defaultColumnOrder
+);
+
+// Auto-persist column order
+columnOrder.subscribe((val) =>
+    localStorage.setItem("columnOrder", JSON.stringify(val))
+);
+
 getOs();
