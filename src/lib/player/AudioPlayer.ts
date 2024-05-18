@@ -252,14 +252,14 @@ class AudioPlayer {
     }
 
     playNext() {
-        console.log("currentidx", this.currentSongIdx);
-        currentSongIdx.set(get(currentSongIdx) + 1);
-        console.log("currentidx", this.currentSongIdx);
+        this.currentSongIdx++;
+        currentSongIdx.set(this.currentSongIdx);
         this.playSong(this.playlist[this.currentSongIdx]);
     }
 
     playPrevious() {
-        currentSongIdx.set(get(currentSongIdx) - 1);
+        this.currentSongIdx--;
+        currentSongIdx.set(this.currentSongIdx);
         this.playSong(this.playlist[this.currentSongIdx]);
         currentSongIdx.set(this.currentSongIdx);
     }

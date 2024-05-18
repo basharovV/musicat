@@ -273,7 +273,7 @@
         grid-template-columns: 1fr auto;
         overflow: visible;
         position: relative;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        border-bottom: 0.7px solid rgba(255, 255, 255, 0.16);
     }
 
     .smart-query-actions {
@@ -282,6 +282,7 @@
         flex-direction: row;
         justify-content: flex-end;
         padding-right: 0.5em;
+        border-bottom: 0.7px solid rgba(255, 255, 255, 0.16);
 
         input {
             background-color: transparent;
