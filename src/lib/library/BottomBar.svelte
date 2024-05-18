@@ -84,7 +84,7 @@
             <p>Queue</p>
         </div>
         <div
-            class="toggle-button"
+            class="toggle-button lyrics"
             class:selected={$isLyricsOpen}
             on:click={() => {
                 $isLyricsOpen = !$isLyricsOpen;
@@ -187,7 +187,7 @@
             color: rgb(176, 161, 161);
             margin: 0;
         }
-        @media only screen and (max-width: 522px) {
+        @media only screen and (max-width: 600px) {
             p:not(:nth-child(1)) {
                 display: none;
             }
@@ -205,7 +205,7 @@
                 flex-direction: row;
                 gap: 5px;
                 max-width: 250px;
-                @media only screen and (max-width: 900px) {
+                @media only screen and (max-width: 1050px) {
                     display: none;
                 }
                 .label {
@@ -254,6 +254,10 @@
                         user-select: none;
                         text-transform: lowercase;
                     }
+                }
+
+                @media only screen and (max-width: 500px) {
+                    display: none;
                 }
             }
 
@@ -308,6 +312,10 @@
                     #242026 85%,
                     transparent 100%
                 );
+
+                @media only screen and (max-width: 1050px) {
+                    display: none;
+                }
             }
         }
 
@@ -326,6 +334,10 @@
             transform: rotate(0deg);
             &.scanning {
                 animation: rotate 1.5s linear infinite normal forwards;
+            }
+
+            @media only screen and (max-width: 800px) {
+                display: none;
             }
         }
 
@@ -363,12 +375,12 @@
                 cursor: default;
             }
 
-            @media only screen and (max-width: 730px) {
+            @media only screen and (max-width: 800px) {
                 .albums {
                     display: none;
                 }
             }
-            @media only screen and (max-width: 627px) {
+            @media only screen and (max-width: 700px) {
                 .artists {
                     display: none;
                 }
