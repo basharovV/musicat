@@ -495,6 +495,8 @@
                     return width > 650;
                 case "trackNumber":
                     return width > 500;
+                case "artist":
+                    return width > 300;
                 case "album":
                     return width > 450;
                 case "composer":
