@@ -547,18 +547,13 @@ pub mod file_streamer {
                 }
 
                 let mut last_sent_time = Instant::now();
-                let target_bitrate =
-                    file_info.bit_depth.unwrap() as u32 * file_info.sample_rate.unwrap();
-                let max_packet_size = &decoder.codec_params().max_frames_per_packet;
-                let max_block_size = &decoder.codec_params().frames_per_block;
-                println!("Target kbits/second: {}", target_bitrate as f64 / 1000f64);
-                println!("Max packet size: {:?} frames", max_packet_size);
-                println!("Max block size: {:?} frames", max_block_size);
 
                 if !is_transition {
                     let _ = reset_control_sender.send(true);
                     let _ = sender_sample_offset.send(SampleOffsetEvent {
-                        sample_offset: Some(seek_ts * file_info.channels.unwrap() as u64),
+                        sample_offset: Some(
+                            seek_ts * track.codec_params.channels.unwrap().count() as u64,
+                        ),
                     });
                 }
 
@@ -698,7 +693,7 @@ pub mod file_streamer {
                                                         SampleOffsetEvent {
                                                             sample_offset: Some(
                                                                 seek_ts
-                                                                    * file_info.channels.unwrap()
+                                                                    * track.codec_params.channels.unwrap().count()
                                                                         as u64,
                                                             ),
                                                         },
@@ -778,7 +773,7 @@ pub mod file_streamer {
     pub fn get_peaks(
         event: GetWaveformRequest,
         app_handle: &AppHandle,
-        cancel_token: CancellationToken
+        cancel_token: CancellationToken,
     ) -> Result<Vec<f32>, symphonia::core::errors::Error> {
         let binding = event.path.unwrap();
         let path = Path::new(binding.as_str());
@@ -844,7 +839,7 @@ pub mod file_streamer {
 
         let expected_peaks_size = (track.codec_params.n_frames.unwrap()
             * new_spec.channels.count() as u64
-            / 512) as usize;
+            / 256) as usize;
         let mut peaks: Vec<f32> = Vec::new();
 
         let mut avg = 0f32;
@@ -879,12 +874,12 @@ pub mod file_streamer {
                     sample_buf.copy_interleaved_ref(_decoded);
                     let mut i = 0;
                     sample_buf.samples().iter().for_each(|f| {
-                        if (i % 2 == 0) {
+                        if i % 2 == 0 {
                             total += f;
                             count += 1;
                             n_frames += 1;
                         }
-                        if (n_frames % 512 == 0) {
+                        if (n_frames % 256 == 0) {
                             avg = total / count as f32;
                             peaks.push(avg);
                             total = 0f32;

@@ -176,7 +176,7 @@ struct ScanPathsEvent {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
-    duration: Option<u64>, //s
+    duration: Option<f64>, //s
     overall_bitrate: Option<u32>,
     audio_bitrate: Option<u32>,
     sample_rate: Option<u32>,

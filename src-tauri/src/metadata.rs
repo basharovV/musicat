@@ -34,7 +34,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                     }
                     // println!("bit depth {:?}", tagged_file.properties().bit_depth());
                     file_info = FileInfo {
-                        duration: Some(tagged_file.properties().duration().as_secs()),
+                        duration: Some(tagged_file.properties().duration().as_secs_f64()),
                         channels: tagged_file.properties().channels(),
                         bit_depth: tagged_file.properties().bit_depth().or(Some(16)),
                         sample_rate: tagged_file.properties().sample_rate(),
