@@ -109,6 +109,7 @@ class AudioPlayer {
                     newCurrentSongIdx = 0;
                 }
             }
+            
 
             this.currentSongIdx = newCurrentSongIdx;
             currentSongIdx.set(newCurrentSongIdx);
@@ -150,6 +151,7 @@ class AudioPlayer {
 
             this.currentSongIdx = newCurrentSongIdx;
             currentSongIdx.set(newCurrentSongIdx);
+            console.log("playlist: currentsongindex", this.currentSongIdx, this.currentSong);
 
             this.setNextUpSong();
             if (this.shouldPlay) {
@@ -175,43 +177,18 @@ class AudioPlayer {
         });
 
         appWindow.listen("song_change", async (event: Event<Song>) => {
-            if (this.isRunningTransition) {
-                currentSong.set(event.payload);
-                this.currentSongIdx += 1;
-                currentSongIdx.set(this.currentSongIdx);
-                this.setNextUpSong();
-                this.isRunningTransition = false;
-            }
+            this.currentSong = event.payload;
+            currentSong.set(this.currentSong);
+            this.currentSongIdx += 1;
+            currentSongIdx.set(this.currentSongIdx);
+            this.setNextUpSong();
+            this.isRunningTransition = false;
         });
 
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
             isPlaying.set(true);
-            // console.log("timestamp", event.payload);
-            // console.log("duration", get(currentSong).fileInfo.duration);
-
-            // Gapless setup here
-            if (
-                !this.isRunningTransition &&
-                event.payload < get(currentSong)?.fileInfo?.duration &&
-                event.payload > get(currentSong)?.fileInfo?.duration - 8
-            ) {
-                console.log("Running transition...");
-                this.isRunningTransition = true;
-                let nextUp = get(nextUpSong);
-                if (nextUp) {
-                    invoke("queue_next", {
-                        event: {
-                            path: nextUp.path,
-                            seek: 0,
-                            file_info: nextUp.fileInfo,
-                            volume: get(volume)
-                        }
-                    });
-                }
-            }
         });
-        // this.setupAnalyserAudio();
     }
 
     async setupBuffers() {
@@ -219,7 +196,9 @@ class AudioPlayer {
     }
 
     shuffle() {
-        const shuffled = shuffleArray(this.playlist);
+        let toShuffle = [...this.playlist];
+        toShuffle.splice(get(currentSongIdx), 1);
+        const shuffled = [this.currentSong].concat(shuffleArray(toShuffle));
         shuffledPlaylist.set(shuffled);
         this.playlist = shuffled;
         isShuffleEnabled.set(true);
@@ -362,6 +341,14 @@ class AudioPlayer {
         if (this.currentSongIdx + 1 < this.playlist?.length) {
             const nextSong = this.playlist[this.currentSongIdx + 1];
             nextUpSong.set(nextSong);
+            invoke("queue_next", {
+                event: {
+                    path: nextSong.path,
+                    seek: 0,
+                    file_info: nextSong.fileInfo,
+                    volume: get(volume)
+                }
+            });
         } else {
             nextUpSong.set(null);
         }

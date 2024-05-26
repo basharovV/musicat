@@ -72,8 +72,6 @@ pub mod file_streamer {
         pub audio_output: Arc<Mutex<Option<Box<dyn output::AudioOutput + Send + Sync>>>>,
         pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
         pub volume_control_sender: Sender<VolumeControlEvent>,
-        pub prepare_transition_receiver: Arc<Mutex<Receiver<bool>>>,
-        pub prepare_transition_sender: Sender<bool>,
     }
 
     impl<'a> AudioStreamer<'a> {
@@ -110,8 +108,6 @@ pub mod file_streamer {
                 audio_output: Arc::new(Mutex::new(None)),
                 volume_control_receiver: Arc::new(Mutex::new(receiver_vol)),
                 volume_control_sender: sender_vol,
-                prepare_transition_receiver: Arc::new(Mutex::new(receiver_transition)),
-                prepare_transition_sender: sender_transition,
             })
         }
 
@@ -121,7 +117,6 @@ pub mod file_streamer {
             let cancel_tokens = self.cancel_tokens.clone();
             let decoding_active = self.decoding_active.clone();
             let volume_control_receiver = self.volume_control_receiver.clone();
-            let prepare_transition_receiver = self.prepare_transition_receiver.clone();
             let data_channel = self.data_channel.clone();
 
             std::thread::spawn(move || {
@@ -133,7 +128,6 @@ pub mod file_streamer {
                     &volume_control_receiver,
                     &receiver,
                     &next_track_receiver,
-                    &prepare_transition_receiver,
                     data_channel,
                     &app_handle,
                 );
@@ -336,7 +330,6 @@ pub mod file_streamer {
         volume_control_receiver: &Arc<Mutex<Receiver<VolumeControlEvent>>>,
         player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
         next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
-        prepare_transition_receiver: &Arc<Mutex<Receiver<bool>>>,
         data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
         app_handle: &AppHandle,
     ) {
@@ -351,7 +344,6 @@ pub mod file_streamer {
             vol_receiver,
             player_control_receiver,
             next_track_receiver,
-            prepare_transition_receiver,
             decoding_active,
             data_channel,
             app_handle,
@@ -362,7 +354,6 @@ pub mod file_streamer {
         volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
         player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
         next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
-        prepare_transition_receiver: &Arc<Mutex<Receiver<bool>>>,
         decoding_active: Arc<AtomicU32>,
         data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
         app_handle: &AppHandle,
@@ -681,6 +672,7 @@ pub mod file_streamer {
                                                         },
                                                     );
                                                 }
+
                                                 if let Some(song) =
                                                     crate::metadata::extract_metadata(&Path::new(
                                                         &p.clone().as_str(),
@@ -693,11 +685,17 @@ pub mod file_streamer {
                                                         SampleOffsetEvent {
                                                             sample_offset: Some(
                                                                 seek_ts
-                                                                    * track.codec_params.channels.unwrap().count()
+                                                                    * track
+                                                                        .codec_params
+                                                                        .channels
+                                                                        .unwrap()
+                                                                        .count()
                                                                         as u64,
                                                             ),
                                                         },
                                                     );
+                                                } else {
+                                                    println!("ERROR getting song");
                                                 }
                                                 is_transition = false;
                                                 started_transition = false;
@@ -735,7 +733,9 @@ pub mod file_streamer {
                                 {
                                     println!("End of stream!!");
                                     let mut next_track = None;
-                                    while let Ok(value) = next_track_receiver.try_lock().unwrap().try_recv() {
+                                    while let Ok(value) =
+                                        next_track_receiver.try_lock().unwrap().try_recv()
+                                    {
                                         println!("received {:?}", value);
                                         next_track.replace(value);
                                     }
