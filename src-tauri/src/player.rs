@@ -734,10 +734,12 @@ pub mod file_streamer {
                                         && err.to_string() == "end of stream" =>
                                 {
                                     println!("End of stream!!");
-
-                                    let next_track =
-                                        next_track_receiver.try_lock().unwrap().try_recv();
-                                    if let Ok(request) = next_track {
+                                    let mut next_track = None;
+                                    while let Ok(value) = next_track_receiver.try_lock().unwrap().try_recv() {
+                                        println!("received {:?}", value);
+                                        next_track.replace(value);
+                                    }
+                                    if let Some(request) = next_track {
                                         let path = request.path.clone().unwrap();
 
                                         is_transition = true;
