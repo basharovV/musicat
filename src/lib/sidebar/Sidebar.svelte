@@ -456,7 +456,7 @@
     //     }
     // }
 
-    async function onDropSongsToPlaylist(playlistId: string) {
+    async function onDropSongsToPlaylist(playlistId: number) {
         if ($draggedSongs.length) {
             const playlist = await db.playlists.get(playlistId);
             const songsToAdd = $draggedSongs.map((s) => s.id);
@@ -821,7 +821,7 @@
                                                 />
                                             {:else}
                                                 <div
-                                                    class="playlist-menu"
+                                                    class="playlist-options"
                                                     class:visible={showPlaylistMenu &&
                                                         playlistToEdit ===
                                                             playlist}
@@ -853,37 +853,6 @@
                                         minimal
                                     />
                                 </div>
-                            </div>
-                        {/if}
-
-                        {#if showPlaylistMenu}
-                            <div class="menu">
-                                <Menu
-                                    x={menuX}
-                                    y={menuY}
-                                    onClickOutside={() => {
-                                        showPlaylistMenu = false;
-                                        isConfirmingPlaylistDelete = false;
-                                    }}
-                                    fixed
-                                >
-                                    <MenuOption
-                                        isDestructive={true}
-                                        isConfirming={isConfirmingPlaylistDelete}
-                                        onClick={deletePlaylist}
-                                        text="Delete playlist"
-                                        confirmText="Click again to confirm"
-                                    />
-                                    <MenuOption
-                                        onClick={() => {
-                                            updatedPlaylistName =
-                                                playlistToEdit.title;
-                                            isRenamingPlaylist = true;
-                                            showPlaylistMenu = false;
-                                        }}
-                                        text="Rename playlist"
-                                    />
-                                </Menu>
                             </div>
                         {/if}
                         <item
@@ -957,6 +926,36 @@
             />
         </div>
     </div>
+
+    {#if showPlaylistMenu}
+        <div class="playlist-menu">
+            <Menu
+                x={menuX}
+                y={menuY}
+                onClickOutside={() => {
+                    showPlaylistMenu = false;
+                    isConfirmingPlaylistDelete = false;
+                }}
+                fixed
+            >
+                <MenuOption
+                    isDestructive={true}
+                    isConfirming={isConfirmingPlaylistDelete}
+                    onClick={deletePlaylist}
+                    text="Delete playlist"
+                    confirmText="Click again to confirm"
+                />
+                <MenuOption
+                    onClick={() => {
+                        updatedPlaylistName = playlistToEdit.title;
+                        isRenamingPlaylist = true;
+                        showPlaylistMenu = false;
+                    }}
+                    text="Rename playlist"
+                />
+            </Menu>
+        </div>
+    {/if}
     <div class="track-info">
         <!-- <hr /> -->
 
@@ -1118,8 +1117,7 @@
             <div
                 class="visualizer-icon"
                 use:tippy={{
-                    content:
-                        "waveform, loop region, marker editor",
+                    content: "waveform, loop region, marker editor",
                     placement: "top"
                 }}
             >
@@ -1806,6 +1804,11 @@
         }
     }
 
+    .playlist-menu {
+        position: fixed;
+        z-index: 22;
+    }
+
     .playlists {
         display: flex;
         flex-direction: column;
@@ -1827,7 +1830,7 @@
             &.hover {
                 border-radius: 5px;
                 background-color: #392f5d3b;
-                .playlist-menu {
+                .playlist-options {
                     display: flex;
                 }
             }
@@ -1850,7 +1853,7 @@
             }
         }
 
-        .playlist-menu {
+        .playlist-options {
             display: none;
 
             &.visible {

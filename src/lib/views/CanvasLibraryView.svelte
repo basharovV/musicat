@@ -11,6 +11,7 @@
         isSmartQueryBuilderOpen,
         lastPlayedInfo,
         playlist,
+        playlistDuration,
         queriedSongs,
         query,
         selectedPlaylistId,
@@ -63,6 +64,9 @@
                             .includes($query.query.toLowerCase())
                 );
             }
+            $playlistDuration = results.reduce((total, song) => {
+                return total + song.fileInfo.duration;
+            }, 0);
         } else if ($uiView === "smart-query" || $uiView === "favourites") {
             /**
              * User-built smart queries don't support indexing
@@ -182,6 +186,7 @@
         isLoading = false;
         return resultsArray;
     });
+
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
@@ -196,10 +201,9 @@
         grid-template-rows: 1fr;
         margin: 5px 5px 0 0;
         border-radius: 5px;
-        box-sizing:content-box;
+        box-sizing: content-box;
         overflow: hidden;
         /* border: 0.7px solid #ffffff0b; */
         border-top: 0.7px solid #ffffff36;
-
     }
 </style>

@@ -376,6 +376,12 @@ class AudioPlayer {
                     "audioplayer::datachannel::",
                     this.webRTCReceiver.dataChannel?.readyState
                 );
+
+                if (!this.webRTCReceiver.dataChannel) {
+                    // Try to reconnect
+                    this.webRTCReceiver.init();
+                }
+
                 // If the WebRTC receiver is ready to receive data, invoke the streamer
                 this.webRTCReceiver.prepareForNewStream();
                 invoke("stream_file", {

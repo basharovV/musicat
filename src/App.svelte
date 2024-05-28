@@ -16,6 +16,8 @@
         isWaveformOpen,
         isWelcomeSeen,
         os,
+        playlistDuration,
+        selectedPlaylistId,
         uiView
     } from "./data/store";
 
@@ -42,6 +44,7 @@
     import QueueView from "./lib/views/QueueView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
+    import { db } from "./data/db";
 
     startMenuListener();
     startImportListener();
@@ -162,6 +165,31 @@
     });
 
     $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
+
+    // For playlists header only
+    $: selectedPlaylist = db.playlists.get($selectedPlaylistId);
+    function secondsToFriendlyTime(seconds) {
+        if (seconds < 0) return "Invalid input"; // handle negative input
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+
+        let result = [];
+
+        if (hours > 0) result.push(hours + "h");
+        if (minutes > 0) result.push(minutes + "m");
+        if (remainingSeconds > 0 || result.length === 0)
+            result.push(remainingSeconds.toFixed(0) + "s");
+
+        return result.join(" ");
+    }
+    let durationText;
+    $: if ($playlistDuration) {
+        durationText = secondsToFriendlyTime($playlistDuration);
+    } else {
+        durationText = null;
+    }
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->
@@ -210,6 +238,32 @@
             {/if}
         </div>
 
+        <div class="header">
+            {#if $uiView === "playlists"}
+                <!-- <p class="label">playlist:</p> -->
+                <div class="content">
+                    {#await selectedPlaylist then playlist}
+                        <h3 class="title">{playlist.title}</h3>
+                        <div class="playlist-info">
+                            <p class="count">
+                                {#if playlist.tracks.length === 0}
+                                    No tracks
+                                {:else}
+                                    {playlist.tracks.length} track{playlist
+                                        .tracks.length > 1
+                                        ? "s"
+                                        : ""}
+                                {/if}
+                            </p>
+                            {#if durationText}
+                                <p class="duration">{durationText}</p>
+                            {/if}
+                        </div>
+                    {/await}
+                </div>
+            {/if}
+        </div>
+
         <div class="panel">
             {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
                 <CanvasLibraryView />
@@ -248,7 +302,7 @@
     main {
         display: grid;
         grid-template-columns: auto auto 1fr;
-        grid-template-rows: 1fr auto auto;
+        grid-template-rows: auto 1fr auto auto;
         width: 100vw;
         height: 100vh;
         opacity: 1;
@@ -281,19 +335,86 @@
             padding-top: 2em;
         }
 
+        .header {
+            grid-row: 1;
+            grid-column: 3;
+
+            .content {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                height: 28px;
+                margin: 5px 5px 2px 0px;
+            }
+
+            .label {
+                font-size: 1em;
+                color: rgb(104, 96, 113);
+                line-height: initial;
+                margin: 0;
+                font-weight: 600;
+                margin-left: -58px;
+            }
+            .title {
+                font-size: 1.1em;
+                line-height: initial;
+                position: relative;
+                background-color: #242026;
+                border-radius: 5px;
+                height: 100%;
+                display: flex;
+                padding: 0 8px;
+                align-items: center;
+            }
+
+            .playlist-info {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                padding: 0 8px;
+                gap: 8px;
+            }
+
+            .count {
+                font-size: 0.9em;
+                margin: 0;
+                line-height: initial;
+                opacity: 0.5;
+            }
+            .duration {
+                font-size: 0.9em;
+                margin: 0;
+                line-height: initial;
+                opacity: 0.5;
+                &::before {
+                    content: "•";
+                    margin-right: 0.4em;
+                }
+            }
+        }
+
+        .panel {
+            grid-row: 2;
+            grid-column: 3;
+            display: grid;
+            overflow: hidden;
+        }
+
+        .notes {
+            grid-row: 3;
+            grid-column: 2 / 4;
+        }
+
         .bottom-bar {
             position: relative;
             width: 100%;
             z-index: 15;
-            grid-row: 3;
+            grid-row: 4;
             grid-column: 2 / 4;
             margin-top: 5px;
             margin-bottom: 5px;
-        }
-
-        .notes {
-            grid-row: 2;
-            grid-column: 2 / 4;
         }
 
         .queue {
@@ -311,13 +432,6 @@
                 margin: 0px 7.5px 0 0;
                 /* display: grid; */
             }
-        }
-
-        .panel {
-            grid-row: 1;
-            grid-column: 3;
-            display: grid;
-            overflow: hidden;
         }
     }
 
