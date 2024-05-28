@@ -205,6 +205,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-fs-watch",
+ "tauri-plugin-window-state",
  "tauri-utils",
  "tokio",
  "tokio-util",
@@ -5175,6 +5176,20 @@ dependencies = [
  "log",
  "notify",
  "notify-debouncer-mini",
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror",
+]
+
+[[package]]
+name = "tauri-plugin-window-state"
+version = "0.1.1"
+source = "git+https://github.com/tauri-apps/plugins-workspace?branch=v1#5e3900e682e13f3759b439116ae2f77a6d389ca2"
+dependencies = [
+ "bincode",
+ "bitflags 2.4.1",
+ "log",
  "serde",
  "serde_json",
  "tauri",

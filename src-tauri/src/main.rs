@@ -816,6 +816,7 @@ async fn main() {
             loop_region
         ])
         .plugin(tauri_plugin_fs_watch::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
