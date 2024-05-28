@@ -1,21 +1,19 @@
 <script lang="ts">
-    import { fly } from "svelte/transition";
     import {
-        albumPlaylist,
         currentSong,
         currentSongIdx,
         isShuffleEnabled,
         playlist,
-        playlistIsAlbum,
+        playlistType,
         shuffledPlaylist
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     $: upcoming = $isShuffleEnabled
         ? $shuffledPlaylist.filter((v, i) =>
-              $playlistIsAlbum ? true : i >= $currentSongIdx
+              $playlistType === "album" ? true : i >= $currentSongIdx
           )
         : $playlist.filter((v, i) =>
-              $playlistIsAlbum ? true : i >= $currentSongIdx
+              $playlistType === "album" ? true : i >= $currentSongIdx
           );
 </script>
 
@@ -25,16 +23,16 @@
             <header>
                 <p>
                     Queue
-                    {#if $playlistIsAlbum}
+                    {#if $playlistType === "album" }
                         <span>(Album mode)</span>
                     {:else}
                         <span>(Library mode)</span>
                     {/if}
                 </p>
-                {#if $playlistIsAlbum}
-                <small>{$currentSong.album}</small>
+                {#if $playlistType === "album" }
+                    <small>{$currentSong.album}</small>
                 {:else}
-                <small style="opacity: 0.5;">Showing upcoming tracks</small>
+                    <small style="opacity: 0.5;">Showing upcoming tracks</small>
                 {/if}
             </header>
             <div class="tracks">

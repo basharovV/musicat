@@ -19,7 +19,7 @@
         isSmartQueryBuilderOpen,
         playlist,
         playlistIsAlbum,
-        playlistIsCountry,
+        playlistCountry,
         queriedSongs,
         query,
         selectedPlaylistId,
@@ -27,7 +27,8 @@
         smartQuery,
         smartQueryResults,
         smartQueryUpdater,
-        uiView
+        uiView,
+        playlistType
     } from "../../data/store";
     import SmartQuery from "../smart-query/Query";
     import { codes, countries } from "../data/CountryCodes";
@@ -232,7 +233,7 @@
                     initialized = true;
                 }
 
-                $playlistIsCountry && setSelectedCountry($playlistIsCountry);
+                $playlistCountry && setSelectedCountry($playlistCountry);
             }
         }
         console.log("countMap", dataCountMap);
@@ -431,7 +432,8 @@
         audioPlayer.shouldPlay = true;
         $playlist = dataSetCountryValue.data;
         console.log(dataSetCountryValue.data[0]);
-        $playlistIsCountry = selectedCountry;
+        $playlistCountry = selectedCountry;
+        $playlistType = "country";
     }
 
     // Selected country
@@ -545,12 +547,12 @@
                         />
                     </div>
                 </div>
-            {:else if $playlistIsCountry}
+            {:else if $playlistCountry}
                 <div id="info">
                     <p>Listening to music from</p>
                     <h2>
-                        {getFlagEmoji($playlistIsCountry)}{countries[
-                            $playlistIsCountry
+                        {getFlagEmoji($playlistCountry)}{countries[
+                            $playlistCountry
                         ]}
                     </h2>
                     <small

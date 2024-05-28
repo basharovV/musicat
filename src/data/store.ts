@@ -10,6 +10,7 @@ import type {
     CurrentSongLyrics,
     ImportStatus,
     LastPlayedInfo,
+    PlaylistType,
     SidebarItem,
     Song,
     StreamInfo,
@@ -63,7 +64,9 @@ export const playlist: Writable<Song[]> = writable([]);
 export const shuffledPlaylist: Writable<Song[]> = writable([]);
 export const albumPlaylist: Writable<Song[]> = writable([]);
 export const playlistIsAlbum = writable(false);
-export const playlistIsCountry = writable(null); // ISO Country code
+export const playlistCountry = writable(null); // ISO Country code
+export const playlistType: Writable<PlaylistType> = writable("library");
+export const playlistDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
@@ -134,7 +137,7 @@ export const smartQueryUpdater = writable(0);
 export const smartQueryResults: Writable<Song[]> = writable([]);
 
 // Playlists
-export const selectedPlaylistId: Writable<String> = writable(null);
+export const selectedPlaylistId: Writable<number> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
 export const dragGhostReset = writable(false);
 

@@ -326,3 +326,5 @@ interface Marker {
     pos: number; // seconds
     title: string;
 }
+
+type PlaylistType = "library" | "album" | "playlist" | "country"

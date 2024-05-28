@@ -7,7 +7,7 @@
         currentSong,
         isPlaying,
         playlist,
-        playlistIsAlbum
+        playlistType
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
@@ -19,7 +19,7 @@
     console.log("highlight", highlighted);
     let isHovered = false;
     async function playPauseToggle() {
-        if ($playlistIsAlbum && $currentSong?.album === album.title) {
+        if ($playlistType === "album" && $currentSong?.album === album.title) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
@@ -36,7 +36,7 @@
             if (tracks) audioPlayer.playSong(tracks[0]);
             $playlist = tracks;
             $albumPlaylist = tracks;
-            $playlistIsAlbum = true;
+            $playlistType = "album";
         }
     }
 
@@ -97,16 +97,20 @@
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
-                {#if isHovered || ($playlistIsAlbum && isPlayingCurrentAlbum)}
+                {#if isHovered || ($playlistType === "album" && isPlayingCurrentAlbum)}
                     <div class="play-button-container">
                         <div
-                            class={$playlistIsAlbum && $isPlaying && isPlayingCurrentAlbum
-                            ? "pause-button"
+                            class={$playlistType === "album" &&
+                            $isPlaying &&
+                            isPlayingCurrentAlbum
+                                ? "pause-button"
                                 : "play-button"}
                             on:click={playPauseToggle}
                         >
                             <Icon
-                                icon={$playlistIsAlbum && $isPlaying && isPlayingCurrentAlbum
+                                icon={$playlistType === "album" &&
+                                $isPlaying &&
+                                isPlayingCurrentAlbum
                                     ? "fe:pause"
                                     : "fe:play"}
                                 size={25}
