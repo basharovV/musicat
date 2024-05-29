@@ -23,6 +23,7 @@ import Query from "./SmartQueries";
 
 interface Query {
     orderBy: string;
+    libraryOrderBy: string;
     reverse: boolean;
     query: string;
 }
@@ -33,6 +34,7 @@ export const isInit = writable(true);
 export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
     orderBy: "artist",
+    libraryOrderBy: "artist",
     reverse: false,
     query: ""
 });

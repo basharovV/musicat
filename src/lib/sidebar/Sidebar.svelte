@@ -693,6 +693,7 @@
                             on:click={() => {
                                 $isSmartQueryBuilderOpen = false;
                                 $selectedPlaylistId = null;
+                                $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
                             }}
                         >
@@ -784,6 +785,7 @@
                                                 playlist.id}
                                             on:click={() => {
                                                 $uiView = "playlists";
+                                                $query.orderBy = 'none';
                                                 $selectedPlaylistId =
                                                     playlist.id;
                                             }}

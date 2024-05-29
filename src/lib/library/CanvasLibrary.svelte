@@ -47,10 +47,12 @@
         os,
         playlist,
         playlistIsAlbum,
+        playlistType,
         queriedSongs,
         query,
         rightClickedTrack,
         rightClickedTracks,
+        selectedPlaylistId,
         shouldFocusFind,
         shuffledPlaylist,
         singleKeyShortcutsEnabled,
@@ -144,7 +146,8 @@
                     // If currently in album mode, then the current song index doesn't match the library index,
                     // and we need to find it
                     if (
-                        ($playlistIsAlbum && s.id === $currentSong?.id) ||
+                        ($playlistType === "album" &&
+                            s.id === $currentSong?.id) ||
                         ($isShuffleEnabled && s.id === $currentSong?.id)
                     ) {
                         console.log("found song:", idx);
@@ -312,6 +315,7 @@
     // CONSTANTS
     const HEADER_HEIGHT = 26;
     const ROW_HEIGHT = 26;
+    const DROP_HINT_HEIGHT = 2;
     const BORDER_WIDTH = 1;
     const SCROLL_PADDING = 200;
     const DUMMY_COUNT = 5;
@@ -332,6 +336,7 @@
     const DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
     const CLICKABLE_CELL_BG_COLOR = "#71658e1e";
     const CLICKABLE_CELL_BG_COLOR_HOVERED = "#8c7dae36";
+    const DRAGGING_SOURCE_COLOR = "#8a69683e";
 
     onMount(() => {
         init();
@@ -482,7 +487,9 @@
         let runningX = 0;
         let previousWidth = 0;
 
-        const sortedFields = $columnOrder.map(c => fields.find((f) => f.value === c));
+        const sortedFields = $columnOrder.map((c) =>
+            fields.find((f) => f.value === c)
+        );
 
         // Fields visible depending on window width
         const visibleFields = sortedFields.filter((f) => {
@@ -720,7 +727,7 @@
 
     let currentSongY = 0;
     $: if (
-        !$playlistIsAlbum &&
+        $playlistType !== "album" &&
         !$isShuffleEnabled &&
         $currentSongIdx !== null
     ) {
@@ -760,7 +767,7 @@
         AudioPlayer.shouldPlay = false;
         $currentSongIdx = idx;
         $playlist = $queriedSongs;
-        $playlistIsAlbum = false;
+        $playlistType = $uiView === "playlists" ? "playlist" : "library";
         AudioPlayer.playSong(song);
     }
 
@@ -870,13 +877,32 @@
         onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
 
-    function onSongDragStart(song: Song) {
-        // console.log("dragstart", song);
+    let draggingSongIdx = null;
+
+    function onSongDragStart(song: Song, idx: number) {
+        console.log("dragstart", idx);
         // console.log("songshighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
             $draggedSongs = songsHighlighted;
         } else {
             $draggedSongs = [song];
+            if (idx !== undefined && $uiView === 'playlists') {
+                draggingSongIdx = idx;
+            }
+        }
+    }
+
+    async function onReorderSong(song: Song, idx: number) {
+        if (draggingSongIdx !== null) {
+            console.log("reorder song", idx);
+            let playlist = await db.playlists.get($selectedPlaylistId);
+            playlist.tracks = moveArrayElement(
+                playlist.tracks,
+                draggingSongIdx,
+                idx
+            );
+            await db.playlists.put(playlist);
+            draggingSongIdx = null;
         }
     }
 
@@ -963,7 +989,8 @@
             if (!$isTrackInfoPopupOpen) {
                 AudioPlayer.shouldPlay = false;
                 $playlist = $queriedSongs;
-                $playlistIsAlbum = false;
+                $playlistType =
+                    $uiView === "playlists" ? "playlist" : "library";
                 $currentSongIdx = highlightedSongIdx;
                 AudioPlayer.playSong(songsHighlighted[0]);
             }
@@ -995,11 +1022,15 @@
             $query.reverse = !$query.reverse;
         }
         $query.orderBy = newOrderBy;
+        if ($uiView === "library") {
+            // This is used to restore the orderBy
+            // when going back to the library from a playlist (custom order)
+            $query.libraryOrderBy = newOrderBy;
+        }
         $query = $query;
     }
 
     // Re-order columns
-
 
     $: {
         displayFields && $columnOrder && calculateColumns();
@@ -1345,15 +1376,39 @@
                                         }}
                                         on:mouseenter={() => {
                                             hoveredSongIdx = songIdx;
+                                            if (
+                                                draggingSongIdx !== null &&
+                                                songIdx > songsSlice.length - 15
+                                            ) {
+                                                scrollContainer?.scrollBy({
+                                                    top: ROW_HEIGHT
+                                                });
+                                            } else if (
+                                                draggingSongIdx !== null &&
+                                                songIdx < 10
+                                            ) {
+                                                scrollContainer?.scrollBy({
+                                                    top: -ROW_HEIGHT
+                                                });
+                                            }
                                         }}
                                         on:mouseleave={() => {
                                             hoveredSongIdx = null;
                                         }}
                                         on:mousedown={(e) =>
                                             e.detail.evt.button === 0 &&
-                                            onSongDragStart(song)}
+                                            onSongDragStart(
+                                                song,
+                                                song.viewModel?.index
+                                            )}
                                         config={{
                                             visible: !song.dummy
+                                        }}
+                                        on:mouseup={(e) => {
+                                            onReorderSong(
+                                                song,
+                                                song.viewModel.index
+                                            );
                                         }}
                                     >
                                         <Rect
@@ -1369,18 +1424,21 @@
                                                 height: ROW_HEIGHT,
                                                 listening: true,
                                                 fill:
-                                                    $currentSong?.id ===
-                                                    song?.id
-                                                        ? PLAYING_BG_COLOR
-                                                        : songsHighlighted &&
-                                                            isSongHighlighted(
-                                                                song
-                                                            )
-                                                          ? HIGHLIGHT_BG_COLOR
-                                                          : hoveredSongIdx ===
-                                                              songIdx
-                                                            ? ROW_BG_COLOR_HOVERED
-                                                            : ROW_BG_COLOR
+                                                    draggingSongIdx ===
+                                                    song.viewModel?.index
+                                                        ? DRAGGING_SOURCE_COLOR
+                                                        : $currentSong?.id ===
+                                                            song?.id
+                                                          ? PLAYING_BG_COLOR
+                                                          : songsHighlighted &&
+                                                              isSongHighlighted(
+                                                                  song
+                                                              )
+                                                            ? HIGHLIGHT_BG_COLOR
+                                                            : hoveredSongIdx ===
+                                                                songIdx
+                                                              ? ROW_BG_COLOR_HOVERED
+                                                              : ROW_BG_COLOR
                                             }}
                                         />
                                         {#each displayFields as f, idx (f.value)}
@@ -1611,6 +1669,27 @@
                                             {/if}
                                         {/each}
                                     </Group>
+
+                                    {#if hoveredSongIdx === songIdx && draggingSongIdx !== null}
+                                        <Rect
+                                            config={{
+                                                x: 0,
+                                                y:
+                                                    sandwichTopHeight +
+                                                    HEADER_HEIGHT +
+                                                    ROW_HEIGHT * songIdx +
+                                                    -DUMMY_PADDING +
+                                                    scrollOffset +
+                                                    (song.viewModel?.index >
+                                                    draggingSongIdx
+                                                        ? ROW_HEIGHT
+                                                        : 0),
+                                                width: width,
+                                                height: DROP_HINT_HEIGHT,
+                                                fill: PLAYING_BG_COLOR
+                                            }}
+                                        />
+                                    {/if}
                                 {/each}
                                 {#if isScrollable}
                                     <Rect
