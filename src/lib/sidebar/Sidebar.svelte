@@ -659,7 +659,18 @@
                     on:keydown={onSearchInputKeyDown}
                 />
                 <div class="search-icon">
-                    <Icon icon="ion:search" color="#737373" />
+                    {#if $query.query.length}
+                        <Icon
+                            icon="mingcute:close-circle-fill"
+                            color="#737373"
+                            size={15}
+                            onClick={() => {
+                                $query.query = "";
+                            }}
+                        />
+                    {:else}
+                        <Icon icon="ion:search" color="#737373" size={16} />
+                    {/if}
                 </div>
             </div>
         </div>
@@ -785,7 +796,7 @@
                                                 playlist.id}
                                             on:click={() => {
                                                 $uiView = "playlists";
-                                                $query.orderBy = 'none';
+                                                $query.orderBy = "none";
                                                 $selectedPlaylistId =
                                                     playlist.id;
                                             }}
