@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 pub mod file_streamer {
-    use std::sync::mpsc::{Receiver, Sender};
+    use std::sync::mpsc::{Receiver, Sender, TryRecvError};
     use std::time::Instant;
 
     use std::collections::HashMap;
@@ -25,7 +25,7 @@ pub mod file_streamer {
     use symphonia::core::units::Time;
     use symphonia::default::get_probe;
     use tauri::{AppHandle, Manager};
-    use tokio::sync::Mutex;
+    use tokio::sync::{Mutex, MutexGuard};
     use tokio::time::Duration;
 
     use tokio_util::sync::CancellationToken;
@@ -325,6 +325,28 @@ pub mod file_streamer {
         // }
     }
 
+    // Peeking channel receiver without consuming
+    // From https://stackoverflow.com/questions/59447577/how-to-peek-on-channels-without-blocking-and-still-being-able-to-detect-hangup
+    pub struct TryIterResult<'a, T: 'a> {
+        rx: &'a Receiver<T>,
+    }
+
+    pub fn try_iter_result<'a, T>(rx: &'a MutexGuard<Receiver<T>>) -> TryIterResult<'a, T> {
+        TryIterResult { rx: &rx }
+    }
+
+    impl<'a, T> Iterator for TryIterResult<'a, T> {
+        type Item = Result<T, TryRecvError>;
+
+        fn next(&mut self) -> Option<Result<T, TryRecvError>> {
+            match self.rx.try_recv() {
+                Ok(data) => Some(Ok(data)),
+                Err(TryRecvError::Empty) => Some(Err(TryRecvError::Empty)),
+                Err(TryRecvError::Disconnected) => None,
+            }
+        }
+    }
+
     pub fn start_audio(
         decoding_active: &Arc<AtomicU32>,
         volume_control_receiver: &Arc<Mutex<Receiver<VolumeControlEvent>>>,
@@ -597,15 +619,53 @@ pub mod file_streamer {
                                     }
                                 }
 
+                                let mut is_paused = false;
                                 if (decoding_active.load(std::sync::atomic::Ordering::Relaxed)
                                     == PAUSED)
                                 {
+                                    is_paused = true;
+                                    println!("Sending paused state to output");
+                                    guard.pause();
                                     let _ = playback_state_sender.send(false);
                                 }
 
                                 // waits while the value is PAUSED (0)
                                 atomic_wait::wait(&decoding_active, PAUSED);
-
+                                if (is_paused) {
+                                    is_paused = false;
+                                    guard.resume();
+                                    let ctrl_event = receiver.try_recv();
+                                    if let Ok(result) = ctrl_event {
+                                        match result {
+                                            PlayerControlEvent::StreamFile(request) => {
+                                                println!(
+                                                    "audio: source changed during decoding! {:?}",
+                                                    request
+                                                );
+                                                path_str.replace(request.path.unwrap());
+                                                seek.replace(request.seek.unwrap());
+                                                end_pos = None;
+                                                volume.replace(request.volume.unwrap());
+                                                file.try_lock()
+                                                    .unwrap()
+                                                    .replace(request.file_info.unwrap());
+                                                cancel_token.cancel();
+                                                guard.flush();
+                                            }
+                                            PlayerControlEvent::LoopRegion(request) => {
+                                                println!("audio: loop region! {:?}", request);
+                                                if (request.enabled.unwrap()) {
+                                                    seek.replace(request.start_pos.unwrap());
+                                                    end_pos.replace(request.end_pos.unwrap());
+                                                } else {
+                                                    end_pos = None;
+                                                }
+                                                cancel_token.cancel();
+                                                guard.flush();
+                                            }
+                                        }
+                                    }
+                                }
                                 let _ = playback_state_sender.send(true);
 
                                 if cancel_token.is_cancelled() {

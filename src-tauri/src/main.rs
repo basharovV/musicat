@@ -605,10 +605,10 @@ fn stream_file(
     _app_handle: tauri::AppHandle,
 ) {
     println!("Stream file {:?}", event);
-    state.resume();
     let _ = state
         .player_control_sender
         .send(player::file_streamer::PlayerControlEvent::StreamFile(event));
+    state.resume();
 }
 
 #[tauri::command]

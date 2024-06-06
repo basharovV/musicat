@@ -21,6 +21,8 @@ pub trait AudioOutput {
     fn write(&mut self, decoded: AudioBufferRef<'_>);
     fn flush(&mut self);
     fn get_sample_rate(&self) -> u32;
+    fn pause(&self);
+    fn resume(&self);
 }
 
 #[allow(dead_code)]
@@ -436,6 +438,7 @@ mod cpal {
 
                     // update duration if seconds changed
                     if *playback_state.try_read().unwrap() {
+
                         // Write out as many samples as possible from the ring buffer to the audio
                         // output.
                         let written = ring_buf_consumer.read(data).unwrap_or(0);
@@ -594,6 +597,14 @@ mod cpal {
 
         fn get_sample_rate(&self) -> u32 {
             return self.sample_rate;
+        }
+
+        fn pause(&self) {
+            self.stream.pause();
+        }
+
+        fn resume(&self) {
+            self.stream.play();
         }
     }
 }
