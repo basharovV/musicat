@@ -109,7 +109,6 @@ class AudioPlayer {
                     newCurrentSongIdx = 0;
                 }
             }
-            
 
             this.currentSongIdx = newCurrentSongIdx;
             currentSongIdx.set(newCurrentSongIdx);
@@ -151,7 +150,11 @@ class AudioPlayer {
 
             this.currentSongIdx = newCurrentSongIdx;
             currentSongIdx.set(newCurrentSongIdx);
-            console.log("playlist: currentsongindex", this.currentSongIdx, this.currentSong);
+            console.log(
+                "playlist: currentsongindex",
+                this.currentSongIdx,
+                this.currentSong
+            );
 
             this.setNextUpSong();
             if (this.shouldPlay) {
@@ -377,8 +380,14 @@ class AudioPlayer {
                     this.webRTCReceiver.dataChannel?.readyState
                 );
 
-                if (!this.webRTCReceiver.dataChannel) {
+                if (
+                    !this.webRTCReceiver.dataChannel ||
+                    this.webRTCReceiver.dataChannel.readyState !== "open"
+                ) {
                     // Try to reconnect
+                    this.webRTCReceiver.playerConnection?.close();
+                    this.webRTCReceiver.remoteConnection?.close();
+                    this.webRTCReceiver.dataChannel.close();
                     this.webRTCReceiver.init();
                 }
 

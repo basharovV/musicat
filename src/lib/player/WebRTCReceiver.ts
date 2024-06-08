@@ -22,7 +22,6 @@ export default class WebRTCReceiver {
     currentBufferedSeconds = 0;
 
     constructor() {
-        this.playerConnection = new RTCPeerConnection();
         this.init();
         // Setup listeners
         this.playerConnection.addEventListener("icecandidate", (event) => {
@@ -108,10 +107,11 @@ export default class WebRTCReceiver {
     }
 
     async init() {
+        this.playerConnection = new RTCPeerConnection();
         await this.checkExistingConnection();
-        this.listenForIceCandidate();
+        await this.listenForIceCandidate();
         this.createDataChannel();
-        this.createLocalOffer();
+        await this.createLocalOffer();
     }
 
     async checkExistingConnection() {
