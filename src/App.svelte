@@ -311,7 +311,6 @@
                 height: 28px;
                 margin: 5px 5px 2px 0px;
             }
-
         }
 
         .panel {
@@ -337,7 +336,7 @@
         }
 
         .queue {
-            grid-row: 1;
+            grid-row: 1/3;
             grid-column: 2;
             overflow: hidden;
             height: 100%;
