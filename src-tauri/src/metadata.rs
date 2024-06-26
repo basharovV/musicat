@@ -141,6 +141,9 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         duration,
                         file_info,
                         artwork,
+                        // We default the origin country to "" to allow Dexie to return results when using orderBy,
+                        // even if there are zero songs with a non-empty country
+                        origin_country: Some(String::from(""))
                     });
                 }
             }
