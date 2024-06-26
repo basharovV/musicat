@@ -20,6 +20,7 @@
 
 <style lang="scss">
     div {
+        width: fit-content;
         display: flex;
         flex-direction: row;
         align-items: center;

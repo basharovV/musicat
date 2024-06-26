@@ -365,7 +365,7 @@
         align-items: center;
         justify-content: space-between;
         border: 1px solid grey;
-        border-radius: 20px;
+        border-radius: 6px;
         padding: 1px 10px;
         margin-bottom: 5px;
         position: relative;

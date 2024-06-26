@@ -55,7 +55,7 @@
         border-radius: 5px;
         position: relative;
         /* padding: 2em 0em 0; */
-        background: rgb(55, 55, 55);
+        background: rgb(94, 91, 98);
         color: white;
         border: 1px solid rgb(114, 114, 114);
         display: flex;
@@ -101,6 +101,6 @@
     }
 
     .release-notes {
-        border-left: 1px solid rgb(66, 65, 65);
+        border-left: 1px solid rgba(147, 147, 147, 0.336);
     }
 </style>

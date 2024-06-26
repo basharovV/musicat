@@ -53,7 +53,7 @@
             height: "auto",
             barRadius: 2,
             autoScroll: false,
-            hideScrollbar: true
+            hideScrollbar: true,
         });
         wavesurfer.registerPlugin(
             Hover.create({
