@@ -292,7 +292,7 @@
                 <div
                     class="grid"
                     class:show={$query.query?.length}
-                    style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+                    style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.1fr));width: 100%;"
                 >
                     {#each queriedAlbums as album, idx (album.id)}
                         <div
@@ -312,7 +312,7 @@
             <div
                 class="grid"
                 class:show={$albums && $query.query?.length === 0}
-                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.33fr));width: 100%;"
+                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.1fr));width: 100%;"
             >
                 {#if $albums}
                     {#each $albums as album, idx (album.id)}
