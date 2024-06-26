@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use rubato::{calculate_cutoff, SincInterpolationParameters};
 use symphonia::core::audio::{AudioBuffer, AudioBufferRef, Signal, SignalSpec};
 use symphonia::core::conv::{FromSample, IntoSample};
 use symphonia::core::sample::Sample;
@@ -47,7 +48,8 @@ where
         // Interleave the planar samples from Rubato.
         let num_channels = self.output.len();
 
-        self.interleaved.resize(num_channels * self.output[0].len(), T::MID);
+        self.interleaved
+            .resize(num_channels * self.output[0].len(), T::MID);
 
         for (i, frame) in self.interleaved.chunks_exact_mut(num_channels).enumerate() {
             for (ch, s) in frame.iter_mut().enumerate() {
@@ -71,16 +73,39 @@ where
             spec.rate as usize,
             to_sample_rate,
             duration,
-            2,
+            1,
             num_channels,
         )
         .unwrap();
+
+        // let sinc_len = duration;
+        // let oversampling_factor = 128;
+        // let interpolation = rubato::SincInterpolationType::Linear;
+        // let window = rubato::WindowFunction::Blackman2;
+
+        // let f_cutoff = 0.95;
+        // let params = SincInterpolationParameters {
+        //     sinc_len,
+        //     f_cutoff,
+        //     interpolation,
+        //     oversampling_factor,
+        //     window,
+        // };
+        // let ratio = spec.rate as f64 / to_sample_rate as f64;
+        // let resampler =
+        //     rubato::FastFixedIn::<f32>::new(ratio, 1.0f64, rubato::PolynomialDegree::Cubic, 1, num_channels).unwrap();
 
         let output = rubato::Resampler::output_buffer_allocate(&resampler, true);
 
         let input = vec![Vec::with_capacity(duration); num_channels];
 
-        Self { resampler, input, output, duration, interleaved: Default::default() }
+        Self {
+            resampler,
+            input,
+            output,
+            duration,
+            interleaved: Default::default(),
+        }
     }
 
     /// Resamples a planar/non-interleaved input.
@@ -102,6 +127,7 @@ where
     pub fn flush(&mut self) -> Option<&[T]> {
         let len = self.input[0].len();
 
+        println!("Flushing resampler, len: {}", len);
         if len == 0 {
             return None;
         }
@@ -112,6 +138,7 @@ where
             // Fill each input channel buffer with silence to the next multiple of the resampler
             // duration.
             for channel in self.input.iter_mut() {
+                channel.clear();
                 channel.resize(len + (self.duration - partial_len), f32::MID);
             }
         }

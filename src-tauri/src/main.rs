@@ -224,6 +224,7 @@ pub struct Song {
     duration: String,
     file_info: FileInfo,
     artwork: Option<Artwork>,
+    origin_country: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -23,6 +23,7 @@ pub trait AudioOutput {
     fn get_sample_rate(&self) -> u32;
     fn pause(&self);
     fn resume(&self);
+    fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool;
 }
 
 #[allow(dead_code)]
@@ -186,7 +187,10 @@ mod cpal {
     use super::{AudioOutput, AudioOutputError, Result};
 
     use bytes::Bytes;
-    use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
+    use cpal::SupportedBufferSize;
+    use symphonia::core::audio::{
+        AudioBufferRef, Channels, Layout, RawSample, SampleBuffer, SignalSpec,
+    };
     use symphonia::core::conv::{ConvertibleSample, IntoSample};
     use symphonia::core::units::TimeBase;
 
@@ -198,8 +202,7 @@ mod cpal {
     use tokio::sync::Mutex;
     use webrtc::data_channel::RTCDataChannel;
 
-    pub struct CpalAudioOutput {
-    }
+    pub struct CpalAudioOutput {}
 
     trait AudioOutputSample:
         cpal::Sample
@@ -219,7 +222,6 @@ mod cpal {
     impl CpalAudioOutput {
         pub fn try_open(
             spec: SignalSpec,
-            duration: symphonia::core::units::Duration,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
@@ -248,6 +250,22 @@ mod cpal {
                     error!("failed to get default audio output device config: {}", err);
                     return Err(AudioOutputError::OpenStreamError);
                 }
+            };
+
+            let spec = SignalSpec::new_with_layout(
+                config.sample_rate().0,
+                match config.channels() {
+                    1 => Layout::Mono,
+                    2 => Layout::Stereo,
+                    3 => Layout::TwoPointOne,
+                    5 => Layout::FivePointOne,
+                    _ => Layout::Stereo,
+                },
+            );
+
+            let duration = match config.buffer_size() {
+                SupportedBufferSize::Range { min, max } => (*max * 2) as u64,
+                SupportedBufferSize::Unknown => 4096 as u64,
             };
 
             // Select proper playback routine based on sample format.
@@ -372,7 +390,7 @@ mod cpal {
                 cpal::StreamConfig {
                     channels: num_channels as cpal::ChannelCount,
                     sample_rate: cpal::SampleRate(spec.rate),
-                    buffer_size: cpal::BufferSize::Default,
+                    buffer_size: cpal::BufferSize::Default
                 }
             } else {
                 // Use the default config for Windows.
@@ -381,6 +399,7 @@ mod cpal {
                     .expect("Failed to get the default output config.")
                     .config()
             };
+
 
             let time_base = TimeBase {
                 numer: 1,
@@ -438,7 +457,6 @@ mod cpal {
 
                     // update duration if seconds changed
                     if *playback_state.try_read().unwrap() {
-
                         // Write out as many samples as possible from the ring buffer to the audio
                         // output.
                         let written = ring_buf_consumer.read(data).unwrap_or(0);
@@ -485,7 +503,8 @@ mod cpal {
                         if prev_duration != next_duration {
                             let new_duration = Duration::from_secs(next_duration);
 
-                            let _ = app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
+                            let _ =
+                                app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
 
                             let mut duration = elapsed_time_state.write().unwrap();
                             *duration = new_duration.as_secs();
@@ -529,23 +548,12 @@ mod cpal {
 
             let sample_buf = SampleBuffer::<T>::new(duration, spec);
 
-            let resampler = if spec.rate != config.sample_rate.0 {
-                info!("resampling {} Hz to {} Hz", spec.rate, config.sample_rate.0);
-                Some(Resampler::new(
-                    spec,
-                    config.sample_rate.0 as usize,
-                    duration,
-                ))
-            } else {
-                None
-            };
-
             Ok(Arc::new(Mutex::new(CpalAudioOutputImpl {
                 ring_buf,
                 ring_buf_producer,
                 sample_buf,
                 stream,
-                resampler,
+                resampler: None,
                 sample_rate: config.sample_rate.0,
             })))
         }
@@ -561,7 +569,6 @@ mod cpal {
             let mut samples = if let Some(resampler) = &mut self.resampler {
                 // Resampling is required. The resampler will return interleaved samples in the
                 // correct sample format.
-
                 match resampler.resample(decoded) {
                     Some(resampled) => resampled,
                     None => return,
@@ -583,10 +590,8 @@ mod cpal {
             // If there is a resampler, then it may need to be flushed
             // depending on the number of samples it has.
             if let Some(resampler) = &mut self.resampler {
-                let mut remaining_samples = resampler.flush().unwrap_or_default();
-
-                while let Some(written) = self.ring_buf_producer.write_blocking(remaining_samples) {
-                    remaining_samples = &remaining_samples[written..];
+                while let Some(remaining_samples) = resampler.flush() {
+                    println!("Flushed samples {:?}", remaining_samples.len());
                 }
             }
 
@@ -600,11 +605,60 @@ mod cpal {
         }
 
         fn pause(&self) {
-            self.stream.pause();
+            let pause_result = self.stream.pause();
+            println!("cpal: Stream pause result: {:?}", pause_result);
         }
 
         fn resume(&self) {
-            self.stream.play();
+            let resume_result = self.stream.play();
+            println!("cpal: Stream resume result: {:?}", resume_result);
+        }
+
+        fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool {
+            let host = cpal::default_host();
+            let output_device = host.default_output_device();
+
+            // If we have a default audio device (we always should, but just in case)
+            // we check if the track spec differs from the output device
+            // if it does - resample the decoded audio using Symphonia.
+
+            // Check if track sample rate differs from current OS config
+            if let Some(device) = output_device {
+                println!("cpal: Default device {:?}", device.name());
+                if let Ok(config) = device.default_output_config() {
+                    println!("cpal: Default config {:?}", config);
+                    let buffer_size = match config.buffer_size() {
+                        SupportedBufferSize::Range { min, max } => (*max) as u64,
+                        SupportedBufferSize::Unknown => 4096 as u64,
+                    };
+                    if config.sample_rate().0 != spec.rate {
+                        println!(
+                            "resampling {} Hz to {} Hz",
+                            spec.rate,
+                            config.sample_rate().0
+                        );
+                        self.resampler.replace(Resampler::new(
+                            spec,
+                            config.sample_rate().0 as usize,
+                            max_frames,
+                        ));
+                        return true;
+                    } else {
+                        self.resampler.take();
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            } else {
+                // If default audio device doesn't exist for some reason
+                // Fallback to comparing spec changes between tracks
+                // and re-initializing the audio device if needed
+                // NOTE: This will introduce audible gaps between tracks
+                // Check if spec has changed, reinit audio
+                self.resampler.take();
+                return false;
+            }
         }
     }
 }
@@ -617,7 +671,6 @@ pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOut
 #[cfg(not(target_os = "linux"))]
 pub fn try_open(
     spec: SignalSpec,
-    duration: Duration,
     volume_control_receiver: Arc<
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::VolumeControlEvent>>,
     >,
@@ -632,7 +685,6 @@ pub fn try_open(
 ) -> Result<Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
     cpal::CpalAudioOutput::try_open(
         spec,
-        duration,
         volume_control_receiver,
         sample_offset_receiver,
         playback_state_receiver,

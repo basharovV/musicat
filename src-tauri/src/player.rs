@@ -14,6 +14,7 @@ pub mod file_streamer {
     use std::sync::Arc;
 
     use atomic_wait::{wake_all, wake_one};
+    use cpal::traits::{DeviceTrait, HostTrait};
     use log::warn;
     use symphonia::core::audio::{Layout, RawSampleBuffer, SampleBuffer, SignalSpec};
     use symphonia::core::codecs::{DecoderOptions, FinalizeResult, CODEC_TYPE_NULL};
@@ -41,6 +42,7 @@ pub mod file_streamer {
     use webrtc::peer_connection::RTCPeerConnection;
 
     use crate::output::{self, AudioOutput};
+    use crate::resampler::Resampler;
     use crate::{
         GetWaveformRequest, GetWaveformResponse, LoopRegionRequest, SampleOffsetEvent,
         StreamFileRequest, VolumeControlEvent,
@@ -389,6 +391,7 @@ pub mod file_streamer {
 
         let mut spec: SignalSpec = SignalSpec::new_with_layout(44100, Layout::Stereo);
         let mut duration: u64 = 512;
+        let mut device_sample_rate = 44100;
 
         let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
         let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
@@ -527,28 +530,43 @@ pub mod file_streamer {
                     .make(&track.codec_params, &DecoderOptions { verify: false })
                     .unwrap();
 
-                let mut spec_changed = false;
-                let mut new_spec = SignalSpec::new_with_layout(44100, Layout::Stereo);
-                let mut new_duration = 1152;
-                if let Some(channels) = decoder.codec_params().channels {
-                    new_spec =
-                        SignalSpec::new(decoder.codec_params().sample_rate.unwrap(), channels);
-                    let max_frames = decoder.codec_params().max_frames_per_packet;
+                let spec = SignalSpec {
+                    rate: decoder.codec_params().sample_rate.unwrap(),
+                    channels: decoder.codec_params().channels.unwrap(),
+                };
 
-                    if let Some(new_dur) = max_frames {
-                        new_duration = new_dur;
-                        // Check if spec has changed, reinit audio
-                        if (new_spec != spec) || new_dur != duration {
-                            spec_changed = true;
+                let mut device_changed = false;
+                let mut new_duration = 1152;
+
+                let max_frames = decoder.codec_params().max_frames_per_packet;
+                if let Some(dur) = max_frames {
+                    new_duration = dur;
+                }
+
+                // Check if audio device changed
+                let host = cpal::default_host();
+                let output_device = host.default_output_device();
+
+                // If we have a default audio device (we always should, but just in case)
+                // we check if the track spec differs from the output device
+                // if it does - resample the decoded audio using Symphonia.
+
+                // Check if track sample rate differs from current OS config
+                if let Some(device) = output_device {
+                    println!("cpal: Default device {:?}", device.name());
+                    if let Ok(config) = device.default_output_config() {
+                        let new_sample_rate = config.sample_rate().0;
+                        if (device_sample_rate != new_sample_rate) {
+                            device_changed = true;
                         }
+                        device_sample_rate = new_sample_rate;
                     }
                 }
 
-                if (audio_output.is_none() || spec_changed) {
+                if (audio_output.is_none() || device_changed) {
                     // Try to open the audio output.
                     audio_output.replace(output::try_open(
-                        new_spec,
-                        new_duration,
+                        spec,
                         volume_control_receiver.clone(),
                         sample_offset_receiver.clone(),
                         playback_state.clone(),
@@ -583,6 +601,9 @@ pub mod file_streamer {
                         if let Ok(mut guard) = ao.try_lock() {
                             let mut transition_time = Instant::now();
                             let mut started_transition = false;
+                            
+                            // Resampling stuff
+                            guard.update_resampler(spec, new_duration);
 
                             // Decode all packets, ignoring all decode errors.
                             let result = loop {
