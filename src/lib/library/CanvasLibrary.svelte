@@ -2117,6 +2117,6 @@
         right: 0;
         left: 0;
         z-index: 10;
-        opacity: 0.9;
+        opacity: 0.6;
     }
 </style>
