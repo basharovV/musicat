@@ -13,7 +13,6 @@ use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio_util::sync::CancellationToken;
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::BufReader;
@@ -24,6 +23,7 @@ use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Manager, State};
 use tokio::runtime::Handle;
+use tokio_util::sync::CancellationToken;
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
 mod metadata;
@@ -224,7 +224,7 @@ pub struct Song {
     duration: String,
     file_info: FileInfo,
     artwork: Option<Artwork>,
-    origin_country: Option<String>
+    origin_country: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -367,11 +367,6 @@ fn build_menu() -> Menu {
             Menu::new().add_item(CustomMenuItem::new("import", "Import Library")),
         ))
         .add_submenu(Submenu::new(
-            "Library",
-            Menu::new()
-                .add_item(CustomMenuItem::new("find", "Find").accelerator("CommandOrControl+F")),
-        ))
-        .add_submenu(Submenu::new(
             "Edit",
             Menu::new()
                 .add_native_item(MenuItem::Copy)
@@ -382,6 +377,18 @@ fn build_menu() -> Menu {
                 .add_native_item(MenuItem::Redo)
                 .add_native_item(MenuItem::Separator)
                 .add_native_item(MenuItem::SelectAll),
+        ))
+        .add_submenu(Submenu::new(
+            "Library",
+            Menu::new()
+                .add_item(CustomMenuItem::new("find", "Find").accelerator("CommandOrControl+F")),
+        ))
+        .add_submenu(Submenu::new(
+            "View",
+            Menu::new()
+                .add_item(CustomMenuItem::new("queue", "Toggle Queue").accelerator("Q"))
+                .add_item(CustomMenuItem::new("albums", "Show albums").accelerator("A"))
+                .add_item(CustomMenuItem::new("library", "Show library").accelerator("L")),
         ));
     #[cfg(dev)]
     let newMenu = menu.add_submenu(Submenu::new(
@@ -647,11 +654,12 @@ fn get_waveform(
     let token_clone = token.clone();
     if let Ok(mut tokens) = state.cancel_tokens.try_lock() {
         // Cancel all existing waveform threads
-        tokens.iter().filter(|t| {
-            t.0 != &event.clone().path.unwrap()
-        }).for_each(|t| {
-            t.1.cancel();
-        });
+        tokens
+            .iter()
+            .filter(|t| t.0 != &event.clone().path.unwrap())
+            .for_each(|t| {
+                t.1.cancel();
+            });
         tokens.insert(event.path.unwrap(), token);
     }
 

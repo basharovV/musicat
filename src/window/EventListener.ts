@@ -6,9 +6,11 @@ import {
     importStatus,
     isFindFocused,
     isInfoPopupOpen,
+    isQueueOpen,
     isSettingsOpen,
     isTrackInfoPopupOpen,
-    shouldFocusFind
+    shouldFocusFind,
+    uiView
 } from "../data/store";
 import { db } from "../data/db";
 import type { ToImport } from "../App";
@@ -48,6 +50,15 @@ export function startMenuListener() {
                     target: "search",
                     action: get(isFindFocused) ? "unfocus" : "focus"
                 });
+                break;
+            case "queue":
+                isQueueOpen.set(!get(isQueueOpen));
+                break;
+            case "albums":
+                uiView.set("albums");
+                break;
+            case "library":
+                uiView.set("library");
                 break;
         }
     });
