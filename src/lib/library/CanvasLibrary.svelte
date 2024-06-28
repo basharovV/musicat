@@ -25,6 +25,7 @@
     import { db } from "../../data/db";
 
     import {
+        arrowFocus,
         bottomBarNotification,
         columnOrder,
         compressionSelected,
@@ -881,12 +882,13 @@
 
     function onSongDragStart(song: Song, idx: number) {
         console.log("dragstart", idx);
+        $arrowFocus = "library";
         // console.log("songshighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
             $draggedSongs = songsHighlighted;
         } else {
             $draggedSongs = [song];
-            if (idx !== undefined && $uiView === 'playlists') {
+            if (idx !== undefined && $uiView === "playlists") {
                 draggingSongIdx = idx;
             }
         }
@@ -915,6 +917,8 @@
     });
 
     function onKeyDown(event) {
+        if ($arrowFocus !== "library") return;
+
         if (event.keyCode === 16) {
             isShiftPressed = true;
             console.log("shift pressed");
@@ -1885,6 +1889,7 @@
             </div>
         </div>
     {/if}
+    <div class="bottom-shadow" />
 </div>
 
 <style lang="scss">
@@ -2081,5 +2086,37 @@
         left: 0;
         right: 0;
         z-index: 15;
+    }
+
+    .bottom-shadow {
+        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
+        pointer-events: none;
+        background: linear-gradient(
+            to top,
+            hsl(320, 4.92%, 11.96%) 0%,
+            hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+            hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+            hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+            hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+            hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+            hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+            hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+            hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+            hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+            hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+            hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+            hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+            hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+            hsla(320, 4.92%, 11.96%, 0.016) 90%,
+            hsla(320, 4.92%, 11.96%, 0) 100%
+        );
+        height: 40px;
+        width: 100%;
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        z-index: 10;
+        opacity: 0.9;
     }
 </style>

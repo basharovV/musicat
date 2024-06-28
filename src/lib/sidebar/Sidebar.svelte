@@ -25,6 +25,7 @@
         currentSongArtworkSrc,
         currentSongIdx,
         draggedSongs,
+        isDraggingFromQueue,
         isFindFocused,
         isFullScreenVisualiser,
         isInfoPopupOpen,
@@ -477,6 +478,7 @@
                 }
             );
             $draggedSongs = [];
+            $isDraggingFromQueue = false;
         }
     }
 

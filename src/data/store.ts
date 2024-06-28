@@ -3,6 +3,7 @@ import type {
     ActionEvent,
     AddOriginCountryStatus,
     Album,
+    ArrowFocus,
     ArtistContentItem,
     ArtworkSrc,
     BottomBarNotification,
@@ -88,7 +89,7 @@ export const isFullScreenVisualiser = writable(false);
 export const isInfoPopupOpen = writable(false);
 export const isTrackInfoPopupOpen = writable(false);
 export const uiView: Writable<SidebarItem> = writable("library");
-
+export const arrowFocus: Writable<ArrowFocus> = writable("library");
 export const draggedColumnIdx: Writable<number | null> = writable(null);
 
 export const isWelcomeSeen: Writable<boolean> = writable(
@@ -141,6 +142,7 @@ export const smartQueryResults: Writable<Song[]> = writable([]);
 // Playlists
 export const selectedPlaylistId: Writable<number> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
+export const isDraggingFromQueue = writable(false);
 export const dragGhostReset = writable(false);
 
 // Settings

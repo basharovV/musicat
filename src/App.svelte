@@ -16,7 +16,6 @@
         isWaveformOpen,
         isWelcomeSeen,
         os,
-        playlistDuration,
         selectedPlaylistId,
         uiView
     } from "./data/store";
@@ -25,11 +24,13 @@
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
     import { fade, fly } from "svelte/transition";
+    import { db } from "./data/db";
     import { startWatching } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryImporter";
     import BottomBar from "./lib/library/BottomBar.svelte";
     import Dropzone from "./lib/library/Dropzone.svelte";
     import LyricsView from "./lib/library/LyricsView.svelte";
+    import PlaylistHeader from "./lib/library/PlaylistHeader.svelte";
     import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
@@ -41,11 +42,10 @@
     import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
     import MapView from "./lib/views/MapView.svelte";
     import NotesView from "./lib/views/NotesView.svelte";
+    import QueueOptions from "./lib/views/QueueOptions.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
-    import { db } from "./data/db";
-    import PlaylistHeader from "./lib/library/PlaylistHeader.svelte";
 
     startMenuListener();
     startImportListener();
@@ -211,7 +211,9 @@
                     class="queue-container"
                     transition:fly={{ duration: 200, x: -200 }}
                 >
+                    <!-- <QueueView /> -->
                     <QueueView />
+                    <QueueOptions />
                 </div>
             {/if}
         </div>
@@ -345,9 +347,12 @@
                 height: 100%;
                 box-sizing: border-box;
                 overflow: hidden;
-                border-bottom: 0.7px solid #ffffff36;
+                /* border-bottom: 0.7px solid #ffffff36; */
                 border-radius: 5px;
                 margin: 0px 7.5px 0 0;
+                display: grid;
+                grid-template-rows: 1fr auto;
+                gap: 5px;
                 /* display: grid; */
             }
         }

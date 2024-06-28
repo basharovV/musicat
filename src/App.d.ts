@@ -58,10 +58,10 @@ interface Song {
     songProjectId?: number; // Link to project id
     isFavourite: boolean;
     viewModel?: {
-        isFirstArtist: boolean;
-        isFirstAlbum: boolean;
+        isFirstArtist?: boolean;
+        isFirstAlbum?: boolean;
         index: number; // When viewed in a song slice, we need the actual index of this song in the list,
-        viewId: string; // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
+        viewId?: string; // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
     };
     playCount: number;
     // Returned from lofty but only written to db for albums for better grid loading performance
@@ -328,3 +328,5 @@ interface Marker {
 }
 
 type PlaylistType = "library" | "album" | "playlist" | "country"
+
+type ArrowFocus = "library" | "queue"

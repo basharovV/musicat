@@ -142,7 +142,7 @@ class AudioPlayer {
                 newCurrentSongIdx = playlist.findIndex(
                     (s) => s.id === this.currentSong?.id
                 );
-                console.log("found index", playlist, this.currentSong);
+                // console.log("found index", playlist, this.currentSong);
                 if (newCurrentSongIdx === -1) {
                     newCurrentSongIdx = 0;
                 }
