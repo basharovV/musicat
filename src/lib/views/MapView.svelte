@@ -286,6 +286,7 @@
             data = groupBy($songs, "originCountry");
             delete data.undefined;
             delete data.null;
+            delete data[""];
             nOfCountries = Object.keys(data)?.length ?? 0;
         }
     }
