@@ -134,10 +134,11 @@
 
 <style lang="scss">
     .playing {
+        transform: scale(1.1);
         .cd {
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
-            box-shadow: 2px 2px 50px 40px rgba(72, 16, 128, 0.181) !important;
+            box-shadow: 2px 2px 50px 40px rgba(72, 16, 128, 0.481) !important;
             .hinge {
                 background-color: rgba(167, 164, 173, 0.078);
             }
@@ -150,6 +151,10 @@
             background-color: #5123dd;
             border-radius: 4px;
             color: white;
+            z-index: 20;
+        }
+        .artist, .info {
+            z-index: 20;
         }
         z-index: 9;
     }
@@ -197,6 +202,7 @@
         align-items: center;
         justify-content: flex-start;
         position: relative;
+        transition: all 0.6s cubic-bezier(0.075, 0.82, 0.165, 1);
         &:hover {
         }
         * {

@@ -28,8 +28,10 @@
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
+    import { onMount } from "svelte";
 
     let isLoading = true;
+    let isInit = true;
 
     let cachedAlbums: Album[] = [];
 
@@ -103,7 +105,7 @@
         });
     }
 
-    $: if ($playlist && $currentSong) {
+    $: if (isInit && $playlist && $currentSong) {
         showCurrentlyPlayingAlbum();
     }
 
@@ -240,6 +242,10 @@
     ];
 
     let orderBy = fields[0];
+
+    onMount(() => {
+        isInit = false;
+    })
 </script>
 
 <AlbumMenu
