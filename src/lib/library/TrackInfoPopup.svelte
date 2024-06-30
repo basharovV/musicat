@@ -309,7 +309,7 @@
                         toUpdate["title"] = field.value;
                     } else if (field.genericId === "date") {
                         // DATE tag is year in the DB
-                        toUpdate["year"] = field.value;
+                        toUpdate["year"] = Number(field.value);
                     } else {
                         toUpdate[field.genericId] = field.value;
                     }
