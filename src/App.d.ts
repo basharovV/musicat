@@ -231,6 +231,7 @@ interface MapTooltipData {
 interface ToImport {
     songs: Song[];
     progress: number;
+    error?: string;
 }
 interface ReadMetadataStatus {
     progress: number;
