@@ -385,6 +385,7 @@ pub mod file_streamer {
     ) {
         // These will be reset when changing tracks
         let mut path_str: Option<String> = None;
+        let mut path_str_clone: Option<String> = None;
         let mut seek = None;
         let mut end_pos = None; // for loop region
         let mut volume = None;
@@ -410,10 +411,13 @@ pub mod file_streamer {
 
         let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
         let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
+        let mut is_looping = false;
 
         // Loop here!
         loop {
             cancel_token = CancellationToken::new();
+            println!("path_str is {:?}", path_str);
+            path_str_clone = path_str.clone(); // Used for looping
             if let None = path_str {
                 is_transition = false;
                 let event = player_control_receiver
@@ -430,12 +434,15 @@ pub mod file_streamer {
                             seek.replace(request.seek.unwrap());
                             volume.replace(request.volume.unwrap());
                             file.try_lock().unwrap().replace(request.file_info.unwrap());
+                            is_looping = false;
                         }
                         PlayerControlEvent::LoopRegion(request) => {
                             println!("audio: loop region! {:?}", request);
+                            path_str.replace(path_str_clone.unwrap());
                             seek.replace(request.start_pos.unwrap());
                             end_pos.replace(request.end_pos.unwrap());
                             cancel_token.cancel();
+                            is_looping = true;
                         }
                     }
                 }
@@ -485,6 +492,7 @@ pub mod file_streamer {
                     continue;
                 }
 
+                println!("Resetting path_str");
                 path_str = None;
 
                 let mut reader = probe_result.unwrap().format;
@@ -651,6 +659,7 @@ pub mod file_streamer {
                                             cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
+                                            is_looping = false;
                                         }
                                         PlayerControlEvent::LoopRegion(request) => {
                                             println!("audio: loop region! {:?}", request);
@@ -660,8 +669,11 @@ pub mod file_streamer {
                                             } else {
                                                 end_pos = None;
                                             }
+                                            path_str.replace(path_str_clone.clone().unwrap());
                                             cancel_token.cancel();
                                             guard.flush();
+                                            is_reset = true;
+                                            is_looping = true;
                                         }
                                     }
                                 }
@@ -703,6 +715,7 @@ pub mod file_streamer {
                                                 cancel_token.cancel();
                                                 guard.flush();
                                                 is_reset = true;
+                                                is_looping = false;
                                             }
                                             PlayerControlEvent::LoopRegion(request) => {
                                                 println!("audio: loop region! {:?}", request);
@@ -712,8 +725,11 @@ pub mod file_streamer {
                                                 } else {
                                                     end_pos = None;
                                                 }
+                                                path_str.replace(path_str_clone.clone().unwrap());
                                                 cancel_token.cancel();
                                                 guard.flush();
+                                                is_reset = true;
+                                                is_looping = true;
                                             }
                                         }
                                     }
