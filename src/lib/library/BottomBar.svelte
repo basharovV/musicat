@@ -18,7 +18,7 @@
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
-    import SpectrumAnalyzer from "../player/SpectrumAnalyzer.svelte";
+    import Oscilloscope from "../player/Oscilloscope.svelte";
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
 
@@ -106,7 +106,7 @@
         {/if}
 
         <div class="spectrum">
-            <SpectrumAnalyzer show={showVisualiser} width={visualiserWidth} />
+            <Oscilloscope show={showVisualiser} width={visualiserWidth} />
         </div>
     </div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -302,6 +302,7 @@
             .spectrum {
                 display: flex;
                 width: 100%;
+                margin-left: 10px;
                 max-width: 200px;
                 height: 30px;
                 position: relative;
