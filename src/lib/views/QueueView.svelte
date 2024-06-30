@@ -266,7 +266,7 @@
         // );
         setTimeout(() => {
             scrollContainer.scrollTo({
-                top: (contentHeight - viewportHeight) * $libraryScrollPos,
+                top: 0,
                 behavior: "instant"
             });
             ready = true;
@@ -610,7 +610,7 @@
     let currentSongScrollIdx = null;
 
     function onDoubleClickSong(song, idx) {
-        audioPlayer.playSong(song);
+        audioPlayer.playSong(song, 0, true, idx);
     }
 
     function onRightClick(e, song, idx) {
@@ -1076,7 +1076,10 @@
                                 {#each songsSlice as song, songIdx (song.viewModel?.viewId ?? songIdx)}
                                     <Group
                                         on:dblclick={() =>
-                                            onDoubleClickSong(song, songIdx)}
+                                            onDoubleClickSong(
+                                                song,
+                                                song?.viewModel?.index
+                                            )}
                                         on:click={(e) => {
                                             if (e.detail.evt.button === 2) {
                                                 onRightClick(
@@ -1141,8 +1144,9 @@
                                                     draggingSongIdx ===
                                                     song.viewModel?.index
                                                         ? DRAGGING_SOURCE_COLOR
-                                                        : $currentSong?.id ===
-                                                            song?.id
+                                                        : $currentSongIdx ===
+                                                            song?.viewModel
+                                                                ?.index
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
                                                               isSongIdxHighlighted(
@@ -1207,8 +1211,8 @@
                                                     fontSize: 13.5,
                                                     verticalAlign: "middle",
                                                     fill:
-                                                        $currentSong?.id ===
-                                                        song.id
+                                                        $currentSongIdx ===
+                                                        song?.viewModel?.index
                                                             ? PLAYING_TEXT_COLOR
                                                             : TEXT_COLOR,
                                                     ellipsis:
@@ -1234,7 +1238,7 @@
 
                                             {#if f.value === "title"}
                                                 <!-- Now playing icon -->
-                                                {#if $currentSong?.id === song.id}
+                                                {#if $currentSongIdx === song?.viewModel?.index}
                                                     <Path
                                                         config={{
                                                             x:
@@ -1634,7 +1638,7 @@
         right: 0;
         z-index: 15;
     }
-    
+
     .bottom-shadow {
         font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
         pointer-events: none;

@@ -192,6 +192,12 @@ class AudioPlayer {
             playerTime.set(event.payload);
             isPlaying.set(true);
         });
+
+        appWindow.listen("stopped", async (event: any) => {
+            this.isStopped = true;
+            playerTime.set(0);
+            isPlaying.set(false);
+        });
     }
 
     async setupBuffers() {
@@ -354,6 +360,15 @@ class AudioPlayer {
             });
         } else {
             nextUpSong.set(null);
+            // Tell the backend to clear the queue
+            invoke("queue_next", {
+                event: {
+                    path: null,
+                    seek: 0,
+                    file_info: null,
+                    volume: get(volume)
+                }
+            });
         }
     }
 
@@ -365,7 +380,7 @@ class AudioPlayer {
 
     // MEDIA
 
-    async playSong(song: Song, position = 0, play = true) {
+    async playSong(song: Song, position = 0, play = true, index = null) {
         if (song) {
             // this.pause();
             this.isRunningTransition = false;
@@ -404,9 +419,12 @@ class AudioPlayer {
                 this.incrementPlayCounter(song);
             }
             this.shouldPlay = play;
-            let newCurrentSongIdx = this.playlist.findIndex(
-                (s) => s.id === this.currentSong?.id
-            );
+            let newCurrentSongIdx =
+                index !== null
+                    ? index
+                    : this.playlist.findIndex(
+                          (s) => s.id === this.currentSong?.id
+                      );
             if (newCurrentSongIdx === -1) {
                 newCurrentSongIdx = 0;
             }

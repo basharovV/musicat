@@ -7,6 +7,7 @@
         queriedSongs,
         shuffledPlaylist
     } from "../../data/store";
+    import audioPlayer from "../player/AudioPlayer";
     import Input from "../ui/Input.svelte";
 
     let playlistName = "";
@@ -58,6 +59,7 @@
         disabled={($isShuffleEnabled ? $shuffledPlaylist : $playlist).length ===
             1}
         on:click={() => {
+            audioPlayer.shouldPlay = false; // Avoid re-starting playback after playlist change
             if ($isShuffleEnabled) {
                 $shuffledPlaylist = [$currentSong];
             } else {

@@ -1028,7 +1028,7 @@
                 {#if codec}
                     <div class="file" class:empty={!title && !album && !artist}>
                         <p>{codec}</p>
-                        {#if bitrate}<p>{bitrate} bit</p>{/if}
+                        <!-- {#if bitrate}<p>{bitrate} bit</p>{/if} -->
                         <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
                         <p>{stereo ? "stereo" : "mono"}</p>
                     </div>
@@ -1346,13 +1346,6 @@
                 }
                 .chevron {
                     visibility: visible;
-                }
-                &::after {
-                    content: "";
-                    height: 1.5px;
-                    background-color: #504c4c6c;
-                    width: 150px;
-                    position: relative;
                 }
             }
 
