@@ -137,15 +137,23 @@
             .toString()
             .padStart(2, "0")}`;
     }
+
+    // The artwork for this track(s)
     let artworkFormat;
     let artworkBuffer: Buffer;
     let artworkSrc;
+
+    // When scrolling through tracks, re-use artworks
     let previousArtworkFormat;
     let previousArtworkSrc;
 
-    let foundArtwork;
+    // The preliminary artwork to be set (from an image on disk)
+    let artworkToSetSrc = null;
+    let artworkToSetFormat = null;
     let isArtworkSet = false;
     let artworkFileToSet = null;
+
+    let foundArtwork;
 
     $: hasChanges =
         isArtworkSet || !isEqual(metadata?.mappedMetadata, metadataFromFile);
@@ -264,8 +272,17 @@
         }
         console.log($rightClickedTrack || $rightClickedTracks[0]);
 
-        if (toImport)
-            await reImportTracks(toImport);
+        if (toImport) {
+            if (toImport.error) {
+                // Show error
+                toast.error(toImport.error);
+                // Roll back to current artwork
+                artworkToSetFormat = null;
+                artworkToSetSrc = null;
+            } else {
+                await reImportTracks(toImport);
+            }
+        }
 
         artworkFileToSet = null;
         isArtworkSet = false;
@@ -355,10 +372,8 @@
                 // const imageData = await (await response.body.getReader().read()).value;
                 // const imageData = await imageUrlToBase64(artworkSrc);
                 // console.log("body", imageData)
-                artworkSrc = src;
-                artworkFileToSet = selected;
-                previousArtworkSrc = src;
-                previousArtworkFormat = type;
+                artworkToSetSrc = src;
+                artworkToSetFormat = type;
                 // return {
                 //     artworkSrc: src,
                 //     artworkFormat: "image/jpeg",
@@ -386,6 +401,8 @@
     async function updateArtwork() {
         artworkFormat = null;
         artworkSrc = null;
+        artworkToSetFormat = null;
+        artworkToSetSrc = null;
         foundArtwork = null;
         isArtworkSet = false;
         artworkFileToSet = null;
@@ -890,12 +907,13 @@
                 on:click={onImageClick}
             >
                 <div class="artwork-frame">
-                    {#if (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
+                    {#if (artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
                         <img
                             alt="Artwork"
-                            type={previousArtworkFormat || artworkFormat}
                             class="artwork"
-                            src={previousArtworkSrc || artworkSrc}
+                            src={artworkToSetSrc ||
+                                previousArtworkSrc ||
+                                artworkSrc}
                         />
                     {:else}
                         <div class="artwork-placeholder">

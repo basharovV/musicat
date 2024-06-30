@@ -4,6 +4,7 @@
 
 pub mod file_streamer {
     use std::sync::mpsc::{Receiver, Sender, TryRecvError};
+    use std::thread;
     use std::time::Instant;
 
     use std::collections::HashMap;
@@ -152,7 +153,7 @@ pub mod file_streamer {
             let _ = &self
                 .decoding_active
                 .store(ACTIVE, std::sync::atomic::Ordering::Relaxed);
-            wake_one(self.decoding_active.as_ref());
+            wake_all(self.decoding_active.as_ref());
         }
 
         pub async fn init_webrtc(
@@ -391,7 +392,7 @@ pub mod file_streamer {
 
         let mut spec: SignalSpec = SignalSpec::new_with_layout(44100, Layout::Stereo);
         let mut duration: u64 = 512;
-        let mut device_sample_rate = 44100;
+        let mut previous_sample_rate = 44100;
 
         let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
         let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
@@ -408,6 +409,7 @@ pub mod file_streamer {
         let mut cancel_token;
 
         let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
+        let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
 
         // Loop here!
         loop {
@@ -419,7 +421,7 @@ pub mod file_streamer {
                     .unwrap()
                     .recv_timeout(Duration::from_secs(1));
 
-                // println!("audio: waiting for file! {:?}", event);
+                println!("audio: waiting for file! {:?}", event);
                 if let Ok(result) = event {
                     match result {
                         PlayerControlEvent::StreamFile(request) => {
@@ -482,6 +484,9 @@ pub mod file_streamer {
                     path_str = None;
                     continue;
                 }
+
+                path_str = None;
+
                 let mut reader = probe_result.unwrap().format;
 
                 let track = reader.default_track().unwrap().clone();
@@ -535,7 +540,7 @@ pub mod file_streamer {
                     channels: decoder.codec_params().channels.unwrap(),
                 };
 
-                let mut device_changed = false;
+                let mut should_reset_audio = false;
                 let mut new_duration = 1152;
 
                 let max_frames = decoder.codec_params().max_frames_per_packet;
@@ -554,16 +559,25 @@ pub mod file_streamer {
                 // Check if track sample rate differs from current OS config
                 if let Some(device) = output_device {
                     println!("cpal: Default device {:?}", device.name());
-                    if let Ok(config) = device.default_output_config() {
-                        let new_sample_rate = config.sample_rate().0;
-                        if (device_sample_rate != new_sample_rate) {
-                            device_changed = true;
-                        }
-                        device_sample_rate = new_sample_rate;
-                    }
+                    // Only resample when audio device doesn't support file sample rate
+                    // so we can't switch the device rate to match.
+                    let supports_sample_rate = device
+                        .supported_output_configs()
+                        .unwrap()
+                        .find(|c| {
+                            return c
+                                .try_with_sample_rate(cpal::SampleRate(spec.rate))
+                                .is_some();
+                        })
+                        .is_some();
+                    // If sample rate changed - reinit the audio device with the new sample rate
+                    // (if this sample rate isn't supported, it will be resampled)
+                    should_reset_audio = supports_sample_rate && spec.rate != previous_sample_rate;
                 }
 
-                if (audio_output.is_none() || device_changed) {
+                previous_sample_rate = spec.rate;
+
+                if (audio_output.is_none() || should_reset_audio) {
                     // Try to open the audio output.
                     audio_output.replace(output::try_open(
                         spec,
@@ -601,9 +615,20 @@ pub mod file_streamer {
                         if let Ok(mut guard) = ao.try_lock() {
                             let mut transition_time = Instant::now();
                             let mut started_transition = false;
-                            
+
                             // Resampling stuff
+                            guard.resume();
                             guard.update_resampler(spec, new_duration);
+
+                            // Until all samples have been flushed - don't start decoding
+                            // Keep checking until all samples have been played (buffer is empty)
+                            if is_reset {
+                                while guard.has_remaining_samples() {
+                                    guard.flush();
+                                    println!("Buffer is not empty yet, waiting to continue...");
+                                }
+                                println!("Buffer is now empty. Continuing decoding...");
+                            }
 
                             // Decode all packets, ignoring all decode errors.
                             let result = loop {
@@ -625,6 +650,7 @@ pub mod file_streamer {
                                                 .replace(request.file_info.unwrap());
                                             cancel_token.cancel();
                                             guard.flush();
+                                            is_reset = true;
                                         }
                                         PlayerControlEvent::LoopRegion(request) => {
                                             println!("audio: loop region! {:?}", request);
@@ -672,6 +698,7 @@ pub mod file_streamer {
                                                     .replace(request.file_info.unwrap());
                                                 cancel_token.cancel();
                                                 guard.flush();
+                                                is_reset = true;
                                             }
                                             PlayerControlEvent::LoopRegion(request) => {
                                                 println!("audio: loop region! {:?}", request);
@@ -692,6 +719,7 @@ pub mod file_streamer {
                                 if cancel_token.is_cancelled() {
                                     break Ok(());
                                 }
+
                                 let packet = match reader.next_packet() {
                                     Ok(packet) => packet,
                                     Err(err) => break Err(err),
@@ -821,16 +849,30 @@ pub mod file_streamer {
                                         next_track.replace(value);
                                     }
                                     if let Some(request) = next_track {
-                                        let path = request.path.clone().unwrap();
+                                        if let Some(path) = request.path.clone() {
+                                            is_transition = true;
+                                            println!("player: next track received! {:?}", request);
+                                            path_str.replace(path);
+                                            seek.replace(request.seek.unwrap());
+                                            volume.replace(request.volume.unwrap());
+                                            file.try_lock()
+                                                .unwrap()
+                                                .replace(request.file_info.unwrap());
+                                            is_reset = false;
+                                        } else {
+                                            println!("player: nothing else in the queue");
 
-                                        is_transition = true;
-                                        println!("audio: next track received! {:?}", request);
-                                        path_str.replace(request.path.unwrap());
-                                        seek.replace(request.seek.unwrap());
-                                        volume.replace(request.volume.unwrap());
-                                        file.try_lock()
-                                            .unwrap()
-                                            .replace(request.file_info.unwrap());
+                                            // Keep checking until all samples have been played (buffer is empty)
+                                            while guard.has_remaining_samples() {
+                                                println!(
+                                                    "Buffer is not empty yet, waiting to pause..."
+                                                );
+                                                thread::sleep(Duration::from_millis(500));
+                                            }
+                                            println!("Buffer is now empty. Pausing stream...");
+                                            guard.pause();
+                                            app_handle.emit_all("stopped", Some(0.0f64));
+                                        }
                                     }
                                     // Do not treat "end of stream" as a fatal error. It's the currently only way a
                                     // format reader can indicate the media is complete.

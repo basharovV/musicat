@@ -46,6 +46,7 @@ arrayvec = "0.7.4"
 env_logger = "0.11.3"
 rustfft = "6.2.0"
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+anyhow = "1.0.86"
 
 [features]
 # by default Tauri runs in production mode

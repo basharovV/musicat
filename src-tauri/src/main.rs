@@ -3,6 +3,7 @@
     windows_subsystem = "windows"
 )]
 
+use bytes::buf::Reader;
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::{
     read_from_path, AudioFile, ItemKey, ItemValue, Picture, Probe, TagItem, TagType, TaggedFileExt,
@@ -15,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::error::Error;
 use std::fs::{self, File};
-use std::io::BufReader;
+use std::io::{BufReader, ErrorKind};
 use std::ops::{Deref, Mul};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -128,6 +129,7 @@ async fn write_metadata(event: WriteMetatadaEvent, app_handle: tauri::AppHandle)
     let to_import = ToImportEvent {
         songs: songs.lock().unwrap().clone(),
         progress: 100,
+        error: None,
     };
     return to_import;
 }
@@ -140,6 +142,8 @@ async fn write_metadatas(
     println!("{:?}", event);
     // let payload: &str = event.payload().unwrap();
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut error: Option<String> = None;
 
     // let v: WriteMetatadaEvent = serde_json::from_str(payload).unwrap();
     for track in event.tracks.iter() {
@@ -154,7 +158,21 @@ async fn write_metadatas(
                 println!("Wrote metadata")
             }
             Err(err) => {
-                println!("{}", err)
+                match err.downcast_ref::<std::io::Error>() {
+                    Some(io_err) => match (io_err.kind()) {
+                        ErrorKind::PermissionDenied => {
+                            error.replace(String::from(
+                                "Permission denied. Check your file permissions and try again",
+                            ));
+                            break;
+                        }
+                        _ => {
+                            panic!("{}", io_err);
+                        }
+                    },
+                    None => {}
+                }
+                println!("Error writing metadata: {}", err);
             }
         }
     }
@@ -163,6 +181,7 @@ async fn write_metadatas(
     let to_import = ToImportEvent {
         songs: songs.lock().unwrap().clone(),
         progress: 100,
+        error: error,
     };
     return to_import;
 }
@@ -231,6 +250,7 @@ pub struct Song {
 struct ToImportEvent {
     songs: Vec<Song>,
     progress: u8,
+    error: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -258,7 +278,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
 
     event.paths.par_iter().for_each(|p| {
         let path = Path::new(p.as_str());
-        println!("{:?}", path);
+        // println!("{:?}", path);
 
         if path.is_file() {
             if let Some(song) = crate::metadata::extract_metadata(&path) {
@@ -297,12 +317,14 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
                 ToImportEvent {
                     songs: slice.to_vec(),
                     progress: progress,
+                    error: None,
                 },
             );
         });
         ToImportEvent {
             songs: songs.lock().unwrap().clone(),
             progress: 100,
+            error: None,
         }
     } else {
         let _ = app_handle.emit_all(
@@ -310,11 +332,13 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
             ToImportEvent {
                 songs: songs.lock().unwrap().clone(),
                 progress: 100,
+                error: None,
             },
         );
         ToImportEvent {
             songs: songs.lock().unwrap().clone(),
             progress: 100,
+            error: None,
         }
     }
 }
@@ -393,7 +417,9 @@ fn build_menu() -> Menu {
     #[cfg(dev)]
     let newMenu = menu.add_submenu(Submenu::new(
         "DevTools",
-        Menu::new().add_item(CustomMenuItem::new("clear-db", "Clear DB")),
+        Menu::new()
+            .add_item(CustomMenuItem::new("clear-db", "Clear DB"))
+            .add_item(CustomMenuItem::new("open-cache", "Open cache directory")),
     ));
     #[cfg(dev)]
     return newMenu;
@@ -429,7 +455,7 @@ fn map_id3v1_to_id3v2_4(key: &str) -> Option<&'static str> {
     }
 }
 
-fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
+fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
     // println!("got event-name with payload {:?}", event.payload());
 
     // Parse JSON
@@ -528,12 +554,11 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), Box<dyn Error>> {
                 let picture_file = File::options()
                     .read(true)
                     .write(true)
-                    .open(&Path::new(&v.artwork_file_to_set))
-                    .unwrap();
+                    .open(&Path::new(&v.artwork_file_to_set))?;
 
                 let mut reader = BufReader::new(picture_file);
-                let picture = Picture::from_reader(reader.get_mut());
-                to_write.set_picture(0, picture.unwrap());
+                let pic = Picture::from_reader(reader.get_mut());
+                to_write.set_picture(0, pic.unwrap());
             }
 
             for tag_item in tag.tags() {
@@ -626,6 +651,7 @@ fn queue_next(
     _app_handle: tauri::AppHandle,
 ) {
     println!("Queue next file {:?}", event);
+    // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
 }
 

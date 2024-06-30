@@ -23,6 +23,8 @@ where
     T: Sample + FromSample<f32> + IntoSample<f32>,
 {
     fn resample_inner(&mut self) -> &[T] {
+        let mut output: Vec<Vec<f32>> = Default::default();
+
         {
             let mut input: arrayvec::ArrayVec<&[f32], 32> = Default::default();
 
@@ -31,13 +33,7 @@ where
             }
 
             // Resample.
-            rubato::Resampler::process_into_buffer(
-                &mut self.resampler,
-                &input,
-                &mut self.output,
-                None,
-            )
-            .unwrap();
+            output = rubato::Resampler::process(&mut self.resampler, &input, None).unwrap();
         }
 
         // Remove consumed samples from the input buffer.
@@ -46,14 +42,14 @@ where
         }
 
         // Interleave the planar samples from Rubato.
-        let num_channels = self.output.len();
+        let num_channels = output.len();
 
         self.interleaved
-            .resize(num_channels * self.output[0].len(), T::MID);
+            .resize(num_channels * output[0].len(), T::MID);
 
         for (i, frame) in self.interleaved.chunks_exact_mut(num_channels).enumerate() {
             for (ch, s) in frame.iter_mut().enumerate() {
-                *s = self.output[ch][i].into_sample();
+                *s = output[ch][i].into_sample();
             }
         }
 
@@ -132,18 +128,12 @@ where
             return None;
         }
 
-        let partial_len = len % self.duration;
-
-        if partial_len != 0 {
-            // Fill each input channel buffer with silence to the next multiple of the resampler
-            // duration.
-            for channel in self.input.iter_mut() {
-                channel.clear();
-                channel.resize(len + (self.duration - partial_len), f32::MID);
-            }
+        for channel in self.input.iter_mut() {
+            channel.drain(0..len);
+            // channel.resize(len + (self.duration - partial_len), f32::MID);
         }
 
-        Some(self.resample_inner())
+        None
     }
 }
 

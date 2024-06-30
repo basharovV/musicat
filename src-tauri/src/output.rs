@@ -24,6 +24,7 @@ pub trait AudioOutput {
     fn pause(&self);
     fn resume(&self);
     fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool;
+    fn has_remaining_samples(&self) -> bool;
 }
 
 #[allow(dead_code)]
@@ -252,8 +253,31 @@ mod cpal {
                 }
             };
 
+            // Only resample when audio device doesn't support file sample rate
+            // so we can't switch the device rate to match.
+            let supports_sample_rate = device
+                .supported_output_configs()
+                .unwrap()
+                .find(|c| {
+                    return c
+                        .try_with_sample_rate(cpal::SampleRate(spec.rate))
+                        .is_some();
+                })
+                .is_some();
+
+            println!(
+                "output: supports sample rate ({}) ? {}",
+                spec.rate, supports_sample_rate
+            );
+
+            let rate = if supports_sample_rate {
+                spec.rate
+            } else {
+                config.sample_rate().0
+            };
+
             let spec = SignalSpec::new_with_layout(
-                config.sample_rate().0,
+                rate,
                 match config.channels() {
                     1 => Layout::Mono,
                     2 => Layout::Stereo,
@@ -390,7 +414,7 @@ mod cpal {
                 cpal::StreamConfig {
                     channels: num_channels as cpal::ChannelCount,
                     sample_rate: cpal::SampleRate(spec.rate),
-                    buffer_size: cpal::BufferSize::Default
+                    buffer_size: cpal::BufferSize::Default,
                 }
             } else {
                 // Use the default config for Windows.
@@ -399,7 +423,6 @@ mod cpal {
                     .expect("Failed to get the default output config.")
                     .config()
             };
-
 
             let time_base = TimeBase {
                 numer: 1,
@@ -563,6 +586,7 @@ mod cpal {
         fn write(&mut self, decoded: AudioBufferRef<'_>) -> () {
             // Do nothing if there are no audio frames.
             if decoded.frames() == 0 {
+                println!("No more samples.");
                 return;
             }
 
@@ -596,8 +620,16 @@ mod cpal {
             }
 
             // Flush is best-effort, ignore the returned result.
+
             self.sample_buf.clear();
             self.ring_buf.clear();
+
+            // Check what's left now
+            println!(
+                "Sample buf empty: {}, Ring buf empty:{} ",
+                self.sample_buf.is_empty(),
+                self.ring_buf.is_empty()
+            );
         }
 
         fn get_sample_rate(&self) -> u32 {
@@ -622,43 +654,27 @@ mod cpal {
             // we check if the track spec differs from the output device
             // if it does - resample the decoded audio using Symphonia.
 
-            // Check if track sample rate differs from current OS config
-            if let Some(device) = output_device {
-                println!("cpal: Default device {:?}", device.name());
-                if let Ok(config) = device.default_output_config() {
-                    println!("cpal: Default config {:?}", config);
-                    let buffer_size = match config.buffer_size() {
-                        SupportedBufferSize::Range { min, max } => (*max) as u64,
-                        SupportedBufferSize::Unknown => 4096 as u64,
-                    };
-                    if config.sample_rate().0 != spec.rate {
-                        println!(
-                            "resampling {} Hz to {} Hz",
-                            spec.rate,
-                            config.sample_rate().0
-                        );
-                        self.resampler.replace(Resampler::new(
-                            spec,
-                            config.sample_rate().0 as usize,
-                            max_frames,
-                        ));
-                        return true;
-                    } else {
-                        self.resampler.take();
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
+            if self.sample_rate != spec.rate {
+                println!(
+                    "resampling {} Hz to {} Hz",
+                    spec.rate,
+                    self.sample_rate
+                );
+                self.resampler.replace(Resampler::new(
+                    spec,
+                    self.sample_rate as usize,
+                    max_frames,
+                ));
+                return true;
             } else {
-                // If default audio device doesn't exist for some reason
-                // Fallback to comparing spec changes between tracks
-                // and re-initializing the audio device if needed
-                // NOTE: This will introduce audible gaps between tracks
-                // Check if spec has changed, reinit audio
                 self.resampler.take();
                 return false;
             }
+        }
+
+        /// Checks if there are any samples left in the buffer that have not been played yet.
+        fn has_remaining_samples(&self) -> bool {
+            !self.ring_buf.is_empty()
         }
     }
 }
