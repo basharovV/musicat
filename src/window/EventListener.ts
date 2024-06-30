@@ -14,24 +14,14 @@ import {
 } from "../data/store";
 import { db } from "../data/db";
 import type { ToImport } from "../App";
-import { deleteCacheDirectory } from "../data/Cacher";
+import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
+import { open } from "@tauri-apps/api/shell";
+import { appDataDir, dataDir } from "@tauri-apps/api/path";
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {
         console.log("menu", event);
         switch (payload) {
-            case "clear-db":
-                console.log("clear-db");
-                await db.songs.clear();
-                await db.albums.clear();
-                await db.smartQueries.clear();
-                await db.songProjects.clear();
-                await db.artistProjects.clear();
-                await db.scrapbook.clear();
-                await db.playlists.clear();
-                await db.delete();
-                await deleteCacheDirectory();
-                break;
             case "about":
                 console.log("about");
                 isInfoPopupOpen.set(true);
@@ -59,6 +49,28 @@ export function startMenuListener() {
                 break;
             case "library":
                 uiView.set("library");
+                break;
+            // DevTools
+            case "clear-db":
+                console.log("clear-db");
+                await db.songs.clear();
+                await db.albums.clear();
+                await db.smartQueries.clear();
+                await db.songProjects.clear();
+                await db.artistProjects.clear();
+                await db.scrapbook.clear();
+                await db.playlists.clear();
+                await db.delete();
+                await deleteCacheDirectory();
+                break;
+            case "open-cache":
+                try {
+                    const dir = await appDataDir();
+                    console.log("dir", dir);
+                    open(`${dir}${CACHE_DIR}`);
+                } catch (err) {
+                    console.error(err);
+                }
                 break;
         }
     });
