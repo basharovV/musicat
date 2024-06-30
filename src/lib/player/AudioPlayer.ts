@@ -190,13 +190,22 @@ class AudioPlayer {
 
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
-            isPlaying.set(true);
         });
 
         appWindow.listen("stopped", async (event: any) => {
             this.isStopped = true;
             playerTime.set(0);
             isPlaying.set(false);
+        });
+
+        appWindow.listen("paused", async (event: any) => {
+            this.isStopped = false;
+            isPlaying.set(false);
+        });
+
+        appWindow.listen("playing", async (event: any) => {
+            this.isStopped = false;
+            isPlaying.set(true);
         });
     }
 

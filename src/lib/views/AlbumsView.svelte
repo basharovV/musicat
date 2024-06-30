@@ -83,7 +83,7 @@
 
         // Find the album currently playing
         currentAlbum = await db.albums.get(
-            md5(`${albumPath} - ${$currentSong.album}`)
+            md5(`${$currentSong.artist} - ${$currentSong.album}`.toLowerCase())
         );
         if (!currentAlbum) return;
         let tracks = await db.songs
@@ -245,7 +245,7 @@
 
     onMount(() => {
         isInit = false;
-    })
+    });
 </script>
 
 <AlbumMenu
@@ -358,6 +358,9 @@
             <p>Scroll to Now playing</p>
         </div>
     {/if}
+
+    <div class="top-shadow" />
+    <div class="bottom-shadow" />
 </div>
 
 <style lang="scss">
@@ -372,7 +375,8 @@
         box-sizing: border-box;
         overflow: hidden;
         /* border: 0.7px solid #ffffff0b; */
-        border-top: 0.7px solid #ffffff36;
+        border-top: 0.7px solid #ffffff19;
+        border-bottom: 0.7px solid #ffffff2a;
     }
     .grid-container {
         overflow-x: hidden;
@@ -602,5 +606,68 @@
         100% {
             height: 15px;
         }
+    }
+
+    .bottom-shadow {
+        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
+        pointer-events: none;
+        background: linear-gradient(
+            to top,
+            hsl(320, 4.92%, 11.96%) 0%,
+            hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+            hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+            hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+            hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+            hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+            hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+            hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+            hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+            hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+            hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+            hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+            hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+            hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+            hsla(320, 4.92%, 11.96%, 0.016) 90%,
+            hsla(320, 4.92%, 11.96%, 0) 100%
+        );
+        height: 50px;
+        width: 100%;
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        z-index: 10;
+        opacity: 0.8;
+    }
+
+    .top-shadow {
+        pointer-events: none;
+        background: linear-gradient(
+            to bottom,
+            hsl(320, 4.92%, 11.96%) 0%,
+            hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
+            hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
+            hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
+            hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
+            hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
+            hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
+            hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
+            hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
+            hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
+            hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
+            hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
+            hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
+            hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
+            hsla(320, 4.92%, 11.96%, 0.016) 90%,
+            hsla(320, 4.92%, 11.96%, 0) 100%
+        );
+        height: 40px;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 20;
+        opacity: 0.8;
     }
 </style>

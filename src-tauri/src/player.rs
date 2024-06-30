@@ -674,10 +674,14 @@ pub mod file_streamer {
                                     println!("Sending paused state to output");
                                     guard.pause();
                                     let _ = playback_state_sender.send(false);
+                                    app_handle.emit_all("paused", {});
                                 }
 
                                 // waits while the value is PAUSED (0)
                                 atomic_wait::wait(&decoding_active, PAUSED);
+
+                                app_handle.emit_all("playing", {});
+
                                 if (is_paused) {
                                     is_paused = false;
                                     guard.resume();
