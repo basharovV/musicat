@@ -39,6 +39,7 @@
         importStatus,
         isCmdOrCtrlPressed,
         isPlaying,
+        isQueueCleared,
         isQueueOpen,
         isShuffleEnabled,
         isSmartQueryBuilderOpen,
@@ -767,7 +768,9 @@
     function onDoubleClickSong(song, idx) {
         AudioPlayer.shouldPlay = false;
         $currentSongIdx = idx;
-        $playlist = $queriedSongs;
+        if (!$isQueueCleared) {
+            $playlist = $queriedSongs;
+        }
         $playlistType = $uiView === "playlists" ? "playlist" : "library";
         AudioPlayer.playSong(song);
     }

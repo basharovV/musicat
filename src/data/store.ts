@@ -211,6 +211,7 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 export const isQueueOpen = writable(false);
+export const isQueueCleared = writable(false);
 
 export const isCmdOrCtrlPressed = writable(false);
 

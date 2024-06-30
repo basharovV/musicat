@@ -1088,7 +1088,7 @@
                 class="transport-middle"
                 size={36}
                 icon="fe:forward"
-                disabled={$currentSongIdx === $playlist?.length - 1}
+                disabled={$playlist.length === 0 || $currentSongIdx === $playlist?.length - 1}
                 onClick={() => audioPlayer.playNext()}
             />
             <Icon

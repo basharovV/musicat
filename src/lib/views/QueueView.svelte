@@ -1339,6 +1339,22 @@
                                         }}
                                     />
                                 {/if}
+                            {:else}
+                                <Text
+                                    config={{
+                                        x: 10,
+                                        y: HEADER_HEIGHT,
+                                        text: "Nothing here yet",
+                                        listening: false,
+                                        align: "left",
+                                        width: width,
+                                        padding: 2,
+                                        height: HEADER_HEIGHT,
+                                        fontSize: 13.5,
+                                        verticalAlign: "middle",
+                                        fill: TEXT_COLOR
+                                    }}
+                                />
                             {/if}
                         </Layer>
                         <Layer>

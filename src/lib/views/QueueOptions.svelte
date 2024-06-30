@@ -2,6 +2,7 @@
     import { db } from "../../data/db";
     import {
         currentSong,
+        isQueueCleared,
         isShuffleEnabled,
         playlist,
         queriedSongs,
@@ -57,22 +58,24 @@
     <button
         class="clear-btn"
         disabled={($isShuffleEnabled ? $shuffledPlaylist : $playlist).length ===
-            1}
+            0}
         on:click={() => {
             audioPlayer.shouldPlay = false; // Avoid re-starting playback after playlist change
             if ($isShuffleEnabled) {
-                $shuffledPlaylist = [$currentSong];
+                $shuffledPlaylist = [];
             } else {
-                $playlist = [$currentSong];
+                $playlist = [];
             }
+            $isQueueCleared = true;
         }}>Clear queue</button
     >
     <button
         class="fill-btn"
-        disabled={($isShuffleEnabled ? $shuffledPlaylist : $playlist).length >
+        disabled={($isShuffleEnabled ? $shuffledPlaylist : $playlist).length >=
             1}
         on:click={() => {
             $playlist = $queriedSongs;
+            $isQueueCleared = false;
         }}>Mirror library</button
     >
 </div>
