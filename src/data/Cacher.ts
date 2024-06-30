@@ -33,7 +33,7 @@ import { appDataDir } from "@tauri-apps/api/path";
 //         }
 //     });
 // }
-const CACHE_DIR =
+export const CACHE_DIR =
     process.env.NODE_ENV === "development" ? "cache-dev" : "cache";
 
 /**

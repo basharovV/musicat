@@ -130,10 +130,10 @@ export async function getSongFromMetadata(
 async function getAlbumFromSong(song: Song) {
     const albumPath = song.path.replace(`/${song.file}`, "");
     const existingAlbum = await db.albums.get(
-        md5(`${albumPath} - ${song.album}`)
+        md5(`${song.artist} - ${song.album}`.toLowerCase())
     );
     if (existingAlbum) {
-        console.log("existing album", `${albumPath} - ${song.album}`);
+        console.log("existing album", `${song.artist} - ${song.album}`.toLowerCase());
         existingAlbum.tracksIds.push(song.id);
         existingAlbum.trackCount++;
         if (!existingAlbum.artwork) {
@@ -142,10 +142,10 @@ async function getAlbumFromSong(song: Song) {
         return existingAlbum;
         // Re-order trackIds in album order?
     } else {
-        console.log("new album", `${albumPath} - ${song.album}`);
+        console.log("new album", `${song.artist} - ${song.album}`.toLowerCase());
 
         const newAlbum: Album = {
-            id: md5(`${albumPath} - ${song.album}`),
+            id: md5(`${song.artist} - ${song.album}`.toLowerCase()),
             title: song.album,
             artist: song.artist,
             genre: song.genre,
@@ -379,7 +379,7 @@ export async function startImportListener() {
 
             worker.onmessage = async (ev) => {
                 switch (ev.data.event) {
-                    case "handleImport":
+                    case "handleImportDone":
                         // Import chunk completed
                         chunksToProcess.splice(
                             chunksToProcess.findIndex(
@@ -397,7 +397,7 @@ export async function startImportListener() {
                         }
                         break;
                     // Last step - finish after this
-                    case "bulkAlbumPut":
+                    case "bulkAlbumPutDone":
                         importStatus.update((importStatus) => ({
                             ...importStatus,
                             status: "Processing albums",
@@ -510,7 +510,6 @@ export async function lookForArt(
 }
 
 async function addAlbumArtworkFromSong(song: Song, newAlbum: Album) {
-    // console.log("adding artwork from song", song, newAlbum);
     const artwork = await lookForArt(song.path, song.file);
     if (artwork) {
         const artworkSrc = artwork.artworkSrc;
@@ -532,7 +531,6 @@ async function addAlbumArtworkFromSong(song: Song, newAlbum: Album) {
             song.artwork.format
         );
 
-        // console.log("artworkSrc", artworkSrc);
         newAlbum.artwork = {
             src: convertFileSrc(path),
             format: artworkFormat,
@@ -626,8 +624,8 @@ export async function addArtworksToAllAlbums(
             const albumPath = song.path.replace(`/${song.file}`, "");
 
             const existingAlbum =
-                albumsToPut[md5(`${albumPath} - ${song.album}`)] ||
-                (await db.albums.get(md5(`${albumPath} - ${song.album}`)));
+                albumsToPut[md5(`${song.artist} - ${song.album}`.toLowerCase())] ||
+                (await db.albums.get(md5(`${song.artist} - ${song.album}`.toLowerCase())));
 
             if (existingAlbum) {
                 if (!existingAlbum.artwork) {

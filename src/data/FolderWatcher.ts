@@ -86,7 +86,7 @@ export async function startWatching() {
                                     ""
                                 );
 
-                                let id = md5(`${albumPath} - ${song.album}`);
+                                let id = md5(`${song.artist} - ${song.album}`.toLowerCase());
                                 await db.albums.delete(id);
                             }
                         } else {

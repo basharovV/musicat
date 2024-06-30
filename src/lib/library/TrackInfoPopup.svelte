@@ -26,6 +26,7 @@
     import {
         isTrackInfoPopupOpen,
         os,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks
     } from "../../data/store";
@@ -163,25 +164,24 @@
     async function getArtwork() {
         if ($rightClickedTrack === null && !$rightClickedTracks.length) {
             return;
-        }       
-         console.log('getting artwork', $rightClickedTrack, $rightClickedTracks);
+        }
+        console.log("getting artwork", $rightClickedTrack, $rightClickedTracks);
 
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
-            
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: { path }
             });
             if (songWithArtwork.artwork) {
-                console.log('artwork');
-                artworkFormat =songWithArtwork.artwork.format;
+                console.log("artwork");
+                artworkFormat = songWithArtwork.artwork.format;
                 artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                 artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                     "base64"
                 )}`;
 
                 previousArtworkFormat = artworkFormat;
-                    previousArtworkSrc = artworkSrc;
+                previousArtworkSrc = artworkSrc;
             } else {
                 foundArtwork = await lookForArt(
                     ($rightClickedTrack || $rightClickedTracks[0]).path,
@@ -212,6 +212,10 @@
         }
     }
 
+    function getField(fieldKey: string) {
+        return metadata?.mappedMetadata.find((m) => m.genericId === fieldKey);
+    }
+
     /**
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
@@ -223,15 +227,19 @@
                 .map((t) => ({ id: t.id, value: t.value }));
             console.log("Writing: ", toWrite);
 
-            toImport = await invoke<ToImport>("write_metadata", {
+            toImport = await invoke<ToImport>("write_metadatas", {
                 event: {
-                    "song_id": $rightClickedTrack.id,
-                    metadata: toWrite,
-                    "tag_type": metadata.tagType,
-                    "file_path": $rightClickedTrack.path,
-                    "artwork_file_to_set": artworkFileToSet
-                        ? artworkFileToSet
-                        : ""
+                    tracks: [
+                        {
+                            "song_id": $rightClickedTrack.id,
+                            metadata: toWrite,
+                            "tag_type": metadata.tagType,
+                            "file_path": $rightClickedTrack.path,
+                            "artwork_file_to_set": artworkFileToSet
+                                ? artworkFileToSet
+                                : ""
+                        }
+                    ]
                 }
             });
         } else if ($rightClickedTracks?.length) {
@@ -286,25 +294,54 @@
 
         artworkFileToSet = null;
         isArtworkSet = false;
+
+        // Update album in DB as well
+        if ($rightClickedAlbum) {
+            const fieldsToUpdate = ALBUM_FIELDS.reduce((toUpdate, current) => {
+                const field = getField(current);
+                // Check if it differs from the album
+                if (
+                    field.value !== null &&
+                    field.value !== $rightClickedAlbum[field.genericId]
+                ) {
+                    if (field.genericId === "album") {
+                        // ALBUM is title in the DB
+                        toUpdate["title"] = field.value;
+                    } else if (field.genericId === "date") {
+                        // DATE tag is year in the DB
+                        toUpdate["year"] = field.value;
+                    } else {
+                        toUpdate[field.genericId] = field.value;
+                    }
+                }
+                return toUpdate;
+            }, {});
+
+            console.log("Updating album with changes: ", fieldsToUpdate);
+
+            db.albums.update($rightClickedAlbum.id, {
+                ...fieldsToUpdate
+            });
+        }
     }
     rightClickedTrack.subscribe((track) => {
-        console.log('TRACK UPDATED', track)
-    })
+        console.log("TRACK UPDATED", track);
+    });
     rightClickedTracks.subscribe((tracks) => {
-        console.log('TRACKS UPDATED', tracks)
-    })
+        console.log("TRACKS UPDATED", tracks);
+    });
     async function reImportTracks(toImport: ToImport) {
         console.log("toImport", toImport);
         toast.success("Successfully written metadata!", {
             position: "top-right"
         });
-        console.log('right clicked ok?', $rightClickedTrack)
+        console.log("right clicked ok?", $rightClickedTrack);
 
         const songs = await Promise.all(
             toImport.songs.map((s) => importSong(s, true))
         );
-        console.log('right clicked ok?', $rightClickedTrack)
-        console.log('songs imported', songs);
+        console.log("right clicked ok?", $rightClickedTrack);
+        console.log("songs imported", songs);
 
         await reset();
     }
@@ -899,7 +936,9 @@
             </div>
         </section>
 
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
         <section class="user-section">
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
                 contenteditable
                 class="artwork-container"

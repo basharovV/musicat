@@ -36,7 +36,7 @@ export async function handleImport(toImport: ToImport) {
             const albumsToPut = toImport.songs.reduce((albums, song) => {
                 const albumPath = song.path.replace(`/${song.file}`, "");
 
-                let id = md5(`${albumPath} - ${song.album}`);
+                let id = md5(`${song.artist} - ${song.album}`.toLowerCase());
                 if (albums[id] !== undefined) {
                     albums[id].trackCount++;
                     albums[id].tracksIds.push(song.id);
@@ -141,7 +141,7 @@ async function addArtworksToAllAlbums(
     const albumsToPut = await Promise.all(
         songs.map(async (song) => {
             const existingAlbum = await db.albums.get(
-                md5(`${song.artist} - ${song.album}`)
+                md5(`${song.artist} - ${song.album}`.toLowerCase())
             );
             if (existingAlbum) {
                 if (!existingAlbum.artwork) {
@@ -163,15 +163,11 @@ async function handleMessage(e) {
     switch (e.data.function) {
         case "handleImport":
             await handleImport(e.data.toImport);
-            postMessage({event: "handleImport", progress: e.data.toImport.progress});
+            postMessage({event: "handleImportDone", progress: e.data.toImport.progress});
             break;
         case "bulkAlbumPut":
             await bulkAlbumPut(e.data.albums);
-            postMessage({event: "bulkAlbumPut"});
-            break;
-        case "addArtworksToAllAlbums":
-            await addArtworksToAllAlbums(e.data.songs, e.data.userSettings);
-            postMessage({event: "addArtworksToAllAlbums"});
+            postMessage({event: "bulkAlbumPutDone"});
             break;
         default:
             break;
