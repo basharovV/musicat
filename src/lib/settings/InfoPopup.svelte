@@ -4,13 +4,22 @@
     import { isInfoPopupOpen } from "../../data/store";
     import { clickOutside } from "../../utils/ClickOutside";
     import ReleaseNotes from "./ReleaseNotes.svelte";
+    import Icon from "../ui/Icon.svelte";
 
     let version = getVersion();
     export let onClickOutside;
+    export let isReleaseNotesShown = false;
+    let scrollToHeader: HTMLElement;
+    let popup: HTMLElement;
 </script>
 
 <container>
-    <div class="popup" use:clickOutside={onClickOutside}>
+    <div
+        class="popup"
+        class:expanded={isReleaseNotesShown}
+        use:clickOutside={onClickOutside}
+        bind:this={popup}
+    >
         <!-- <img src="images/cd6.gif" /> -->
         <section class="info">
             <div>
@@ -33,7 +42,36 @@
             </div>
         </section>
         <section class="release-notes">
-            <ReleaseNotes />
+            <div
+                class="release-notes-title"
+                bind:this={scrollToHeader}
+                on:click|stopPropagation={() => {
+                    if (!isReleaseNotesShown) {
+                        isReleaseNotesShown = true;
+                        setTimeout(() => {
+                            scrollToHeader.scrollIntoView({
+                                behavior: "smooth"
+                            });
+                        }, 10);
+                    } else {
+                        popup.scrollTo({
+                            top: 0,
+                            behavior: "smooth"
+                        });
+                        setTimeout(() => {
+                            isReleaseNotesShown = false;
+                        }, 150);
+                    }
+                }}
+            >
+                <h3>Release Notes</h3>
+                <div class="chevron" class:expanded={isReleaseNotesShown}>
+                    <Icon icon="lucide:chevron-down" size={14} />
+                </div>
+            </div>
+            {#if isReleaseNotesShown}
+                <ReleaseNotes />
+            {/if}
         </section>
     </div></container
 >
@@ -50,35 +88,35 @@
     .popup {
         min-width: 500px;
         max-width: 700px;
-        min-height: 400px;
-        max-height: 500px;
+        min-height: 410px;
+        max-height: 0;
         border-radius: 5px;
         position: relative;
         /* padding: 2em 0em 0; */
-        background: rgb(94, 91, 98);
+        background: rgb(74, 72, 77);
         color: white;
         border: 1px solid rgb(114, 114, 114);
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         flex: 10em;
+        overflow: auto;
+        transition: max-height 0.25s ease-in-out;
+        &.expanded {
+            max-height: 700px;
+        }
     }
 
     .info {
-        min-height: 100%;
-        min-width: 300px;
-        max-width: 350px;
         display: flex;
         flex-direction: column;
         grid-template-rows: auto 1fr 1fr;
+        align-items: center;
 
         .app-icon {
-            position: absolute;
-            opacity: 0.08;
-            width: auto;
-            height: 100%;
+            height: auto;
             pointer-events: none;
             img {
-                width: auto;
+                width: 150px;
                 height: 100%;
             }
         }
@@ -101,6 +139,40 @@
     }
 
     .release-notes {
-        border-left: 1px solid rgba(147, 147, 147, 0.336);
+        border-top: 1px solid rgba(147, 147, 147, 0.336);
+        .expanded > & {
+            height: auto;
+        }
+        &-title {
+            width: 100%;
+            height: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            position: sticky;
+            top: 0;
+            background: rgb(74, 72, 77);
+            z-index: 2;
+
+            * {
+                user-select: none;
+            }
+
+            .expanded {
+                visibility: visible;
+                transform: rotate(180deg);
+            }
+
+            &:hover {
+                opacity: 0.7;
+                cursor: default;
+            }
+
+            &:active {
+                opacity: 0.5;
+                cursor: default;
+            }
+        }
     }
 </style>

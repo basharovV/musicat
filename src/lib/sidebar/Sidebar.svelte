@@ -143,17 +143,6 @@
         }
     }
 
-    function playNext() {
-        audioPlayer.playSong($queriedSongs[++$currentSongIdx]);
-    }
-
-    function playPrev() {
-        if ($currentSongIdx === 1) {
-            return;
-        }
-        audioPlayer.playSong($queriedSongs[--$currentSongIdx]);
-    }
-
     function openTrackInfo() {
         if ($currentSong) {
             $rightClickedTrack = $currentSong;

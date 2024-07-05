@@ -4,18 +4,34 @@
     onMount(() => {});
 </script>
 
-<div><Post /></div>
+<div>
+    <Post />
+</div>
 
 <style lang="scss">
     div {
-        overflow: auto;
-        height: 100%;
+        height: auto;
         text-align: left;
         padding: 1em;
-        color: rgb(206, 206, 206);
+        color: rgb(218, 215, 215);
+        position: relative;
+        letter-spacing: 0.6px;
 
         :global(li) {
-            font-size: 0.9em;
+            font-size: 1em;
+        }
+        :global(h3) {
+            position: sticky;
+            top: 40px;
+            background: rgb(74, 72, 77);
+            z-index: 3;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(147, 147, 147, 0.336);
+
+        }
+        :global(strong) {
+            color: rgb(187, 176, 240);
+            letter-spacing: 0.7px;
         }
     }
     ul {
@@ -23,7 +39,7 @@
         /* max-height: 200px; */
         width: 100%;
         height: fit-content;
-        color: rgb(212, 212, 212);
+        color: rgb(225, 222, 222);
         font-size: 1em;
         padding: 0;
         margin: 0;
