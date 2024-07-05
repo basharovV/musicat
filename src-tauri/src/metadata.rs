@@ -1,6 +1,8 @@
 use crate::{Artwork, FileInfo, Song};
 use chksum_md5::MD5;
-use lofty::{read_from_path, Accessor, AudioFile, FileType, ItemKey, TagType, TaggedFileExt};
+use lofty::file::{AudioFile, FileType, TaggedFileExt};
+use lofty::read_from_path;
+use lofty::tag::{Accessor, ItemKey, TagType};
 use std::path::Path;
 
 pub fn extract_metadata(file_path: &Path) -> Option<Song> {
@@ -122,7 +124,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),
-                                format: pic.mime_type().to_string(),
+                                format: pic.mime_type().unwrap().to_string(),
                             })
                         }
                     }
@@ -143,7 +145,7 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         artwork,
                         // We default the origin country to "" to allow Dexie to return results when using orderBy,
                         // even if there are zero songs with a non-empty country
-                        origin_country: Some(String::from(""))
+                        origin_country: Some(String::from("")),
                     });
                 }
             }

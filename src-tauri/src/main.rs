@@ -4,16 +4,21 @@
 )]
 
 use bytes::buf::Reader;
-use lofty::id3::v2::{upgrade_v2, upgrade_v3};
-use lofty::{
-    read_from_path, AudioFile, ItemKey, ItemValue, Picture, Probe, TagItem, TagType, TaggedFileExt,
-};
+use lofty::config::WriteOptions;
+use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::id3::v2::{upgrade_v2, upgrade_v3, Frame, FrameId, Id3v2Tag, TextInformationFrame};
+use lofty::picture::Picture;
+use lofty::probe::Probe;
+use lofty::tag::ItemKey::TrackNumber;
+use lofty::tag::{Accessor, ItemKey, ItemValue, TagItem, TagType};
+use lofty::{read_from_path, TextEncoding};
 use player::file_streamer::AudioStreamer;
 use rayon::prelude::*;
 use reqwest;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::borrow::Cow;
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::{BufReader, ErrorKind};
@@ -31,6 +36,9 @@ mod metadata;
 mod output;
 mod player;
 mod resampler;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct MetadataEntry {
@@ -388,7 +396,9 @@ fn build_menu() -> Menu {
         ))
         .add_submenu(Submenu::new(
             "File",
-            Menu::new().add_item(CustomMenuItem::new("import", "Import Library")),
+            Menu::new().add_item(
+                CustomMenuItem::new("import", "Import folder").accelerator("CommandOrControl+O"),
+            ),
         ))
         .add_submenu(Submenu::new(
             "Edit",
@@ -400,19 +410,19 @@ fn build_menu() -> Menu {
                 .add_native_item(MenuItem::Undo)
                 .add_native_item(MenuItem::Redo)
                 .add_native_item(MenuItem::Separator)
-                .add_native_item(MenuItem::SelectAll),
-        ))
-        .add_submenu(Submenu::new(
-            "Library",
-            Menu::new()
+                .add_native_item(MenuItem::SelectAll)
                 .add_item(CustomMenuItem::new("find", "Find").accelerator("CommandOrControl+F")),
         ))
         .add_submenu(Submenu::new(
             "View",
             Menu::new()
+                .add_item(CustomMenuItem::new("albums", "Go to Albums").accelerator("A"))
+                .add_item(CustomMenuItem::new("library", "Go to Library").accelerator("L"))
                 .add_item(CustomMenuItem::new("queue", "Toggle Queue").accelerator("Q"))
-                .add_item(CustomMenuItem::new("albums", "Show albums").accelerator("A"))
-                .add_item(CustomMenuItem::new("library", "Show library").accelerator("L")),
+                .add_item(
+                    CustomMenuItem::new("lyrics", "Toggle Lyrics")
+                        .accelerator("CommandOrControl+L"),
+                ),
         ));
     #[cfg(dev)]
     let newMenu = menu.add_submenu(Submenu::new(
@@ -482,15 +492,16 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
             println!("fileType: {:?}", &file_type);
             let mut tag = read_from_path(&v.file_path).unwrap();
             let tag_file_type = tag.file_type();
-            let mut to_write = lofty::Tag::new(tag_type.unwrap());
+            let mut to_write = lofty::tag::Tag::new(tag_type.unwrap());
 
-            tag.primary_tag()
-                .unwrap()
-                .pictures()
-                .iter()
-                .enumerate()
-                .for_each(|(idx, pic)| to_write.set_picture(idx, pic.clone()));
-
+            if (tag.primary_tag().is_some()) {
+                tag.primary_tag()
+                    .unwrap()
+                    .pictures()
+                    .iter()
+                    .enumerate()
+                    .for_each(|(idx, pic)| to_write.set_picture(idx, pic.clone()));
+            }
             println!("tag fileType: {:?}", &tag_file_type);
 
             // let primary_tag = tag.primary_tag_mut().unwrap();
@@ -543,7 +554,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         } else {
                             let item_value: ItemValue =
                                 ItemValue::Text(String::from(item.value.as_str().unwrap()));
-                            to_write.insert_unchecked(TagItem::new(item_key, item_value));
+                            to_write.insert(TagItem::new(item_key, item_value));
                         }
                     }
                 }
@@ -575,7 +586,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
 
             tag.clear();
             tag.insert_tag(to_write);
-            tag.save_to(&mut file)?;
+            tag.save_to(&mut file, WriteOptions::new())?;
             println!("File saved succesfully!");
         }
     } else {
