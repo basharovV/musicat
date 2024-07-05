@@ -4,7 +4,7 @@
     import { db } from "../../data/db";
     import { selectedArtistId } from "../../data/store";
 
-    import Library from "../library/Library.svelte";
+    import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
     let selectedSong: Song;
@@ -136,16 +136,12 @@
                     <div>
                         <h2>in library</h2>
                     </div>
-                    <Library
+                    <CanvasLibrary
                         theme="outline"
                         bind:songsHighlighted={librarySongsHighlighted}
                         allSongs={songs}
                         {isLoading}
                         isSmartQueryEnabled={false}
-                        fields={[
-                            { name: "Title", value: "title" },
-                            { name: "Album", value: "album" }
-                        ]}
                         {onSongsHighlighted}
                     />
                 </library>

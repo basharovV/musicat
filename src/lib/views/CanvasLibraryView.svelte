@@ -2,6 +2,7 @@
     import { liveQuery } from "dexie";
     import "iconify-icon";
     import type { Song } from "src/App";
+    import { get } from "svelte/store";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -21,14 +22,9 @@
         smartQueryUpdater,
         uiView
     } from "../../data/store";
-    import Library from "../library/Library.svelte";
-    import SmartQuery from "../smart-query/Query";
-    import { get } from "svelte/store";
-    import audioPlayer from "../player/AudioPlayer";
-    import LyricsView from "../library/LyricsView.svelte";
-    import { fade, fly } from "svelte/transition";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
-    import BottomBar from "../library/BottomBar.svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import SmartQuery from "../smart-query/Query";
 
     let isLoading = true;
 
