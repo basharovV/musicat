@@ -536,7 +536,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                                 println!("Upgraded ID3v2.3 tag to ID3v2.4: {}", tag_key);
                             }
                         }
-                        let item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
+                        let mut item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
 
                         if item.value.is_null() {
                             let mut exists = false;
@@ -554,6 +554,9 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         } else {
                             let item_value: ItemValue =
                                 ItemValue::Text(String::from(item.value.as_str().unwrap()));
+                            if (tag_key.eq_ignore_ascii_case("TRCK")) {
+                                item_key = ItemKey::TrackNumber;
+                            }
                             to_write.insert(TagItem::new(item_key, item_value));
                         }
                     }
