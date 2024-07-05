@@ -16,7 +16,6 @@
 
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
-    import "iconify-icon";
     import { debounce } from "lodash-es";
     import type { Song } from "src/App";
     import { onDestroy } from "svelte";

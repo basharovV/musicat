@@ -1040,7 +1040,6 @@
                 {:else}
                     <div class="artwork-placeholder">
                         <img alt="placeholder" src="icon.png" />
-                        <!-- <iconify-icon icon="mdi:music-clef-treble" /> -->
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
@@ -1330,9 +1329,6 @@
             cursor: default;
             &.selected {
                 color: white;
-                iconify-icon {
-                    color: #45fffcf3;
-                }
                 .chevron {
                     visibility: visible;
                 }
@@ -1350,13 +1346,6 @@
                 &:active {
                     color: rgb(130, 130, 130);
                 }
-            }
-
-            iconify-icon {
-                margin-right: 5px;
-                font-size: 15px;
-                text-align: center;
-                vertical-align: middle;
             }
 
             .chevron {
@@ -1448,11 +1437,6 @@
             height: fit-content;
             padding: 5px;
             margin: auto 0;
-            > iconify-icon {
-                font-size: 17px;
-                color: #737373;
-                pointer-events: none;
-            }
         }
     }
 
@@ -1658,9 +1642,6 @@
                 img {
                     width: 80%;
                 }
-                iconify-icon {
-                    /* margin-top: 0.7em; */
-                }
             }
         }
     }
@@ -1779,27 +1760,6 @@
         }
     }
 
-    iconify-icon {
-        font-size: 40px;
-        &.disabled {
-            pointer-events: none;
-            color: #474747;
-        }
-
-        // Like disabled but clickable
-        &.off {
-            color: #474747;
-        }
-
-        &:hover {
-            opacity: 0.5;
-        }
-
-        &:active {
-            color: rgb(141, 47, 47);
-            opacity: 1;
-        }
-    }
 
     .playlist-menu {
         position: fixed;

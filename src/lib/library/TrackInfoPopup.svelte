@@ -5,12 +5,9 @@
 
     import { listen } from "@tauri-apps/api/event";
     import { pictureDir } from "@tauri-apps/api/path";
-    import { convertFileSrc } from "@tauri-apps/api/tauri";
 
     import hotkeys from "hotkeys-js";
-    import "iconify-icon";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
-    import * as musicMetadata from "music-metadata-browser";
     import type { MetadataEntry, Song, TagType, ToImport } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
@@ -31,9 +28,9 @@
         rightClickedTracks
     } from "../../data/store";
     import { focusTrap } from "../../utils/FocusTrap";
+    import "../tippy.css";
     import Input from "../ui/Input.svelte";
     import { optionalTippy } from "../ui/TippyAction";
-    import "../tippy.css";
 
     import { invoke } from "@tauri-apps/api";
     import {
@@ -63,7 +60,7 @@
         // Add empty default fields
         const defaults: MetadataEntry[] = [];
         const others: MetadataEntry[] = [];
-        console.log('map', map);
+        console.log("map", map);
         if (!map) return { defaults, others };
         for (const field of Object.entries(map)) {
             // Check if this default field already exists in the file
@@ -99,7 +96,6 @@
         metadata: MetadataEntry[],
         format: TagType
     ): MetadataEntry[] {
-
         if (
             ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
             "WAV"
@@ -108,7 +104,7 @@
             return []; // UNSUPPORTED FORMAT, for now...
         }
 
-        console.log('adding defaults', metadata, format);
+        console.log("adding defaults", metadata, format);
         if (!format) return [];
 
         isUnsupportedFormat = false;
@@ -846,8 +842,9 @@
                                                 )}
                                         >
                                             <span
-                                                ><iconify-icon
+                                                ><Icon
                                                     icon="bi:file-earmark-play"
+                                                    size={12}
                                                 /></span
                                             >
                                             {track.file}
@@ -1270,9 +1267,6 @@
                 flex-direction: column;
                 align-items: center;
                 gap: 1em;
-                iconify-icon {
-                    /* margin-top: 0.7em; */
-                }
             }
         }
     }
@@ -1333,9 +1327,6 @@
             color: white;
             border: 1px solid rgba(128, 128, 128, 0.16);
 
-            iconify-icon {
-                font-size: 2.4em;
-            }
         }
 
         .top-shadow {
@@ -1458,6 +1449,8 @@
 
                     span {
                         vertical-align: middle;
+                        position: relative;
+                        display: flex;
                     }
 
                     p {
@@ -1467,6 +1460,8 @@
                         font-size: 13px;
                         width: 100%;
                         vertical-align: middle;
+                        display: flex;
+                        gap: 4px;
                     }
 
                     &:hover {
@@ -1531,9 +1526,6 @@
         color: #7dffee;
         text-transform: uppercase;
 
-        iconify-icon {
-            font-size: 3em;
-        }
     }
 
     .enrichment {
@@ -1607,9 +1599,6 @@
             color: #ffe6ac;
             border: 1px solid rgba(255, 203, 158, 0.145);
 
-            iconify-icon {
-                color: rgb(255, 223, 178);
-            }
         }
         h4 {
             user-select: none;
@@ -1712,9 +1701,6 @@
         .section-title {
             color: rgb(170, 170, 170);
             border: transparent;
-            iconify-icon {
-                color: rgb(170, 170, 170);
-            }
         }
 
         .tool {
@@ -1749,10 +1735,6 @@
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
-
-        iconify-icon {
-            padding: 1em;
-        }
         p {
             margin: 0;
         }

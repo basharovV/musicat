@@ -9,7 +9,6 @@
 
     import { onMount } from "svelte";
 
-    import "iconify-icon";
     import type { MapTooltipData, Song } from "src/App";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";

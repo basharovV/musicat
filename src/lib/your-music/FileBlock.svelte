@@ -8,6 +8,7 @@
     } from "../../data/LibraryImporter";
     import audioPlayer from "../player/AudioPlayer";
     import { convertFileSrc } from "@tauri-apps/api/tauri";
+    import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistFileItem;
     export let style: "dashed" | "outline" = "dashed";
@@ -45,6 +46,8 @@
     on:click={openFile}
     draggable="true"
     on:dragstart={onDragStart}
+    role="button"
+    tabindex="0"
 >
     <div class="container">
         {#if item.fileType.type === "image"}
@@ -59,22 +62,18 @@
             </video>
         {:else}
             <div class="background">
-                <iconify-icon
-                    icon={item.fileType.type === "video"
-                        ? "bxs:video"
-                        : "system-uicons:audio-wave"}
-                />
+                <Icon icon="system-uicons:audio-wave" size={40}/>
             </div>
         {/if}
         <div class="item-info">
             {#if item.fileType.type === "audio"}
-                <Icon icon="bi:file-earmark-play" />
+                <Icon icon="bi:file-earmark-play" color="#c745c7"/>
             {:else if item.fileType.type === "video"}
-                <iconify-icon icon="dashicons:editor-video" />
+                <Icon icon="dashicons:editor-video" color="#e04848"/>
             {:else if item.fileType.type === "image"}
-                <iconify-icon icon="dashicons:editor-video" />
+                <Icon icon="dashicons:editor-video" />
             {:else if item.fileType.type === "txt"}
-                <iconify-icon icon="dashicons:editor-video" />
+                <Icon icon="dashicons:editor-video" color="#d4d442" />
             {/if}
             <p>{item.name}</p>
         </div>
@@ -88,22 +87,6 @@
         display: flex;
         flex-direction: column;
         max-width: 165px;
-
-        &.audio {
-            iconify-icon {
-                color: rgb(199, 69, 199);
-            }
-        }
-        &.video {
-            iconify-icon {
-                color: rgb(224, 72, 72);
-            }
-        }
-        &.txt {
-            iconify-icon {
-                color: rgb(212, 212, 66);
-            }
-        }
 
         &.dashed {
             .container {
@@ -141,11 +124,6 @@
                     line-height: 1em;
                     overflow: hidden;
                     text-overflow: ellipsis;
-                }
-                iconify-icon {
-                    width: auto;
-                    height: fit-content;
-                    display: flex;
                 }
             }
 
@@ -185,10 +163,6 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                iconify-icon {
-                    font-size: 40px;
-                    color: white;
-                }
             }
         }
     }

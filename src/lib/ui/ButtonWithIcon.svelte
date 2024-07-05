@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
+
     export let icon = null;
     export let onClick;
     export let text;
@@ -8,12 +10,15 @@
     export let disabled = false;
 </script>
 
-<div on:click={onClick} class="theme-{theme} {size}" class:disabled={disabled}>
+<div
+    on:click={onClick}
+    class="theme-{theme} {size}"
+    class:disabled
+    role="button"
+    tabindex="0"
+>
     {#if icon}
-        <iconify-icon
-            class="close-icon"
-            icon={isLoading ? "line-md:loading-loop" : icon}
-        />
+        <Icon icon={isLoading ? "line-md:loading-loop" : icon} />
     {/if}
     <p>{text}</p>
 </div>

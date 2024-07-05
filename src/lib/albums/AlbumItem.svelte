@@ -379,11 +379,6 @@
                     .artwork {
                         width: 100%;
                     }
-                    iconify-icon {
-                        /* margin-top: 0.7em; */
-                        font-size: 2em;
-                        display: none;
-                    }
                 }
             }
         }

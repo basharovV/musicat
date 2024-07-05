@@ -27,6 +27,7 @@
     import TagCloud from "./TagCloud.svelte";
     import MenuInput from "../menu/MenuInput.svelte";
     import hotkeys from "hotkeys-js";
+    import Icon from "../ui/Icon.svelte";
 
     let contentTypes = [
         {
@@ -327,7 +328,7 @@
                 class={contentType.name}
                 on:click={() => toggleContentType(contentType.name)}
             >
-                <iconify-icon icon={contentType.icon} />
+                <Icon icon={contentType.icon} />
                 <p>{contentType.name}</p>
             </div>
         {/each}
@@ -463,16 +464,16 @@
                 user-select: none;
                 text-transform: capitalize;
             }
-            &.lyrics > iconify-icon {
-                color: rgb(212, 212, 66);
+            &.lyrics {
+                color: #d4d442;
             }
-            &.audio > iconify-icon {
+            &.audio {
                 color: rgb(199, 69, 199);
             }
-            &.video > iconify-icon {
+            &.video {
                 color: rgb(224, 72, 72);
             }
-            &.link > iconify-icon {
+            &.link {
                 color: rgb(70, 227, 227);
             }
         }

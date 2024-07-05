@@ -1,6 +1,5 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
-    import "iconify-icon";
     import type { Song } from "src/App";
     import { get } from "svelte/store";
     import BuiltInQueries from "../../data/SmartQueries";

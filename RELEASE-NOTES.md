@@ -1,5 +1,11 @@
+### 📦 0.7.1
+
+-   **Reduced app size**. The app size is now is a reasonable 35MB, down significantly from a whopping 200MB 😬 which was due to asset bloat (unused icons, uncompressed images).
+
 ### 📦 0.7.0
- _BREAKING RELEASE_. The way albums are stored internally has changed, please delete and re-import your library.
+
+_BREAKING RELEASE_. The way albums are stored internally has changed, please delete and re-import your library.
+
 -   **Gapless playback**. The audio playback component has been re-built to support gapless playback (between files of the same sample rate), resampling (automatically switches on when the audio device doesn't support the file sample rate), and better performance than the previous web-based version.
 -   **New: Queue**. Press "Q" to open up the new queue panel. You can drag and drop tracks from the library, re-arrange tracks in the queue, and create a new playlist from the current queue. Multi-select works via Shift/Cmd + click. The queue has two modes: Custom and Same as Library. When in "Same as library" mode, playing a track from the library will reset the queue to library order.
 -   **Waveform View**. Click on the wave icon next to the volume to open up the Waveform view. Here you can drag to create loop regions, or Cmd/Ctrl + Click to set markers of your favourite song moments. You can scroll to zoom in and pan around the waveform.

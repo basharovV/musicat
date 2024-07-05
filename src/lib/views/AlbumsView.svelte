@@ -1,7 +1,6 @@
 <script lang="ts">
     import { convertFileSrc } from "@tauri-apps/api/tauri";
     import { liveQuery } from "dexie";
-    import "iconify-icon";
     import md5 from "md5";
     import * as musicMetadata from "music-metadata-browser";
     import { cubicInOut } from "svelte/easing";

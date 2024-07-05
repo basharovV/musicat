@@ -72,10 +72,6 @@
             &:active {
                 background-color: rgba(128, 128, 128, 0.391);
             }
-
-            iconify-icon {
-                color: grey;
-            }
         }
 
         .menu {

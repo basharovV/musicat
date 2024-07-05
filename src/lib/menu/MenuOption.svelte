@@ -25,6 +25,8 @@
     }
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <container
     class:disabled={isDisabled}
     class:destructive={isDestructive}
@@ -59,10 +61,9 @@
         </span>
 
         {#if isLoading}
-            <iconify-icon
-                icon="line-md:loading-loop"
-                class:loading={isLoading}
-            />
+            <div class:loading={isLoading}>
+                <Icon icon="line-md:loading-loop" />
+            </div>
         {/if}
 
         {#if checked !== null}
@@ -78,9 +79,9 @@
         {/if}
 
         {#if onDelete}
-            <iconify-icon
+            <Icon
                 icon="mingcute:close-circle-fill"
-                on:click={onDelete}
+                onСlick={onDelete}
             />
         {/if}
     {:else}
@@ -177,20 +178,6 @@
                 display: block;
                 opacity: 0.7;
                 text-align: left;
-            }
-        }
-
-        &.single-selection {
-            iconify-icon[icon="charm:tick"] {
-                color: transparent;
-            }
-        }
-
-        iconify-icon[icon="charm:tick"] {
-            color: grey;
-
-            &.checked {
-                color: white;
             }
         }
     }

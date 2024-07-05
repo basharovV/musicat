@@ -6,7 +6,8 @@
         ArtistFileItem,
         ArtistLinkItem,
         ArtistProject,
-        ContentFileType, Song,
+        ContentFileType,
+        Song,
         SongProject
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
@@ -23,7 +24,10 @@
 
     import { readTextFile } from "@tauri-apps/api/fs";
     import toast from "svelte-french-toast";
-    import { getMetadataFromFile, getSongFromMetadata } from "../../data/LibraryImporter";
+    import {
+        getMetadataFromFile,
+        getSongFromMetadata
+    } from "../../data/LibraryImporter";
     import {
         droppedFiles,
         fileDropHandler,
@@ -50,13 +54,16 @@
     // Eg. 127 beats per minute = 1 beat every 0.4724409449 seconds
     function startBPMTicker(bpm: number) {
         if (bpmTicker === 1 && !bpmInterval) {
-            bpmInterval = setInterval(() => {
-                if (songProjectClone?.bpm !== undefined) {
-                    bpmTicker++;
-                } else {
-                    stopBpmTicker();
-                }
-            }, 60000 / bpm / 2);
+            bpmInterval = setInterval(
+                () => {
+                    if (songProjectClone?.bpm !== undefined) {
+                        bpmTicker++;
+                    } else {
+                        stopBpmTicker();
+                    }
+                },
+                60000 / bpm / 2
+            );
         }
     }
 
@@ -732,15 +739,15 @@
                 {/each}
             </div>
             <div class="lyrics-options">
-                <iconify-icon
+                <Icon
                     icon="mdi:format-font-size-decrease"
-                    on:click={decreaseFontSize}
+                    onClick={decreaseFontSize}
                 />
-                <iconify-icon
+                <Icon
                     icon="mdi:format-font-size-increase"
-                    on:click={increaseFontSize}
+                    onClick={increaseFontSize}
                 />
-                <iconify-icon
+                <Icon
                     icon="icon-park-outline:full-screen-one"
                     on:click={toggleFullScreenLyrics}
                 />
@@ -1021,15 +1028,6 @@
             gap: 3px;
             align-items: center;
             margin-right: 20px;
-
-            iconify-icon {
-                padding: 6px;
-                font-size: 20px;
-                border-radius: 4px;
-                &:hover {
-                    background-color: rgba(0, 0, 0, 0.457);
-                }
-            }
         }
     }
     p {

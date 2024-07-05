@@ -1,5 +1,4 @@
 <script lang="ts">
-    import "iconify-icon";
     import tippy from "svelte-tippy";
     import { cubicInOut } from "svelte/easing";
     import { fly } from "svelte/transition";

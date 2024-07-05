@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { ArtistFileItem, ArtistLyricsItem } from "src/App";
+    import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistLyricsItem;
 </script>
@@ -10,7 +11,7 @@
             <img src="images/scribbles.png" />
         </div>
         <div class="item-info">
-            <iconify-icon icon="bi:file-earmark-text" />
+            <Icon icon="bi:file-earmark-text" />
             <p>{item.name}</p>
         </div>
     </div>
@@ -51,12 +52,6 @@
                     margin: 0;
                     line-height: 1em;
                 }
-                iconify-icon {
-                    width: auto;
-                    height: fit-content;
-                    display: flex;
-                    color: rgb(212, 212, 66);
-                }
             }
             &:hover {
                 border: 1px solid  rgb(212, 212, 66);
@@ -80,10 +75,6 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                iconify-icon {
-                    font-size: 40px;
-                    color: white;
-                }
             }
         }
 

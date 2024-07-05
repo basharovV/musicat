@@ -8,6 +8,7 @@
     import { fly } from "svelte/transition";
     import { quadInOut, quadOut } from "svelte/easing";
     import { flip } from "svelte/animate";
+    import Icon from "../ui/Icon.svelte";
 
     export let recordings: SongProjectRecording[];
     export let songProject: SongProject;
@@ -42,10 +43,12 @@
     }
 
     async function createProject() {
-        const songProjectId = await db.songProjects.add(songProject) as number;
+        const songProjectId = (await db.songProjects.add(
+            songProject
+        )) as number;
         if (song) {
             song.songProjectId = songProjectId;
-            await db.songs.put(song)
+            await db.songs.put(song);
             onSelectSong && onSelectSong(song);
         }
     }
@@ -65,13 +68,14 @@
                 <Icon icon="fe:play" />
                 <p>{recording.song.file}</p>
                 {#if isProject}
-                    <iconify-icon
-                        class="delete"
-                        icon="ant-design:delete-outlined"
-                        on:click|preventDefault|stopPropagation={() => {
-                            deleteRecording(idx);
-                        }}
-                    />
+                    <div class="delete">
+                        <Icon
+                            icon="ant-design:delete-outlined"
+                            onClick|preventDefault|stopPropagation={() => {
+                                deleteRecording(idx);
+                            }}
+                        />
+                    </div>
                 {/if}
             </div>
         {/each}

@@ -5,6 +5,7 @@
     import { autoWidth } from "../../utils/AutoWidth";
     import { flip } from "svelte/animate";
     import { quadInOut } from "svelte/easing";
+    import Icon from "../ui/Icon.svelte";
 
     export let artist: ArtistProject;
 
@@ -49,10 +50,9 @@
                     >
                         <p>{member}</p>
                         {#if isEditEnabled}
-                            <iconify-icon
-                                in:fly={{ duration: 150, x: -40 }}
+                            <Icon
                                 icon="mingcute:close-circle-fill"
-                                on:click={() => removeMember(member)}
+                                onClick={() => removeMember(member)}
                             />
                         {/if}
                     </div>
@@ -76,7 +76,7 @@
                 isEditEnabled = !isEditEnabled;
             }}
         >
-            <iconify-icon icon="clarity:edit-solid" />
+            <Icon icon="clarity:edit-solid" />
         </div>
     </div>
 </container>
@@ -125,17 +125,7 @@
         gap: 5px;
         padding: 0 1px;
 
-        iconify-icon {
-            display: none;
-        }
-
         &.editable {
-            iconify-icon {
-                display: flex;
-                &:hover {
-                    opacity: 0.6;
-                }
-            }
             background: rgb(62, 61, 61);
             border-radius: 4px;
             border: 1px solid rgb(76, 72, 72);

@@ -1,7 +1,7 @@
 {
   "name": "musicat",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,8 +14,6 @@
     "@alexanderolsen/libsamplerate-js": "^2.1.1",
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
-    "@iconify/json": "^2.1.110",
-    "@iconify/utils": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^2.4.1",
     "@tauri-apps/cli": "^1.5.5",
     "@tsconfig/svelte": "^3.0.0",
@@ -24,7 +22,6 @@
     "better-cue-parser": "^0.3.1",
     "dexie": "^4.0.4",
     "hotkeys-js": "^3.9.5",
-    "iconify-icon": "^1.0.0-beta.3",
     "konva": "^9.3.1",
     "lodash-es": "^4.17.21",
     "md5": "^2.3.0",
@@ -50,6 +47,7 @@
     "tsparticles-slim": "^2.12.0",
     "typescript": "^4.6.4",
     "vite": "^4.5.1",
+    "vite-bundle-analyzer": "^0.10.3",
     "wavefile": "^11.0.0",
     "wavesurfer.js": "^7.7.11",
     "wikibase-sdk": "^9.2.4"

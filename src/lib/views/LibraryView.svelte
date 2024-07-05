@@ -1,6 +1,5 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
-    import "iconify-icon";
     import type { Song } from "src/App";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";

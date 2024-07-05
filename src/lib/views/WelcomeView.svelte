@@ -4,7 +4,7 @@
 </script>
 
 <container in:fade={{ delay: 200, duration: 400 }}>
-    <img class="bg" src="/images/welcome-cartwheel-galaxy.png" />
+    <img class="bg" src="/images/welcome-cartwheel-galaxy.jpg" />
     <div class="content">
         <h1 in:fade={{ delay: 100, duration: 400 }}>
             A few words about this app

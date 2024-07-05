@@ -5,7 +5,6 @@ import { BaseDirectory, exists, readDir } from "@tauri-apps/api/fs";
 import { audioDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/tauri";
 import { appWindow } from "@tauri-apps/api/window";
-import "iconify-icon";
 import md5 from "md5";
 import * as musicMetadata from "music-metadata-browser";
 import type {

@@ -2,6 +2,7 @@
     import type { ArtistLinkItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
     import { open } from "@tauri-apps/api/shell";
+    import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistLinkItem;
 
@@ -26,9 +27,11 @@
     on:click={openUrl}
 >
     <div class="container">
-        {#if item.imageUrl} <img src={item.imageUrl} alt="thumnbail" /> {/if}
+        {#if item.imageUrl}
+            <img src={item.imageUrl} alt="thumnbail" />
+        {/if}
         <div class="item-info">
-            <iconify-icon icon="akar-icons:link-chain" />
+            <Icon icon="akar-icons:link-chain" color="#46e3e3" />
             <p>{item.name}</p>
         </div>
     </div>
@@ -87,12 +90,6 @@
                     line-height: 1em;
                     width: 100%;
                     text-align: end;
-                }
-                iconify-icon {
-                    width: auto;
-                    height: fit-content;
-                    display: flex;
-                    color: rgb(70, 227, 227);
                 }
             }
             &:hover {
