@@ -48,7 +48,7 @@
     import { Buffer } from "buffer";
     // optional
 
-    const ALBUM_FIELDS = ["album", "artist", "date"];
+    const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
 
     function onClose() {
         $isTrackInfoPopupOpen = false;

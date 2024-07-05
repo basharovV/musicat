@@ -113,7 +113,7 @@
         align-items: center;
 
         .app-icon {
-            height: auto;
+            height: 157px;
             pointer-events: none;
             img {
                 width: 150px;

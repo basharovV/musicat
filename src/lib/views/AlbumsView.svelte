@@ -30,6 +30,7 @@
     import { onMount } from "svelte";
 
     let isLoading = true;
+    let isVisible = false;
     let isInit = true;
 
     let cachedAlbums: Album[] = [];
@@ -102,10 +103,14 @@
             block: "center",
             behavior: "instant"
         });
+
+        isVisible = true;
     }
 
     $: if (isInit && $playlist && $currentSong) {
         showCurrentlyPlayingAlbum();
+    } else if (isInit) {
+        isVisible = true;
     }
 
     let showSingles = false;
@@ -286,17 +291,18 @@
         </div>
 
         {#if isLoading}
-            <div
+            <!-- <div
                 class="loading"
                 out:fade={{ duration: 90, easing: cubicInOut }}
             >
                 <p>💿 one sec...</p>
-            </div>
+            </div> -->
         {:else}
             {#if $query.query?.length && queriedAlbums?.length}
                 <div
                     class="grid"
                     class:show={$query.query?.length}
+                    class:visible={isVisible}
                     style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.1fr));width: 100%;"
                 >
                     {#each queriedAlbums as album, idx (album.id)}
@@ -317,6 +323,7 @@
             <div
                 class="grid"
                 class:show={$albums && $query.query?.length === 0}
+                class:visible={isVisible}
                 style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.1fr));width: 100%;"
             >
                 {#if $albums}
@@ -435,6 +442,9 @@
         padding: 1em;
         gap: 10px;
         min-width: 0; // hack to make the grid respect wrap
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.15s cubic-bezier(0.455, 0.03, 0.515, 0.955);
         /* background-color: rgb(34, 33, 33); */
         /* background-image: url("images/textures/soft-wallpaper.png"); */
         /* background-repeat: repeat; */
@@ -445,6 +455,10 @@
 
         &.show {
             display: grid;
+        }
+        &.visible {
+            visibility: visible;
+            opacity: 1;
         }
     }
 
