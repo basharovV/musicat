@@ -728,15 +728,23 @@
         }
     }
 
+    function currentSongIdxMatches() {
+        return (
+            $currentSongIdx !== null &&
+            $currentSongIdx < $allSongs?.length &&
+            $allSongs[$currentSongIdx]?.id === $currentSong?.id
+        );
+    }
+
     let currentSongY = 0;
-    $: if (
-        $playlistType !== "album" &&
-        !$isShuffleEnabled &&
-        $currentSongIdx !== null
-    ) {
-        let idx = $currentSongIdx;
-        currentSongY = idx * ROW_HEIGHT;
-        currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
+    $: if ($playlistType !== "album" && !$isShuffleEnabled) {
+        let idx = currentSongIdxMatches()
+            ? $currentSongIdx
+            : $allSongs?.findIndex((s) => s.id === $currentSong?.id);
+        if (idx !== undefined) {
+            currentSongY = idx * ROW_HEIGHT;
+            currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
+        }
         // console.log("currentSongY", currentSongY);
     }
 
@@ -1268,9 +1276,9 @@
 
 <div class="library-container" bind:this={libraryContainer}>
     {#if isLoading}
-        <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
+        <!-- <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
-        </div>
+        </div> -->
     {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites)/) === null))}
         <ImportPlaceholder />
     {:else}
