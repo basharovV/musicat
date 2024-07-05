@@ -130,8 +130,9 @@ function getMapForTagType(
         case "ID3v2.2":
             return fromGeneric ? genericToId3v22Map : id3v22ToGenericMap;
         case "ID3v2.3":
-        case "ID3v2.4":
             return fromGeneric ? genericToId3v23Map : id3v23ToGenericMap;
+        case "ID3v2.4":
+            return fromGeneric ? genericToId3v24Map : id3v24ToGenericMap;
         default:
             return null;
     }
@@ -144,7 +145,8 @@ function getMapForTagType(
  */
 const codecToTagTypeMap = {
     "FLAC": "Vorbis",
-    "MPEG": "ID3v2.4"
+    "MPEG": "ID3v2.4",
+    "MPEG 1 Layer 3": "ID3v2.4"
 };
 
 function getTagTypeFromCodec(codec) {

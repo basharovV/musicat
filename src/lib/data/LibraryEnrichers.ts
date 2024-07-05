@@ -108,7 +108,7 @@ export async function fetchAlbumArt(
             const imageData = await fetch(imageUrl);
             let imageArray = await imageData.body.getReader().read();
 
-            let imageBody = imageArray.value;
+            let imageBody = imageArray.value.buffer;
 
             console.log("imageData");
 

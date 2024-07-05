@@ -18,7 +18,7 @@ import type {
 } from "src/App";
 import { get } from "svelte/store";
 import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
-import { getMapForTagType } from "./LabelMap";
+import { getMapForTagType, getTagTypeFromCodec } from "./LabelMap";
 import { db } from "./db";
 import {
     bottomBarNotification,
@@ -56,16 +56,16 @@ export async function readMappedMetadataFromSong(
     console.log("meta", metadata);
     const tagType = metadata.format.tagTypes.length
         ? metadata.format.tagTypes[0]
-        : null;
+        : getTagTypeFromCodec(metadata.format.codec);
     const map = getMapForTagType(tagType, false);
     const mappedMetadata: MetadataEntry[] = tagType
-        ? metadata.native[tagType]
-              .map((tag) => ({
+        ? metadata?.native[tagType]
+              ?.map((tag) => ({
                   genericId: map && tag ? map[tag.id] : "unknown",
                   id: tag.id,
                   value: tag.value
               }))
-              .filter((tag) => typeof tag.value === "string")
+              .filter((tag) => typeof tag.value === "string") ?? []
         : [];
     return { mappedMetadata, tagType };
 }
@@ -133,7 +133,10 @@ async function getAlbumFromSong(song: Song) {
         md5(`${song.artist} - ${song.album}`.toLowerCase())
     );
     if (existingAlbum) {
-        console.log("existing album", `${song.artist} - ${song.album}`.toLowerCase());
+        console.log(
+            "existing album",
+            `${song.artist} - ${song.album}`.toLowerCase()
+        );
         existingAlbum.tracksIds.push(song.id);
         existingAlbum.trackCount++;
         if (!existingAlbum.artwork) {
@@ -142,7 +145,10 @@ async function getAlbumFromSong(song: Song) {
         return existingAlbum;
         // Re-order trackIds in album order?
     } else {
-        console.log("new album", `${song.artist} - ${song.album}`.toLowerCase());
+        console.log(
+            "new album",
+            `${song.artist} - ${song.album}`.toLowerCase()
+        );
 
         const newAlbum: Album = {
             id: md5(`${song.artist} - ${song.album}`.toLowerCase()),
@@ -624,8 +630,12 @@ export async function addArtworksToAllAlbums(
             const albumPath = song.path.replace(`/${song.file}`, "");
 
             const existingAlbum =
-                albumsToPut[md5(`${song.artist} - ${song.album}`.toLowerCase())] ||
-                (await db.albums.get(md5(`${song.artist} - ${song.album}`.toLowerCase())));
+                albumsToPut[
+                    md5(`${song.artist} - ${song.album}`.toLowerCase())
+                ] ||
+                (await db.albums.get(
+                    md5(`${song.artist} - ${song.album}`.toLowerCase())
+                ));
 
             if (existingAlbum) {
                 if (!existingAlbum.artwork) {

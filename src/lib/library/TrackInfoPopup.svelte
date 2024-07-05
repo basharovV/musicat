@@ -63,10 +63,11 @@
         // Add empty default fields
         const defaults: MetadataEntry[] = [];
         const others: MetadataEntry[] = [];
+        console.log('map', map);
         if (!map) return { defaults, others };
         for (const field of Object.entries(map)) {
             // Check if this default field already exists in the file
-            const existingField = metadata.find(
+            const existingField = metadata?.find(
                 (m) => field[1] === m.genericId
             );
 
@@ -98,6 +99,7 @@
         metadata: MetadataEntry[],
         format: TagType
     ): MetadataEntry[] {
+
         if (
             ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
             "WAV"
@@ -106,6 +108,7 @@
             return []; // UNSUPPORTED FORMAT, for now...
         }
 
+        console.log('adding defaults', metadata, format);
         if (!format) return [];
 
         isUnsupportedFormat = false;
@@ -324,12 +327,6 @@
             });
         }
     }
-    rightClickedTrack.subscribe((track) => {
-        console.log("TRACK UPDATED", track);
-    });
-    rightClickedTracks.subscribe((tracks) => {
-        console.log("TRACKS UPDATED", tracks);
-    });
     async function reImportTracks(toImport: ToImport) {
         console.log("toImport", toImport);
         toast.success("Successfully written metadata!", {
@@ -513,7 +510,7 @@
         if (firstMatch?.length) {
             console.log("firstMatch", firstMatch);
             console.log("artistInput", artistInput);
-            const artistField = metadata?.mappedMetadata.find(
+            const artistField = metadata?.mappedMetadata?.find(
                 (m) => m.genericId === "artist"
             );
             if (artistField) {
@@ -526,7 +523,7 @@
 
     async function onArtistUpdated(evt) {
         artistInput = evt.target.value;
-        const artistField = metadata?.mappedMetadata.find(
+        const artistField = metadata?.mappedMetadata?.find(
             (m) => m.genericId === "artist"
         );
         if (artistField) {
