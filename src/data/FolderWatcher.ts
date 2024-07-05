@@ -31,6 +31,9 @@ export async function startWatching() {
                 for (const path of event.paths) {
                     const result = isFileOrDirectory(path);
                     console.log("result", result);
+                    if (paths.includes(path)) {
+                        continue;
+                    }
                     if (result === "file") {
                         if (isAudioFile(path)) {
                             const file = path.split("/").pop();
@@ -94,7 +97,7 @@ export async function startWatching() {
                                 text: "Folder watcher: Folder added - updating library...",
                                 timeout: 2000
                             });
-                            await importPaths([path], true);
+                            // await importPaths([path], true);
                         }
                     }
                 }
