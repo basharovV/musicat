@@ -395,7 +395,7 @@ class AudioPlayer {
             this.isRunningTransition = false;
             currentSong.set(song);
             this.currentSong = song;
-
+            console.log('play', play, this.shouldPlay);
             if (play) {
                 await this.play(false);
                 playerTime.set(position);
@@ -411,7 +411,7 @@ class AudioPlayer {
                     // Try to reconnect
                     this.webRTCReceiver.playerConnection?.close();
                     this.webRTCReceiver.remoteConnection?.close();
-                    this.webRTCReceiver.dataChannel.close();
+                    this.webRTCReceiver.dataChannel?.close();
                     this.webRTCReceiver.init();
                 }
 

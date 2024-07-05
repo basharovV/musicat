@@ -6,6 +6,7 @@ import {
     importStatus,
     isFindFocused,
     isInfoPopupOpen,
+    isLyricsOpen,
     isQueueOpen,
     isSettingsOpen,
     isTrackInfoPopupOpen,
@@ -17,6 +18,7 @@ import type { ToImport } from "../App";
 import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
 import { open } from "@tauri-apps/api/shell";
 import { appDataDir, dataDir } from "@tauri-apps/api/path";
+import { openTauriImportDialog } from "../data/LibraryImporter";
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {
@@ -41,6 +43,9 @@ export function startMenuListener() {
                     action: get(isFindFocused) ? "unfocus" : "focus"
                 });
                 break;
+            case "import":
+                openTauriImportDialog()
+                break;
             case "queue":
                 isQueueOpen.set(!get(isQueueOpen));
                 break;
@@ -49,6 +54,9 @@ export function startMenuListener() {
                 break;
             case "library":
                 uiView.set("library");
+                break;
+            case "lyrics":
+                isLyricsOpen.set(!get(isLyricsOpen));
                 break;
             // DevTools
             case "clear-db":
