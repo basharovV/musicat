@@ -750,6 +750,7 @@
 
     // Something got released over the queue
     async function onMouseUpContainer() {
+        audioPlayer.shouldPlay = false;
         if ($draggedSongs?.length) {
             if ($isShuffleEnabled) {
                 $shuffledPlaylist.push(...$draggedSongs);
@@ -759,6 +760,10 @@
                 $playlist = $playlist;
             }
         }
+
+        $draggedSongs = [];
+        draggingSongIdx = null;
+        $isDraggingFromQueue = false;
     }
 
     // Something got released over a song in the queue
@@ -1145,8 +1150,10 @@
                                                     song.viewModel?.index
                                                         ? DRAGGING_SOURCE_COLOR
                                                         : $currentSongIdx ===
-                                                            song?.viewModel
-                                                                ?.index
+                                                                song?.viewModel
+                                                                    ?.index &&
+                                                            song.id ===
+                                                                $currentSong?.id
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
                                                               isSongIdxHighlighted(
@@ -1212,7 +1219,10 @@
                                                     verticalAlign: "middle",
                                                     fill:
                                                         $currentSongIdx ===
-                                                        song?.viewModel?.index
+                                                            song?.viewModel
+                                                                ?.index &&
+                                                        song.id ===
+                                                            $currentSong?.id
                                                             ? PLAYING_TEXT_COLOR
                                                             : TEXT_COLOR,
                                                     ellipsis:
@@ -1238,7 +1248,7 @@
 
                                             {#if f.value === "title"}
                                                 <!-- Now playing icon -->
-                                                {#if $currentSongIdx === song?.viewModel?.index}
+                                                {#if $currentSongIdx === song?.viewModel?.index && song.id === $currentSong?.id}
                                                     <Path
                                                         config={{
                                                             x:
@@ -1483,6 +1493,12 @@
         top: 0;
         bottom: 0;
         user-select: none;
+        mask-image: linear-gradient(
+            to bottom,
+            black 0%,
+            black 95%,
+            transparent 100%
+        );
     }
 
     .dimmer {
@@ -1677,13 +1693,13 @@
             hsla(320, 4.92%, 11.96%, 0.016) 90%,
             hsla(320, 4.92%, 11.96%, 0) 100%
         );
-        height: 40px;
+        height: 100px;
         width: 100%;
         position: absolute;
         bottom: 0;
         right: 0;
         left: 0;
         z-index: 10;
-        opacity: 0.6;
+        opacity: 0.4;
     }
 </style>

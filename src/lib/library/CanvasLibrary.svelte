@@ -52,6 +52,7 @@
         playlistType,
         queriedSongs,
         query,
+        queueMode,
         rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistId,
@@ -60,6 +61,7 @@
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
+        smartQueryResults,
         uiView
     } from "../../data/store";
     import {
@@ -145,15 +147,15 @@
                     status.state.previousAlbum = s?.album;
                     status.state.previousArtist = s?.artist;
 
-                    // If currently in album mode, then the current song index doesn't match the library index,
+                    // If currently in album/shuffle/custom queue mode, then the current song index doesn't match the library index,
                     // and we need to find it
                     if (
-                        ($playlistType === "album" &&
-                            s.id === $currentSong?.id) ||
-                        ($isShuffleEnabled && s.id === $currentSong?.id)
+                        ($playlistType === "album" ||
+                            $queueMode === "custom" ||
+                            $isShuffleEnabled) &&
+                        s.id === $currentSong?.id
                     ) {
                         console.log("found song:", idx);
-
                         currentSongY = idx * ROW_HEIGHT;
                         currentSongScrollIdx = idx;
                     } else {
@@ -767,9 +769,13 @@
 
     function onDoubleClickSong(song, idx) {
         AudioPlayer.shouldPlay = false;
-        $currentSongIdx = idx;
-        if (!$isQueueCleared) {
-            $playlist = $queriedSongs;
+        if ($queueMode === "library") {
+            $currentSongIdx = idx;
+            if ($uiView === "smart-query") {
+                $playlist = $smartQueryResults;
+            } else {
+                $playlist = $queriedSongs;
+            }
         }
         $playlistType = $uiView === "playlists" ? "playlist" : "library";
         AudioPlayer.playSong(song);
@@ -995,10 +1001,12 @@
             event.preventDefault();
             if (!$isTrackInfoPopupOpen) {
                 AudioPlayer.shouldPlay = false;
-                $playlist = $queriedSongs;
+                if ($queueMode === "library") {
+                    $currentSongIdx = highlightedSongIdx;
+                    $playlist = $queriedSongs;
+                }
                 $playlistType =
                     $uiView === "playlists" ? "playlist" : "library";
-                $currentSongIdx = highlightedSongIdx;
                 AudioPlayer.playSong(songsHighlighted[0]);
             }
         }

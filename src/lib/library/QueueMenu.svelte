@@ -16,6 +16,7 @@
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { findCountryByArtist } from "../data/LibraryEnrichers";
+    import type { Song } from "../../App";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -56,6 +57,20 @@
         isConfirmingRemoveFromPlaylist = false;
     }
 
+    function spliceMultiple(arr: Song[], indexes: number[]) {
+        // Sort the indexes in descending order to avoid index shifting issues
+        indexes.sort((a, b) => b - a);
+        // Create a copy of the array to avoid mutating the original array
+        let newArray = arr.slice();
+        // Iterate over the sorted indexes and remove elements
+        indexes.forEach((index) => {
+            if (index >= 0 && index < newArray.length) {
+                newArray.splice(index, 1);
+            }
+        });
+        return newArray;
+    }
+
     async function removeFromQueue() {
         console.log("delete");
         if (!isConfirmingDelete) {
@@ -66,13 +81,16 @@
 
         if ($rightClickedTracks.length) {
             closeMenu();
-            $rightClickedTracks.forEach((t) => {
-                ($isShuffleEnabled ? $shuffledPlaylist : $playlist).splice(
-                    t.viewModel.index,
-                    1
-                );
-            });
-            $playlist = $playlist;
+            const spliced = spliceMultiple(
+                $isShuffleEnabled ? $shuffledPlaylist : $playlist,
+                $rightClickedTracks.map((t) => t.viewModel.index)
+            );
+            console.log("spliced", spliced);
+            if ($isShuffleEnabled) {
+                $shuffledPlaylist = spliced;
+            } else {
+                $playlist = spliced;
+            }
             $rightClickedTracks = [];
             isConfirmingDelete = false;
         } else if ($rightClickedTrack) {

@@ -331,3 +331,5 @@ interface Marker {
 type PlaylistType = "library" | "album" | "playlist" | "country"
 
 type ArrowFocus = "library" | "queue"
+
+type QueueMode = "library" | "custom";

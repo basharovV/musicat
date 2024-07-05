@@ -12,6 +12,7 @@ import type {
     ImportStatus,
     LastPlayedInfo,
     PlaylistType,
+    QueueMode,
     SidebarItem,
     Song,
     StreamInfo,
@@ -210,8 +211,10 @@ export const isLyricsOpen = writable(false);
 export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
+// Queue
 export const isQueueOpen = writable(false);
 export const isQueueCleared = writable(false);
+export const queueMode: Writable<QueueMode> = writable("library");
 
 export const isCmdOrCtrlPressed = writable(false);
 
