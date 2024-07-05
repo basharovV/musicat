@@ -13,18 +13,20 @@ use std::result;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
-use symphonia::core::audio::{AudioBufferRef, SignalSpec};
+use symphonia::core::audio::{AudioBufferRef, SampleBuffer, SignalSpec};
 use symphonia::core::units::Duration;
 use webrtc::data_channel::RTCDataChannel;
 
 pub trait AudioOutput {
-    fn write(&mut self, decoded: AudioBufferRef<'_>);
+    fn write(&mut self, decoded: AudioBufferRef<'_>, ramp_up_samples: u64, ramp_down_samples: u64);
     fn flush(&mut self);
     fn get_sample_rate(&self) -> u32;
     fn pause(&self);
     fn resume(&self);
     fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool;
     fn has_remaining_samples(&self) -> bool;
+    fn ramp_down(&mut self, buffer: AudioBufferRef, num_samples: usize);
+    fn ramp_up(&mut self, buffer: AudioBufferRef, num_samples: usize);
 }
 
 #[allow(dead_code)]
@@ -188,7 +190,7 @@ mod cpal {
     use super::{AudioOutput, AudioOutputError, Result};
 
     use bytes::Bytes;
-    use cpal::SupportedBufferSize;
+    use cpal::{Sample, SupportedBufferSize};
     use symphonia::core::audio::{
         AudioBufferRef, Channels, Layout, RawSample, SampleBuffer, SignalSpec,
     };
@@ -583,7 +585,12 @@ mod cpal {
     }
 
     impl<T: AudioOutputSample + Send + Sync> AudioOutput for CpalAudioOutputImpl<T> {
-        fn write(&mut self, decoded: AudioBufferRef<'_>) -> () {
+        fn write(
+            &mut self,
+            decoded: AudioBufferRef<'_>,
+            ramp_up_samples: u64,
+            ramp_down_samples: u64,
+        ) -> () {
             // Do nothing if there are no audio frames.
             if decoded.frames() == 0 {
                 println!("No more samples.");
@@ -599,9 +606,18 @@ mod cpal {
                 }
             } else {
                 // Resampling is not required. Interleave the sample for cpal using a sample buffer.
-                self.sample_buf.copy_interleaved_ref(decoded);
-
-                self.sample_buf.samples()
+                if (ramp_up_samples > 0) {
+                    println!("Ramping up first {:?}", ramp_up_samples);
+                    self.ramp_up(decoded, ramp_up_samples as usize);
+                    self.sample_buf.samples()
+                } else if (ramp_down_samples > 0) {
+                    println!("Ramping down last {:?}", ramp_down_samples);
+                    self.ramp_down(decoded, ramp_down_samples as usize);
+                    self.sample_buf.samples()
+                } else {
+                    self.sample_buf.copy_interleaved_ref(decoded);
+                    self.sample_buf.samples()
+                }
             };
 
             // Write all samples to the ring buffer.
@@ -655,16 +671,9 @@ mod cpal {
             // if it does - resample the decoded audio using Symphonia.
 
             if self.sample_rate != spec.rate {
-                println!(
-                    "resampling {} Hz to {} Hz",
-                    spec.rate,
-                    self.sample_rate
-                );
-                self.resampler.replace(Resampler::new(
-                    spec,
-                    self.sample_rate as usize,
-                    max_frames,
-                ));
+                println!("resampling {} Hz to {} Hz", spec.rate, self.sample_rate);
+                self.resampler
+                    .replace(Resampler::new(spec, self.sample_rate as usize, max_frames));
                 return true;
             } else {
                 self.resampler.take();
@@ -675,6 +684,32 @@ mod cpal {
         /// Checks if there are any samples left in the buffer that have not been played yet.
         fn has_remaining_samples(&self) -> bool {
             !self.ring_buf.is_empty()
+        }
+
+        fn ramp_down(&mut self, buffer: AudioBufferRef, num_samples: usize) {
+            self.sample_buf.copy_interleaved_ref(buffer);
+            let ramp_len = num_samples.min(self.sample_buf.len());
+
+            for (i, sample) in self.sample_buf.samples_mut()[..ramp_len]
+                .iter_mut()
+                .enumerate()
+            {
+                let factor = 1.0 - (i as f32 / ramp_len as f32);
+                sample.mul_amp(factor.to_sample());
+            }
+        }
+
+        fn ramp_up(&mut self, buffer: AudioBufferRef, num_samples: usize) {
+            self.sample_buf.copy_interleaved_ref(buffer);
+            let ramp_len = num_samples.min(self.sample_buf.len());
+
+            for (i, sample) in self.sample_buf.samples_mut()[..ramp_len]
+                .iter_mut()
+                .enumerate()
+            {
+                let factor = i as f32 / ramp_len as f32;
+                sample.mul_amp(factor.to_sample());
+            }
         }
     }
 }

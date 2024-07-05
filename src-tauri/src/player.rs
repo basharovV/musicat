@@ -17,7 +17,9 @@ pub mod file_streamer {
     use atomic_wait::{wake_all, wake_one};
     use cpal::traits::{DeviceTrait, HostTrait};
     use log::warn;
-    use symphonia::core::audio::{Layout, RawSampleBuffer, SampleBuffer, SignalSpec};
+    use symphonia::core::audio::{
+        AudioBufferRef, Layout, RawSampleBuffer, SampleBuffer, SignalSpec,
+    };
     use symphonia::core::codecs::{DecoderOptions, FinalizeResult, CODEC_TYPE_NULL};
     use symphonia::core::errors::Error::{self, ResetRequired};
     use symphonia::core::formats::{FormatOptions, SeekTo, Track};
@@ -416,7 +418,7 @@ pub mod file_streamer {
         // Loop here!
         loop {
             cancel_token = CancellationToken::new();
-            println!("path_str is {:?}", path_str);
+            // println!("path_str is {:?}", path_str);
             path_str_clone = path_str.clone(); // Used for looping
             if let None = path_str {
                 is_transition = false;
@@ -425,7 +427,7 @@ pub mod file_streamer {
                     .unwrap()
                     .recv_timeout(Duration::from_secs(1));
 
-                println!("audio: waiting for file! {:?}", event);
+                // println!("audio: waiting for file! {:?}", event);
                 if let Ok(result) = event {
                     match result {
                         PlayerControlEvent::StreamFile(request) => {
@@ -586,6 +588,7 @@ pub mod file_streamer {
                 previous_sample_rate = spec.rate;
 
                 if (audio_output.is_none() || should_reset_audio) {
+                    println!("player: Resetting audio device");
                     // Try to open the audio output.
                     audio_output.replace(output::try_open(
                         spec,
@@ -597,6 +600,8 @@ pub mod file_streamer {
                         volume.clone(),
                         app_handle.clone(),
                     ));
+                } else {
+                    println!("player: Re-using existing audio output");
                 }
 
                 let mut last_sent_time = Instant::now();
@@ -777,7 +782,7 @@ pub mod file_streamer {
 
                                 // Decode the packet into audio samples.
                                 match decoder.decode(&packet) {
-                                    Ok(_decoded) => {
+                                    Ok(mut _decoded) => {
                                         last_sent_time = Instant::now();
 
                                         /*
@@ -841,7 +846,21 @@ pub mod file_streamer {
                                             // Write the decoded audio samples to the audio output if the presentation timestamp
                                             // for the packet is >= the seeked position (0 if not seeking).
                                             if packet.ts() >= seek_ts {
-                                                guard.write(_decoded);
+                                                let mut ramp_up_smpls = 0;
+                                                let mut ramp_down_smpls = 0;
+                                                // Avoid clicks by ramping down and up quickly
+                                                if let Some(frames) = track.codec_params.n_frames {
+                                                    if (packet.ts >= frames - packet.dur) {
+                                                        ramp_down_smpls = packet.dur;
+                                                    } else if (packet.ts < packet.dur) {
+                                                        ramp_up_smpls = packet.dur;
+                                                    }
+                                                }
+                                                guard.write(
+                                                    _decoded,
+                                                    ramp_up_smpls,
+                                                    ramp_down_smpls,
+                                                );
                                             }
                                         }
 
