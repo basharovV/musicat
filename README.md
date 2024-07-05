@@ -7,7 +7,7 @@
 <br/>
 -
 <br/>
-<small>🎵 supports MP3, FLAC, WAV, AAC, OGG</small>
+<small>🎵 supports MP3, FLAC, WAV, AAC, OGG with gapless playback</small>
 <br/>
 <small>🔗 linked library, using original files on disk</small>
 <br/>
@@ -31,9 +31,6 @@
 </small>
 <br/>
 <small>📊 Stats, album timeline
-</small>
-<br/>
-<small>🤖 Dive deeper with ChatGPT or local Ollama model for additional insights.
 </small>
 <br/>
   -
