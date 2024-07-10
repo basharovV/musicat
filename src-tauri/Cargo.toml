@@ -33,7 +33,8 @@ http-range = "0.1.5"
 tauri-utils = "1.5.2"
 percent-encoding = "2.3.1"
 symphonia = { version = "0.5.4", features = ["mp3", "flac", "opt-simd"] }
-webrtc = "0.9.0"
+webrtc = { git = "https://github.com/basharovV/webrtc.git" }
+crc = { version = "3.2.1" }
 log = "0.4.20"
 bytes = "1.5.0"
 tokio-util = "0.7.10"
@@ -47,6 +48,11 @@ env_logger = "0.11.3"
 rustfft = "6.2.0"
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 anyhow = "1.0.86"
+
+[patch.crates-io]
+webrtc = { git = "https://github.com/basharovV/webrtc.git" }
+webrtc-ice = { git = "https://github.com/basharovV/webrtc.git" }
+webrtc-sctp = { git = "https://github.com/basharovV/webrtc.git" }
 
 [features]
 # by default Tauri runs in production mode

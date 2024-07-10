@@ -23,11 +23,34 @@ export default class WebRTCReceiver {
 
     constructor() {
         this.init();
+    }
+
+    createDataChannel() {
+        this.dataChannel = this.playerConnection.createDataChannel("data", {
+            maxRetransmits: 0,
+            ordered: false
+        });
+    }
+
+    async init() {
+        this.playerConnection = new RTCPeerConnection({ iceServers: [] });
+        await this.checkExistingConnection();
+        this.listenForIceCandidate();
+        this.createDataChannel();
+        await this.createLocalOffer();
+
+        // Setup listeners
+
         // Setup listeners
         this.playerConnection.addEventListener("icecandidate", (event) => {
             console.log("webrtc::Ice candidate", event);
             // Send ice candidate to server
-            if (event.candidate) {
+            // Check if the candidate is a local candidate
+            if (
+                event.candidate &&
+                event.candidate.candidate.match(/(127.0.0.1|localhost|.local)/)
+            ) {
+                console.log("webrtc::Sending candidate to remote...");
                 this.sendIceCandidateToRemote(event.candidate);
             }
         });
@@ -94,24 +117,16 @@ export default class WebRTCReceiver {
         this.playerConnection.addEventListener(
             "connectionstatechange",
             (event) => {
-                console.log("webrtc::Connectionstatechange", event);
+                console.log(
+                    "webrtc::Connectionstatechange",
+                    this.playerConnection.connectionState
+                );
+                if (this.playerConnection.connectionState === "disconnected") {
+                    // Try to re-establish
+                    this.init();
+                }
             }
         );
-    }
-
-    createDataChannel() {
-        this.dataChannel = this.playerConnection.createDataChannel("data", {
-            maxRetransmits: 0,
-            ordered: false
-        });
-    }
-
-    async init() {
-        this.playerConnection = new RTCPeerConnection();
-        await this.checkExistingConnection();
-        await this.listenForIceCandidate();
-        this.createDataChannel();
-        await this.createLocalOffer();
     }
 
     async checkExistingConnection() {
@@ -122,7 +137,9 @@ export default class WebRTCReceiver {
 
     async createLocalOffer() {
         try {
-            const localOffer = await this.playerConnection.createOffer();
+            const localOffer = await this.playerConnection.createOffer({
+                iceRestart: true
+            });
             this.listenForAnswer();
             await this.sendOfferToRemote(localOffer);
             await this.handleLocalDescription(localOffer);
@@ -137,6 +154,7 @@ export default class WebRTCReceiver {
                 "webrtc-answer",
                 async (event) => {
                     console.log("webrtc::answer", event);
+
                     await this.playerConnection.setRemoteDescription(
                         new RTCSessionDescription(event.payload)
                     );

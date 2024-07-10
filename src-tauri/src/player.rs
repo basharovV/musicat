@@ -36,6 +36,7 @@ pub mod file_streamer {
     use webrtc::api::interceptor_registry::register_default_interceptors;
     use webrtc::api::media_engine::MediaEngine;
     use webrtc::api::APIBuilder;
+    use webrtc::data_channel::data_channel_init::RTCDataChannelInit;
     use webrtc::data_channel::RTCDataChannel;
     use webrtc::ice_transport::ice_candidate::RTCIceCandidateInit;
     use webrtc::interceptor::registry::Registry;
@@ -186,6 +187,7 @@ pub mod file_streamer {
 
             // Prepare the configuration
             let config = RTCConfiguration {
+                ice_servers: Vec::new(),
                 ..Default::default()
             };
 
@@ -193,8 +195,21 @@ pub mod file_streamer {
             let peer_connection = Arc::new(api.new_peer_connection(config).await?);
 
             // Create a datachannel with label 'data'
-            let data_channel = peer_connection.create_data_channel("data", None).await?;
+            let data_channel = peer_connection
+                .create_data_channel(
+                    "data",
+                    Some(RTCDataChannelInit {
+                        max_retransmits: Some(0),
+                        ordered: Some(false),
+                        ..Default::default()
+                    }),
+                )
+                .await?;
             // &self.data_channel.on_close(Box::new(move || {}));
+            data_channel.on_open(Box::new(move || {
+                println!("Data channel opened");
+                Box::pin(async {})
+            }));
 
             // Set the handler for Peer connection state
             // This will notify you when the peer has connected/disconnected
@@ -218,9 +233,10 @@ pub mod file_streamer {
                 println!("on_ice_candidate {:?}", c);
                 if let Some(cand) = c {
                     // let candidate = serde_json::to_string(&cand.to_json().unwrap());
-
-                    let _ =
-                        app_handle.emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
+                    if (cand.address.contains("127.0.0.1")) {
+                        let _ = app_handle
+                            .emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
+                    }
                 }
                 Box::pin(async {})
             }));
