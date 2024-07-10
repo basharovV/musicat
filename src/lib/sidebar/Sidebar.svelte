@@ -24,6 +24,7 @@
         currentSong,
         currentSongArtworkSrc,
         currentSongIdx,
+        draggedAlbum,
         draggedSongs,
         isDraggingFromQueue,
         isFindFocused,
@@ -467,6 +468,7 @@
                 }
             );
             $draggedSongs = [];
+            $draggedAlbum = null;
             $isDraggingFromQueue = false;
         }
     }
@@ -892,6 +894,20 @@
                             >
                         {/if}
                         <item
+                            class:selected={$uiView === "internet-archive"}
+                            on:click={() => {
+                                $uiView = "internet-archive";
+                            }}
+                        >
+                            <Icon
+                                icon="fe:music"
+                                size={15}
+                                color={$uiView === "internet-archive"
+                                    ? "#45fffcf3"
+                                    : "currentColor"}
+                            />Internet Archive</item
+                        >
+                        <item
                             class:selected={$uiView === "map"}
                             on:click={() => {
                                 $uiView = "map";
@@ -1076,7 +1092,8 @@
                 class="transport-middle"
                 size={36}
                 icon="fe:forward"
-                disabled={$playlist.length === 0 || $currentSongIdx === $playlist?.length - 1}
+                disabled={$playlist.length === 0 ||
+                    $currentSongIdx === $playlist?.length - 1}
                 onClick={() => audioPlayer.playNext()}
             />
             <Icon
@@ -1759,7 +1776,6 @@
             }
         }
     }
-
 
     .playlist-menu {
         position: fixed;

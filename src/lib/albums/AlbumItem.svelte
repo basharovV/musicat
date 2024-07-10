@@ -5,6 +5,8 @@
     import {
         albumPlaylist,
         currentSong,
+        draggedAlbum,
+        draggedSongs,
         isPlaying,
         playlist,
         playlistType
@@ -62,6 +64,17 @@
         }}
         on:mouseleave={() => {
             isHovered = false;
+        }}
+        on:mousedown|preventDefault={async () => {
+            let tracks = await db.songs
+                .where("id")
+                .anyOf(album.tracksIds)
+                .toArray();
+            tracks = tracks.sort((a, b) => {
+                return a.trackNumber - b.trackNumber;
+            });
+            $draggedSongs = tracks;
+            $draggedAlbum = album;
         }}
     >
         <div class="hinge" />
@@ -153,7 +166,8 @@
             color: white;
             z-index: 20;
         }
-        .artist, .info {
+        .artist,
+        .info {
             z-index: 20;
         }
         z-index: 9;

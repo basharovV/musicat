@@ -143,6 +143,7 @@ export const smartQueryResults: Writable<Song[]> = writable([]);
 // Playlists
 export const selectedPlaylistId: Writable<number> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
+export const draggedAlbum: Writable<Album> = writable(null);
 export const isDraggingFromQueue = writable(false);
 export const dragGhostReset = writable(false);
 

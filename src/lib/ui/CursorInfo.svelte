@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { draggedSongs } from "../../data/store";
+    import { draggedAlbum, draggedSongs } from "../../data/store";
     export let x = 0;
     export let y = 0;
     export let show = false;
@@ -8,7 +8,9 @@
 {#if show}
     <div style="transform: translateY({y}px) translateX({x}px);">
         {#if $draggedSongs}
-            {#if $draggedSongs.length > 1}
+            {#if $draggedAlbum}
+                <p>{$draggedAlbum.title} ({$draggedSongs.length} songs)</p>
+            {:else if $draggedSongs.length > 1}
                 <p>{$draggedSongs.length} songs</p>
             {:else}
                 <p>{$draggedSongs[0].title}</p>

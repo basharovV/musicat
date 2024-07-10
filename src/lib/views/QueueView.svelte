@@ -30,6 +30,7 @@
         compressionSelected,
         currentSong,
         currentSongIdx,
+        draggedAlbum,
         draggedColumnIdx,
         draggedSongs,
         emptyDropEvent,
@@ -761,6 +762,7 @@
         }
 
         $draggedSongs = [];
+        $draggedAlbum = null;
         draggingSongIdx = null;
         $isDraggingFromQueue = false;
     }
@@ -805,6 +807,7 @@
             });
         }
         $draggedSongs = [];
+        $draggedAlbum = null;
         draggingSongIdx = null;
         $isDraggingFromQueue = false;
     }

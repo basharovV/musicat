@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Toaster } from "svelte-french-toast";
     import {
+        draggedAlbum,
         draggedScrapbookItems,
         draggedSongs,
         droppedFiles,
@@ -46,6 +47,7 @@
     import QueueView from "./lib/views/QueueView.svelte";
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
+    import InternetArchiveView from "./lib/views/InternetArchiveView.svelte";
 
     startMenuListener();
     startImportListener();
@@ -143,6 +145,7 @@
 
     function onMouseUp() {
         $draggedSongs = [];
+        $draggedAlbum = null;
         mouseX = 0;
         mouseY = 0;
     }
@@ -242,6 +245,8 @@
                 <MapView />
             {:else if $uiView === "analytics"}
                 <AnalyticsView />
+            {:else if $uiView === "internet-archive"}
+                <InternetArchiveView />
             {/if}
         </div>
 
