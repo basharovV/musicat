@@ -7,13 +7,19 @@
 <br/>
 -
 <br/>
-<small>🎵 supports MP3, FLAC, WAV, AAC, OGG with gapless playback</small>
+<small>🎵 supports MP3, FLAC, WAV, AAC, OGG</small>
+<br/>
+<small>🔊 gapless playback (same sample rate only)</small>
+<br/>
+<small>🎛️ auto-switch device sample rate</small>
 <br/>
 <small>🔗 linked library, using original files on disk</small>
 <br/>
 <small>👀 auto-watch and re-scan folders</small>
 <br/>
 <small>🏷 with metadata tagging support (read and write ID3v2, Vorbis)</small>
+<br/>
+<small>🧠 smart playlists</small>
 <br/>
 <small>🖼 download album art, origin country from Wikipedia
 </small>
