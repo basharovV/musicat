@@ -37,10 +37,12 @@
         isTrackInfoPopupOpen,
         isWaveformOpen,
         os,
+        playerTime,
         playlist,
         queriedSongs,
         query,
         rightClickedTrack,
+        seekTime,
         selectedPlaylistId,
         selectedSmartQuery,
         shouldFocusFind,
@@ -78,6 +80,18 @@
     let bitrate;
     let sampleRate;
     let stereo;
+
+    $: elapsedTime = `${(~~($playerTime / 60))
+        .toString()
+        .padStart(2, "0")}:${(~~($playerTime % 60))
+        .toString()
+        .padStart(2, "0")}`;
+
+    $: durationText = `${(~~(duration / 60)).toString().padStart(2, "0")}:${(~~(
+        duration % 60
+    ))
+        .toString()
+        .padStart(2, "0")}`;
 
     // Shortcuts
     hotkeys("space", function (event, handler) {
@@ -1064,7 +1078,12 @@
     {/if}
     <div class="bottom" data-tauri-drag-region>
         <div class="seekbar">
-            <Seekbar {duration} />
+            <Seekbar
+                {duration}
+                onSeek={(time) => seekTime.set(time)}
+                playerTime={$playerTime}
+            />
+            <p class="elapsed-time">{elapsedTime} / {durationText}</p>
         </div>
         <transport>
             <Icon
@@ -1691,6 +1710,13 @@
 
     .seekbar {
         width: 100%;
+        display: flex;
+        flex-direction: column;
+        .elapsed-time {
+            opacity: 0.5;
+            font-size: 12px;
+            margin: 0;
+        }
     }
     transport {
         /* background-color: rgb(255, 255, 255); */

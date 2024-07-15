@@ -1,32 +1,14 @@
 <script lang="ts">
-    import { playerTime, seekTime } from "../../data/store";
-
-    let playerState = {
-        relativePosition: 0,
-        loadProgress: 0,
-        currentPosition: 0
-    };
-
     // seconds
     export let duration = 0;
+    export let playerTime = 0;
+    export let onSeek = (val) => {};
 
-    $: elapsedTime = `${(~~($playerTime / 60))
-        .toString()
-        .padStart(2, "0")}:${(~~($playerTime % 60))
-        .toString()
-        .padStart(2, "0")}`;
-
-    $: durationText = `${(~~(duration / 60)).toString().padStart(2, "0")}:${(~~(
-        duration % 60
-    ))
-        .toString()
-        .padStart(2, "0")}`;
-
-    $: playheadPos = Math.min(($playerTime / duration) * 100, 100);
+    $: playheadPos = Math.min((playerTime / duration) * 100, 100);
 
     // $: console.log("Duration", duration);
     // $: console.log("Playhead", playheadPos);
-    
+
     $: hoverheadPosPx = 0;
 
     let seekBar;
@@ -47,20 +29,20 @@
     const onSeekHover = (e) => {
         hoverheadPosPx = e.offsetX > 0 ? e.offsetX : 0;
     };
-
-    const onSeek = async (e) => {
-        const percent = e.offsetX / e.target.offsetWidth;
-        seekTime.set(duration * percent);
-    };
 </script>
 
 <div class="container">
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div
+        role="progressbar"
         class="seekbar-container"
         on:mouseenter={() => (showHoverHead = true)}
         on:mouseleave={() => (showHoverHead = false)}
         on:mousemove={onSeekHover}
-        on:click={onSeek}
+        on:click={(e) => {
+            const percent = e.offsetX / e.target.offsetWidth;
+            onSeek && onSeek(duration * percent);
+        }}
     >
         <div class="seekbar" bind:this={seekBar} class:hovered={showHoverHead}>
             <svg
@@ -92,7 +74,6 @@
             {/if}
         </div>
     </div>
-    <p class="elapsed-time">{elapsedTime} / {durationText}</p>
 </div>
 
 <style lang="scss">
@@ -182,10 +163,5 @@
                 }
             }
         }
-    }
-
-    .elapsed-time {
-        opacity: 0.5;
-        font-size: 12px;
     }
 </style>

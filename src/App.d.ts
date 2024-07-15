@@ -179,7 +179,8 @@ type SidebarItem =
     | "albums"
     | "playlists"
     | "map"
-    | "analytics";
+    | "analytics"
+    | "internet-archive";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 
@@ -284,27 +285,26 @@ interface AudioSourceNodeOptions {
     processorOptions: {
         initialSamples: Float32Array[][];
         trackStates: Array<boolean>;
-        trackDescriptions: [{numberChannels: number}];
+        trackDescriptions: [{ numberChannels: number }];
         shouldLoop: boolean;
         totalSamples: number;
         loopStartSample: number;
         inputSampleRate: number;
         outputSampleRate: number;
-    }
+    };
 }
-
 
 interface StreamStatus {
     isOpen: boolean;
 }
 
 interface StreamInfo {
-    bytesReceived: number,
-    receiveRate: number, // in KB/s
-    bufferedSamples: number,
-    playedSamples: number,
-    timestamp: number, // in s
-    sampleIdx: number
+    bytesReceived: number;
+    receiveRate: number; // in KB/s
+    bufferedSamples: number;
+    playedSamples: number;
+    timestamp: number; // in s
+    sampleIdx: number;
 }
 
 interface SongChangeEvent {
@@ -328,8 +328,51 @@ interface Marker {
     title: string;
 }
 
-type PlaylistType = "library" | "album" | "playlist" | "country"
+type PlaylistType = "library" | "album" | "playlist" | "country";
 
-type ArrowFocus = "library" | "queue"
+type ArrowFocus = "library" | "queue";
 
 type QueueMode = "library" | "custom";
+
+interface IACollection {
+    id: string;
+    filesCount: number;
+    size: number; // in bytes
+    title: string;
+    description: string;
+}
+
+interface IAFile {
+    name: string;
+    source: string;
+    mtime: string;
+    size: string;
+    md5: string;
+    crc32: string;
+    sha1: string;
+    format: IAFormat;
+    rotation: string;
+    matrix_number: string;
+    publisher: string;
+    creator: string;
+    title: string;
+    track: string;
+    album: string;
+    collectionCatalogNumber?: string;
+}
+
+type IAFormat = "flac" | "mp3";
+
+interface IAItem {
+    id: string;
+    title: string;
+    server1: string;
+    server2: string;
+    dir: string;
+    previewSrc: string;
+    duration: number; // secs
+    files: IAFile[];
+    date?: number;
+    performer?: string;
+    writer?: string;
+}
