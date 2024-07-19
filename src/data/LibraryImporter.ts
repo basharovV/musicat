@@ -110,7 +110,8 @@ export async function getSongFromMetadata(
             fileInfo: metadata.format,
             isFavourite: false,
             playCount: 0,
-            markers: []
+            markers: [],
+            dateAdded: new Date().getTime()
         };
         console.log("song: ", songToAdd);
         // Remove image, too large
@@ -185,10 +186,9 @@ export async function addSong(
     if (singleFile) {
         songsJustAdded.set([]);
     }
-    const metadata = await getMetadataFromFile(filePath, fileName);
-    if (!metadata) return;
-    const songToAdd = await getSongFromMetadata(filePath, fileName, metadata);
-
+    const songToAdd = await invoke<Song>("get_song_metadata", {
+        event: { path: filePath, isImport: true }
+    });
     try {
         if (!songToAdd) {
             return;
@@ -201,7 +201,8 @@ export async function addSong(
                 originCountry: existingSong.originCountry,
                 songProjectId: existingSong.songProjectId,
                 isFavourite: existingSong.isFavourite,
-                playCount: existingSong.playCount
+                playCount: existingSong.playCount,
+                dateAdded: existingSong.dateAdded
             });
         } else {
             await db.songs.put(songToAdd);

@@ -62,6 +62,7 @@ interface Song {
         isFirstAlbum?: boolean;
         index: number; // When viewed in a song slice, we need the actual index of this song in the list,
         viewId?: string; // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
+        timeSinceAdded?: string; // eg 5m ago
     };
     playCount: number;
     // Returned from lofty but only written to db for albums for better grid loading performance
@@ -70,6 +71,7 @@ interface Song {
         format: string;
     };
     markers: Marker[];
+    dateAdded?: number; // unix timestamp
 }
 
 interface Album {
@@ -347,6 +349,9 @@ interface IAFile {
     name: string;
     source: string;
     mtime: string;
+    itemId: string;
+    duration: number; // in seconds
+    previewSrc: string;
     size: string;
     md5: string;
     crc32: string;

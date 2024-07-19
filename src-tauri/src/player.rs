@@ -824,9 +824,10 @@ pub mod file_streamer {
                                                 }
 
                                                 if let Some(song) =
-                                                    crate::metadata::extract_metadata(&Path::new(
-                                                        &p.clone().as_str(),
-                                                    ))
+                                                    crate::metadata::extract_metadata(
+                                                        &Path::new(&p.clone().as_str()),
+                                                        false,
+                                                    )
                                                 {
                                                     app_handle.emit_all("song_change", Some(song));
 

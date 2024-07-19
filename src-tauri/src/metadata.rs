@@ -4,8 +4,9 @@ use lofty::file::{AudioFile, FileType, TaggedFileExt};
 use lofty::read_from_path;
 use lofty::tag::{Accessor, ItemKey, TagType};
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn extract_metadata(file_path: &Path) -> Option<Song> {
+pub fn extract_metadata(file_path: &Path, is_import: bool) -> Option<Song> {
     if let Some(extension) = file_path.extension() {
         if let Some(ext_str) = extension.to_str() {
             if ext_str.eq_ignore_ascii_case("mp3")
@@ -129,6 +130,9 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         }
                     }
 
+                    let start = SystemTime::now();
+                    let since_the_epoch = start.duration_since(UNIX_EPOCH).unwrap().as_millis();
+
                     return Some(Song {
                         id,
                         path,
@@ -146,6 +150,11 @@ pub fn extract_metadata(file_path: &Path) -> Option<Song> {
                         // We default the origin country to "" to allow Dexie to return results when using orderBy,
                         // even if there are zero songs with a non-empty country
                         origin_country: Some(String::from("")),
+                        date_added: if is_import {
+                            Some(since_the_epoch)
+                        } else {
+                            None
+                        },
                     });
                 }
             }

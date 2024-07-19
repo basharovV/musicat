@@ -17,6 +17,7 @@ export class MySubClassedDexie extends Dexie {
         super("musicatdb");
         this.version(12).stores({
             songs: "id, title, artist, composer, album, genre, year, path, duration, isFavourite, originCountry, [artist+year+album+trackNumber], [artist+album+trackNumber], [album+trackNumber], [artist+album]", // Primary key and indexed props
+            songs: "id, title, artist, composer, album, genre, year, path, duration, isFavourite, originCountry, dateAdded, [artist+year+album+trackNumber], [artist+album+trackNumber], [album+trackNumber], [artist+album]", // Primary key and indexed props
             albums: "id, title, artist, year",
             smartQueries: "name",
             artistProjects: "name",

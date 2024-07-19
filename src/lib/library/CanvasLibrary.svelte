@@ -54,6 +54,7 @@
         queueMode,
         rightClickedTrack,
         rightClickedTracks,
+        scrollToSong,
         selectedPlaylistId,
         shouldFocusFind,
         shuffledPlaylist,
@@ -78,6 +79,7 @@
     import { getQueryPart } from "../smart-query/QueryParts";
     import { UserQueryPart } from "../smart-query/UserQueryPart";
     import Konva from "konva";
+    import { timeSince } from "../../utils/DateUtils";
 
     export let allSongs = null;
     export let dim = false;
@@ -96,11 +98,16 @@
             })
             .reduce(
                 (status, s, idx, songsArray) => {
+                    let timeSinceAdded = s.dateAdded
+                        ? timeSince(s.dateAdded)
+                        : "";
                     if (s.viewModel) {
                         s.viewModel.index = idx;
+                        s.viewModel.timeSinceAdded = timeSinceAdded;
                     } else {
                         s.viewModel = {
-                            index: idx
+                            index: idx,
+                            timeSinceAdded
                         };
                     }
                     if (s?.album !== status.state.previousAlbum) {
@@ -223,6 +230,17 @@
             show: true,
             viewProps: {
                 width: 63,
+                x: 0,
+                autoWidth: false
+            }
+        },
+        {
+            name: "Date Added",
+            value: "dateAdded",
+            displayValue: "viewModel.timeSinceAdded",
+            show: true,
+            viewProps: {
+                width: 100,
                 x: 0,
                 autoWidth: false
             }
@@ -413,7 +431,7 @@
     $: if (
         $uiView === "library" &&
         (isInit || $forceRefreshLibrary === true) &&
-        $libraryScrollPos !== null &&
+        ($libraryScrollPos !== null || $scrollToSong !== null) &&
         scrollContainer &&
         shouldRender
     ) {
@@ -423,10 +441,15 @@
         //     (songs?.length * ROW_HEIGHT - viewportHeight) * $libraryScrollPos
         // );
         setTimeout(() => {
-            scrollContainer.scrollTo({
-                top: (contentHeight - viewportHeight) * $libraryScrollPos,
-                behavior: "instant"
-            });
+            if ($scrollToSong) {
+                focusSong($scrollToSong);
+                $scrollToSong = null;
+            } else {
+                scrollContainer.scrollTo({
+                    top: (contentHeight - viewportHeight) * $libraryScrollPos,
+                    behavior: "instant"
+                });
+            }
             ready = true;
         }, 50);
         isInit = false;
@@ -512,6 +535,8 @@
                 case "composer":
                     return width > 650;
                 case "originCountry":
+                    return width > 650;
+                case "dateAdded":
                     return width > 650;
                 default:
                     return true;
@@ -760,6 +785,33 @@
                 top: adjustedPos,
                 behavior: "smooth"
             });
+        }
+    }
+
+    /**
+     * Scrolls to and highlights song
+     * @param song
+     */
+    function focusSong(song: Song) {
+        let found;
+        let idx = $allSongs?.findIndex((s) => {
+            if (s.id === song.id) {
+                found = s;
+                return true;
+            }
+            return false;
+        });
+        if (idx !== undefined) {
+            let y = idx * ROW_HEIGHT;
+
+            if (y > viewportHeight / 2.3) {
+                y -= viewportHeight / 2.3;
+            }
+            scrollContainer.scrollTo({
+                top: y,
+                behavior: "smooth"
+            });
+            highlightSong(found, found.viewModel.index, false);
         }
     }
 
@@ -1205,12 +1257,6 @@
         }
     }
 
-    $: if ($bottomBarNotification?.timeout) {
-        setTimeout(() => {
-            $bottomBarNotification = null;
-        }, $bottomBarNotification.timeout);
-    }
-
     function filterByField(fieldName: string, fieldValue: any) {
         let queryPart;
         // console.log("filter", fieldName, fieldValue);
@@ -1257,6 +1303,20 @@
 
     function validatedValue(value) {
         return isInvalidValue(value) ? "-" : value;
+    }
+
+    /**
+     * Supports nested props
+     * @param song
+     * @param field
+     */
+    function getValue(song, field) {
+        if (field.displayValue) {
+            return field.displayValue
+                .split(".")
+                .reduce((acc, key) => acc && acc[key], song);
+        }
+        return song[field.value];
     }
 </script>
 
@@ -1339,17 +1399,6 @@
                                 class="smart-query-builder"
                             >
                                 <SmartQueryBuilder />
-                            </div>
-                        {:else}
-                            <div
-                                class="smart-query-main"
-                                transition:fly={{
-                                    y: -10,
-                                    duration: 150,
-                                    easing: cubicInOut
-                                }}
-                            >
-                                <SmartQueryMainHeader />
                             </div>
                         {/if}
                     </div>
@@ -1465,7 +1514,7 @@
                                         />
                                         {#each displayFields as f, idx (f.value)}
                                             <!-- Smart query fields -->
-                                            {#if f.value.match(/^(year|genre|originCountry)/) !== null && !isInvalidValue(song[f.value])}
+                                            {#if f.value.match(/^(year|genre|originCountry)/) !== null && !isInvalidValue(getValue(song, f))}
                                                 <Label
                                                     config={{
                                                         x: f.viewProps.x + 5,
@@ -1491,7 +1540,7 @@
                                                     on:click={() => {
                                                         filterByField(
                                                             f.value,
-                                                            song[f.value]
+                                                            getValue(song, f)
                                                         );
                                                     }}
                                                 >
@@ -1511,7 +1560,10 @@
                                                     <Text
                                                         config={{
                                                             text: validatedValue(
-                                                                song[f.value]
+                                                                getValue(
+                                                                    song,
+                                                                    f
+                                                                )
                                                             ),
                                                             listening: false,
                                                             y: 0,
@@ -1555,7 +1607,7 @@
                                                             -DUMMY_PADDING +
                                                             scrollOffset,
                                                         text: validatedValue(
-                                                            song[f.value]
+                                                            getValue(song, f)
                                                         ),
                                                         listening: false,
                                                         align:

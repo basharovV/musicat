@@ -185,6 +185,7 @@ export const libraryScrollPos: Writable<number> = writable(
         ? parseFloat(localStorage.getItem("libraryScrollPos"))
         : 0
 );
+export const scrollToSong: Writable<Song> = writable(null);
 
 libraryScrollPos.subscribe((scrollPos) => {
     localStorage.setItem("libraryScrollPos", String(scrollPos));

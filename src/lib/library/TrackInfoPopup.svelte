@@ -169,7 +169,7 @@
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path }
+                event: { path, isImport: false }
             });
             if (songWithArtwork.artwork) {
                 console.log("artwork");

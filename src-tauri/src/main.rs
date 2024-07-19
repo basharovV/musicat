@@ -124,7 +124,7 @@ async fn write_metadata(event: WriteMetatadaEvent, app_handle: tauri::AppHandle)
     let write_result = write_metadata_track(&event);
     match write_result {
         Ok(()) => {
-            let song = crate::metadata::extract_metadata(Path::new(&event.file_path));
+            let song = crate::metadata::extract_metadata(Path::new(&event.file_path), false);
             if song.is_some() {
                 songs.lock().unwrap().push(song.unwrap());
             }
@@ -161,7 +161,7 @@ async fn write_metadatas(
         match write_result {
             Ok(()) => {
                 // Emit result back to client
-                let song = crate::metadata::extract_metadata(Path::new(&track.file_path));
+                let song = crate::metadata::extract_metadata(Path::new(&track.file_path), false);
                 if song.is_some() {
                     songs.lock().unwrap().push(song.unwrap());
                 }
@@ -254,6 +254,7 @@ pub struct Song {
     file_info: FileInfo,
     artwork: Option<Artwork>,
     origin_country: Option<String>,
+    date_added: Option<u128>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -264,8 +265,10 @@ struct ToImportEvent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 struct GetSongMetadataEvent {
     path: String,
+    is_import: bool,
 }
 
 #[tauri::command]
@@ -274,7 +277,7 @@ async fn get_song_metadata(event: GetSongMetadataEvent) -> Option<Song> {
 
     if path.is_file() {
         // println!("{:?}", entry.path());
-        if let Some(song) = crate::metadata::extract_metadata(&path) {
+        if let Some(song) = crate::metadata::extract_metadata(&path, event.is_import) {
             return Some(song);
         }
     }
@@ -291,7 +294,7 @@ async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToIm
         // println!("{:?}", path);
 
         if path.is_file() {
-            if let Some(song) = crate::metadata::extract_metadata(&path) {
+            if let Some(song) = crate::metadata::extract_metadata(&path, true) {
                 songs.lock().unwrap().push(song);
             }
         } else if path.is_dir() {
@@ -369,7 +372,7 @@ fn process_directory(
 
                     println!("{:?}", entry.path());
                     if path.is_file() {
-                        if let Some(song) = crate::metadata::extract_metadata(&path) {
+                        if let Some(song) = crate::metadata::extract_metadata(&path, true) {
                             subsongs.lock().unwrap().push(song);
                         }
                     } else if path.is_dir() && recursive {
