@@ -9,7 +9,7 @@
     },
     "package": {
         "productName": "Musicat",
-        "version": "0.7.1"
+        "version": "0.8.0"
     },
     "tauri": {
         "macOSPrivateApi": true,
@@ -78,7 +78,7 @@
             }
         },
         "security": {
-            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'"
+            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org"
         },
         "updater": {
             "active": false
