@@ -959,12 +959,6 @@
         }
     }
 
-    $: if ($bottomBarNotification?.timeout) {
-        setTimeout(() => {
-            $bottomBarNotification = null;
-        }, $bottomBarNotification.timeout);
-    }
-
     function filterByField(fieldName: string, fieldValue: any) {
         let queryPart;
         // console.log("filter", fieldName, fieldValue);

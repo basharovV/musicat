@@ -54,13 +54,6 @@
             {/if}
         </select>
     </div>
-    <div>
-        <button on:click={showSmartQueryBuilder}
-            >{$isSmartQueryBuilderOpen
-                ? "Save smart playlist"
-                : "New smart playlist"}</button
-        >
-    </div>
 </div>
 
 <style lang="scss">
@@ -108,16 +101,6 @@
 
     select > option {
         color: white;
-    }
-
-    button {
-        background-color: rgb(98, 77, 212);
-        border-radius: 4px;
-
-        &:disabled {
-            background-color: rgb(73, 53, 184);
-            color: rgb(116, 114, 114);
-        }
     }
 
     .query-editor-info {

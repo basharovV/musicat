@@ -3,18 +3,16 @@
     import { liveQuery } from "dexie";
     import md5 from "md5";
     import * as musicMetadata from "music-metadata-browser";
-    import { cubicInOut } from "svelte/easing";
-    import { fade, fly } from "svelte/transition";
+    import { onMount } from "svelte";
+    import { fly } from "svelte/transition";
     import type { Album, Song } from "../../App";
     import { lookForArt } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
-        albumPlaylist,
         compressionSelected,
         currentSong,
         isPlaying,
         playlist,
-        playlistIsAlbum,
         query,
         rightClickedAlbum,
         rightClickedTrack,
@@ -23,11 +21,7 @@
     } from "../../data/store";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
-    import BottomBar from "../library/BottomBar.svelte";
-    import audioPlayer from "../player/AudioPlayer";
-    import Icon from "../ui/Icon.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
-    import { onMount } from "svelte";
 
     let isLoading = true;
     let isVisible = false;
@@ -76,21 +70,12 @@
 
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
-        const albumPath = $currentSong.path.replace(
-            `/${$currentSong.file}`,
-            ""
-        );
 
         // Find the album currently playing
         currentAlbum = await db.albums.get(
             md5(`${$currentSong.artist} - ${$currentSong.album}`.toLowerCase())
         );
         if (!currentAlbum) return;
-        let tracks = await db.songs
-            .where("id")
-            .anyOf(currentAlbum.tracksIds)
-            .sortBy("trackNumber");
-
         // $albumPlaylist = tracks;
         // $playlistIsAlbum = true;
 
@@ -105,12 +90,14 @@
         });
 
         isVisible = true;
+        isInit = false;
     }
 
     $: if (isInit && $playlist && $currentSong) {
         showCurrentlyPlayingAlbum();
-    } else if (isInit) {
+    } else {
         isVisible = true;
+        isInit = false;
     }
 
     let showSingles = false;

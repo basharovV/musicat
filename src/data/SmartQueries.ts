@@ -44,18 +44,40 @@ async function jazzFromThe50s() {
         .and((song) => song.year < 1960 && song.year > 1949);
 }
 
-export async function favourites() {
+async function favourites() {
     return db.songs.filter((s) => s.isFavourite);
 }
 
-export async function whereGenreIs(genre: string) {
+async function recentlyAdded() {
+    return db.songs.orderBy("dateAdded");
+}
+
+async function whereGenreIs(genre: string) {
     return db.songs.where("genre").equals(genre);
 }
 
-export default {
+export async function findQuery(queryId: string) {
+    console.log('find', queryId);
+    if (queryId === undefined) return null;
+    let found = BUILT_IN_QUERIES[queryId];
+    if (!found) {
+        found = (await db.smartQueries.get(Number(queryId?.substring(5)))) ?? null;
+    }
+    console.log("found", found);
+    return found;
+}
+
+const BUILT_IN_QUERIES = {
     favourites: {
-        name: "favourites",
+        name: "Favourites",
         value: "favourites",
         query: favourites
+    },
+    recentlyAdded: {
+        name: "Recently Added",
+        value: "recentlyAdded",
+        query: recentlyAdded
     }
 };
+
+export default BUILT_IN_QUERIES;

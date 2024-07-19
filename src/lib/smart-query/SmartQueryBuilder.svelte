@@ -146,13 +146,6 @@
     let hoveredItemIdx = 0;
     let numberOfItems = 0;
 
-    function save() {
-        $smartQuery.save();
-        // Close the builder UI and set the current selected query to the one we just saved
-        $isSmartQueryBuilderOpen = false;
-        $selectedSmartQuery = `~usq:${$smartQuery.name}`;
-        $smartQuery.reset();
-    }
 </script>
 
 <container>
@@ -193,31 +186,8 @@
                 {/if}
             </div>
             <div class="save">
-                <ButtonWithIcon
-                    icon="material-symbols:save-outline"
-                    onClick={() => {
-                        $isSmartQuerySaveUiOpen = !$isSmartQuerySaveUiOpen;
-                    }}
-                    text="Save"
-                    theme="transparent"
-                />
             </div>
             <div class="close">
-                <ButtonWithIcon
-                    icon="material-symbols:close"
-                    onClick={() => {
-                        if ($smartQueryInitiator === "library-cell") {
-                            $forceRefreshLibrary = true;
-                            $isSmartQueryBuilderOpen = false;
-                            $uiView = "library";
-                        } else {
-                            $isSmartQueryBuilderOpen = false;
-                            // $uiView = "smart-query";
-                        }
-                    }}
-                    text="Close editor"
-                    theme="transparent"
-                />
             </div>
         </div>
         {#if matchingQueryParts.length > 0}

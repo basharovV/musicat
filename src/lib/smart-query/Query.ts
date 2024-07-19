@@ -84,7 +84,7 @@ export default class SmartQuery {
     }
 
     async save() {
-        await db.smartQueries.put({
+        return await db.smartQueries.put({
             name: this.name,
             queryParts: this.parts.map((p) => ({
                 ...p.queryPart,

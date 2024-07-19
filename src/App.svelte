@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Toaster } from "svelte-french-toast";
     import {
+        bottomBarNotification,
         draggedAlbum,
         draggedScrapbookItems,
         draggedSongs,
@@ -19,6 +20,8 @@
         isWelcomeSeen,
         os,
         selectedPlaylistId,
+        selectedSmartQuery,
+        smartQuery,
         uiView
     } from "./data/store";
 
@@ -50,6 +53,8 @@
     import { startMenuListener } from "./window/EventListener";
     import InternetArchiveView from "./lib/views/InternetArchiveView.svelte";
     import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
+    import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
+    import { findQuery } from "./data/SmartQueries";
 
     startMenuListener();
     startImportListener();
@@ -173,6 +178,13 @@
     $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
 
     $: selectedPlaylist = db.playlists.get($selectedPlaylistId);
+    $: selectedQuery = findQuery($selectedSmartQuery);
+
+    $: if ($bottomBarNotification?.timeout) {
+        setTimeout(() => {
+            $bottomBarNotification = null;
+        }, $bottomBarNotification.timeout);
+    }
 </script>
 
 <!-- <svelte:body on:click={onPageClick} /> -->
@@ -229,6 +241,13 @@
                 <div class="content">
                     {#await selectedPlaylist then playlist}
                         <PlaylistHeader {playlist} />
+                    {/await}
+                </div>
+            {:else if $uiView === "smart-query"}
+                <!-- <p class="label">playlist:</p> -->
+                <div class="content">
+                    {#await selectedQuery then query}
+                        <SmartPlaylistHeader selectedQuery={query} />
                     {/await}
                 </div>
             {/if}

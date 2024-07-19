@@ -74,17 +74,15 @@
                 console.log("selected query: ", $selectedSmartQuery);
                 if ($selectedSmartQuery.startsWith("~usq:")) {
                     // Run the query from the user-built blocks
-                    const queryName = $selectedSmartQuery.substring(5);
-                    const savedQuery = await db.smartQueries.get(queryName);
+                    const queryId = Number($selectedSmartQuery.substring(5));
+                    const savedQuery = await db.smartQueries.get(queryId);
                     const query = new SmartQuery(savedQuery);
                     results = await query.run();
                     console.log("results query: ", results);
                     isIndexed = false;
                 } else {
                     // Run the query from built-in functions
-                    results = await BuiltInQueries.find(
-                        (q) => q.value === $selectedSmartQuery
-                    ).query();
+                    results = await BuiltInQueries[$selectedSmartQuery].query();
 
                     isIndexed = true;
                 }
@@ -177,9 +175,14 @@
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
-    <Library allSongs={songs} showMyArtists={true} {isLoading} dim={$isLyricsHovered}/>
+    <Library
+        allSongs={songs}
+        showMyArtists={true}
+        {isLoading}
+        dim={$isLyricsHovered}
+    />
     {#if $isLyricsOpen}
-        <div class="lyrics" transition:fade={{duration: 150}}>
+        <div class="lyrics" transition:fade={{ duration: 150 }}>
             <LyricsView />
         </div>
     {/if}

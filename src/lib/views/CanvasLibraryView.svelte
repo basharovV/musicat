@@ -59,9 +59,6 @@
                             .includes($query.query.toLowerCase())
                 );
             }
-            $playlistDuration = results.reduce((total, song) => {
-                return total + song.fileInfo.duration;
-            }, 0);
         } else if ($uiView === "smart-query" || $uiView === "favourites") {
             /**
              * User-built smart queries don't support indexing
@@ -83,7 +80,7 @@
                 console.log("selected query: ", $selectedSmartQuery);
                 if ($selectedSmartQuery.startsWith("~usq:")) {
                     // Run the query from the user-built blocks
-                    const queryName = $selectedSmartQuery.substring(5);
+                    const queryName = Number($selectedSmartQuery.substring(5));
                     const savedQuery = await db.smartQueries.get(queryName);
                     const query = new SmartQuery(savedQuery);
                     results = await query.run();
@@ -92,7 +89,6 @@
                 } else {
                     // Run the query from built-in functions
                     results = await BuiltInQueries[$selectedSmartQuery].query();
-
                     isIndexed = true;
                 }
                 isSmartQueryResults = true;
@@ -135,9 +131,14 @@
                 results = results.reverse();
             }
             resultsArray = await results.toArray();
+            console.log('results', resultsArray);
         } else {
             resultsArray = results;
         }
+
+        $playlistDuration = resultsArray.reduce((total, song) => {
+                return total + song.fileInfo.duration;
+        }, 0);
 
         // Do sorting for non-indexed results
         if (!isIndexed) {

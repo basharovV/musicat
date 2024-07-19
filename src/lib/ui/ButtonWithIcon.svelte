@@ -78,7 +78,7 @@
 
         // Sizes
         &.small {
-            padding: 0.3em 0.5em;
+            padding: 0.3em 0.75em;
         }
 
         &.medium {

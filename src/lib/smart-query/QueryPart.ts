@@ -74,6 +74,7 @@ export interface QueryPartStructWithValues extends QueryPartStruct {
 }
 
 export interface SavedSmartQuery {
+    id?: number;
     name: string;
     queryParts: QueryPartStructWithValues[];
 }

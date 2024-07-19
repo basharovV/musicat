@@ -21,6 +21,7 @@
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
+        currentIAFile,
         currentSong,
         currentSongArtworkSrc,
         currentSongIdx,
@@ -59,6 +60,9 @@
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import { isIAPlaying } from "../player/WebAudioPlayer";
+    import SmartQuery from "../smart-query/Query";
+    import type { SavedSmartQuery } from "../smart-query/QueryPart";
 
     // What to show in the sidebar
     let title;
@@ -103,7 +107,7 @@
     currentSong.subscribe(async (song) => {
         if (song) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path: song.path }
+                event: { path: song.path, isImport: false }
             });
             console.log("test", songWithArtwork);
             title = songWithArtwork.title;
@@ -415,6 +419,14 @@
     let hoveringOverPlaylistId: number = null;
     let isRenamingPlaylist = false;
 
+    let isSmartPlaylistsExpanded = false;
+    let showSmartPlaylistMenu = false;
+    let isConfirmingSmartPlaylistDelete = false;
+    let smartPlaylistToEdit: string = null;
+    let updatedSmartPlaylistName = "";
+    let isRenamingSmartPlaylist = false;
+    let hoveringOverSmartPlaylistId: number|string = null;
+
     function onCreatePlaylist() {
         db.playlists.add({
             title: newPlaylistTitle,
@@ -460,6 +472,44 @@
     //         draggingOverPlaylist = null;
     //     }
     // }
+
+    $: savedSmartQueries = liveQuery(async () => {
+        return db.smartQueries.toArray();
+    });
+
+    async function onRenameSmartPlaylist(smartQuery: SavedSmartQuery) {
+        smartQuery.name = updatedSmartPlaylistName;
+        await db.smartQueries.put(smartQuery);
+        updatedSmartPlaylistName = "";
+        isRenamingSmartPlaylist = false;
+    }
+
+    async function deleteSmartPlaylist() {
+        if (!isConfirmingSmartPlaylistDelete) {
+            isConfirmingSmartPlaylistDelete = true;
+            return;
+        }
+        await db.smartQueries.delete(smartPlaylistToEdit);
+        showSmartPlaylistMenu = false;
+        isConfirmingSmartPlaylistDelete = false;
+
+        // Re-select a smart playlist automatically
+        const userQueries = await db.smartQueries.toArray();
+        if (userQueries.length === 0) {
+            $selectedSmartQuery = Object.values(SmartQueries)[0].value;
+        } else {
+            $selectedSmartQuery = `~usq:${userQueries[0].id}`;
+        }
+        console.log("queries", userQueries);
+    }
+
+    function onMouseOverSmartPlaylist(queryId: number|string) {
+        hoveringOverSmartPlaylistId = queryId;
+    }
+
+    function onMouseLeaveSmartPlaylist() {
+        hoveringOverSmartPlaylistId = null;
+    }
 
     async function onDropSongsToPlaylist(playlistId: number) {
         if ($draggedSongs.length) {
@@ -711,6 +761,7 @@
                             on:click={() => {
                                 $isSmartQueryBuilderOpen = false;
                                 $selectedPlaylistId = null;
+                                $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
                             }}
@@ -728,6 +779,8 @@
                             class:selected={$uiView === "albums"}
                             on:click={() => {
                                 $uiView = "albums";
+                                $selectedPlaylistId = null;
+                                $selectedSmartQuery = null;
                             }}
                         >
                             <Icon
@@ -744,6 +797,7 @@
                             on:click={() => {
                                 $uiView = "favourites";
                                 $selectedPlaylistId = null;
+                                $selectedSmartQuery = null;
                                 $selectedSmartQuery =
                                     SmartQueries.favourites.value;
                             }}
@@ -806,6 +860,7 @@
                                                 $query.orderBy = "none";
                                                 $selectedPlaylistId =
                                                     playlist.id;
+                                                $selectedSmartQuery = null;
                                             }}
                                             on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
@@ -881,16 +936,127 @@
                                 $smartQueryInitiator = "sidebar";
                                 $selectedPlaylistId = null;
                                 $uiView = "smart-query";
+                                isSmartPlaylistsExpanded =
+                                    !isSmartPlaylistsExpanded;
                             }}
                         >
                             <Icon
-                                icon="fluent:search-20-filled"
+                                icon="ic:round-star-outline"
                                 size={15}
                                 color={$uiView === "smart-query"
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Smart Playlists</item
+                            />Smart Playlists
+                            <div
+                                class="chevron"
+                                class:expanded={isSmartPlaylistsExpanded}
+                            >
+                                <Icon icon="lucide:chevron-down" size={14} />
+                            </div></item
                         >
+
+                        {#if isSmartPlaylistsExpanded}
+                            <div class="playlists">
+                                {#each Object.values(SmartQueries) as query (query.value)}
+                                    <div
+                                        animate:flip={{
+                                            duration: 300,
+                                            easing: cubicInOut
+                                        }}
+                                        class="playlist"
+                                        class:hover={hoveringOverSmartPlaylistId ===
+                                            query.value}
+                                        class:selected={$selectedSmartQuery ===
+                                            query.value}
+                                        on:click={() => {
+                                            $uiView = "smart-query";
+                                            $selectedSmartQuery = query.value;
+                                            $selectedPlaylistId = null;
+                                        }}
+                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
+                                        on:mouseenter|preventDefault|stopPropagation={() =>
+                                            onMouseOverSmartPlaylist(query.value)}
+                                    >
+                                        <p>{query.name}</p>
+                                    </div>
+                                {/each}
+                                {#each $savedSmartQueries as query (query.id)}
+                                    <div
+                                        animate:flip={{
+                                            duration: 300,
+                                            easing: cubicInOut
+                                        }}
+                                        class="playlist"
+                                        class:selected={$selectedSmartQuery ===
+                                            `~usq:${query.id}`}
+                                        class:hover={hoveringOverSmartPlaylistId ===
+                                            query.id}
+                                        on:click={() => {
+                                            $uiView = "smart-query";
+                                            $selectedSmartQuery = `~usq:${query.id}`;
+                                        }}
+                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
+                                        on:mouseenter|preventDefault|stopPropagation={() =>
+                                            onMouseOverSmartPlaylist(query.id)}
+                                    >
+                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.name}
+                                            <Input
+                                                bind:value={updatedSmartPlaylistName}
+                                                onEnterPressed={() => {
+                                                    onRenameSmartPlaylist(
+                                                        query
+                                                    );
+                                                }}
+                                                fullWidth
+                                                minimal
+                                                autoFocus
+                                            />
+                                        {:else}
+                                            <p>{query.name}</p>
+                                        {/if}
+                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.name}
+                                            <Icon
+                                                icon="mingcute:close-circle-fill"
+                                                size={14}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    isRenamingSmartPlaylist = false;
+                                                }}
+                                            />
+                                        {:else}
+                                            <div
+                                                class="playlist-options"
+                                                class:visible={showSmartPlaylistMenu &&
+                                                    smartPlaylistToEdit ===
+                                                        query.name}
+                                            >
+                                                <Icon
+                                                    icon="charm:menu-kebab"
+                                                    color="#898989"
+                                                    size={14}
+                                                    onClick={(e) => {
+                                                        menuX = e.clientX;
+                                                        menuY = e.clientY;
+                                                        smartPlaylistToEdit =
+                                                            query.name;
+                                                        showSmartPlaylistMenu =
+                                                            !showSmartPlaylistMenu;
+                                                    }}
+                                                />
+                                            </div>
+                                        {/if}
+                                    </div>
+                                {/each}
+
+                                <!-- {#if $savedSmartQueries}
+                                    {#each $savedSmartQueries as query}
+                                        <option value={`~usq:${query.name}`}
+                                            >{query.name}</option
+                                        >
+                                    {/each}
+                                {/if} -->
+                            </div>
+                        {/if}
                         {#if $userSettings.isArtistsToolkitEnabled}
                             <item
                                 class:selected={$uiView === "your-music"}
@@ -990,6 +1156,37 @@
             </Menu>
         </div>
     {/if}
+
+    {#if showSmartPlaylistMenu}
+        <div class="playlist-menu">
+            <Menu
+                x={menuX}
+                y={menuY}
+                onClickOutside={() => {
+                    showSmartPlaylistMenu = false;
+                    isConfirmingSmartPlaylistDelete = false;
+                }}
+                fixed
+            >
+                <MenuOption
+                    isDestructive={true}
+                    isConfirming={isConfirmingSmartPlaylistDelete}
+                    onClick={deleteSmartPlaylist}
+                    text="Delete smart playlist"
+                    confirmText="Click again to confirm"
+                />
+                <MenuOption
+                    onClick={() => {
+                        updatedSmartPlaylistName = smartPlaylistToEdit;
+                        isRenamingSmartPlaylist = true;
+                        showSmartPlaylistMenu = false;
+                    }}
+                    text="Rename playlist"
+                />
+            </Menu>
+        </div>
+    {/if}
+
     {#if $currentIAFile && $isIAPlaying}
         <div class="ia-mode" transition:fade={{ duration: 200 }}>
             <p>
