@@ -55,6 +55,19 @@
     import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
     import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
     import { findQuery } from "./data/SmartQueries";
+    import { getLocaleFromNavigator, init, register } from "svelte-i18n";
+    import { setLocale } from "./i18n/i18n-svelte";
+    import { loadLocale } from "./i18n/i18n-util.sync";
+    register("en", () => import("./i18n/en"));
+    register("es", () => import("./i18n/es"));
+
+    init({
+        fallbackLocale: "en",
+        initialLocale: getLocaleFromNavigator()
+    });
+
+    loadLocale("en");
+    setLocale("en");
 
     startMenuListener();
     startImportListener();

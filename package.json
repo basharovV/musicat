@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "tauri": "tauri"
+    "tauri": "tauri",
+		"typesafe-i18n": "typesafe-i18n"
   },
   "devDependencies": {
     "@alexanderolsen/libsamplerate-js": "^2.1.1",
@@ -35,6 +36,7 @@
     "svelte-fast-marquee": "^0.4.1",
     "svelte-focus-trap": "^1.2.0",
     "svelte-french-toast": "^1.0.3",
+    "svelte-i18n": "^4.0.0",
     "svelte-input-auto-width": "^2.1.0",
     "svelte-konva": "^0.3.1",
     "svelte-particles": "^2.12.0",
@@ -45,6 +47,7 @@
     "tslib": "^2.4.0",
     "tsparticles-preset-stars": "^2.12.0",
     "tsparticles-slim": "^2.12.0",
+    "typesafe-i18n": "^5.26.2",
     "typescript": "^4.6.4",
     "vite": "^4.5.1",
     "vite-bundle-analyzer": "^0.10.3",

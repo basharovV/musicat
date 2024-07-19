@@ -63,6 +63,7 @@
     import { isIAPlaying } from "../player/WebAudioPlayer";
     import SmartQuery from "../smart-query/Query";
     import type { SavedSmartQuery } from "../smart-query/QueryPart";
+    import LL from "../../i18n/i18n-svelte";
 
     // What to show in the sidebar
     let title;
@@ -709,7 +710,7 @@
                     type="text"
                     autocomplete="off"
                     spellcheck="false"
-                    placeholder="Search ({$os === 'Darwin'
+                    placeholder="{$LL.sidebar.search()} ({$os === 'Darwin'
                         ? 'Cmd + F'
                         : 'Ctrl + F'})"
                     bind:value={$query.query}
@@ -773,7 +774,7 @@
                                 !$selectedPlaylistId
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Library</item
+                            />{$LL.sidebar.library()}</item
                         >
                         <item
                             class:selected={$uiView === "albums"}
@@ -789,7 +790,7 @@
                                 color={$uiView === "albums"
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Albums</item
+                            />{$LL.sidebar.albums()}</item
                         >
 
                         <item
@@ -808,7 +809,7 @@
                                 color={$uiView === "favourites"
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Favourites</item
+                            />{$LL.sidebar.favorites()}</item
                         >
 
                         <item
@@ -830,7 +831,7 @@
                                 $selectedPlaylistId
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Playlists
+                            />{$LL.sidebar.playlists()}
                             <div
                                 class="chevron"
                                 class:expanded={isPlaylistsExpanded}
@@ -946,7 +947,7 @@
                                 color={$uiView === "smart-query"
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Smart Playlists
+                            />{$LL.sidebar.smartPlaylists()}
                             <div
                                 class="chevron"
                                 class:expanded={isSmartPlaylistsExpanded}
@@ -1074,7 +1075,7 @@
                                     color={$uiView === "your-music"
                                         ? "#45fffcf3"
                                         : "currentColor"}
-                                />Artist's toolkit</item
+                                />{$LL.sidebar.artistsToolkit()}</item
                             >
                         {/if}
                         <item
@@ -1108,7 +1109,7 @@
                                 color={$uiView === "map"
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Map</item
+                            />{$LL.sidebar.map()}</item
                         >
                         <item
                             class:selected={$uiView === "analytics"}
@@ -1125,7 +1126,7 @@
                                 color={$uiView === "analytics"
                                     ? "#45fffcf3"
                                     : "currentColor"}
-                            />Stats</item
+                            />{$LL.sidebar.stats()}</item
                         >
                     </items>
                 </menu>
