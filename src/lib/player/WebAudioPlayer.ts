@@ -9,6 +9,7 @@ import {
     webPlayerVolume
 } from "../../data/store";
 import audioPlayer from "./AudioPlayer";
+import toast from "svelte-french-toast";
 
 export const isIAPlaying = writable(false);
 export const currentSrc: Writable<string> = writable(null);
@@ -28,9 +29,37 @@ class WebAudioPlayer {
     isFullyBuffered = false;
     onTimeUpdate = (time: number) => {};
 
+    private _audioContext: AudioContext;
+
+    // Nodes
+    private _audioSource: MediaElementAudioSourceNode;
+    private _gainNode: GainNode;
+    _audioAnalyser: AnalyserNode;
+
     private constructor() {
         this.audioFile = new Audio();
         this.audioFile.crossOrigin = "anonymous";
+
+        // Nodes
+        let AudioContext = window.AudioContext || window.webkitAudioContext;
+        this._audioContext = new AudioContext({ sampleRate: 48000 });
+        this._audioSource = this._audioContext.createMediaElementSource(
+            this.audioFile
+        );
+
+        this._gainNode = new GainNode(this._audioContext, {
+            gain: get(webPlayerVolume)
+        });
+        this._audioSource.mediaElement.volume = get(webPlayerVolume);
+
+        this._audioAnalyser = new AnalyserNode(this._audioContext, {
+            fftSize: 2048,
+            smoothingTimeConstant: 0.9
+        });
+
+        // Source -> Gain -> (Analyser) -> Destination (master)
+        this._audioSource.connect(this._gainNode);
+        this._gainNode.connect(this._audioContext.destination);
 
         this.audioFile.addEventListener("ended", () => {
             isIAPlaying.set(false);
@@ -41,6 +70,31 @@ class WebAudioPlayer {
         });
         this.audioFile.addEventListener("canplaythrough", () => {
             webPlayerIsLoading.set(false);
+        });
+        this.audioFile.addEventListener("error", (e) => {
+            switch (e.target.error.code) {
+                case e.target.error.MEDIA_ERR_ABORTED:
+                    break;
+                case e.target.error.MEDIA_ERR_NETWORK:
+                    toast.error(
+                        "A network error caused the audio download to fail."
+                    );
+                    break;
+                case e.target.error.MEDIA_ERR_DECODE:
+                    toast.error(
+                        "The audio playback was aborted due to a decoding issue."
+                    );
+                    break;
+                case e.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                    toast.error(
+                        "The audio not be loaded, either because network failed or due to an issue with the format."
+                    );
+                    break;
+                default:
+                    break;
+            }
+            webPlayerIsLoading.set(false);
+            isIAPlaying.set(false);
         });
 
         webPlayerVolume.subscribe((vol) => {
@@ -54,6 +108,7 @@ class WebAudioPlayer {
 
     setVolume(vol) {
         this.audioFile.volume = vol;
+        this._gainNode.gain.value = vol;
     }
 
     async playFromUrl(file: IAFile) {
@@ -116,6 +171,22 @@ class WebAudioPlayer {
         } else {
             this.play();
         }
+    }
+
+    connectAnalyser() {
+        try {
+            this._gainNode.disconnect(this._audioContext.destination);
+            this._gainNode.connect(this._audioAnalyser);
+            this._audioAnalyser.connect(this._audioContext.destination);
+        } catch (err) {}
+    }
+
+    disconnectAnalyser() {
+        try {
+            this._audioAnalyser.disconnect(this._audioContext.destination);
+            this._gainNode.disconnect(this._audioAnalyser);
+            this._gainNode.connect(this._audioContext.destination);
+        } catch (err) {}
     }
 }
 

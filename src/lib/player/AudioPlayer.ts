@@ -22,6 +22,7 @@ import type { Event } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import WebRTCReceiver from "./WebRTCReceiver";
 import { register } from "@tauri-apps/api/globalShortcut";
+import webAudioPlayer, { isIAPlaying } from "./WebAudioPlayer";
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
@@ -391,11 +392,14 @@ class AudioPlayer {
 
     async playSong(song: Song, position = 0, play = true, index = null) {
         if (song) {
+            if (get(isIAPlaying)) {
+                webAudioPlayer.pause();
+            }
             // this.pause();
             this.isRunningTransition = false;
             currentSong.set(song);
             this.currentSong = song;
-            console.log('play', play, this.shouldPlay);
+            console.log("play", play, this.shouldPlay);
             if (play) {
                 await this.play(false);
                 playerTime.set(position);

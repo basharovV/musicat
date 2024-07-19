@@ -1,7 +1,6 @@
 export function timeSince(timestamp) {
     const now = Date.now();
     const secondsPast = Math.floor((now - timestamp) / 1000);
-    console.log("seconds past", secondsPast, timestamp);
     if (secondsPast < 60) {
         return "just now";
     }

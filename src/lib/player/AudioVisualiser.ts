@@ -129,5 +129,9 @@ export class AudioVisualiser {
     public clearAnimations(): void {
         this._activeAnimations = [];
     }
+
+    tearDown() {
+        
+    }
 }
 

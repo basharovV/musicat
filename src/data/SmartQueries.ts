@@ -57,11 +57,14 @@ async function whereGenreIs(genre: string) {
 }
 
 export async function findQuery(queryId: string) {
-    console.log('find', queryId);
+    console.log("find", queryId);
     if (queryId === undefined) return null;
     let found = BUILT_IN_QUERIES[queryId];
     if (!found) {
-        found = (await db.smartQueries.get(Number(queryId?.substring(5)))) ?? null;
+        let id = Number(queryId?.substring(5));
+        if (id !== undefined && id !== null && !isNaN(id)) {
+            found = (await db.smartQueries.get(id)) ?? null;
+        }
     }
     console.log("found", found);
     return found;

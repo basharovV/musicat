@@ -13,6 +13,7 @@
         isLyricsOpen,
         isQueueOpen,
         nextUpSong,
+        uiView,
         userSettings
     } from "../../data/store";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
@@ -20,6 +21,7 @@
     import Oscilloscope from "../player/Oscilloscope.svelte";
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
+    import { isIAPlaying } from "../player/WebAudioPlayer";
 
     export let counts;
 
@@ -82,20 +84,24 @@
             <Icon icon="mdi:playlist-music" size={14} />
             <p>Queue</p>
         </div>
-        <div
-            class="toggle-button lyrics"
-            class:selected={$isLyricsOpen}
-            on:click={() => {
-                $isLyricsOpen = !$isLyricsOpen;
-            }}
-        >
-            <Icon icon="material-symbols:lyrics" size={14} />
-            <p>Lyrics</p>
-        </div>
-        <div class="lossy-selector">
-            <CompressionSelector />
-        </div>
-        {#if $nextUpSong}
+        {#if !$isIAPlaying}
+            <div
+                class="toggle-button lyrics"
+                class:selected={$isLyricsOpen}
+                on:click={() => {
+                    $isLyricsOpen = !$isLyricsOpen;
+                }}
+            >
+                <Icon icon="material-symbols:lyrics" size={14} />
+                <p>Lyrics</p>
+            </div>
+        {/if}
+        {#if $uiView.match(/(library|albums|playlists|favourites|smart-query)/)}
+            <div class="lossy-selector">
+                <CompressionSelector />
+            </div>
+        {/if}
+        {#if !$isIAPlaying && $nextUpSong}
             <div class="next-up" bind:this={nextUp}>
                 <p class="label">Next up:</p>
                 <p class="song">

@@ -4,14 +4,16 @@
     import audioPlayer from "./AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import { AudioVisualiser } from "./AudioVisualiser";
+    import { isIAPlaying } from "./WebAudioPlayer";
+    import { WebAudioVisualiser } from "./WebAudioVisualiser";
 
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;
     export let width;
     let height;
-    let analyser: AudioVisualiser;
+    let analyser: AudioVisualiser | WebAudioVisualiser;
     export let show = true;
-
+    let isMounted = false;
     $: if (analyser) {
         if (show) {
             analyser.shouldStopAnimation = false;
@@ -22,6 +24,14 @@
         }
     }
 
+    $: if ($isIAPlaying && isMounted && canvas) {
+        analyser?.tearDown();
+        analyser = new WebAudioVisualiser(canvas);
+    } else if (isMounted && canvas) {
+        analyser?.tearDown();
+        analyser = new AudioVisualiser(canvas);
+    }
+
     onMount(() => {
         width = container.clientWidth;
         height = container.clientHeight;
@@ -30,8 +40,7 @@
             container.clientWidth,
             container.offsetWidth,
             container.scrollWidth
-        );
-        analyser = new AudioVisualiser(canvas);
+        );  
 
         isFullScreenVisualiser.subscribe((isFullScreen) => {
             console.log("w", width);
@@ -46,6 +55,7 @@
                 analyser && analyser.setCanvas(canvas);
             }
         });
+        isMounted = true;
     });
 </script>
 
