@@ -131,7 +131,7 @@ export class AudioVisualiser {
     }
 
     tearDown() {
-        
+        this.clearCanvas();
     }
 }
 

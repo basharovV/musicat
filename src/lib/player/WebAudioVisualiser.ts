@@ -104,5 +104,6 @@ export class WebAudioVisualiser {
 
     tearDown() {
         audioPlayer.disconnectAnalyser();
+        this.clearCanvas();
     }
 }
