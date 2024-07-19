@@ -1,3 +1,15 @@
+### 📦 0.8.0
+
+_BREAKING RELEASE_. The storage of Smart Playlists has been updated. Please re-install.
+
+-   **New Internet Archive view**. A built-in browser for archive.org where you can browse collections, listen to tracks, and download to your library for free. When playing in Internet Archive view, the offline library player is disabled. You can configure the download location in settings. _Hint: If you download to the same location as your set "Folder to watch", it will be automatically imported to your library and you can jump straight to the track from the download popup._
+-   **Date Added column**. You can now sort your library by Date Added column (requires re-import)
+-   **Smart Playlists v2**. The Smart Playlists feature is now easier to use - with playlists appearing in the sidebar just like regular playlists. There are two built-in smart playlists: Favorites and Recently Added, and your user-created Smart Playlists appear below. You can delete or rename Smart Playlists you created.
+-   The Genre tag is now available for edit in bulk tagging mode
+-   Dragging albums to the queue or playlists is supported now
+-   Fixed Map View not loading properly in some cases
+-   ID3: Fixed track number not written correctly
+
 ### 📦 0.7.1
 
 -   **Reduced app size**. The app size is now is a reasonable 35MB, down significantly from a whopping 200MB 😬 which was due to asset bloat (unused icons, uncompressed images).

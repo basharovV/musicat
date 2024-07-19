@@ -422,7 +422,7 @@
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
     let isConfirmingSmartPlaylistDelete = false;
-    let smartPlaylistToEdit: string = null;
+    let smartPlaylistToEdit: number = null;
     let updatedSmartPlaylistName = "";
     let isRenamingSmartPlaylist = false;
     let hoveringOverSmartPlaylistId: number | string = null;
@@ -1001,7 +1001,7 @@
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseOverSmartPlaylist(query.id)}
                                     >
-                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.name}
+                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.id}
                                             <Input
                                                 bind:value={updatedSmartPlaylistName}
                                                 onEnterPressed={() => {
@@ -1016,7 +1016,7 @@
                                         {:else}
                                             <p>{query.name}</p>
                                         {/if}
-                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.name}
+                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.id}
                                             <Icon
                                                 icon="mingcute:close-circle-fill"
                                                 size={14}
@@ -1030,7 +1030,7 @@
                                                 class="playlist-options"
                                                 class:visible={showSmartPlaylistMenu &&
                                                     smartPlaylistToEdit ===
-                                                        query.name}
+                                                        query.id}
                                             >
                                                 <Icon
                                                     icon="charm:menu-kebab"
@@ -1040,7 +1040,7 @@
                                                         menuX = e.clientX;
                                                         menuY = e.clientY;
                                                         smartPlaylistToEdit =
-                                                            query.name;
+                                                            query.id;
                                                         showSmartPlaylistMenu =
                                                             !showSmartPlaylistMenu;
                                                     }}

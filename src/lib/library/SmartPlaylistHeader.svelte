@@ -111,9 +111,7 @@
     <ButtonWithIcon
         size="small"
         icon="material-symbols:save-outline"
-        onClick={() => {
-            // TODO
-        }}
+        onClick={save}
         text="Save"
         disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
         theme="transparent"
