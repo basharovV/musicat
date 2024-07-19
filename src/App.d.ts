@@ -154,6 +154,7 @@ interface UserSettings {
     openAIApiKey?: string;
     geniusApiKey?: string;
     isArtistsToolkitEnabled: boolean;
+    downloadLocation: string;
 }
 
 type MiniPlayerLocation =
@@ -359,6 +360,7 @@ interface IAFile {
     track: string;
     album: string;
     collectionCatalogNumber?: string;
+    downloadLocation?: string;
 }
 
 type IAFormat = "flac" | "mp3";
@@ -369,10 +371,9 @@ interface IAItem {
     server1: string;
     server2: string;
     dir: string;
-    previewSrc: string;
-    duration: number; // secs
     files: IAFile[];
     date?: number;
     performer?: string;
     writer?: string;
+    original: IAFile;
 }

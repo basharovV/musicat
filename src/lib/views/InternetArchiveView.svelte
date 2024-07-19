@@ -1,19 +1,31 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import type { IACollection, IAItem } from "../../App";
+    import type { IACollection, IAFile, IAItem } from "../../App";
     import {
         getIACollection,
         getIACollections,
         getIAItem
     } from "../../data/InternetArchiveAPI";
     import IaItemPlayer from "../internet-archive/IAItemPlayer.svelte";
-    import {
+    import webAudioPlayer, {
         currentItem,
         currentSrc,
-        isPlaying
+        isIAPlaying
     } from "../player/WebAudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
+    import IaFileBlock from "../internet-archive/IAFileBlock.svelte";
+    import {
+        currentIAFile,
+        iaCollections,
+        iaSelectedCollection,
+        iaSelectedCollectionItems,
+        iaSelectedItem,
+        webPlayerVolume
+    } from "../../data/store";
+    import Menu from "../menu/Menu.svelte";
+    import MenuOption from "../menu/MenuOption.svelte";
+    import { open } from "@tauri-apps/api/shell";
 
     let audios;
     let minWidth = 300;
@@ -26,18 +38,17 @@
 
     let scrollContainerCollection;
     let isLoadingCollection = false;
-    let selectedCollection: IACollection;
     let collectionPage = 1;
+    let rightClickedItem: IAItem | null = null;
+    let showMenu = false;
+    let pos = { x: 0, y: 0 };
 
-    let selectedCollectionData: IAItem[];
-    let selectedItemTitle: string;
-    let selectedItem: IAItem;
     let isLoadingItem = false;
 
     onMount(async () => {
-        // Fetch
+        // Fetch / check in memory
         isLoadingCollections = true;
-        collections = await getIACollections(collectionsPage);
+        $iaCollections = await getIACollections(collectionsPage);
         isLoadingCollections = false;
     });
 
@@ -61,8 +72,8 @@
 
     async function selectCollection(collection: IACollection) {
         isLoadingCollection = true;
-        selectedCollection = collection;
-        selectedCollectionData = await getIACollection(
+        $iaSelectedCollection = collection;
+        $iaSelectedCollectionItems = await getIACollection(
             collection.id,
             collectionPage
         );
@@ -79,11 +90,11 @@
                 collectionPage += 1;
                 isLoadingCollection = true;
                 const newPage = await getIACollection(
-                    selectedCollection.id,
+                    $iaSelectedCollection.id,
                     ++collectionPage
                 );
-                selectedCollectionData.push(...newPage);
-                selectedCollectionData = selectedCollectionData;
+                $iaSelectedCollectionItems.push(...newPage);
+                $iaSelectedCollectionItems = $iaSelectedCollectionItems;
                 isLoadingCollection = false;
             }
             console.log("scrolled to bottom", scrolledToBottom);
@@ -91,24 +102,46 @@
     }
 
     async function selectItem(item: IAItem) {
-        selectedItem = item;
+        $iaSelectedItem = item;
         isLoadingItem = true;
-        selectedItem = await getIAItem(item.id);
+        // Prepare files
+        $iaSelectedItem = await getIAItem(item.id);
         isLoadingItem = false;
+    }
+
+    async function openOnArchiveOrg() {
+        await open(`https://archive.org/details/${rightClickedItem.id}`);
+        showMenu = false;
     }
 </script>
 
 <div class="container">
     <div class="grid-container" bind:this={container}>
         <header>
-            <h2>Internet Archive</h2>
-            <div>
-                <p>Explore and download free, public domain music</p>
+            <div class="attribution">
+                <h2>Internet Archive</h2>
                 <small
-                    >from <a href="https://archive.org/details/audio_music"
+                    >public domain music from <a
+                        href="https://archive.org/details/audio_music"
                         >archive.org</a
                     ></small
                 >
+            </div>
+
+            <div class="player">
+                <IaItemPlayer />
+            </div>
+
+            <div class="volume">
+                <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    bind:value={$webPlayerVolume}
+                    class="slider"
+                    id="myRange"
+                />
             </div>
         </header>
         <div class="archive-browser">
@@ -119,21 +152,24 @@
             >
                 <div
                     class="column-collections"
-                    class:show={collections?.length}
+                    class:show={$iaCollections?.length}
                     style="grid-template-columns: repeat(auto-fit, minmax(100%, 0.1fr));width: 100%;"
                 >
-                    {#if collections}
-                        {#each collections as collection}
+                    {#if $iaCollections}
+                        {#each $iaCollections as collection}
+                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                            <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
                             <div
                                 role="listitem"
                                 tabindex="0"
                                 class="item"
                                 class:selected={collection?.id ===
-                                    selectedCollection?.id}
+                                    $iaSelectedCollection?.id}
                                 on:click={() => {
                                     selectCollection(collection);
                                 }}
                             >
+                                <!-- svelte-ignore a11y-missing-attribute -->
                                 <img
                                     src="https://archive.org/services/img/{collection.id}"
                                 />
@@ -173,36 +209,54 @@
                 bind:this={scrollContainerCollection}
             >
                 <div class="header">
-                    {#if selectedCollection}
+                    {#if $iaSelectedCollection}
                         <div class="top-row">
                             <img
-                                src="https://archive.org/services/img/{selectedCollection.id}"
+                                src="https://archive.org/services/img/{$iaSelectedCollection.id}"
                             />
-                            <h2>{selectedCollection.title}</h2>
+                            <h2>{$iaSelectedCollection.title}</h2>
                         </div>
-                        <p class="description">
-                            {selectedCollection.description}
-                        </p>
+                        {#if $iaSelectedCollection.description}
+                            <p class="description">
+                                {$iaSelectedCollection.description}
+                            </p>
+                        {/if}
                     {:else}
                         <p>Select a collection on the left</p>
                     {/if}
                 </div>
                 <div class="selected-collection">
                     <div class="list">
-                        {#if selectedCollectionData}
+                        {#if $iaSelectedCollectionItems}
                             <ul>
-                                {#each selectedCollectionData as item}
+                                {#each $iaSelectedCollectionItems as item}
+                                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                                     <li
                                         class:selected={item.id ===
-                                            selectedItem?.id}
+                                            $iaSelectedItem?.id}
                                         class:playing={item.id ===
-                                            $currentItem?.id && $isPlaying}
+                                            $currentIAFile?.itemId &&
+                                            $isIAPlaying}
+                                        on:contextmenu|preventDefault={(e) => {
+                                            rightClickedItem = item;
+                                            pos = {
+                                                x: e.clientX,
+                                                y: e.clientY
+                                            };
+                                            showMenu = true;
+                                        }}
                                         on:click={() => {
                                             selectItem(item);
                                         }}
+                                        on:dblclick={async () => {
+                                            await selectItem(item);
+                                            await webAudioPlayer.playFromUrl(
+                                                $iaSelectedItem.original
+                                            );
+                                        }}
                                     >
                                         <p>{item.title}</p>
-                                        {#if item.id === $currentItem?.id && $isPlaying}
+                                        {#if item.id === $currentIAFile?.itemId && $isIAPlaying}
                                             <Icon
                                                 icon="f7:speaker-2-fill"
                                                 size={14}
@@ -223,64 +277,47 @@
                 </div>
             </div>
 
-            <!-- COLUMN 2-->
+            <!-- COLUMN 3-->
             <div class="column-audio">
                 {#if isLoadingItem}
                     <div class="header">
-                        <h2>{selectedItem.title}</h2>
+                        <h2>{$iaSelectedItem?.title}</h2>
                         <p>Loading</p>
                         <div class="loading">
                             <LoadingSpinner />
                         </div>
                     </div>
-                {:else if selectedItem}
+                {:else if $iaSelectedItem}
                     <div class="header">
-                        <h2>{selectedItem.title}</h2>
-                        <div class="player">
-                            <IaItemPlayer item={selectedItem} />
-                        </div>
+                        <h2>{$iaSelectedItem?.title}</h2>
                     </div>
-                    <h3>Files</h3>
-                    <div class="files">
-                        {#if selectedItem.files}
-                            {#each selectedItem.files as file}
-                                <div class="file">
-                                    <div class="left">
-                                        <Icon
-                                            icon="bi:file-earmark-play"
-                                            color="#ded2de"
-                                        />
-                                        <div class="info">
-                                            <p class="title">
-                                                {file.title ?? file.name}
-                                            </p>
-                                            <p class="format">{file.format}</p>
-                                        </div>
-                                    </div>
-                                    <p class="size">
-                                        {(
-                                            Number(file.size) /
-                                            (1024 * 1000)
-                                        ).toFixed(2)} MB
-                                    </p>
-                                </div>
+                    <h3>Original</h3>
+                    {#if $iaSelectedItem.original}
+                        <IaFileBlock file={$iaSelectedItem.original} />
+                    {/if}
+                    {#if $iaSelectedItem.files}
+                        <h3>Files</h3>
+
+                        <div class="files">
+                            {#each $iaSelectedItem.files as file}
+                                <IaFileBlock {file} />
                             {/each}
-                        {/if}
-                    </div>
+                        </div>
+                    {/if}
 
                     <div class="credits">
-                        {#if selectedItem.date}
+                        {#if $iaSelectedItem.date}
                             <p class="date">
                                 Publication date: <span
-                                    >{selectedItem.date}</span
+                                    >{$iaSelectedItem.date}</span
                                 >
                             </p>
                         {/if}
-                        {#if selectedItem.performer}
-                            <p>Performed by {selectedItem.performer}</p>
+                        {#if $iaSelectedItem.performer}
+                            <p>Performed by {$iaSelectedItem.performer}</p>
                         {/if}
-                        {#if selectedItem.writer}
-                            <p>Written by {selectedItem.writer}</p>
+                        {#if $iaSelectedItem.writer}
+                            <p>Written by {$iaSelectedItem.writer}</p>
                         {/if}
                     </div>
                 {:else}
@@ -288,6 +325,22 @@
                 {/if}
             </div>
         </div>
+
+        {#if showMenu}
+            <Menu
+                {...pos}
+                fixed
+                onClickOutside={() => {
+                    showMenu = false;
+                    rightClickedItem = null;
+                }}
+            >
+                <MenuOption
+                    text="Open on archive.org"
+                    onClick={() => openOnArchiveOrg()}
+                />
+            </Menu>
+        {/if}
     </div>
 </div>
 
@@ -304,8 +357,6 @@
         box-sizing: border-box;
         overflow: hidden;
         /* border: 0.7px solid #ffffff0b; */
-        border-top: 0.7px solid #ffffff19;
-        border-bottom: 0.7px solid #ffffff2a;
     }
 
     .grid-container {
@@ -318,25 +369,80 @@
         bottom: 0;
         left: 0;
         right: 0;
-        border-bottom-left-radius: 5px;
-        border-bottom-right-radius: 5px;
-        border-left: 0.7px solid #ffffff2a;
-        border-bottom: 0.7px solid #ffffff2a;
-        background-color: #242026b3;
         header {
             display: grid;
-            grid-template-columns: auto 1fr;
-            padding: 0.75em 2em;
+            grid-template-columns: auto 1fr auto;
             align-items: center;
+            height: 60px;
+            background-color: #2e2a31b9;
+            border-top: 0.7px solid #ffffff19;
+            border-left: 0.7px solid #ffffff2a;
+            border-bottom: 0.7px solid #ffffff2a;
+            border-radius: 5px;
+            margin-bottom: 5px;
+
+            .volume {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-self: flex-end;
+                padding: 0.5em 1em;
+                border-left: 0.7px solid #ffffff2a;
+
+                input {
+                    -webkit-appearance: none;
+                    width: 100%;
+                    height: 5px;
+                    background: #474747d4;
+                    outline: none;
+                    opacity: 1;
+                    margin: auto;
+                    border-radius: 3px;
+                    -webkit-transition: 0.2s;
+                    transition: opacity 0.2s;
+
+                    &::-webkit-slider-thumb {
+                        -webkit-appearance: none;
+                        appearance: none;
+                        width: 22px;
+                        height: 22px;
+                        background: url("/images/volume-up.svg");
+                    }
+
+                    &::-moz-range-thumb {
+                        width: 22px;
+                        height: 22px;
+                        background: #04aa6d;
+                    }
+                }
+            }
+
+            .attribution {
+                align-items: center;
+                justify-content: center;
+                text-align: end;
+                padding: 0.5em 1em;
+
+                height: 100%;
+                border-right: 0.7px solid #ffffff2a;
+                h3 {
+                    white-space: nowrap;
+                }
+            }
+
+            .player {
+                height: 100%;
+            }
             h2 {
                 margin: 0;
                 font-family: monospace;
                 letter-spacing: 1px;
+                justify-self: flex-start;
             }
-            div {
+            > div {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-end;
                 small,
                 p {
                     margin: 0;
@@ -357,6 +463,11 @@
         > div {
             height: 100%;
             border-top: 0.7px solid #ffffff2a;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            border-left: 0.7px solid #ffffff2a;
+            border-bottom: 0.7px solid #ffffff2a;
+            background-color: #242026b3;
             &:not(:nth-child(1)) {
                 border-left: 0.7px solid #ffffff2a;
             }
@@ -384,14 +495,15 @@
                 gap: 10px;
                 padding: 1em 2em;
                 border-top: 0.7px solid #ffffff2a;
-
+                opacity: 0.8;
                 &.selected {
                     background-color: #464148b3;
+                    opacity: 1;
                 }
 
                 &:hover {
-                    cursor: pointer;
                     background-color: #3d383fb3;
+                    opacity: 1;
                 }
 
                 img {
@@ -455,7 +567,7 @@
                 backdrop-filter: blur(8px);
                 flex-wrap: wrap;
                 border-bottom: 0.7px solid #ffffff2a;
-
+                z-index: 2;
                 .top-row {
                     display: flex;
                     width: 100%;
@@ -502,18 +614,20 @@
                     word-wrap: nowrap;
                     display: flex;
                     gap: 4px;
+                    opacity: 0.8;
 
                     &:hover {
                         background-color: #423e44b3;
-                        cursor: pointer;
+                        opacity: 1;
                     }
 
                     &:active {
                         background-color: #565159b3;
-                        cursor: pointer;
+                        opacity: 1;
                     }
 
                     &.selected {
+                        opacity: 1;
                         background-color: #565159b3;
                         &.playing {
                             background-color: #5123dd;
@@ -522,11 +636,14 @@
                     }
 
                     &.playing {
+                        opacity: 1;
                         background-color: #5123dd;
                         color: #00ddff;
                     }
                     p {
                         margin: 0;
+                        pointer-events: none;
+                        user-select: none;
                     }
                 }
             }
@@ -571,54 +688,6 @@
                 display: grid;
                 width: 100%;
                 grid-template-columns: repeat(auto-fit, minmax(100%, 0.5fr));
-
-                .file {
-                    display: flex;
-                    border-radius: 5px;
-                    background-color: #242026b3;
-                    padding: 10px;
-                    margin: 0.25em;
-                    gap: 10px;
-                    align-items: center;
-                    justify-content: space-between;
-                    border: 0.7px solid #ffffff2a;
-
-                    .left {
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-
-                        .info {
-                            display: flex;
-                            flex-direction: column;
-                            align-items: flex-start;
-                            text-align: start;
-                            .title {
-                            }
-                            .format {
-                                color: grey;
-                            }
-                        }
-                    }
-
-                    .size {
-                        color: grey;
-                        white-space: nowrap;
-                    }
-                    &:hover {
-                        cursor: pointer;
-                        background-color: #3d383fb3;
-                    }
-                    &:active {
-                        cursor: pointer;
-                        background-color: #524d54b3;
-                    }
-
-                    p {
-                        margin: 0;
-                        text-align: start;
-                    }
-                }
             }
 
             .credits {

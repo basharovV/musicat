@@ -3,6 +3,27 @@
     export let duration = 0;
     export let playerTime = 0;
     export let onSeek = (val) => {};
+    export let buffered: TimeRanges | null = null; // For Web Audio player
+    let bufferedRanges = [];
+    // Function to update buffered ranges
+
+    const updateBufferedRanges = () => {
+        const ranges = [];
+        for (let i = 0; i < buffered.length; i++) {
+            ranges.push({
+                start: buffered.start(i),
+                end: buffered.end(i)
+            });
+        }
+        bufferedRanges = ranges;
+        console.log("bufferedRanges", bufferedRanges);
+    };
+
+    $: {
+        if (buffered) {
+            updateBufferedRanges();
+        }
+    }
 
     $: playheadPos = Math.min((playerTime / duration) * 100, 100);
 
@@ -72,6 +93,16 @@
                     </div>
                 </div>
             {/if}
+
+            {#if buffered}
+                {#each bufferedRanges as range}
+                    <div
+                        class="seekbar buffered"
+                        style="left: {(range.start / duration) * 100}%;
+                        width: {((range.end - range.start) / duration) * 100}%;"
+                    ></div>
+                {/each}
+            {/if}
         </div>
     </div>
 </div>
@@ -120,6 +151,17 @@
         align-items: center;
         display: flex;
         position: relative;
+        z-index: 0;
+
+        .buffered {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.300);
+            z-index: 1;
+            transition: all 0.2s ease-in-out;
+        }
 
         .hoverhead-container {
             pointer-events: none;
@@ -148,7 +190,7 @@
             overflow: visible;
             pointer-events: none;
             transition: all 0.16s cubic-bezier(0.075, 0.82, 0.165, 1);
-
+            z-index: 2;
             top: -4px;
 
             &.hoverhead {

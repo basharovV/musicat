@@ -990,6 +990,14 @@
             </Menu>
         </div>
     {/if}
+    {#if $currentIAFile && $isIAPlaying}
+        <div class="ia-mode" transition:fade={{ duration: 200 }}>
+            <p>
+                Main player off in Internet Archive mode<br /><br />Stop
+                playback to re-enable
+            </p>
+        </div>
+    {/if}
     <div class="track-info">
         <!-- <hr /> -->
 
@@ -1491,6 +1499,21 @@
         /* border-top: 0.7px solid #ffffff23; */
         z-index: 2;
         overflow: hidden;
+    }
+    .ia-mode {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 520px;
+        background-color: #312d3ec0;
+        backdrop-filter: blur(8px);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1em;
+        z-index: 20;
     }
 
     .track-info-content {

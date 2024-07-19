@@ -4,6 +4,7 @@
 )]
 
 use bytes::buf::Reader;
+use futures_util::StreamExt;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::id3::v2::{upgrade_v2, upgrade_v3, Frame, FrameId, Id3v2Tag, TextInformationFrame};
@@ -15,23 +16,24 @@ use lofty::{read_from_path, TextEncoding};
 use player::file_streamer::AudioStreamer;
 use rayon::prelude::*;
 use reqwest;
+use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
 use std::error::Error;
 use std::fs::{self, File};
-use std::io::{BufReader, ErrorKind};
+use std::io::{BufReader, ErrorKind, Write};
 use std::ops::{Deref, Mul};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{fmt, thread, time};
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 use tauri::{Manager, State};
+use tempfile::Builder;
 use tokio::runtime::Handle;
 use tokio_util::sync::CancellationToken;
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
-
 mod metadata;
 mod output;
 mod player;
@@ -774,6 +776,56 @@ async fn init_streamer(
     return Ok(StreamStatus { is_open: false });
 }
 
+#[tauri::command]
+async fn download_file(
+    url: String,
+    path: String,
+    _app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let client = Client::new();
+
+    // Start the request
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let total_size = response
+        .content_length()
+        .ok_or("Failed to get content length")?;
+
+    // Create a temporary file
+    let mut temp_file = Builder::new()
+        .prefix("download_")
+        .tempfile()
+        .map_err(|e| e.to_string())?;
+
+    let mut downloaded = 0;
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        temp_file.write_all(&chunk).map_err(|e| e.to_string())?;
+        downloaded += chunk.len() as u64;
+
+        // Emit progress to the frontend
+        let progress = (downloaded as f64 / total_size as f64) * 100.0;
+        _app_handle
+            .emit_all("download-progress", progress)
+            .map_err(|e| e.to_string())?;
+    }
+
+    // Flush and sync the file
+    temp_file.flush().map_err(|e| e.to_string())?;
+    temp_file
+        .as_file_mut()
+        .sync_all()
+        .map_err(|e| e.to_string())?;
+
+    // Move the temporary file to the final destination
+    let temp_path = temp_file.into_temp_path();
+    let final_path = Path::new(&path);
+    temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     // std::env::set_var("RUST_LOG", "debug");
@@ -862,7 +914,8 @@ async fn main() {
             volume_control,
             get_song_metadata,
             get_waveform,
-            loop_region
+            loop_region,
+            download_file
         ])
         .plugin(tauri_plugin_fs_watch::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())

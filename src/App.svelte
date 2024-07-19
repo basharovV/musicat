@@ -6,6 +6,7 @@
         draggedSongs,
         droppedFiles,
         emptyDropEvent,
+        fileToDownload,
         foldersToWatch,
         hoveredFiles,
         isInfoPopupOpen,
@@ -48,6 +49,7 @@
     import WelcomeView from "./lib/views/WelcomeView.svelte";
     import { startMenuListener } from "./window/EventListener";
     import InternetArchiveView from "./lib/views/InternetArchiveView.svelte";
+    import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
 
     startMenuListener();
     startImportListener();
@@ -265,6 +267,10 @@
         <div class="bottom-bar">
             <BottomBar />
         </div>
+
+        {#if $fileToDownload}
+            <DownloadPopup />
+        {/if}
     {/if}
 </main>
 

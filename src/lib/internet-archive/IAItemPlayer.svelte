@@ -1,14 +1,17 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import type { IAItem } from "../../App";
-    import audioPlayer, {
+    import {
+        currentIAFile,
+        webPlayerBufferedRanges,
+        webPlayerIsLoading
+    } from "../../data/store";
+    import webAudioPlayer, {
         currentSrc,
-        isPlaying
+        isIAPlaying
     } from "../player/WebAudioPlayer";
     import Seekbar from "../sidebar/Seekbar.svelte";
     import Icon from "../ui/Icon.svelte";
-
-    export let item: IAItem;
+    import LoadingSpinner from "../ui/LoadingSpinner.svelte";
 
     let currentTime = 0;
 
@@ -18,18 +21,18 @@
         .toString()
         .padStart(2, "0")}`;
 
-    $: durationText = `${(~~(item.duration / 60)).toString().padStart(2, "0")}:${(~~(
-        item.duration % 60
+    $: durationText = `${(~~(($currentIAFile?.duration ?? 0) / 60)).toString().padStart(2, "0")}:${(~~(
+        ($currentIAFile?.duration ?? 0) % 60
     ))
         .toString()
         .padStart(2, "0")}`;
 
     onMount(() => {
-        if ($currentSrc === item.previewSrc) {
-            currentTime = audioPlayer.audioFile.currentTime;
+        if ($currentSrc === $currentIAFile?.previewSrc) {
+            currentTime = webAudioPlayer.audioFile.currentTime;
         }
-        audioPlayer.onTimeUpdate = (time) => {
-            if ($currentSrc === item.previewSrc) {
+        webAudioPlayer.onTimeUpdate = (time) => {
+            if ($currentSrc === $currentIAFile?.previewSrc) {
                 currentTime = time;
             } else {
                 currentTime = 0;
@@ -39,45 +42,69 @@
 </script>
 
 <div class="container">
-    <Icon
-        icon={$currentSrc === item.previewSrc && $isPlaying
-            ? "fe:pause"
-            : "fe:play"}
-        color="#ded2de"
-        size={30}
-        onClick={() => {
-            if ($currentSrc === item.previewSrc) {
-                audioPlayer.togglePlay();
-            } else audioPlayer.playFromUrl(item);
-        }}
-    />
-    <p class="elapsed-time">{elapsedTime} / {durationText}</p>
+    <p class="title">{$currentIAFile?.title ?? $currentIAFile?.name ?? ""}</p>
+
+    <div>
+        {#if $webPlayerIsLoading && $currentIAFile}
+            <LoadingSpinner />
+        {:else}
+            <Icon
+                icon={$isIAPlaying ? "fe:pause" : "fe:play"}
+                color="#ded2de"
+                size={30}
+                disabled={!$currentIAFile}
+                onClick={() => {
+                    if ($currentSrc === $currentIAFile?.previewSrc) {
+                        webAudioPlayer.togglePlay();
+                    } else webAudioPlayer.playFromUrl($currentIAFile);
+                }}
+            />
+        {/if}
+    </div>
     <div class="seekbar">
         <Seekbar
             playerTime={currentTime}
             onSeek={(time) => {
-                audioPlayer.audioFile.currentTime = time;
+                webAudioPlayer.audioFile.currentTime = time;
             }}
-            duration={item.duration}
+            duration={$currentIAFile?.duration ?? 0}
+            buffered={$webPlayerBufferedRanges}
         />
     </div>
+
+    <p class="elapsed-time">{elapsedTime} / {durationText}</p>
 </div>
 
 <style lang="scss">
     .container {
         display: flex;
+        flex-direction: row;
         padding: 1em;
         border-radius: 5px;
-        padding: 10px;
-        gap: 7px;
+        padding: 15px 10px;
+        height: 60px;
+        width: 100%;
         align-items: center;
-        .elapsed-time {
-            opacity: 0.5;
-            font-size: 12px;
+        justify-content: center;
+
+        .title {
             margin: 0;
+            line-height: initial;
+            position: absolute;
+            
+            top: 5px;
         }
         .seekbar {
             flex: 1;
+            width: 100%;
+        }
+        .elapsed-time {
+            position: absolute;
+            opacity: 0.5;
+            font-size: 12px;
+            margin: 0;
+            line-height: initial;
+            top: 42px;
         }
     }
 </style>

@@ -15,7 +15,7 @@
     import Icon from "../ui/Icon.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import { open } from "@tauri-apps/api/dialog";
-    import { audioDir } from "@tauri-apps/api/path";
+    import { audioDir, downloadDir } from "@tauri-apps/api/path";
     import { importPaths } from "../../data/LibraryImporter";
     import tippy from "svelte-tippy";
 
@@ -68,6 +68,25 @@
             $userSettings = $userSettings;
 
             await importPaths([selected], false);
+        }
+    }
+
+    async function openDefaultDownloadDirSelector() {
+        // Open a selection dialog for directories
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            defaultPath: await downloadDir()
+        });
+        if (Array.isArray(selected)) {
+            // user selected multiple directories
+        } else if (selected === null) {
+            // user cancelled the selection
+        } else {
+            console.log("selected", selected);
+            // user selected a single directory
+            $userSettings.downloadLocation = selected;
+            $userSettings = $userSettings;
         }
     }
 
@@ -144,7 +163,7 @@
                         {/each}
                         <ButtonWithIcon
                             theme="transparent"
-                            icon="mdi:folder-outline"
+                            icon="material-symbols:folder"
                             text="Add folder"
                             onClick={openFolderSelector}
                             size="small"
@@ -170,6 +189,21 @@
                             {/each}
                         </select></td
                     >
+                </tr>
+                <br />
+                <tr>
+                    <td>Download location</td>
+                    <td>
+                        <div class="download-location">
+                            <p>{$userSettings.downloadLocation}</p>
+                            <Icon
+                                icon="material-symbols:folder"
+                                onClick={() => {
+                                    openDefaultDownloadDirSelector();
+                                }}
+                            />
+                        </div>
+                    </td>
                 </tr>
                 <br />
                 <tr>
@@ -357,6 +391,12 @@
                 }
             }
         }
+    }
+
+    .download-location {
+        display: flex;
+        gap: 10px;
+        align-items: center;
     }
 
     .folder-item {

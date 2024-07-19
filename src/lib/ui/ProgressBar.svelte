@@ -26,7 +26,7 @@
         width: 100%;
         flex-direction: column;
         height: auto;
-        padding: 0 1em 0;
+        padding: 0;
         align-items: center;
         justify-content: space-between;
 

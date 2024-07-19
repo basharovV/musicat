@@ -25,7 +25,7 @@ tauri-plugin-fs-watch = { git = "https://github.com/tauri-apps/plugins-workspace
 filetime = "0.2.22"
 chksum-md5 = "0.0.0"
 rayon = "1.8.0"
-reqwest = "0.11"
+reqwest = { version = "0.11", features = ["stream"] }
 tokio = { version = "1", features = ["full"] }
 scraper = "0.12"
 http = "1.0.0"
@@ -48,6 +48,8 @@ env_logger = "0.11.3"
 rustfft = "6.2.0"
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 anyhow = "1.0.86"
+futures-util = "0.3.30"
+tempfile = "3.10.1"
 
 [patch.crates-io]
 webrtc = { git = "https://github.com/basharovV/webrtc.git" }

@@ -9,6 +9,9 @@ import type {
     BottomBarNotification,
     Compression,
     CurrentSongLyrics,
+    IACollection,
+    IAFile,
+    IAItem,
     ImportStatus,
     LastPlayedInfo,
     PlaylistType,
@@ -22,6 +25,7 @@ import type {
 import { derived, writable, type Writable } from "svelte/store";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
+import { downloadDir } from "@tauri-apps/api/path";
 
 interface Query {
     orderBy: string;
@@ -157,7 +161,8 @@ const defaultSettings: UserSettings = {
     openAIApiKey: null,
     aiFeaturesEnabled: false,
     geniusApiKey: null,
-    isArtistsToolkitEnabled: false
+    isArtistsToolkitEnabled: false,
+    downloadLocation: null
 };
 
 export const userSettings: Writable<UserSettings> = writable(
@@ -229,10 +234,19 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     loopStartPos: 0
 });
 
-async function getOs() {
+async function init() {
+    // Set OS
     const osType = await type();
-
     os.set(osType);
+
+    // Set default download location
+    const dir = await downloadDir();
+    userSettings.update((settings) => {
+        if (!settings.downloadLocation) {
+            return { ...settings, downloadLocation: dir };
+        }
+        return settings;
+    });
 }
 
 export const streamInfo: Writable<StreamInfo> = writable({
@@ -265,4 +279,15 @@ columnOrder.subscribe((val) =>
     localStorage.setItem("columnOrder", JSON.stringify(val))
 );
 
-getOs();
+// Internet Archive
+export const iaCollections:Writable<IACollection[]> = writable([]);
+export const iaSelectedCollection:Writable<IACollection> = writable(null);
+export const iaSelectedCollectionItems:Writable<IAItem[]> = writable([]);
+export const iaSelectedItem: Writable<IAItem> = writable(null);
+
+export const currentIAFile: Writable<IAFile> = writable(null);
+export const webPlayerBufferedRanges: Writable<TimeRanges> = writable(null);
+export const webPlayerVolume: Writable<number> = writable(0.6);
+export const webPlayerIsLoading = writable(false);
+export const fileToDownload: Writable<IAFile> = writable(null);
+init();
