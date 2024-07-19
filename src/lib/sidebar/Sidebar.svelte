@@ -425,7 +425,7 @@
     let smartPlaylistToEdit: string = null;
     let updatedSmartPlaylistName = "";
     let isRenamingSmartPlaylist = false;
-    let hoveringOverSmartPlaylistId: number|string = null;
+    let hoveringOverSmartPlaylistId: number | string = null;
 
     function onCreatePlaylist() {
         db.playlists.add({
@@ -503,7 +503,7 @@
         console.log("queries", userQueries);
     }
 
-    function onMouseOverSmartPlaylist(queryId: number|string) {
+    function onMouseOverSmartPlaylist(queryId: number | string) {
         hoveringOverSmartPlaylistId = queryId;
     }
 
@@ -975,7 +975,9 @@
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseOverSmartPlaylist(query.value)}
+                                            onMouseOverSmartPlaylist(
+                                                query.value
+                                            )}
                                     >
                                         <p>{query.name}</p>
                                     </div>
@@ -1062,6 +1064,8 @@
                                 class:selected={$uiView === "your-music"}
                                 on:click={() => {
                                     $uiView = "your-music";
+                                    $selectedPlaylistId = null;
+                                    $selectedSmartQuery = null;
                                 }}
                             >
                                 <Icon
@@ -1076,6 +1080,8 @@
                         <item
                             class:selected={$uiView === "internet-archive"}
                             on:click={() => {
+                                $selectedPlaylistId = null;
+                                $selectedSmartQuery = null;
                                 $uiView = "internet-archive";
                             }}
                         >
@@ -1090,6 +1096,9 @@
                         <item
                             class:selected={$uiView === "map"}
                             on:click={() => {
+                                $selectedPlaylistId = null;
+                                $selectedSmartQuery = null;
+                                $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "map";
                             }}
                         >
@@ -1104,6 +1113,9 @@
                         <item
                             class:selected={$uiView === "analytics"}
                             on:click={() => {
+                                $selectedPlaylistId = null;
+                                $selectedSmartQuery = null;
+                                $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "analytics";
                             }}
                         >
