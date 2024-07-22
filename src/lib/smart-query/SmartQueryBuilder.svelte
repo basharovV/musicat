@@ -2,25 +2,19 @@
     import { UserQueryPart } from "./UserQueryPart";
 
     import { onMount } from "svelte";
+    import { _ } from "svelte-i18n";
     import {
-        forceRefreshLibrary,
-        isSmartQueryBuilderOpen,
-        isSmartQuerySaveUiOpen,
         isSmartQueryValid,
-        selectedSmartQuery,
         smartQuery,
-        smartQueryInitiator,
-        uiView
+        smartQueryInitiator
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
     import { autoWidth } from "../../utils/AutoWidth";
     import Menu from "../menu/Menu.svelte";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import type { QueryPartStruct } from "./QueryPart";
     import { BUILT_IN_QUERY_PARTS } from "./QueryParts";
     import SmartQueryPart from "./SmartQueryPart.svelte";
-    import { fly } from "svelte/transition";
-    import { cubicInOut } from "svelte/easing";
 
     const fields = ["artist"];
 
@@ -145,7 +139,6 @@
 
     let hoveredItemIdx = 0;
     let numberOfItems = 0;
-
 </script>
 
 <container>
@@ -178,17 +171,15 @@
         <div class="options">
             <div class="validation">
                 {#if $isSmartQueryValid}
-                    <p>query is valid</p>
+                    <p>{$LL.smartPlaylists.builder.valid()}</p>
                     <Icon color="green" icon="charm:tick" />
                 {:else}
-                    <p>query is not valid</p>
+                    <p>{$LL.smartPlaylists.builder.invalid()}</p>
                     <Icon color="orange" icon="ant-design:warning-outlined" />
                 {/if}
             </div>
-            <div class="save">
-            </div>
-            <div class="close">
-            </div>
+            <div class="save"></div>
+            <div class="close"></div>
         </div>
         {#if matchingQueryParts.length > 0}
             <Menu
@@ -196,40 +187,14 @@
                 y={inputY}
                 onClickOutside={closeAutoComplete}
                 items={matchingQueryParts.map((p) => ({
-                    text: p.description,
-                    description: "eg. " + p.example,
+                    text: $_(p.description),
+                    description: $_(p.example),
                     source: p
                 }))}
                 onItemSelected={onSelectPart}
             />
         {/if}
     </div>
-    {#if $isSmartQuerySaveUiOpen}
-        <!-- <ButtonWithIcon
-        icon="mingcute:close-circle-fill"
-        onClick={hideSmartQueryBuilder}
-        text="Hide builder"
-    /> -->
-
-        <div
-            class="smart-query-actions"
-            transition:fly={{
-                y: -10,
-                duration: 200,
-                easing: cubicInOut
-            }}
-        >
-            <p>Name:</p>
-            <form on:submit|preventDefault={save}>
-                <input bind:value={$smartQuery.name} />
-            </form>
-            <img src="images/arrow-down-right.svg" />
-            <button
-                disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
-                on:click={save}>Save smart query</button
-            >
-        </div>
-    {/if}
 </container>
 
 <style lang="scss">

@@ -1,4 +1,5 @@
 import { type, type OsType } from "@tauri-apps/api/os";
+import { downloadDir } from "@tauri-apps/api/path";
 import type {
     ActionEvent,
     AddOriginCountryStatus,
@@ -23,9 +24,14 @@ import type {
     WaveformPlayerState
 } from "src/App";
 import { derived, writable, type Writable } from "svelte/store";
+import { locale } from "../i18n/i18n-svelte";
+import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
-import { downloadDir } from "@tauri-apps/api/path";
+
+export const L = derived(locale, (l) => {
+    return i18nString(l);
+});
 
 interface Query {
     orderBy: string;
@@ -281,9 +287,9 @@ columnOrder.subscribe((val) =>
 );
 
 // Internet Archive
-export const iaCollections:Writable<IACollection[]> = writable([]);
-export const iaSelectedCollection:Writable<IACollection> = writable(null);
-export const iaSelectedCollectionItems:Writable<IAItem[]> = writable([]);
+export const iaCollections: Writable<IACollection[]> = writable([]);
+export const iaSelectedCollection: Writable<IACollection> = writable(null);
+export const iaSelectedCollectionItems: Writable<IAItem[]> = writable([]);
 export const iaSelectedItem: Writable<IAItem> = writable(null);
 
 export const currentIAFile: Writable<IAFile> = writable(null);

@@ -58,6 +58,9 @@
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
     import { setLocale } from "./i18n/i18n-svelte";
     import { loadLocale } from "./i18n/i18n-util.sync";
+
+    console.log('locale', getLocaleFromNavigator())
+    
     register("en", () => import("./i18n/en"));
     register("es", () => import("./i18n/es"));
 

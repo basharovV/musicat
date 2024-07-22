@@ -46,6 +46,7 @@
     import Icon from "../ui/Icon.svelte";
 
     import { Buffer } from "buffer";
+    import LL from "../../i18n/i18n-svelte";
     // optional
 
     const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
@@ -821,12 +822,12 @@
                         <table class="file-info">
                             <thead>
                                 <tr>
-                                    <td>File</td>
-                                    <td>Codec</td>
-                                    <td>Tag type</td>
-                                    <td>Duration</td>
-                                    <td>Sample rate</td>
-                                    <td>Bit rate</td>
+                                    <td>{$LL.trackInfo.file()}</td>
+                                    <td>{$LL.trackInfo.codec()}</td>
+                                    <td>{$LL.trackInfo.tagType()}</td>
+                                    <td>{$LL.trackInfo.duration()}</td>
+                                    <td>{$LL.trackInfo.sampleRate()}</td>
+                                    <td>{$LL.trackInfo.bitRate()}</td>
                                 </tr>
                             </thead>
                             {#each $rightClickedTrack ? [$rightClickedTrack] : $rightClickedTracks as track}
@@ -875,7 +876,8 @@
                                     <td>
                                         {#if track.fileInfo.bitDepth}
                                             <p>
-                                                {track.fileInfo.bitDepth} bit
+                                                {track.fileInfo.bitDepth}
+                                                {$LL.trackInfo.bit()}
                                             </p>
                                         {/if}
                                     </td>
@@ -884,20 +886,22 @@
                         </table>
                     </div>
                 {:else}
-                    <p>Song has no metadata</p>
+                    <p>{$LL.trackInfo.noMetadata()}</p>
                 {/if}
             </div>
 
             <div class="enrichment">
                 <h5 class="section-title">
-                    <Icon icon="iconoir:atom" size={34} />Enrichment center
+                    <Icon
+                        icon="iconoir:atom"
+                        size={34}
+                    />{$LL.trackInfo.enrichmentCenter()}
                 </h5>
                 <div class="label">
-                    <h4>Country of origin</h4>
+                    <h4>{$LL.trackInfo.countryOfOrigin()}</h4>
                     <div
                         use:tippy={{
-                            content:
-                                "Set this to use the Map view, and to be able to filter by country in Smart Playlists",
+                            content: $LL.trackInfo.countryOfOriginTooltip(),
                             placement: "right"
                         }}
                     >
@@ -909,20 +913,20 @@
                         fullWidth
                         value={originCountryEdited}
                         placeholder={isFetchingOriginCountry
-                            ? "Looking online..."
+                            ? $LL.trackInfo.fetchingOriginCountry()
                             : ""}
                         onChange={onOriginCountryUpdated}
                     />
                     <ButtonWithIcon
                         onClick={saveTrack}
-                        text="Save"
+                        text={$LL.trackInfo.save()}
                         icon="material-symbols:save"
                         disabled={originCountry === originCountryEdited}
                     />
                     <ButtonWithIcon
                         onClick={fetchFromWikipedia}
                         isLoading={isFetchingOriginCountry}
-                        text="Fetch from Wikipedia"
+                        text={$LL.trackInfo.fetchFromWikipedia()}
                         icon="tabler:world-download"
                         theme="transparent"
                     />
@@ -957,22 +961,26 @@
                 </div>
             </div>
             {#if isArtworkSet}
-                <small>Ready to save</small>
+                <small>{$LL.trackInfo.artworkReadyToSave()}</small>
             {:else if foundArtwork}
-                <small>Found {foundArtwork.artworkFilenameMatch}</small>
+                <small
+                    >{$LL.trackInfo.artworkFound()}
+                    {foundArtwork.artworkFilenameMatch}</small
+                >
             {:else if artworkSrc}
-                <small>Encoded in file</small>
+                <small>{$LL.trackInfo.encodedInFile()}</small>
             {:else}
-                <small style="color: grey">No artwork</small>
+                <small style="color: grey">{$LL.trackInfo.noArtwork()}</small>
             {/if}
             <span
                 use:tippy={{
                     allowHTML: true,
-                    content:
-                        "<h3 style='margin:0'>🎨 Artwork priority</h3><br/>First, Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>If there is none, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i> (you can change this list of filenames in Settings).<br/><br/>Otherwise, it will look for any image in the album folder and use that.",
+                    content: $LL.trackInfo.artworkTooltipBody(),
                     placement: "left"
                 }}
-                ><Icon icon="ic:round-info" /><small>About artwork</small></span
+                ><Icon icon="ic:round-info" /><small
+                    >{$LL.trackInfo.aboutArtwork()}</small
+                ></span
             >
             <div class="find-art-btn">
                 <ButtonWithIcon
@@ -987,13 +995,12 @@
     <div class="bottom">
         <section class="metadata-section">
             <h5 class="section-title">
-                <Icon icon="fe:music" size={30} />Metadata
+                <Icon icon="fe:music" size={30} />{$LL.trackInfo.metadata()}
             </h5>
             {#if $rightClickedTrack || $rightClickedTracks[0]}
                 {#if isUnsupportedFormat}
                     <p>
-                        This file type is not yet supported for metadata
-                        viewing/editing
+                        {$LL.trackInfo.unsupportedFormat()}
                     </p>
                 {:else}
                     {#if containsError === "err:null-chars"}
@@ -1003,17 +1010,20 @@
                         >
                             <Icon icon="ant-design:warning-outlined" />
                             <p>
-                                Some tags have a hidden character that prevents
-                                them from being read properly.
+                                {$LL.trackInfo.errors.nullChars()}
                             </p>
-                            <button on:click={stripNonAsciiChars}>Fix</button>
+                            <button on:click={stripNonAsciiChars}
+                                >{$LL.trackInfo.fix()}</button
+                            >
                         </div>
                     {/if}
                     <form>
                         {#each metadata?.mappedMetadata?.filter((m) => $rightClickedTrack || ($rightClickedTracks.length && ALBUM_FIELDS.includes(m.genericId))) as tag, idx}
                             {#if tag.genericId === "artist"}
                                 <div class="tag">
-                                    <p class="label">artist</p>
+                                    <p class="label">
+                                        {$LL.trackInfo.artist()}
+                                    </p>
                                     <div class="line" />
                                     <div
                                         class="artist-input"
@@ -1076,21 +1086,20 @@
                     </form>
                     <div class="tools">
                         <h5 class="section-title">
-                            <Icon icon="ri:tools-fill" />Tools
+                            <Icon icon="ri:tools-fill" />{$LL.trackInfo.tools()}
                         </h5>
                         <div class="tool">
                             <div class="description">
-                                <p>Fix legacy encodings</p>
+                                <p>
+                                    {$LL.trackInfo.fixLegacyEncodings.title()}
+                                </p>
                                 <small
-                                    >If you have ID3 tags encoded with legacy
-                                    encodings, you should update them to the
-                                    universal UTF-8 so they display properly.
-                                    Select an encoding and click Fix.</small
+                                    >{$LL.trackInfo.fixLegacyEncodings.body()}</small
                                 >
                             </div>
                             <select bind:value={selectedEncoding}>
                                 <option value="placeholder"
-                                    >Select encoding...</option
+                                    >{$LL.trackInfo.fixLegacyEncodings.hint()}</option
                                 >
                                 {#each ENCODINGS as encoding}
                                     <option
@@ -1105,7 +1114,7 @@
                                 {/each}
                             </select>
                             <ButtonWithIcon
-                                text="Fix encoding"
+                                text={$LL.trackInfo.fix()}
                                 theme="transparent"
                                 onClick={fixEncoding}
                                 disabled={selectedEncoding === "placeholder"}
@@ -1114,7 +1123,7 @@
                     </div>
                 {/if}
             {:else}
-                <p>Song has no metadata</p>
+                <p>{$LL.trackInfo.noMetadata()}</p>
             {/if}
         </section>
     </div>
@@ -1326,7 +1335,6 @@
             margin: 0;
             color: white;
             border: 1px solid rgba(128, 128, 128, 0.16);
-
         }
 
         .top-shadow {
@@ -1525,7 +1533,6 @@
         text-align: start;
         color: #7dffee;
         text-transform: uppercase;
-
     }
 
     .enrichment {
@@ -1598,7 +1605,6 @@
         .section-title {
             color: #ffe6ac;
             border: 1px solid rgba(255, 203, 158, 0.145);
-
         }
         h4 {
             user-select: none;

@@ -15,7 +15,9 @@ export enum QUERY_PARTS {
 type QUERY_PART = keyof typeof QUERY_PARTS;
 
 export function getQueryPart(queryPartName: QUERY_PART) {
-    return BUILT_IN_QUERY_PARTS.find((q) => q.name === QUERY_PARTS[queryPartName]);
+    return BUILT_IN_QUERY_PARTS.find(
+        (q) => q.name === QUERY_PARTS[queryPartName]
+    );
 }
 
 export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
@@ -23,8 +25,8 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         dataType: "song",
         fieldKey: "artist",
         comparison: "is-equal",
-        description: "by artist",
-        example: "by Charlie Parker",
+        description: "smartPlaylists.builder.parts.byArtist.title",
+        example: "smartPlaylists.builder.parts.byArtist.example",
         prompt: "by {artist}",
         name: QUERY_PARTS.BY_ARTIST,
         inputRequired: {
@@ -38,10 +40,27 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
     },
     {
         dataType: "song",
+        fieldKey: "composer",
+        comparison: "is-equal",
+        description: "smartPlaylists.builder.parts.byComposer.title",
+        example: "smartPlaylists.builder.parts.byComposer.example",
+        prompt: "by composer: {composer}",
+        name: QUERY_PARTS.BY_COMPOSER,
+        inputRequired: {
+            "composer": {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string"
+            }
+        }
+    },
+    {
+        dataType: "song",
         fieldKey: "year",
         comparison: "is-between",
-        description: "released between",
-        example: "released between 1950 and 1967",
+        description: "smartPlaylists.builder.parts.releasedBetween.title",
+        example: "smartPlaylists.builder.parts.releasedBetween.example",
         prompt: "released between {startYear} and {endYear}",
         name: QUERY_PARTS.RELEASED_BETWEEN,
         inputRequired: {
@@ -63,8 +82,8 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         dataType: "song",
         fieldKey: "year",
         comparison: "is-greater-than",
-        description: "released after",
-        example: "released after 1950",
+        description: "smartPlaylists.builder.parts.releasedAfter.title",
+        example: "smartPlaylists.builder.parts.releasedAfter.example",
         prompt: "released after {startYear}",
         name: QUERY_PARTS.RELEASED_AFTER,
         inputRequired: {
@@ -78,10 +97,27 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
     },
     {
         dataType: "song",
+        fieldKey: "year",
+        comparison: "is-equal",
+        description: "smartPlaylists.builder.parts.releasedIn.title",
+        example: "smartPlaylists.builder.parts.releasedIn.example",
+        prompt: "released in {year}",
+        name: QUERY_PARTS.RELEASED_IN,
+        inputRequired: {
+            "year": {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string"
+            }
+        }
+    },
+    {
+        dataType: "song",
         fieldKey: "title",
         comparison: "contains",
-        description: "song title contains {text}",
-        example: "song title contains love",
+        description: "smartPlaylists.builder.parts.titleContains.title",
+        example: "smartPlaylists.builder.parts.titleContains.example",
         prompt: "title contains {text}",
         name: QUERY_PARTS.TITLE_CONTAINS,
         inputRequired: {
@@ -97,8 +133,8 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         dataType: "song",
         fieldKey: "duration",
         comparison: "is-greater-than",
-        description: "longer than",
-        example: "longer than 04:00",
+        description: "smartPlaylists.builder.parts.longerThan.title",
+        example: "smartPlaylists.builder.parts.longerThan.example",
         prompt: "longer than {minutes}",
         name: QUERY_PARTS.LONGER_THAN,
         inputRequired: {
@@ -114,8 +150,8 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         dataType: "song",
         fieldKey: "genre",
         comparison: "contains",
-        description: "contains genre",
-        example: "contains 'disco'",
+        description: "smartPlaylists.builder.parts.containsGenre.title",
+        example: "smartPlaylists.builder.parts.containsGenre.example",
         prompt: "contains genre {genre}",
         name: QUERY_PARTS.CONTAINS_GENRE,
         inputRequired: {
@@ -129,27 +165,10 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
     },
     {
         dataType: "song",
-        fieldKey: "year",
-        comparison: "is-equal",
-        description: "released in",
-        example: "released in 1976",
-        prompt: "released in {year}",
-        name: QUERY_PARTS.RELEASED_IN,
-        inputRequired: {
-            "year": {
-                defaultVal: "",
-                isFieldKey: true,
-                isRequired: true,
-                type: "string"
-            }
-        }
-    },
-    {
-        dataType: "song",
         fieldKey: "originCountry",
         comparison: "is-equal",
-        description: "from country",
-        example: "from Australia",
+        description: "smartPlaylists.builder.parts.fromCountry.title",
+        example: "smartPlaylists.builder.parts.fromCountry.example",
         prompt: "from {originCountry}",
         name: QUERY_PARTS.FROM_COUNTRY,
         inputRequired: {
@@ -161,21 +180,4 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
             }
         }
     },
-    {
-        dataType: "song",
-        fieldKey: "composer",
-        comparison: "is-equal",
-        description: "by composer",
-        example: "by composer: Gottschalk",
-        prompt: "by composer: {composer}",
-        name: QUERY_PARTS.BY_COMPOSER,
-        inputRequired: {
-            "composer": {
-                defaultVal: "",
-                isFieldKey: true,
-                isRequired: true,
-                type: "string"
-            }
-        }
-    }
 ];

@@ -1,13 +1,14 @@
 <script lang="ts">
+    import { debounce } from "lodash-es";
     import tippy from "svelte-tippy";
     import { cubicInOut } from "svelte/easing";
     import { fly } from "svelte/transition";
     import { runScan } from "../../data/LibraryImporter";
-    import { debounce } from "lodash-es";
 
+    import { liveQuery } from "dexie";
+    import { db } from "../../data/db";
     import {
         bottomBarNotification,
-        foldersToWatch,
         importStatus,
         isFolderWatchUpdate,
         isLyricsOpen,
@@ -16,12 +17,11 @@
         uiView,
         userSettings
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
+    import Oscilloscope from "../player/Oscilloscope.svelte";
+    import { isIAPlaying } from "../player/WebAudioPlayer";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
-    import Oscilloscope from "../player/Oscilloscope.svelte";
-    import { liveQuery } from "dexie";
-    import { db } from "../../data/db";
-    import { isIAPlaying } from "../player/WebAudioPlayer";
 
     export let counts;
 
@@ -82,7 +82,7 @@
             }}
         >
             <Icon icon="mdi:playlist-music" size={14} />
-            <p>Queue</p>
+            <p>{$LL.bottomBar.queue()}</p>
         </div>
         {#if !$isIAPlaying}
             <div
@@ -93,7 +93,7 @@
                 }}
             >
                 <Icon icon="material-symbols:lyrics" size={14} />
-                <p>Lyrics</p>
+                <p>{$LL.bottomBar.lyrics()}</p>
             </div>
         {/if}
         {#if $uiView.match(/(library|albums|playlists|favourites|smart-query)/)}
@@ -103,7 +103,7 @@
         {/if}
         {#if !$isIAPlaying && $nextUpSong}
             <div class="next-up" bind:this={nextUp}>
-                <p class="label">Next up:</p>
+                <p class="label">{$LL.bottomBar.nextUp()}:</p>
                 <p class="song">
                     {$nextUpSong.title ?? $nextUpSong.file}
                 </p>
@@ -145,9 +145,18 @@
                     easing: cubicInOut
                 }}
             >
-                <p class="songs">{$counts.songs} songs</p>
-                <p class="artists">{$counts.artists} artists</p>
-                <p class="albums">{$counts.albums} albums</p>
+                <p class="songs">
+                    {$counts.songs}
+                    {$LL.bottomBar.stats.songs()}
+                </p>
+                <p class="artists">
+                    {$counts.artists}
+                    {$LL.bottomBar.stats.artists()}
+                </p>
+                <p class="albums">
+                    {$counts.albums}
+                    {$LL.bottomBar.stats.albums()}
+                </p>
             </div>
         {:else}
             <p>...</p>

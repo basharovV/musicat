@@ -80,6 +80,8 @@
     import { UserQueryPart } from "../smart-query/UserQueryPart";
     import Konva from "konva";
     import { timeSince } from "../../utils/DateUtils";
+    import { _ } from "svelte-i18n";
+    import LL from "../../i18n/i18n-svelte";
 
     export let allSongs = null;
     export let dim = false;
@@ -185,7 +187,7 @@
 
     const DEFAULT_FIELDS = [
         {
-            name: "Title",
+            name: $LL.library.fields.title(),
             value: "title",
             show: true,
             viewProps: {
@@ -195,7 +197,7 @@
             }
         },
         {
-            name: "Artist",
+            name: $LL.library.fields.artist(),
             value: "artist",
             show: true,
             viewProps: {
@@ -205,7 +207,7 @@
             }
         },
         {
-            name: "Composer",
+            name: $LL.library.fields.composer(),
             value: "composer",
             show: false,
             viewProps: {
@@ -215,7 +217,7 @@
             }
         },
         {
-            name: "Album",
+            name: $LL.library.fields.album(),
             value: "album",
             show: true,
             viewProps: {
@@ -225,7 +227,7 @@
             }
         },
         {
-            name: "Track",
+            name: $LL.library.fields.track(),
             value: "trackNumber",
             show: true,
             viewProps: {
@@ -235,7 +237,7 @@
             }
         },
         {
-            name: "Date Added",
+            name: $LL.library.fields.dateAdded(),
             value: "dateAdded",
             displayValue: "viewModel.timeSinceAdded",
             show: true,
@@ -246,7 +248,7 @@
             }
         },
         {
-            name: "Year",
+            name: $LL.library.fields.year(),
             value: "year",
             show: true,
             viewProps: {
@@ -256,7 +258,7 @@
             }
         },
         {
-            name: "Genre",
+            name: $LL.library.fields.genre(),
             value: "genre",
             show: true,
             viewProps: {
@@ -266,7 +268,7 @@
             }
         },
         {
-            name: "Origin",
+            name: $LL.library.fields.origin(),
             value: "originCountry",
             show: false,
             viewProps: {
@@ -276,7 +278,7 @@
             }
         },
         {
-            name: "Duration",
+            name: $LL.library.fields.duration(),
             value: "duration",
             show: true,
             viewProps: {

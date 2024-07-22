@@ -813,7 +813,7 @@
                         >
 
                         <item
-                            class:selected={$uiView === "library" &&
+                            class:selected={$uiView === "playlists" &&
                                 $selectedPlaylistId}
                             on:click={() => {
                                 // expand playlists
@@ -935,8 +935,6 @@
                             class:selected={$uiView === "smart-query"}
                             on:click={() => {
                                 $smartQueryInitiator = "sidebar";
-                                $selectedPlaylistId = null;
-                                $uiView = "smart-query";
                                 isSmartPlaylistsExpanded =
                                     !isSmartPlaylistsExpanded;
                             }}

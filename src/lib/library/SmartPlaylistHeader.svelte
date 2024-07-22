@@ -14,6 +14,7 @@
         smartQueryInitiator,
         uiView
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
@@ -88,7 +89,7 @@
             on:click={() => {
                 $isSmartQueryBuilderOpen = true;
                 $isSmartQuerySaveUiOpen = false;
-            }}>New smart playlist</button
+            }}>{$LL.smartPlaylists.newSmartPlaylist()}</button
         >
     </div>
 {:else}
@@ -105,14 +106,14 @@
                 // $uiView = "smart-query";
             }
         }}
-        text="Close editor"
+        text={$LL.smartPlaylists.builder.close()}
         theme="transparent"
     />
     <ButtonWithIcon
         size="small"
         icon="material-symbols:save-outline"
         onClick={save}
-        text="Save"
+        text={$LL.smartPlaylists.builder.save()}
         disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
         theme="transparent"
     />

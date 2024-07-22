@@ -1,9 +1,10 @@
 <script lang="ts">
+    import LL from "../../i18n/i18n-svelte";
 </script>
 
 <div>
-    <h2>Smart playlist results will appear here</h2>
-    <small>Happy searching!</small>
+    <h2>{$LL.smartPlaylists.libraryPlaceholder.title()}</h2>
+    <small>{$LL.smartPlaylists.libraryPlaceholder.subtitle()}</small>
 </div>
 
 <style lang="scss">
