@@ -4,7 +4,7 @@
     export let icon = null;
     export let onClick;
     export let text;
-    export let theme: "solid" | "transparent" = "solid";
+    export let theme: "solid" | "translucent" | "transparent" = "solid";
     export let size: "small" | "medium" = "medium";
     export let isLoading = false;
     export let disabled = false;
@@ -34,7 +34,7 @@
         font-weight: normal;
         /* background-color: rgba(240, 248, 255, 0.088); */
         border-radius: 6px;
-        color: var(--text);
+        color: var(--button-text);
         white-space: nowrap;
         cursor: default;
         transition: border-color 0.1s;
@@ -45,8 +45,7 @@
         }
 
         &.disabled {
-            background-color: #5d5d5d !important;
-            color: rgb(181, 171, 171);
+            opacity: 0.5;
         }
         &:active {
             opacity: 0.8;
@@ -66,14 +65,33 @@
             font-size: 1em;
             font-weight: 500;
             font-family: inherit;
-            background-color: #1a1a1a;
+            background-color: var(--button-bg);
             white-space: nowrap;
             &:hover {
-                border-color: #646cff;
+                border-color: var(--accent);
+            }
+        }
+
+        &.theme-translucent {
+            background-color: color-mix(
+                in srgb,
+                var(--inverse) 40%,
+                transparent
+            );
+            border: 1px solid
+                color-mix(in srgb, var(--inverse) 80%, transparent);
+            &:hover {
+                border-color: var(--accent);
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 90%,
+                    transparent
+                );
             }
         }
         &.theme-transparent {
             border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text);
         }
 
         // Sizes

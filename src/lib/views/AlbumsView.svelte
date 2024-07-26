@@ -353,7 +353,7 @@
         </div>
     {/if}
 
-    <ShadowGradient type="top" />
+    <!-- <ShadowGradient type="top" /> -->
     <ShadowGradient type="bottom" />
 </div>
 
@@ -417,7 +417,7 @@
             .order-by {
                 display: flex;
                 gap: 3px;
-                color: #949c9f;
+                color: var(--text-secondary);
             }
         }
     }
@@ -455,7 +455,7 @@
         flex-direction: row-reverse;
         gap: 4px;
         align-items: center;
-        color: #949c9f;
+        color: var(--text-secondary);
     }
     input[type="checkbox"] {
         padding: 0;
@@ -479,7 +479,7 @@
             position: relative;
         }
         &::-webkit-slider-runnable-track {
-            background: #4a4d4e;
+            background-color: var(--icon-secondary);
             appearance: none;
             border-radius: 10px;
             outline: none;
@@ -607,37 +607,5 @@
         100% {
             height: 15px;
         }
-    }
-
-    .bottom-shadow {
-        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
-        pointer-events: none;
-        background: linear-gradient(
-            to top,
-            hsl(320, 4.92%, 11.96%) 0%,
-            hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-            hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-            hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-            hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-            hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-            hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-            hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-            hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-            hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-            hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-            hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-            hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-            hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-            hsla(320, 4.92%, 11.96%, 0.016) 90%,
-            hsla(320, 4.92%, 11.96%, 0) 100%
-        );
-        height: 50px;
-        width: 100%;
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        z-index: 10;
-        opacity: 0.8;
     }
 </style>

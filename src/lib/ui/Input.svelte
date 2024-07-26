@@ -79,14 +79,14 @@
     input {
         line-height: inherit;
         padding: 0.3em;
-        background-color: color-mix(in srgb, var(--background) 66%, black);
-        border: 1px solid color-mix(in srgb, var(--background) 56%, black);
+        background-color: var(--input-bg);
+        border: 1px solid color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
         border-radius: 2px;
         font-size: 14px;
         z-index: 1;
         color: var(--text);
         &:focus {
-            background-color: color-mix(in srgb, var(--background) 60%, black);
+            background-color: color-mix(in srgb, vvar(--input-bg) 60%, var(--inverse));
         }
 
         &.alt {

@@ -453,6 +453,18 @@ type RootTranslation = {
 		 */
 		title: string
 		/**
+		 * L​i​b​r​a​r​y
+		 */
+		library: string
+		/**
+		 * I​n​t​e​r​f​a​c​e
+		 */
+		'interface': string
+		/**
+		 * F​e​a​t​u​r​e​s
+		 */
+		features: string
+		/**
 		 * C​o​n​f​i​g​u​r​e​ ​s​t​u​f​f
 		 */
 		subtitle: string
@@ -941,6 +953,18 @@ export type TranslationFunctions = {
 		 * Settings
 		 */
 		title: () => LocalizedString
+		/**
+		 * Library
+		 */
+		library: () => LocalizedString
+		/**
+		 * Interface
+		 */
+		'interface': () => LocalizedString
+		/**
+		 * Features
+		 */
+		features: () => LocalizedString
 		/**
 		 * Configure stuff
 		 */

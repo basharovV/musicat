@@ -781,9 +781,11 @@
             <small>ESC</small>
         </div>
         <div class="button-container">
-            <button disabled={!hasChanges} on:click={writeMetadata}
-                >Overwrite file{isMultiMode ? "s" : ""}</button
-            >
+            <ButtonWithIcon
+                disabled={!hasChanges}
+                onClick={writeMetadata}
+                text={`Overwrite file${isMultiMode ? "s" : ""}`}
+            />
             <small>Cmd + ENTER</small>
         </div>
 
@@ -920,7 +922,8 @@
                     <ButtonWithIcon
                         onClick={saveTrack}
                         text={$LL.trackInfo.save()}
-                        icon="material-symbols:save"
+                        icon="material-symbols:save-outline"
+                        theme="translucent"
                         disabled={originCountry === originCountryEdited}
                     />
                     <ButtonWithIcon
@@ -1149,7 +1152,7 @@
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(53, 51, 51);
-        background: rgba(60, 60, 63, 0.2);
+        background-color: var(--overlay-bg);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
         backdrop-filter: blur(8px);
         overflow-y: auto;
@@ -1175,8 +1178,9 @@
         top: -1px;
         padding: 0.4em 0;
         width: 100%;
-        background: rgba(38, 37, 37, 0.601);
-        border-bottom: 1px solid rgb(53, 51, 51);
+        background-color: color-mix(in srgb, var(--background) 1%, transparent);
+        border-bottom: 1px solid
+            color-mix(in srgb, var(--background) 60%, var(--inverse));
         backdrop-filter: blur(10px);
         z-index: 20;
 
@@ -1245,7 +1249,8 @@
         border-radius: 4px;
         overflow: hidden;
         cursor: pointer;
-        border: 1px solid rgba(255, 255, 255, 0.198);
+        border: 1px solid
+            color-mix(in srgb, var(--background) 60%, var(--inverse));
 
         &:hover {
             border: 1px solid rgba(255, 255, 255, 0.517);
@@ -1324,11 +1329,17 @@
     .info-section {
     }
     .file-outer {
-        border: 1px solid rgba(255, 255, 255, 0.099);
+        border: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
         border-radius: 5px;
         padding: 4px;
         min-width: 575px;
         position: relative;
+        background-color: color-mix(
+            in srgb,
+            var(--overlay-bg) 80%,
+            var(--inverse)
+        );
 
         .section-title {
             top: -10px;
@@ -1440,7 +1451,7 @@
                         padding: 0.2em 0.5em;
                         width: fit-content;
                         border-radius: 4px;
-                        color: rgb(175, 187, 197);
+                        color: var(--text);
                         user-select: none;
                         cursor: default;
                         margin: 0;
@@ -1519,7 +1530,11 @@
         flex-direction: row;
         gap: 5px;
         align-items: center;
-        background: #32323a;
+        background-color: color-mix(
+            in srgb,
+            var(--background) 50%,
+            var(--inverse)
+        );
         z-index: 11;
         border: 1px solid rgba(28, 163, 201, 0.29);
         top: -15px;
@@ -1537,11 +1552,16 @@
 
     .enrichment {
         margin-top: 1.5em;
-        border: 1px solid rgba(28, 163, 201, 0.29);
+        border: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
         border-radius: 5px;
         padding: 2em 1em 1em 1em;
         grid-column: 1 / 3;
-        background: rgba(22, 61, 76, 0.069);
+        background-color: color-mix(
+            in srgb,
+            var(--overlay-bg) 80%,
+            var(--inverse)
+        );
         position: relative;
 
         .section-title {
@@ -1559,7 +1579,7 @@
 
             h4 {
                 margin: 0;
-                color: rgba(255, 255, 255, 0.768);
+                color: var(--text);
                 text-align: left;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
@@ -1592,8 +1612,14 @@
         color: white;
         position: relative;
         width: 100%;
-        border: 1px solid rgb(78, 73, 73);
-        background: rgba(56, 54, 60, 0.442);
+        border: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
+
+        background-color: color-mix(
+            in srgb,
+            var(--overlay-bg) 80%,
+            var(--inverse)
+        );
         font-family:
             system-ui,
             -apple-system,
@@ -1665,12 +1691,13 @@
             display: flex;
             align-items: center;
             position: relative;
+            margin: 1px 0;
             > .label {
                 width: fit-content;
                 margin: 0;
                 font-size: 13px;
                 font-weight: 500;
-                color: rgb(204, 204, 204);
+                color: var(--text);
                 font-family: monospace;
                 user-select: none;
                 cursor: default;
@@ -1680,7 +1707,11 @@
 
             .line {
                 height: 1px;
-                background-color: rgba(255, 255, 255, 0.125);
+                background-color: color-mix(
+                    in srgb,
+                    var(--background) 60%,
+                    var(--inverse)
+                );
                 width: 40px;
             }
 
@@ -1714,6 +1745,10 @@
             flex-direction: row;
             align-items: center;
             gap: 5px;
+            color: var(--text);
+            * {
+                color: var(--text);
+            }
 
             .description {
                 text-align: left;

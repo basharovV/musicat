@@ -6,10 +6,14 @@ export interface Theme {
     "text-active": string;
     "text-inactive": string;
     background: string;
+    "overlay-bg": string;
     accent: string;
     "accent-secondary": string;
     "icon-primary": string;
     "icon-secondary": string;
+    "button-bg": string;
+    "button-text": string;
+    "input-bg": string;
     "transport-controls": string;
     "transport-favorite": string;
     "transport-shuffle": string;
@@ -29,6 +33,7 @@ export interface Theme {
     "smart-playlist-builder-block-bg": string;
     "smart-playlist-builder-block-focused-bg": string;
     "smart-playlist-builder-block-input-bg": string;
+    "oscilloscope": string;
 }
 export const allFonts = {
     "2Peas": {
@@ -39,18 +44,22 @@ export const allFonts = {
 export const DEFAULT_THEME: Theme = {
     "type": "dark",
     "text": "#ffffffde",
-    "text-secondary": "#8f9093",
+    "text-secondary": "#9fa0a2",
     "text-active": "#ffffff",
     "text-inactive": "#676464",
     "background": "#242026",
+    "overlay-bg": "#3c3c3f33",
     "accent": "#45fffcf3",
-    "accent-secondary": "#da69ff",
+    "accent-secondary": "#5123dd",
+    "button-bg": "#1c1b1b",
+    "button-text": "#ffffff",
+    "input-bg": "#4d494966",
     "icon-primary": "#ffffff",
     "icon-secondary": "#474747",
     "transport-controls": "#ffffff",
     "transport-favorite": "#59cd7a",
     "transport-shuffle": "#e1ff00",
-    "panel-background": "rgba(36, 33, 34, 0.948)",
+    "panel-background": "#242026b3",
     "library-text-color": "#d3d3d3",
     "library-playing-bg": "#5123dd",
     "library-playing-text": "#00ddff",
@@ -65,7 +74,8 @@ export const DEFAULT_THEME: Theme = {
     "smart-playlist-builder-bg": "#4d347c",
     "smart-playlist-builder-block-bg": "#7256be56",
     "smart-playlist-builder-block-focused-bg": "#7256be99",
-    "smart-playlist-builder-block-input-bg": "#231b4d45"
+    "smart-playlist-builder-block-input-bg": "#231b4d45",
+    oscilloscope: "#14D8BD"
 };
 
 export const allThemes: { [key: string]: Theme } = {
@@ -73,14 +83,18 @@ export const allThemes: { [key: string]: Theme } = {
         ...DEFAULT_THEME,
         "type": "light",
         "text": "#282230",
-        "text-secondary": "#7388c6",
+        "text-secondary": "#56575b",
         "text-active": "#38353b",
         "text-inactive": "#707879",
         "background": "#f1f1f1",
+        "overlay-bg": "#f1f1f1c0",
         "accent": "#5d00fff3",
         "accent-secondary": "#da69ff",
+        "button-bg": "#282b2c",
+        "button-text": "#ede8f0",
+        "input-bg": "#86808066",
         "icon-primary": "#2c0b3e",
-        "icon-secondary": "#575151",
+        "icon-secondary": "#716a6a",
         "transport-controls": "#333135",
         "transport-favorite": "#49ab65",
         "transport-shuffle": "#9804d3",
@@ -99,10 +113,49 @@ export const allThemes: { [key: string]: Theme } = {
         "smart-playlist-builder-bg": "#347c75",
         "smart-playlist-builder-block-bg": "#56beb556",
         "smart-playlist-builder-block-focused-bg": "#569abe99",
-        "smart-playlist-builder-block-input-bg": "#1b474d6f"
+        "smart-playlist-builder-block-input-bg": "#1b474d6f",
+        oscilloscope: "#017b94"
+    },
+    light2: {
+        ...DEFAULT_THEME,
+        "type": "light",
+        "text": "#282230",
+        "text-secondary": "#56575b",
+        "text-active": "#38353b",
+        "text-inactive": "#646067",
+        "background": "#ebe1e1",
+        "overlay-bg": "#f1f1f1c0",
+        "accent": "#5d00fff3",
+        "accent-secondary": "#da69ff",
+        "button-bg": "#282b2c",
+        "button-text": "#ede8f0",
+        "input-bg": "#86808066",
+        "icon-primary": "#2c0b3e",
+        "icon-secondary": "#716a6a",
+        "transport-controls": "#333135",
+        "transport-favorite": "#49ab65",
+        "transport-shuffle": "#9804d3",
+        "panel-background": "#dddbd4ca",
+        "library-text-color": "#3e4040",
+        "library-playing-bg": "#5123dd",
+        "library-playing-text": "#ffffff",
+        "library-playing-icon": "#efe2e6",
+        "library-highlight-bg": "#5123dd45",
+        "library-hover-bg": "#5123dd1c",
+        "library-header-bg": "#71658e7e",
+        "library-header-active-bg": "#997be1",
+        "library-clickable-cell-bg": "#9891aa1c",
+        "library-clickable-cell-hover-bg": "#5123dd6e",
+        "library-favourite-icon": "#5123dd",
+        "smart-playlist-builder-bg": "#347c75",
+        "smart-playlist-builder-block-bg": "#56beb556",
+        "smart-playlist-builder-block-focused-bg": "#569abe99",
+        "smart-playlist-builder-block-input-bg": "#1b474d6f",
+        oscilloscope: "#590194"
     },
     dark: DEFAULT_THEME,
     amphibian: {
+        ...DEFAULT_THEME,
         "type": "dark",
         "text": "#b6e1e3de",
         "text-secondary": "#819be8",
@@ -111,6 +164,7 @@ export const allThemes: { [key: string]: Theme } = {
         "background": "#233346",
         "accent": "#00ff62f3",
         "accent-secondary": "#da69ff",
+        "button-bg": "#486d7b",
         "icon-primary": "#ffffff",
         "icon-secondary": "#797676",
         "transport-controls": "#e9d6fb",

@@ -151,6 +151,9 @@ const en = {
     },
     settings: {
         title: "Settings",
+        library: "Library",
+        interface: "Interface",
+        features: "Features",
         subtitle: "Configure stuff",
         version: "Version",
         commaSeparatedFilenames: "filenames",

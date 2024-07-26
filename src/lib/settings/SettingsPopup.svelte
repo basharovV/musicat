@@ -128,147 +128,159 @@
 
         <section>
             <table>
-                <tr>
-                    <td>
-                        <p>{$LL.settings.foldersToWatch()}</p>
+                <tbody>
+                    <tr>
+                        <th colspan="2">{$LL.settings.library()}</th>
+                    </tr>
+                    <tr>
+                        <td class="folders">
+                            <p>{$LL.settings.foldersToWatch()}</p>
 
-                        {#if $importStatus.isImporting}
-                            <small>Importing..</small>
-                        {:else if $userSettings.foldersToWatch.length}
-                            <small>
-                                {$LL.settings.folder(
-                                    $userSettings.foldersToWatch.length
-                                )}
-                            </small>
-                        {/if}
-                    </td>
-                    <td>
-                        {#each $userSettings.foldersToWatch as folder}
-                            <div class="folder-item">
-                                <p>{folder}</p>
-                                <div
-                                    use:tippy={{
-                                        content:
-                                            "Removing a folder will not remove the tracks from your library.",
-                                        placement: "right"
-                                    }}
-                                >
-                                    <Icon
-                                        icon="mingcute:close-circle-fill"
-                                        onClick={() => {
-                                            removeFolder(folder);
+                            {#if $importStatus.isImporting}
+                                <small>Importing..</small>
+                            {:else if $userSettings.foldersToWatch.length}
+                                <small>
+                                    {$LL.settings.folder(
+                                        $userSettings.foldersToWatch.length
+                                    )}
+                                </small>
+                            {/if}
+                        </td>
+                        <td>
+                            {#each $userSettings.foldersToWatch as folder}
+                                <div class="folder-item">
+                                    <p>{folder}</p>
+                                    <div
+                                        use:tippy={{
+                                            content:
+                                                "Removing a folder will not remove the tracks from your library.",
+                                            placement: "right"
                                         }}
-                                    />
+                                    >
+                                        <Icon
+                                            icon="mingcute:close-circle-fill"
+                                            onClick={() => {
+                                                removeFolder(folder);
+                                            }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        {/each}
-                        <ButtonWithIcon
-                            theme="transparent"
-                            icon="material-symbols:folder"
-                            text="Add folder"
-                            onClick={openFolderSelector}
-                            size="small"
-                        />
-                    </td>
-                </tr>
-                <tr>
-                    <td>Cover art file names</td>
-                    <td
-                        ><Input
-                            bind:value={commaSeparatedFilenames}
-                            onChange={onUpdateFilenames}
-                            fullWidth
-                        /></td
-                    >
-                </tr>
-                <tr>
-                    <td>Mini-player default location</td>
-                    <td>
-                        <select bind:value={$userSettings.miniPlayerLocation}>
-                            {#each miniPlayerLocations as location}
-                                <option value={location}>{location}</option>
                             {/each}
-                        </select></td
-                    >
-                </tr>
-                <br />
-                <tr>
-                    <td>Theme</td>
-                    <td>
-                        <select bind:value={$userSettings.theme}>
-                            {#each Object.keys(allThemes) as theme}
-                                <option value={theme}>{theme}</option>
-                            {/each}
-                        </select></td
-                    >
-                </tr>
-                <br />
-                <tr>
-                    <td>Download location</td>
-                    <td>
-                        <div class="download-location">
-                            <p>{$userSettings.downloadLocation}</p>
-                            <Icon
+                            <ButtonWithIcon
+                                theme="transparent"
                                 icon="material-symbols:folder"
-                                onClick={() => {
-                                    openDefaultDownloadDirSelector();
-                                }}
+                                text="Add folder"
+                                onClick={openFolderSelector}
+                                size="small"
                             />
-                        </div>
-                    </td>
-                </tr>
-                <br />
-                <tr>
-                    <td>Enable AI features</td>
-                    <td
-                        ><input
-                            type="checkbox"
-                            bind:checked={$userSettings.aiFeaturesEnabled}
-                        /></td
-                    >
-                </tr>
-                <tr>
-                    <td>AI Model (LLM)</td>
-                    <td>
-                        <select bind:value={$userSettings.llm}>
-                            {#each llms as llm}
-                                <option value={llm}>{llm}</option>
-                            {/each}
-                        </select></td
-                    >
-                </tr>
-                <tr>
-                    <td>OpenAI API Key</td>
-                    <td
-                        ><Input
-                            bind:value={$userSettings.openAIApiKey}
-                            fullWidth
-                        /></td
-                    >
-                </tr>
-
-                <br />
-                <tr>
-                    <td>Genius API Key</td>
-                    <td
-                        ><Input
-                            bind:value={$userSettings.geniusApiKey}
-                            fullWidth
-                        /></td
-                    >
-                </tr>
-
-                <br />
-
-                <tr>
-                    <td>Enable Artist's Toolkit</td>
-                    <td
-                        ><input
-                            type="checkbox"
-                            bind:checked={$userSettings.isArtistsToolkitEnabled}
-                        /></td
-                    >
-                </tr>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Cover art file names</td>
+                        <td
+                            ><Input
+                                bind:value={commaSeparatedFilenames}
+                                onChange={onUpdateFilenames}
+                                fullWidth
+                                small
+                            /></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>Download location</td>
+                        <td>
+                            <div class="download-location">
+                                <p>{$userSettings.downloadLocation}</p>
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openDefaultDownloadDirSelector();
+                                    }}
+                                />
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="2">{$LL.settings.interface()}</th>
+                    </tr>
+                    <tr>
+                        <td>Mini-player location</td>
+                        <td>
+                            <select
+                                bind:value={$userSettings.miniPlayerLocation}
+                            >
+                                {#each miniPlayerLocations as location}
+                                    <option value={location}>{location}</option>
+                                {/each}
+                            </select></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>Theme</td>
+                        <td>
+                            <select bind:value={$userSettings.theme}>
+                                {#each Object.keys(allThemes) as theme}
+                                    <option value={theme}>{theme}</option>
+                                {/each}
+                            </select></td
+                        >
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="2">{$LL.settings.features()}</th>
+                    </tr>
+                    <tr>
+                        <td>Enable AI features</td>
+                        <td
+                            ><input
+                                type="checkbox"
+                                bind:checked={$userSettings.aiFeaturesEnabled}
+                            /></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>Enable Artist's Toolkit</td>
+                        <td
+                            ><input
+                                type="checkbox"
+                                bind:checked={$userSettings.isArtistsToolkitEnabled}
+                            /></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>AI Model (LLM)</td>
+                        <td>
+                            <select bind:value={$userSettings.llm}>
+                                {#each llms as llm}
+                                    <option value={llm}>{llm}</option>
+                                {/each}
+                            </select></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>OpenAI API Key</td>
+                        <td
+                            ><Input
+                                bind:value={$userSettings.openAIApiKey}
+                                fullWidth
+                                small
+                            /></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>Genius API Key</td>
+                        <td
+                            ><Input
+                                bind:value={$userSettings.geniusApiKey}
+                                fullWidth
+                                small
+                            /></td
+                        >
+                    </tr>
+                </tbody>
             </table>
         </section>
     </div></container
@@ -297,11 +309,7 @@
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(53, 51, 51);
-        background-color: color-mix(
-            in srgb,
-            var(--background) 66%,
-            transparent
-        );
+        background-color: var(--overlay-bg);
         backdrop-filter: blur(10px);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
         overflow: auto;
@@ -393,24 +401,37 @@
 
     section {
         width: 100%;
-        padding: 2em;
+        padding: 0 2em 2em 2em;
         table {
             width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.4em;
             tr {
+                th {
+                    text-align: start;
+                    vertical-align: middle;
+                    padding: 1em 0;
+                }
                 td {
+                    vertical-align: middle;
                     p {
                         margin: 0;
                     }
                     * {
                         color: var(--text);
                     }
+
+                    &.folders {
+                        vertical-align: top;
+                    }
                 }
                 td:nth-child(1) {
                     padding-right: 10px;
-                    text-align: right;
+                    text-align: start;
+                    opacity: 0.7;
                 }
                 td:nth-child(2) {
-                    text-align: left;
+                    text-align: start;
                 }
             }
         }

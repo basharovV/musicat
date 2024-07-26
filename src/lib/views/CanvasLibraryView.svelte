@@ -199,7 +199,6 @@
         border-radius: 5px;
         box-sizing: content-box;
         overflow: hidden;
-        /* border: 0.7px solid #ffffff0b; */
-        border-top: 0.7px solid #ffffff36;
+        border-top: 0.7px solid color-mix(in srgb, var(--inverse) 40%, transparent);
     }
 </style>

@@ -84,6 +84,11 @@ export function createCSSTemplate(prefix, base = {}) {
 
     const theme = get(currentThemeObject);
     const themeCSS = Object.entries(theme).reduce((acc, val) => {
+        if (val[0] === "type" && val[1] === "dark") {
+            acc += `--inverse: #ffffff2f;\n`;
+        } else if (val[0] === "type" && val[1] === "light") {
+            acc += `--inverse: black;\n`;
+        }
         return (acc += `--${val[0]}: ${val[1]};\n`);
     }, "");
     const font = get(currentFont);

@@ -1,4 +1,6 @@
+import { get } from "svelte/store";
 import { isPlaying } from "../../data/store";
+import { currentThemeObject } from "../../theming/store";
 import audioPlayer from "./AudioPlayer";
 
 export interface IAnimation {
@@ -21,6 +23,7 @@ export class AudioVisualiser {
     timeDomain: Uint8Array;
     freqDomain: Uint8Array;
     lastTick = performance.now();
+    color: string;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -34,6 +37,10 @@ export class AudioVisualiser {
                 this.clearCanvas();
             }
         });
+
+        currentThemeObject.subscribe((theme) => {
+            this.color = theme.oscilloscope;
+        });
     }
 
     setCanvas(canvas: HTMLCanvasElement) {
@@ -45,17 +52,18 @@ export class AudioVisualiser {
         const length = array.length;
         const interpolatedLength = length * factor - (factor - 1);
         const interpolatedArray = new Uint8Array(interpolatedLength);
-    
+
         for (let i = 0; i < length - 1; i++) {
             interpolatedArray[i * factor] = array[i];
             for (let j = 1; j < factor; j++) {
-                interpolatedArray[i * factor + j] = (j * array[i] + (factor - j) * array[i + 1]) / factor;
+                interpolatedArray[i * factor + j] =
+                    (j * array[i] + (factor - j) * array[i + 1]) / factor;
             }
         }
-    
+
         // Copy the last value from the original array
         interpolatedArray[interpolatedLength - 1] = array[length - 1];
-        
+
         return interpolatedArray;
     }
 
@@ -102,11 +110,11 @@ export class AudioVisualiser {
             const percent = this.timeDomain[i] / 256;
             const x = i * step;
             const yL = this._canvasContext.canvas.height * percent;
-            this._canvasContext.shadowColor = "#14D8BD";
+            this._canvasContext.shadowColor = this.color;
             this._canvasContext.shadowBlur = 10;
             this._canvasContext.shadowOffsetX = 2;
             this._canvasContext.shadowOffsetY = 2;
-            this._canvasContext.strokeStyle = "#14D8BD";
+            this._canvasContext.strokeStyle = this.color;
             this._canvasContext.lineTo(x, yL);
         }
 
@@ -134,4 +142,3 @@ export class AudioVisualiser {
         this.clearCanvas();
     }
 }
-

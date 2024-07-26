@@ -2006,8 +2006,8 @@
         justify-content: center;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
-        border-left: 0.7px solid #ffffff2a;
-        border-bottom: 0.7px solid #ffffff2a;
+        border-left: 0.7px solid color-mix(in srgb, var(--inverse) 40%, transparent);
+        border-bottom: 0.7px solid color-mix(in srgb, var(--inverse) 40%, transparent);
         overflow: hidden;
     }
     .container {

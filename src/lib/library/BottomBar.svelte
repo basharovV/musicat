@@ -238,6 +238,7 @@
                     font-size: 0.9em;
                     user-select: none;
                     cursor: default;
+                    color: var(--text-secondary);
                 }
             }
 
@@ -273,7 +274,7 @@
                     }
                 }
                 p {
-                    color: var(--text);
+                    color: var(--text-secondary);
                     margin: 0 0 1px 0;
                     line-height: normal;
                 }
@@ -341,7 +342,7 @@
             align-items: center;
             width: max-content;
             p {
-                color: rgb(203, 182, 208);
+                color: var(--text);
                 font-size: 13px;
                 margin: 0;
             }
@@ -354,6 +355,7 @@
             p {
                 user-select: none;
                 cursor: default;
+                color: var(--text-secondary);
             }
 
             @media only screen and (max-width: 800px) {

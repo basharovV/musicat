@@ -76,7 +76,7 @@
             flex-direction: row;
             align-items: center;
             height: fit-content;
-            color: var(--text);
+            color: var(--text-secondary);
             border: 1px solid rgba(128, 128, 128, 0.159);
             border-radius: 4px;
             padding-bottom: 1px;

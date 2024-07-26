@@ -13,6 +13,7 @@
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
+    import { currentThemeObject } from "../../theming/store";
 
     export let album: Album; // to display album data
     export let highlighted = false;
@@ -127,6 +128,7 @@
                                     ? "fe:pause"
                                     : "fe:play"}
                                 size={25}
+                                color="white"
                             />
                         </div>
                     </div>
@@ -161,7 +163,7 @@
             transform: translate(15%, -10px) rotate(140deg) !important;
         }
         .title {
-            background-color: #5123dd;
+            background-color: var(--accent-secondary);
             border-radius: 4px;
             color: var(--text);
             z-index: 20;
@@ -306,9 +308,14 @@
         box-shadow: 2px 2px 3px 2px rgba(0, 0, 0, 0.103);
         box-sizing: border-box;
         .hinge {
-            border-left: 1px solid rgba(255, 255, 255, 0.066);
+            border-left: 1px solid
+                color-mix(in srgb, var(--inverse) 10.32%, transparent);
             width: 5%;
-            background-color: rgba(255, 255, 255, 0.032);
+            background-color: color-mix(
+                in srgb,
+                var(--inverse) 4.32%,
+                transparent
+            );
         }
 
         .artwork-container {
@@ -355,10 +362,10 @@
                     z-index: 10;
 
                     &:hover {
-                        background-color: #5123dd;
+                        background-color: var(--accent-secondary);
                     }
                     &:active {
-                        background-color: #4420b1;
+                        background-color: var(--accent-secondary);
                         transform: scale(0.9);
                     }
                     .play-button {

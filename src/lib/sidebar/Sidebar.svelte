@@ -2022,7 +2022,7 @@
             -webkit-appearance: none;
             width: 100%;
             height: 5px;
-            background: #474747d4;
+            background: color-mix(in srgb, var(--inverse) 20%, transparent);
             outline: none;
             opacity: 1;
             border-radius: 3px;
