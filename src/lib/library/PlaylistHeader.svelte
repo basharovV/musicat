@@ -32,7 +32,7 @@
 </script>
 
 <h3 class="title">{playlist.title}</h3>
-<div class="line"/>
+<div class="line" />
 <div class="playlist-info">
     <p class="count">
         {#if playlist.tracks.length === 0}
@@ -61,7 +61,12 @@
         font-size: 1.1em;
         line-height: initial;
         position: relative;
-        background-color: #242026;
+        background-color: color-mix(
+            in srgb,
+            var(--background) 76%,
+            black
+        );
+
         border-radius: 5px;
         height: 100%;
         display: flex;

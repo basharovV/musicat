@@ -76,11 +76,10 @@
             flex-direction: row;
             align-items: center;
             height: fit-content;
-            color: rgb(188, 188, 188);
+            color: var(--text);
             border: 1px solid rgba(128, 128, 128, 0.159);
             border-radius: 4px;
             padding-bottom: 1px;
-            
 
             &:hover {
                 background-color: rgba(128, 128, 128, 0.191);

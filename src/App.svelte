@@ -58,9 +58,10 @@
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
     import { setLocale } from "./i18n/i18n-svelte";
     import { loadLocale } from "./i18n/i18n-util.sync";
+    import ThemeWrapper from "./theming/ThemeWrapper.svelte";
 
-    console.log('locale', getLocaleFromNavigator())
-    
+    console.log("locale", getLocaleFromNavigator());
+
     register("en", () => import("./i18n/en"));
     register("es", () => import("./i18n/es"));
 
@@ -203,113 +204,133 @@
     }
 </script>
 
-<!-- <svelte:body on:click={onPageClick} /> -->
-<Toaster />
+<ThemeWrapper>
+    <!-- <svelte:body on:click={onPageClick} /> -->
+    <Toaster />
 
-<CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
+    <CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
 
-{#if $isSettingsOpen}
-    <div class="info">
-        <SettingsPopup />
-    </div>
-{/if}
-
-{#if $isInfoPopupOpen}
-    <div class="info">
-        <InfoPopup onClickOutside={onCloseAppInfo} />
-    </div>
-{/if}
-
-{#if $isTrackInfoPopupOpen}
-    <div class="info">
-        <TrackInfoPopup />
-    </div>
-{/if}
-
-{#if showDropzone}
-    <Dropzone />
-{/if}
-
-<main class:mini-player={$isMiniPlayer} class:transparent={$os === "Darwin"}>
-    {#if !$isWelcomeSeen}
-        <WelcomeView />
-    {:else}
-        <div class="sidebar">
-            <Sidebar />
+    {#if $isSettingsOpen}
+        <div class="info">
+            <SettingsPopup />
         </div>
-
-        <div class="queue">
-            {#if $isQueueOpen}
-                <div
-                    class="queue-container"
-                    transition:fly={{ duration: 200, x: -200 }}
-                >
-                    <!-- <QueueView /> -->
-                    <QueueView />
-                    <QueueOptions />
-                </div>
-            {/if}
-        </div>
-
-        <div class="header">
-            {#if $uiView === "playlists"}
-                <!-- <p class="label">playlist:</p> -->
-                <div class="content">
-                    {#await selectedPlaylist then playlist}
-                        <PlaylistHeader {playlist} />
-                    {/await}
-                </div>
-            {:else if $uiView === "smart-query"}
-                <!-- <p class="label">playlist:</p> -->
-                <div class="content">
-                    {#await selectedQuery then query}
-                        <SmartPlaylistHeader selectedQuery={query} />
-                    {/await}
-                </div>
-            {/if}
-        </div>
-
-        <div class="panel">
-            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
-                <CanvasLibraryView />
-            {:else if $uiView === "playlists"}
-                <CanvasLibraryView />
-            {:else if $uiView === "albums"}
-                <AlbumView />
-            {:else if $uiView === "your-music"}
-                <ArtistsToolkitView />
-            {:else if $uiView === "map"}
-                <MapView />
-            {:else if $uiView === "analytics"}
-                <AnalyticsView />
-            {:else if $uiView === "internet-archive"}
-                <InternetArchiveView />
-            {/if}
-        </div>
-
-        {#if $isLyricsOpen}
-            <div class="lyrics" transition:fade={{ duration: 150 }}>
-                <LyricsView />
-            </div>
-        {/if}
-
-        {#if $isWaveformOpen}
-            <div class="notes" transition:fly={{ duration: 200, y: 50 }}>
-                <NotesView />
-            </div>
-        {/if}
-
-        <div class="bottom-bar">
-            <BottomBar />
-        </div>
-
-        {#if $fileToDownload}
-            <DownloadPopup />
-        {/if}
     {/if}
-</main>
+
+    {#if $isInfoPopupOpen}
+        <div class="info">
+            <InfoPopup onClickOutside={onCloseAppInfo} />
+        </div>
+    {/if}
+
+    {#if $isTrackInfoPopupOpen}
+        <div class="info">
+            <TrackInfoPopup />
+        </div>
+    {/if}
+
+    {#if showDropzone}
+        <Dropzone />
+    {/if}
+
+    <main
+        class:mini-player={$isMiniPlayer}
+        class:transparent={$os === "Darwin"}
+    >
+        {#if !$isWelcomeSeen}
+            <WelcomeView />
+        {:else}
+            <div class="sidebar">
+                <Sidebar />
+            </div>
+
+            <div class="queue">
+                {#if $isQueueOpen}
+                    <div
+                        class="queue-container"
+                        transition:fly={{ duration: 200, x: -200 }}
+                    >
+                        <!-- <QueueView /> -->
+                        <QueueView />
+                        <QueueOptions />
+                    </div>
+                {/if}
+            </div>
+
+            <div class="header">
+                {#if $uiView === "playlists"}
+                    <!-- <p class="label">playlist:</p> -->
+                    <div class="content">
+                        {#await selectedPlaylist then playlist}
+                            <PlaylistHeader {playlist} />
+                        {/await}
+                    </div>
+                {:else if $uiView === "smart-query"}
+                    <!-- <p class="label">playlist:</p> -->
+                    <div class="content">
+                        {#await selectedQuery then query}
+                            <SmartPlaylistHeader selectedQuery={query} />
+                        {/await}
+                    </div>
+                {/if}
+            </div>
+
+            <div class="panel">
+                {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
+                    <CanvasLibraryView />
+                {:else if $uiView === "playlists"}
+                    <CanvasLibraryView />
+                {:else if $uiView === "albums"}
+                    <AlbumView />
+                {:else if $uiView === "your-music"}
+                    <ArtistsToolkitView />
+                {:else if $uiView === "map"}
+                    <MapView />
+                {:else if $uiView === "analytics"}
+                    <AnalyticsView />
+                {:else if $uiView === "internet-archive"}
+                    <InternetArchiveView />
+                {/if}
+            </div>
+
+            {#if $isLyricsOpen}
+                <div class="lyrics" transition:fade={{ duration: 150 }}>
+                    <LyricsView />
+                </div>
+            {/if}
+
+            {#if $isWaveformOpen}
+                <div class="notes" transition:fly={{ duration: 200, y: 50 }}>
+                    <NotesView />
+                </div>
+            {/if}
+
+            <div class="bottom-bar">
+                <BottomBar />
+            </div>
+
+            {#if $fileToDownload}
+                <DownloadPopup />
+            {/if}
+        {/if}
+    </main>
+</ThemeWrapper>
 
 <style lang="scss">
+    :global(html) {
+        background-color: var(--background, initial);
+        color: var(--text, initial);
+        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 24px;
+        font-weight: 400;
+        color-scheme: light dark;
+
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
     main {
         display: grid;
         grid-template-columns: auto auto 1fr;
@@ -318,10 +339,10 @@
         height: 100vh;
         opacity: 1;
         position: relative;
-        background-color: #242026;
+        background-color: var(--background, initial);
 
         &.transparent {
-            background-color: #242026c2;
+            background-color: color-mix(in srgb, var(--background, initial) 76%, transparent);
         }
 
         &.mini-player {

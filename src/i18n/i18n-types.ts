@@ -447,6 +447,60 @@ type RootTranslation = {
 			hint: string
 		}
 	}
+	settings: {
+		/**
+		 * S​e​t​t​i​n​g​s
+		 */
+		title: string
+		/**
+		 * C​o​n​f​i​g​u​r​e​ ​s​t​u​f​f
+		 */
+		subtitle: string
+		/**
+		 * V​e​r​s​i​o​n
+		 */
+		version: string
+		/**
+		 * f​i​l​e​n​a​m​e​s
+		 */
+		commaSeparatedFilenames: string
+		/**
+		 * g​p​t​-​3​.​5​-​t​u​r​b​o​,​ ​g​p​t​-​4​,​ ​o​l​l​a​m​a
+		 */
+		llms: string
+		/**
+		 * F​o​l​d​e​r​s​ ​t​o​ ​w​a​t​c​h
+		 */
+		foldersToWatch: string
+		/**
+		 * {​{​1​ ​f​o​l​d​e​r​|​?​?​ ​f​o​l​d​e​r​s​}​}
+		 */
+		folder: string
+		/**
+		 * I​m​p​o​r​t​i​n​g​.​.
+		 */
+		importing: string
+		/**
+		 * E​n​a​b​l​e​ ​A​r​t​i​s​t​'​s​ ​T​o​o​l​k​i​t
+		 */
+		enableArtistsToolkit: string
+		/**
+		 * E​n​a​b​l​e​ ​A​I​ ​f​e​a​t​u​r​e​s
+		 */
+		enableAIFeatures: string
+		/**
+		 * A​I​ ​M​o​d​e​l​ ​(​L​L​M​)
+		 */
+		aiModel: string
+		/**
+		 * O​p​e​n​A​I​ ​A​P​I​ ​K​e​y
+		 */
+		openApiKey: string
+		/**
+		 * G​e​n​i​u​s​ ​A​P​I​ ​K​e​y
+		 */
+		geniusApiKey: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -881,6 +935,60 @@ export type TranslationFunctions = {
 			 */
 			hint: () => LocalizedString
 		}
+	}
+	settings: {
+		/**
+		 * Settings
+		 */
+		title: () => LocalizedString
+		/**
+		 * Configure stuff
+		 */
+		subtitle: () => LocalizedString
+		/**
+		 * Version
+		 */
+		version: () => LocalizedString
+		/**
+		 * filenames
+		 */
+		commaSeparatedFilenames: () => LocalizedString
+		/**
+		 * gpt-3.5-turbo, gpt-4, ollama
+		 */
+		llms: () => LocalizedString
+		/**
+		 * Folders to watch
+		 */
+		foldersToWatch: () => LocalizedString
+		/**
+		 * {{1 folder|?? folders}}
+		 */
+		folder: (arg0: number | string | boolean) => LocalizedString
+		/**
+		 * Importing..
+		 */
+		importing: () => LocalizedString
+		/**
+		 * Enable Artist's Toolkit
+		 */
+		enableArtistsToolkit: () => LocalizedString
+		/**
+		 * Enable AI features
+		 */
+		enableAIFeatures: () => LocalizedString
+		/**
+		 * AI Model (LLM)
+		 */
+		aiModel: () => LocalizedString
+		/**
+		 * OpenAI API Key
+		 */
+		openApiKey: () => LocalizedString
+		/**
+		 * Genius API Key
+		 */
+		geniusApiKey: () => LocalizedString
 	}
 }
 

@@ -9,11 +9,11 @@
     <div style="transform: translateY({y}px) translateX({x}px);">
         {#if $draggedSongs}
             {#if $draggedAlbum}
-                <p>{$draggedAlbum.title} ({$draggedSongs.length} songs)</p>
+                <p>{$draggedAlbum?.title} ({$draggedSongs.length} songs)</p>
             {:else if $draggedSongs.length > 1}
                 <p>{$draggedSongs.length} songs</p>
             {:else}
-                <p>{$draggedSongs[0].title}</p>
+                <p>{$draggedSongs[0]?.title}</p>
             {/if}
         {/if}
     </div>

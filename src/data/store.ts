@@ -168,7 +168,8 @@ const defaultSettings: UserSettings = {
     aiFeaturesEnabled: false,
     geniusApiKey: null,
     isArtistsToolkitEnabled: false,
-    downloadLocation: null
+    downloadLocation: null,
+    theme: 'dark'
 };
 
 export const userSettings: Writable<UserSettings> = writable(

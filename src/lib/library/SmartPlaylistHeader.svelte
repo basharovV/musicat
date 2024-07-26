@@ -132,7 +132,7 @@
         font-size: 1.1em;
         line-height: initial;
         position: relative;
-        background-color: #242026;
+        background-color: color-mix(in srgb, var(--background) 76%, black);
         border-radius: 5px;
         height: 100%;
         display: flex;

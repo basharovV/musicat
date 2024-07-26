@@ -62,7 +62,8 @@
         smartQuery,
         smartQueryInitiator,
         smartQueryResults,
-        uiView
+        uiView,
+        userSettings
     } from "../../data/store";
     import {
         moveArrayElement,
@@ -82,6 +83,8 @@
     import { timeSince } from "../../utils/DateUtils";
     import { _ } from "svelte-i18n";
     import LL from "../../i18n/i18n-svelte";
+    import { currentThemeName, currentThemeObject } from "../../theming/store";
+    import ShadowGradient from "../ui/ShadowGradient.svelte";
 
     export let allSongs = null;
     export let dim = false;
@@ -345,21 +348,21 @@
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
 
     // COLORS
-    const BG_COLOR = "rgba(36, 33, 34, 0.948)";
-    const HEADER_BG_COLOR = "#71658e7e";
-    const OFFSCREEN_BG_COLOR = "#71658e3b";
-    const HEADER_BG_COLOR_HOVERED = "#604d8d";
-    const TEXT_COLOR = "rgb(211, 211, 211)";
-    const HIGHLIGHT_BG_COLOR = "#2e3357";
-    const ROW_BG_COLOR = "transparent";
-    const ROW_BG_COLOR_HOVERED = "#1f1f1f";
-    const PLAYING_BG_COLOR = "#5123dd";
-    const PLAYING_TEXT_COLOR = "#00ddff";
-    const COLUMN_INSERT_HINT_COLOR = "#b399ffca";
-    const DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
-    const CLICKABLE_CELL_BG_COLOR = "#71658e1e";
-    const CLICKABLE_CELL_BG_COLOR_HOVERED = "#8c7dae36";
-    const DRAGGING_SOURCE_COLOR = "#8a69683e";
+    let BG_COLOR: string;
+    let HEADER_BG_COLOR: string;
+    let OFFSCREEN_BG_COLOR: string;
+    let HEADER_BG_COLOR_HOVERED: string;
+    let TEXT_COLOR: string;
+    let HIGHLIGHT_BG_COLOR: string;
+    let ROW_BG_COLOR: string;
+    let ROW_BG_COLOR_HOVERED: string;
+    let PLAYING_BG_COLOR: string;
+    let PLAYING_TEXT_COLOR: string;
+    let COLUMN_INSERT_HINT_COLOR: string;
+    let DROP_HIGHLIGHT_BG_COLOR: string;
+    let CLICKABLE_CELL_BG_COLOR: string;
+    let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
+    let DRAGGING_SOURCE_COLOR: string;
 
     onMount(() => {
         init();
@@ -427,6 +430,28 @@
         console.log("Library::songs updated", songs.length);
         drawSongDataGrid();
         prevSongCount = songs.length;
+    }
+
+    $: if ($currentThemeObject) {
+        // COLORS
+        BG_COLOR = $currentThemeObject["panel-background"];
+        HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
+        OFFSCREEN_BG_COLOR = "#71658e3b";
+        HEADER_BG_COLOR_HOVERED =
+            $currentThemeObject["library-header-active-bg"];
+        TEXT_COLOR = $currentThemeObject["library-text-color"];
+        HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
+        ROW_BG_COLOR = "transparent";
+        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
+        PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
+        PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
+        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
+        DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
+        CLICKABLE_CELL_BG_COLOR =
+            $currentThemeObject["library-clickable-cell-bg"];
+        CLICKABLE_CELL_BG_COLOR_HOVERED =
+            $currentThemeObject["library-clickable-cell-hover-bg"];
+        DRAGGING_SOURCE_COLOR = "#8a69683e";
     }
 
     // Restore scroll position if any
@@ -1373,6 +1398,7 @@
                         in:fly={{ duration: 150, y: 30 }}
                         out:fly={{ duration: 150, y: 30 }}
                         class="scroll-now-playing"
+                        class:light={$currentThemeObject.type === "light"}
                         on:click={scrollToCurrentSong}
                     >
                         <div class="eq">
@@ -1684,7 +1710,9 @@
                                                             scaleX: 0.65,
                                                             scaleY: 0.65,
                                                             data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
-                                                            fill: "#00ddff"
+                                                            fill: $currentThemeObject[
+                                                                "library-playing-icon"
+                                                            ]
                                                         }}
                                                     />
                                                 {/if}
@@ -1714,8 +1742,12 @@
                                                             fill:
                                                                 $currentSong?.id ===
                                                                 song.id
-                                                                    ? "#00ddff"
-                                                                    : "#5123dd"
+                                                                    ? $currentThemeObject[
+                                                                          "library-playing-icon"
+                                                                      ]
+                                                                    : $currentThemeObject[
+                                                                          "library-favourite-icon"
+                                                                      ]
                                                         }}
                                                     />
                                                 {:else if hoveredSongIdx === songIdx}
@@ -1961,7 +1993,7 @@
             </div>
         </div>
     {/if}
-    <div class="bottom-shadow" />
+    <ShadowGradient type="bottom" />
 </div>
 
 <style lang="scss">
@@ -2043,6 +2075,28 @@
         cursor: default;
         user-select: none;
 
+        &.light {
+            background-color: #d9d9e0;
+            color: var(--text);
+            border: 1px solid rgba(163, 158, 158, 0.497);
+            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.334);
+
+            &:hover {
+                background-color: #d2d2dd;
+                border: 1px solid rgba(101, 98, 98, 0.31);
+                box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.534);
+            }
+            &:active {
+                background-color: #c0c0ca;
+                border: 2px solid rgba(101, 98, 98, 0.262);
+                box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.534);
+            }
+            .eq {
+                span {
+                    background-color: #a0a0a0;
+                }
+            }
+        }
         @media only screen and (max-width: 522px) {
             display: none;
         }
@@ -2141,7 +2195,6 @@
             grid-row-start: 1;
             grid-row-end: 2;
         }
-        background-color: #4d347c;
     }
 
     .bottom-bar {
@@ -2160,35 +2213,4 @@
         z-index: 15;
     }
 
-    .bottom-shadow {
-        font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
-        pointer-events: none;
-        background: linear-gradient(
-            to top,
-            hsl(320, 4.92%, 11.96%) 0%,
-            hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-            hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-            hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-            hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-            hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-            hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-            hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-            hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-            hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-            hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-            hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-            hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-            hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-            hsla(320, 4.92%, 11.96%, 0.016) 90%,
-            hsla(320, 4.92%, 11.96%, 0) 100%
-        );
-        height: 40px;
-        width: 100%;
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        z-index: 10;
-        opacity: 0.6;
-    }
 </style>

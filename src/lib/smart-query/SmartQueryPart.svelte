@@ -154,7 +154,7 @@
 
 <style lang="scss">
     div {
-        background-color: rgba(114, 86, 190, 0.338);
+        background-color: var(--smart-playlist-builder-block-bg);
         border-radius: 4px;
         display: flex;
         flex-direction: row;
@@ -165,7 +165,7 @@
         /* transition: all 0.2s cubic-bezier(0.075, 0.82, 0.165, 1); */
 
         &.focused {
-            background-color: rgba(114, 86, 190, 0.6);
+            background-color: var(--smart-playlist-builder-block-focused-bg);
             border: 1px solid rgba(255, 255, 255, 0.089);
             transform: scale(1.04);
         }
@@ -178,7 +178,7 @@
     }
 
     input {
-        background-color: rgba(35, 27, 77, 0.271);
+        background-color: var(--smart-playlist-builder-block-input-bg);
         /* background-color: #45306A; */
         border: 1px solid #d4ccdd6c;
         box-shadow: 0px 0px 1px 4px #3e286420 inset;

@@ -146,8 +146,23 @@ const en = {
         fixLegacyEncodings: {
             title: "Fix legacy encodings",
             body: "If you have ID3 tags encoded with legacy encodings, you should update them to the universal UTF-8 so they display properly. Select an encoding and click Fix.",
-			hint: "Select encoding..."
-		}
+            hint: "Select encoding..."
+        }
+    },
+    settings: {
+        title: "Settings",
+        subtitle: "Configure stuff",
+        version: "Version",
+        commaSeparatedFilenames: "filenames",
+        llms: "gpt-3.5-turbo, gpt-4, ollama",
+        foldersToWatch: "Folders to watch",
+        folder: "{{1 folder | ?? folders}}",
+        importing: "Importing..",
+        enableArtistsToolkit: "Enable Artist's Toolkit",
+        enableAIFeatures: "Enable AI features",
+        aiModel: "AI Model (LLM)",
+        openApiKey: "OpenAI API Key",
+        geniusApiKey: "Genius API Key"
     }
 } satisfies BaseTranslation;
 

@@ -157,6 +157,7 @@ interface UserSettings {
     geniusApiKey?: string;
     isArtistsToolkitEnabled: boolean;
     downloadLocation: string;
+    theme: string;
 }
 
 type MiniPlayerLocation =

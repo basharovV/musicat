@@ -110,7 +110,7 @@
         height: 30px;
         background-color: rgba(119, 119, 119, 0.24);
         border: 1px solid rgba(255, 255, 255, 0.118);
-        color: rgb(210, 210, 210);
+        color: var(--text);
         vertical-align: center;
         padding-top: 0;
         padding-bottom: 0;
@@ -129,7 +129,7 @@
             padding-top: 0px;
             border: 1px solid transparent;
             background-color: rgba(119, 119, 119, 0.02);
-            color: gray;
+            color: var(--text-inactive);
             height: 26px;
             font-size: 12.5px;
             &:hover {
@@ -142,7 +142,7 @@
             &.active {
                 background-color: rgba(119, 119, 119, 0.056);
                 border-bottom: 0.7px solid #ffffff2a;
-                color: rgb(210, 210, 210);
+                color: var(--text-active);
             }
 
             &.clear-btn {

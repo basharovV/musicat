@@ -22,6 +22,7 @@
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
+    import ShadowGradient from "../ui/ShadowGradient.svelte";
 
     let isLoading = true;
     let isVisible = false;
@@ -352,8 +353,8 @@
         </div>
     {/if}
 
-    <div class="top-shadow" />
-    <div class="bottom-shadow" />
+    <ShadowGradient type="top" />
+    <ShadowGradient type="bottom" />
 </div>
 
 <style lang="scss">
@@ -384,7 +385,7 @@
         border-bottom-right-radius: 5px;
         border-left: 0.7px solid #ffffff2a;
         border-bottom: 0.7px solid #ffffff2a;
-        background-color: #242026b3;
+        background-color: var(--panel-background);
     }
 
     .header {
@@ -637,37 +638,6 @@
         right: 0;
         left: 0;
         z-index: 10;
-        opacity: 0.8;
-    }
-
-    .top-shadow {
-        pointer-events: none;
-        background: linear-gradient(
-            to bottom,
-            hsl(320, 4.92%, 11.96%) 0%,
-            hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-            hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-            hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-            hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-            hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-            hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-            hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-            hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-            hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-            hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-            hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-            hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-            hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-            hsla(320, 4.92%, 11.96%, 0.016) 90%,
-            hsla(320, 4.92%, 11.96%, 0) 100%
-        );
-        height: 40px;
-        width: 100%;
-        position: absolute;
-        top: 0;
-        right: 0;
-        left: 0;
-        z-index: 20;
         opacity: 0.8;
     }
 </style>

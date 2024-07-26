@@ -187,7 +187,7 @@
         /* border-top: 1px solid rgb(51, 51, 51); */
         /* border-left: 0.7px solid #ffffff2a; */
         /* border-radius: 5px; */
-        color: white;
+        color: var(--text);
         display: flex;
         flex-direction: row;
         align-items: center;
@@ -198,7 +198,7 @@
         height: 30px;
 
         p {
-            color: rgb(176, 161, 161);
+            color: var(--text);
             margin: 0;
         }
         @media only screen and (max-width: 600px) {
@@ -241,40 +241,6 @@
                 }
             }
 
-            .lossy-selector {
-                display: flex;
-                flex-direction: row;
-                background-color: #24232332;
-                /* border: 1px solid rgba(128, 128, 128, 0.29); */
-                border-radius: 3px;
-                > div {
-                    padding: 1px 10px;
-                    cursor: default;
-                    &:hover {
-                        background-color: #bbb9b92e;
-                    }
-                    &:active {
-                        background-color: #bbb9b923;
-                    }
-                    &.selected {
-                        p {
-                            color: rgb(224, 218, 218);
-                        }
-                        background-color: #35309784;
-                    }
-                    p {
-                        margin: 0;
-                        line-height: 1.3em;
-                        user-select: none;
-                        text-transform: lowercase;
-                    }
-                }
-
-                @media only screen and (max-width: 500px) {
-                    display: none;
-                }
-            }
-
             .toggle-button {
                 display: flex;
                 flex-direction: row;
@@ -307,7 +273,7 @@
                     }
                 }
                 p {
-                    color: rgb(224, 218, 218);
+                    color: var(--text);
                     margin: 0 0 1px 0;
                     line-height: normal;
                 }

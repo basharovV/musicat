@@ -18,6 +18,8 @@
     import { audioDir, downloadDir } from "@tauri-apps/api/path";
     import { importPaths } from "../../data/LibraryImporter";
     import tippy from "svelte-tippy";
+    import LL from "../../i18n/i18n-svelte";
+    import { allThemes } from "../../theming/themes";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
@@ -119,8 +121,8 @@
                 <small>ESC</small>
             </div>
             <div class="title-container">
-                <h2>Settings</h2>
-                <small>Configure stuff</small>
+                <h2>{$LL.settings.title()}</h2>
+                <small>{$LL.settings.subtitle()}</small>
             </div>
         </header>
 
@@ -128,17 +130,16 @@
             <table>
                 <tr>
                     <td>
-                        <p>Folders to watch</p>
-                        {#if $userSettings.foldersToWatch.length}
-                            <small>
-                                {$userSettings.foldersToWatch.length} folder{$userSettings
-                                    .foldersToWatch.length > 1
-                                    ? "s"
-                                    : ""}
-                            </small>
-                        {/if}
+                        <p>{$LL.settings.foldersToWatch()}</p>
+
                         {#if $importStatus.isImporting}
                             <small>Importing..</small>
+                        {:else if $userSettings.foldersToWatch.length}
+                            <small>
+                                {$LL.settings.folder(
+                                    $userSettings.foldersToWatch.length
+                                )}
+                            </small>
                         {/if}
                     </td>
                     <td>
@@ -186,6 +187,17 @@
                         <select bind:value={$userSettings.miniPlayerLocation}>
                             {#each miniPlayerLocations as location}
                                 <option value={location}>{location}</option>
+                            {/each}
+                        </select></td
+                    >
+                </tr>
+                <br />
+                <tr>
+                    <td>Theme</td>
+                    <td>
+                        <select bind:value={$userSettings.theme}>
+                            {#each Object.keys(allThemes) as theme}
+                                <option value={theme}>{theme}</option>
                             {/each}
                         </select></td
                     >
@@ -285,7 +297,11 @@
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(53, 51, 51);
-        background: rgba(67, 65, 73, 0.89);
+        background-color: color-mix(
+            in srgb,
+            var(--background) 66%,
+            transparent
+        );
         backdrop-filter: blur(10px);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
         overflow: auto;
@@ -303,7 +319,11 @@
         top: 0;
         padding: 0.4em 0;
         width: 100%;
-        background: rgba(67, 65, 73, 0.89);
+        background-color: color-mix(
+            in srgb,
+            var(--background) 26%,
+            transparent
+        );
         border-bottom: 1px solid rgb(53, 51, 51);
         backdrop-filter: blur(10px);
         z-index: 20;
@@ -381,6 +401,9 @@
                     p {
                         margin: 0;
                     }
+                    * {
+                        color: var(--text);
+                    }
                 }
                 td:nth-child(1) {
                     padding-right: 10px;
@@ -420,7 +443,7 @@
         p {
             margin: 0;
             font-size: 0.9em;
-            color: rgb(196, 195, 195);
+            color: var(--text);
             white-space: wrap;
             max-width: 300px;
             line-height: initial;

@@ -79,13 +79,14 @@
     input {
         line-height: inherit;
         padding: 0.3em;
-        background-color: rgba(53, 48, 48, 0.349);
-        border: 1px solid rgb(81, 76, 76);
+        background-color: color-mix(in srgb, var(--background) 66%, black);
+        border: 1px solid color-mix(in srgb, var(--background) 56%, black);
         border-radius: 2px;
         font-size: 14px;
         z-index: 1;
+        color: var(--text);
         &:focus {
-            background-color: rgba(102, 92, 92, 0.104);
+            background-color: color-mix(in srgb, var(--background) 60%, black);
         }
 
         &.alt {
@@ -112,6 +113,7 @@
         }
         &::placeholder {
             opacity: 0.5;
+            color: var(--text);
         }
     }
 

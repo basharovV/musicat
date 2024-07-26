@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { currentThemeObject } from "../../theming/store";
+
     // seconds
     export let duration = 0;
     export let playerTime = 0;
@@ -65,7 +67,7 @@
             onSeek && onSeek(duration * percent);
         }}
     >
-        <div class="seekbar" bind:this={seekBar} class:hovered={showHoverHead}>
+        <div class="seekbar" bind:this={seekBar} class:hovered={showHoverHead} class:light={$currentThemeObject.type === 'light'}>
             <svg
                 class="playhead"
                 style="left:{playheadPos}%;"
@@ -144,7 +146,12 @@
     }
 
     .seekbar {
-        background: rgba(255, 255, 255, 0.262);
+        background-color: color-mix(in srgb, var(--background) 76%, white);
+        
+        &.light {
+            background-color: color-mix(in srgb, var(--background) 56%, black);
+        }
+
         height: 2px;
         width: 100%;
         overflow: visible;
@@ -158,7 +165,7 @@
             top: 0;
             left: 0;
             bottom: 0;
-            background: rgba(255, 255, 255, 0.300);
+            background-color: color-mix(in srgb, var(--background) 76%, black);
             z-index: 1;
             transition: all 0.2s ease-in-out;
         }

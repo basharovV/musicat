@@ -34,7 +34,7 @@
         font-weight: normal;
         /* background-color: rgba(240, 248, 255, 0.088); */
         border-radius: 6px;
-        color: rgba(255, 255, 255, 0.811);
+        color: var(--text);
         white-space: nowrap;
         cursor: default;
         transition: border-color 0.1s;

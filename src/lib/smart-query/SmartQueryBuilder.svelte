@@ -201,6 +201,7 @@
     container {
         display: flex;
         flex-direction: column;
+        background-color: var(--smart-playlist-builder-bg)
     }
     .builder {
         padding: 0.5em 0.5em 0.5em 0;

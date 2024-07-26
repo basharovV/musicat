@@ -163,7 +163,7 @@
         .title {
             background-color: #5123dd;
             border-radius: 4px;
-            color: white;
+            color: var(--text);
             z-index: 20;
         }
         .artist,
@@ -249,7 +249,7 @@
         p {
             margin: 0;
             line-height: 1em;
-            color: #d2cfcf;
+            color: var(--text);
             max-lines: 2;
         }
 

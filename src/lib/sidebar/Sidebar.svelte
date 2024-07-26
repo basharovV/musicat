@@ -64,6 +64,7 @@
     import SmartQuery from "../smart-query/Query";
     import type { SavedSmartQuery } from "../smart-query/QueryPart";
     import LL from "../../i18n/i18n-svelte";
+    import { currentThemeObject } from "../../theming/store";
 
     // What to show in the sidebar
     let title;
@@ -540,9 +541,8 @@
 
     async function favouriteCurrentSong() {
         if (!$currentSong) return;
-        await db.songs.update($currentSong, {
-            isFavourite: !$currentSong.isFavourite
-        });
+        $currentSong.isFavourite = !$currentSong.isFavourite;
+        await db.songs.put($currentSong);
         $currentSong = $currentSong;
     }
     let sidebar;
@@ -590,7 +590,13 @@
 
     let canvas: HTMLCanvasElement;
 
-    $: if ($currentSong && canvas && sidebarWidth && displayTitle) {
+    $: if (
+        $currentSong &&
+        canvas &&
+        sidebarWidth &&
+        displayTitle &&
+        $currentThemeObject
+    ) {
         console.log("title", title);
         // Too early - song is changed, but not the title
         isTitleOverflowing =
@@ -614,7 +620,7 @@
 
         context.font =
             "bold 36px -apple-system, Avenir, Helvetica, Arial, sans-serif";
-        context.fillStyle = "white";
+        context.fillStyle = $currentThemeObject["text-active"];
         let gap = 100;
         let textWidth = context.measureText(displayTitle).width;
 
@@ -772,7 +778,7 @@
                                 size={15}
                                 color={$uiView === "library" &&
                                 !$selectedPlaylistId
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.library()}</item
                         >
@@ -788,7 +794,7 @@
                                 icon="ic:round-album"
                                 size={15}
                                 color={$uiView === "albums"
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.albums()}</item
                         >
@@ -807,7 +813,7 @@
                                 icon="clarity:heart-solid"
                                 size={15}
                                 color={$uiView === "favourites"
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.favorites()}</item
                         >
@@ -829,7 +835,7 @@
                                 size={15}
                                 color={$uiView === "library" &&
                                 $selectedPlaylistId
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.playlists()}
                             <div
@@ -943,7 +949,7 @@
                                 icon="ic:round-star-outline"
                                 size={15}
                                 color={$uiView === "smart-query"
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.smartPlaylists()}
                             <div
@@ -1071,7 +1077,7 @@
                                     icon="mdi:music-clef-treble"
                                     size={15}
                                     color={$uiView === "your-music"
-                                        ? "#45fffcf3"
+                                        ? $currentThemeObject["accent"]
                                         : "currentColor"}
                                 />{$LL.sidebar.artistsToolkit()}</item
                             >
@@ -1088,7 +1094,7 @@
                                 icon="fe:music"
                                 size={15}
                                 color={$uiView === "internet-archive"
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />Internet Archive</item
                         >
@@ -1105,7 +1111,7 @@
                                 icon="mdi:map"
                                 size={15}
                                 color={$uiView === "map"
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.map()}</item
                         >
@@ -1122,7 +1128,7 @@
                                 icon="gridicons:line-graph"
                                 size={15}
                                 color={$uiView === "analytics"
-                                    ? "#45fffcf3"
+                                    ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.stats()}</item
                         >
@@ -1305,7 +1311,9 @@
             <Icon
                 class="transport-side"
                 icon="ph:shuffle-bold"
-                color={!$isShuffleEnabled ? "#606060" : "#e1ff00"}
+                color={!$isShuffleEnabled
+                    ? $currentThemeObject["icon-secondary"]
+                    : $currentThemeObject["transport-shuffle"]}
                 onClick={() => {
                     $isShuffleEnabled = !$isShuffleEnabled;
                 }}
@@ -1316,12 +1324,14 @@
                 size={36}
                 disabled={$currentSongIdx === 0}
                 onClick={() => audioPlayer.playPrevious()}
+                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-middle"
                 size={42}
                 onClick={togglePlayPause}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
+                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-middle"
@@ -1330,12 +1340,15 @@
                 disabled={$playlist.length === 0 ||
                     $currentSongIdx === $playlist?.length - 1}
                 onClick={() => audioPlayer.playNext()}
+                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-side favourite {$currentSong?.isFavourite
                     ? 'active'
                     : 'inactive'}"
-                color={$currentSong?.isFavourite ? "#59cd7a" : "grey"}
+                color={$currentSong?.isFavourite
+                    ? $currentThemeObject["transport-favorite"]
+                    : $currentThemeObject["icon-secondary"]}
                 icon={$currentSong?.isFavourite
                     ? "clarity:heart-solid"
                     : "clarity:heart-line"}
@@ -1353,7 +1366,7 @@
                         $rightClickedTrack = $currentSong;
                         $isTrackInfoPopupOpen = true;
                     }}
-                    color="#474747"
+                    color={$currentThemeObject["icon-secondary"]}
                 />
             </div>
 
@@ -1379,7 +1392,9 @@
                 <Icon
                     icon="ph:wave-sine-duotone"
                     onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                    color={$isWaveformOpen ? "#da69ff" : "#474747"}
+                    color={$isWaveformOpen
+                        ? $currentThemeObject["accent-secondary"]
+                        : $currentThemeObject["icon-secondary"]}
                 />
             </div>
         </div>
@@ -1572,7 +1587,7 @@
             padding: 0.3em 0.5em;
             font-size: 12px;
             letter-spacing: 0.2px;
-            color: rgb(143, 144, 147);
+            color: var(--text-inactive, initial);
             /* width: 100%; */
             border-radius: 3px;
             box-sizing: border-box;
@@ -1580,7 +1595,7 @@
 
             cursor: default;
             &.selected {
-                color: white;
+                color: var(--text-active, initial);
                 .chevron {
                     visibility: visible;
                 }
@@ -1596,7 +1611,7 @@
 
             &:not(.selected) {
                 &:active {
-                    color: rgb(130, 130, 130);
+                    color: var(--text-secondary, initial);
                 }
             }
 
@@ -1664,17 +1679,17 @@
             border-radius: 3px;
             padding-left: 5px;
             font-size: 13px;
-            color: rgb(197, 193, 193);
+            color: var(--text-active, initial);
             backdrop-filter: blur(8px);
             z-index: 10;
             &::placeholder {
-                color: rgb(103, 100, 100);
+                color: var(--text-inactive, initial);
             }
             &:focus {
                 /* outline: 1px solid #5123dd; */
                 background-color: #504c4c;
                 &::placeholder {
-                    color: rgb(151, 147, 147);
+                    color: var(--text-inactive, initial);
                 }
             }
             background-color: transparent;
@@ -1716,7 +1731,7 @@
         height: 520px;
         background-color: #312d3ec0;
         backdrop-filter: blur(8px);
-        color: white;
+        color: var(--text, initial);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1755,7 +1770,7 @@
     }
     .info {
         background-color: $sidebar_primary_color;
-        color: white;
+        color: var(--text, initial);
         width: 100%;
         padding: 0.8em 0.3em;
 
@@ -1844,7 +1859,7 @@
         user-select: none;
         pointer-events: none;
         width: 100%;
-        color: rgb(125, 125, 125);
+        color: var(--text-secondary);
 
         p {
             background-color: rgba(85, 85, 85, 0.162);
@@ -1854,7 +1869,9 @@
             font-size: 0.67em;
             line-height: 1.5em;
             font-weight: 600;
-            border-top: 1px solid rgb(49, 49, 49);
+            border-top: 1px solid
+                color-mix(in srgb, var(--background) 76%, black);
+
             /* border-bottom: 1px dashed rgb(49, 49, 49); */
             font-family: monospace;
             text-transform: uppercase;
@@ -1970,12 +1987,6 @@
         .transport-side {
             align-self: center;
             font-size: 20px;
-            &.favourite.active {
-                color: #59cd7a;
-            }
-            &.favourite.inactive {
-                color: grey;
-            }
         }
     }
 
@@ -2067,7 +2078,7 @@
 
             &.selected {
                 p {
-                    color: white;
+                    color: var(--text-active);
                     font-weight: bold;
                 }
 
@@ -2102,7 +2113,7 @@
             white-space: nowrap;
             text-overflow: ellipsis;
             letter-spacing: 0.2px;
-            color: rgb(159, 160, 165);
+            color: var(--text-inactive);
             margin: 0;
             cursor: default;
             pointer-events: none;
