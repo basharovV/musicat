@@ -441,9 +441,9 @@ pub mod file_streamer {
                 let event = player_control_receiver
                     .try_lock()
                     .unwrap()
-                    .recv_timeout(Duration::from_secs(1));
+                    .recv();
 
-                // println!("audio: waiting for file! {:?}", event);
+                println!("audio: waiting for file! {:?}", event);
                 if let Ok(result) = event {
                     match result {
                         PlayerControlEvent::StreamFile(request) => {
@@ -516,7 +516,7 @@ pub mod file_streamer {
                 let mut reader = probe_result.unwrap().format;
 
                 let track = reader.default_track().unwrap().clone();
-
+                
                 if let Some(frames) = track.codec_params.n_frames {
                     app_handle.emit_all("file-samples", frames);
                 }
@@ -539,7 +539,7 @@ pub mod file_streamer {
                     // that no samples are trimmed.
                     match reader.seek(symphonia::core::formats::SeekMode::Accurate, seek_to) {
                         Ok(seeked_to) => seeked_to.required_ts,
-                        Err(ResetRequired) => {
+                        Err(ResetRequired) => { 
                             track_id = first_supported_track(reader.tracks()).unwrap().id;
                             0
                         }
@@ -553,7 +553,7 @@ pub mod file_streamer {
                     // If not seeking, the seek timestamp is 0.
                     0
                 };
-
+        
                 println!("codec params: {:?}", &track.codec_params);
 
                 // Create a decoder for the track.
@@ -570,6 +570,7 @@ pub mod file_streamer {
                 let mut new_duration = 1152;
 
                 let max_frames = decoder.codec_params().max_frames_per_packet;
+                // println!("max frames: {:?}", max_frames);
                 if let Some(dur) = max_frames {
                     new_duration = dur;
                 }

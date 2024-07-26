@@ -431,12 +431,12 @@ mod cpal {
                 denom: config.sample_rate.0 * config.channels as u32,
             };
 
-            // Create a ring buffer with a capacity for up-to 200ms of audio.
+            // Create a ring buffer with a capacity
             let ring_len = ((5000 * config.sample_rate.0 as usize) / 1000) * num_channels;
 
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
-
+            println!("Ring buffer capacity: {:?}", ring_buf.capacity());
             // States
             let volume_state = Arc::new(RwLock::new(vol.unwrap()));
             let frame_idx_state = Arc::new(RwLock::new(0));
@@ -450,6 +450,7 @@ mod cpal {
             let stream_result = device.build_output_stream(
                 &config,
                 move |data: &mut [T], _cb: &cpal::OutputCallbackInfo| {
+                    // println!("playing back {:?}", data.len());
                     // If file changed, reset
                     let reset = reset_control_receiver.try_lock().unwrap().try_recv();
                     if let Ok(rst) = reset {
@@ -597,6 +598,14 @@ mod cpal {
                 return;
             }
 
+            // Print buffer size
+            {
+                // println!("decoded samples: {}", decoded.frames());
+                // // Current Buffer size
+                // println!("buffer samples: {}", self.sample_buf.samples().len());
+                // println!("ring buffer size: {}", self.ring_buf.count());
+            }
+
             let mut samples = if let Some(resampler) = &mut self.resampler {
                 // Resampling is required. The resampler will return interleaved samples in the
                 // correct sample format.
@@ -623,7 +632,9 @@ mod cpal {
             // Write all samples to the ring buffer.
             while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
                 samples = &samples[written..];
-            }
+                // Print written
+                // println!("written: {}", written);
+            }   
         }
 
         fn flush(&mut self) {
