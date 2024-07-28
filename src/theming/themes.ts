@@ -1,12 +1,19 @@
 type ThemeType = "dark" | "light";
 export interface Theme {
     type: ThemeType;
+    /**  Primary text color */
     text: string;
+    /**  Secondary text color, for dimmed text */
     "text-secondary": string;
+    /**  Text color for active items */
     "text-active": string;
+    /**  Text color for inactive items */
     "text-inactive": string;
+    /**  Window background (will be made more translucent on macOS) */
     background: string;
+    /**  Overlays, popups, menus */
     "overlay-bg": string;
+    /**  Primary accent color used for active items that need to stand out */
     accent: string;
     "accent-secondary": string;
     "icon-primary": string;
@@ -14,9 +21,11 @@ export interface Theme {
     "button-bg": string;
     "button-text": string;
     "input-bg": string;
+    /** Play, pause, next, previous */
     "transport-controls": string;
     "transport-favorite": string;
     "transport-shuffle": string;
+    /** Main panel background */
     "panel-background": string;
     "library-text-color": string;
     "library-playing-bg": string;
@@ -25,14 +34,17 @@ export interface Theme {
     "library-highlight-bg": string;
     "library-hover-bg": string;
     "library-header-bg": string;
+    "library-header-text": string;
     "library-header-active-bg": string;
     "library-clickable-cell-bg": string;
     "library-clickable-cell-hover-bg": string;
     "library-favourite-icon": string;
     "smart-playlist-builder-bg": string;
+    "smart-playlist-builder-text": string;
     "smart-playlist-builder-block-bg": string;
     "smart-playlist-builder-block-focused-bg": string;
     "smart-playlist-builder-block-input-bg": string;
+    /** Oscilloscope line color */
     "oscilloscope": string;
 }
 export const allFonts = {
@@ -67,11 +79,13 @@ export const DEFAULT_THEME: Theme = {
     "library-highlight-bg": "#2e3357",
     "library-hover-bg": "#1f1f1f",
     "library-header-bg": "#71658e7e",
+    "library-header-text": "#ffffffde",
     "library-header-active-bg": "#604d8d",
     "library-clickable-cell-bg": "#71658e1e",
     "library-clickable-cell-hover-bg": "#8c7dae36",
     "library-favourite-icon": "#5123dd",
     "smart-playlist-builder-bg": "#4d347c",
+    "smart-playlist-builder-text": "#ffffffde",
     "smart-playlist-builder-block-bg": "#7256be56",
     "smart-playlist-builder-block-focused-bg": "#7256be99",
     "smart-playlist-builder-block-input-bg": "#231b4d45",
@@ -86,7 +100,7 @@ export const allThemes: { [key: string]: Theme } = {
         "text-secondary": "#56575b",
         "text-active": "#38353b",
         "text-inactive": "#707879",
-        "background": "#f1f1f1",
+        "background": "#e8e1e1",
         "overlay-bg": "#f1f1f1c0",
         "accent": "#5d00fff3",
         "accent-secondary": "#da69ff",
@@ -98,7 +112,7 @@ export const allThemes: { [key: string]: Theme } = {
         "transport-controls": "#333135",
         "transport-favorite": "#49ab65",
         "transport-shuffle": "#9804d3",
-        "panel-background": "#cfcfcf",
+        "panel-background": "#dfd8d8",
         "library-text-color": "#3e4040",
         "library-playing-bg": "#36a4b5",
         "library-playing-text": "#ffffff",
@@ -123,7 +137,7 @@ export const allThemes: { [key: string]: Theme } = {
         "text-secondary": "#56575b",
         "text-active": "#38353b",
         "text-inactive": "#646067",
-        "background": "#ebe1e1",
+        "background": "#e9e5efd9",
         "overlay-bg": "#f1f1f1c0",
         "accent": "#5d00fff3",
         "accent-secondary": "#da69ff",
@@ -135,22 +149,24 @@ export const allThemes: { [key: string]: Theme } = {
         "transport-controls": "#333135",
         "transport-favorite": "#49ab65",
         "transport-shuffle": "#9804d3",
-        "panel-background": "#dddbd4ca",
+        "panel-background": "#e3dfe8",
         "library-text-color": "#3e4040",
         "library-playing-bg": "#5123dd",
         "library-playing-text": "#ffffff",
         "library-playing-icon": "#efe2e6",
         "library-highlight-bg": "#5123dd45",
         "library-hover-bg": "#5123dd1c",
-        "library-header-bg": "#71658e7e",
+        "library-header-bg": "#998bbb7e",
+        "library-header-text": "#312c2c",
         "library-header-active-bg": "#997be1",
         "library-clickable-cell-bg": "#9891aa1c",
         "library-clickable-cell-hover-bg": "#5123dd6e",
         "library-favourite-icon": "#5123dd",
-        "smart-playlist-builder-bg": "#347c75",
-        "smart-playlist-builder-block-bg": "#56beb556",
-        "smart-playlist-builder-block-focused-bg": "#569abe99",
-        "smart-playlist-builder-block-input-bg": "#1b474d6f",
+        "smart-playlist-builder-bg": "#b49bff",
+        "smart-playlist-builder-text": "#ffffffde",
+        "smart-playlist-builder-block-bg": "#a691f3",
+        "smart-playlist-builder-block-focused-bg": "#8b76d0",
+        "smart-playlist-builder-block-input-bg": "#907dd1",
         oscilloscope: "#590194"
     },
     dark: DEFAULT_THEME,
@@ -162,6 +178,7 @@ export const allThemes: { [key: string]: Theme } = {
         "text-active": "#83e4ff",
         "text-inactive": "#668e93",
         "background": "#233346",
+        "overlay-bg": "#2333466d",
         "accent": "#00ff62f3",
         "accent-secondary": "#da69ff",
         "button-bg": "#486d7b",

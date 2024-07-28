@@ -341,9 +341,9 @@
         position: relative;
         background-color: var(--background, initial);
 
-        &.transparent {
-            background-color: color-mix(in srgb, var(--background, initial) 76%, transparent);
-        }
+        /* &.transparent {
+            background-color: color-mix(in srgb, var(--background, initial) 86%, transparent);
+        } */
 
         &.mini-player {
             border-radius: 5px;

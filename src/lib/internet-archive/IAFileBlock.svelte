@@ -7,6 +7,7 @@
         isIAPlaying
     } from "../player/WebAudioPlayer";
     import Icon from "../ui/Icon.svelte";
+    import { currentThemeObject } from "../../theming/store";
 
     export let file: IAFile;
     let downloadProgress = null;
@@ -46,7 +47,7 @@
             icon={$currentSrc === file.previewSrc && $isIAPlaying
                 ? "fe:pause"
                 : "fe:play"}
-            color="#ded2de"
+            color={$currentThemeObject["icon-primary"]}
             size={30}
         />
         <div class="info">
@@ -71,11 +72,11 @@
         display: grid;
         grid-template-columns: 1fr 70px;
         border-radius: 5px;
-        background-color: #242026b3;
+        background-color: color-mix(in srgb, var(--inverse) 10%, transparent);
         margin: 0.25em;
         align-items: center;
         justify-content: space-between;
-        border: 0.7px solid #ffffff2a;
+        border: 0.7px solid color-mix(in srgb, var(--inverse) 20%, transparent);
 
         .left {
             display: flex;
@@ -94,22 +95,31 @@
                 .title {
                 }
                 .format {
-                    color: grey;
+                    color: var(--text-secondary);
                 }
             }
 
             &:hover {
                 cursor: pointer;
-                background-color: #3d383fb3;
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 5%,
+                    transparent
+                );
             }
             &:active {
                 cursor: pointer;
-                background-color: #524d54b3;
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 10%,
+                    transparent
+                );
             }
         }
         .download {
             padding: 0.5em;
-            border-left: 0.7px solid #ffffff2a;
+            border-left: 0.7px solid
+                color-mix(in srgb, var(--inverse) 20%, transparent);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -119,15 +129,23 @@
 
             &:hover {
                 cursor: pointer;
-                background-color: #3d383fb3;
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 5%,
+                    transparent
+                );
             }
             &:active {
                 cursor: pointer;
-                background-color: #524d54b3;
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 10%,
+                    transparent
+                );
             }
         }
         .size {
-            color: grey;
+            color: var(--text-secondary);
             white-space: nowrap;
             font-size: 12px;
         }

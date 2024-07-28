@@ -1,4 +1,4 @@
-import type { Event } from "@tauri-apps/api/event";
+import { TauriEvent, type Event } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import { get } from "svelte/store";
 
@@ -21,6 +21,7 @@ import { appDataDir, dataDir } from "@tauri-apps/api/path";
 import { openTauriImportDialog } from "../data/LibraryImporter";
 
 export function startMenuListener() {
+
     appWindow.listen("menu", async ({ event, payload }) => {
         console.log("menu", event);
         switch (payload) {
@@ -44,7 +45,7 @@ export function startMenuListener() {
                 });
                 break;
             case "import":
-                openTauriImportDialog()
+                openTauriImportDialog();
                 break;
             case "queue":
                 isQueueOpen.set(!get(isQueueOpen));

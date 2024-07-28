@@ -69,6 +69,7 @@
             white-space: nowrap;
             &:hover {
                 border-color: var(--accent);
+                background-color: color-mix(in srgb, var(--button-bg) 80%, transparent);
             }
         }
 

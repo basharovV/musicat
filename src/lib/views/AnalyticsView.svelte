@@ -452,11 +452,11 @@
     .container {
         overflow: auto;
         display: flex;
-        border: 0.7px solid #ffffff2a;
+        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
         margin: 5px 5px 5px 0;
         border-radius: 5px;
         overflow: hidden;
-        background-color: #0d0c0c2a;
+        background-color: var(--panel-background);
     }
 
     .placeholder {

@@ -49,7 +49,7 @@ async function favourites() {
 }
 
 async function recentlyAdded() {
-    return db.songs.orderBy("dateAdded");
+    return db.songs.orderBy("dateAdded").reverse()
 }
 
 async function whereGenreIs(genre: string) {

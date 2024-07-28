@@ -605,11 +605,11 @@
     container {
         position: relative;
         cursor: grab;
-        border: 0.7px solid #ffffff2a;
+        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
         margin: 5px 0 0 0;
         border-radius: 5px;
         overflow: hidden;
-        background-color: #0d0c0c2a;
+        background-color: var(--panel-background);
     }
 
     .bg {
@@ -729,20 +729,6 @@
         margin-top: 2em;
     }
 
-    #dropdown {
-        display: block;
-        width: fit-content;
-        margin: 2em auto;
-        color: rgb(32, 31, 30);
-        h2 {
-            text-align: center;
-        }
-        select {
-            font-size: 1em;
-            color: rgb(50, 48, 48);
-        }
-    }
-
     #map {
         overflow: hidden;
         margin: auto;
@@ -789,7 +775,7 @@
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(53, 51, 51);
-        background: rgba(34, 32, 35, 0.8);
+        background: var(--overlay-bg);
         box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
         backdrop-filter: blur(8px);
         small,

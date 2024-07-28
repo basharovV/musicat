@@ -178,7 +178,7 @@
         };
     }
 
-    let minWidth = 200;
+    let minWidth = 197;
 
     $: count = $query.query?.length ? queriedAlbums?.length : $albums?.length;
 

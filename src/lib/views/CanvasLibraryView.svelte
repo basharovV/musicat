@@ -130,14 +130,18 @@
             if ($query.reverse) {
                 results = results.reverse();
             }
-            resultsArray = await results.toArray();
-            console.log('results', resultsArray);
+            if ($uiView === "smart-query" && $query.orderBy !== "none") {
+                resultsArray = await results.sortBy($query.orderBy);
+            } else {
+                resultsArray = await results.toArray();
+                console.log("results", resultsArray);
+            }
         } else {
             resultsArray = results;
         }
 
         $playlistDuration = resultsArray.reduce((total, song) => {
-                return total + song.fileInfo.duration;
+            return total + song.fileInfo.duration;
         }, 0);
 
         // Do sorting for non-indexed results
@@ -182,7 +186,6 @@
         isLoading = false;
         return resultsArray;
     });
-
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
@@ -199,6 +202,7 @@
         border-radius: 5px;
         box-sizing: content-box;
         overflow: hidden;
-        border-top: 0.7px solid color-mix(in srgb, var(--inverse) 40%, transparent);
+        border-top: 0.7px solid
+            color-mix(in srgb, var(--inverse) 40%, transparent);
     }
 </style>

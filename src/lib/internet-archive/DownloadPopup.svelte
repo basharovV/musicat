@@ -29,7 +29,7 @@
             if (song) {
                 songAdded = song;
             }
-        }, 1000);
+        }, 2000);
     }
 
     async function goToSong() {
@@ -84,7 +84,7 @@
     </div>
     <div class="download-options">
         <Icon
-            icon="lucide:chevron-up"
+            icon="lucide:chevron-down"
             onClick={() => {
                 $fileToDownload = null;
             }}
@@ -102,12 +102,12 @@
         display: grid;
         grid-template-columns: 1fr auto;
         border-radius: 5px;
-        background-color: #242026b3;
+        background-color: var(--overlay-bg);
         backdrop-filter: blur(8px);
         margin: 0.25em;
         align-items: center;
         justify-content: space-between;
-        border: 0.7px solid #ffffff2a;
+        border: 0.7px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         cursor: default;
         z-index: 10;
         p {
@@ -126,9 +126,10 @@
                 text-overflow: ellipsis;
                 text-align: start;
                 user-select: none;
+                color: var(--text);
 
                 span {
-                    color: #6bffe6;
+                    color: var(--accent);
                     padding: 2px 3px;
                     border-radius: 4px;
                     user-select: none;

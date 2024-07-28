@@ -12,6 +12,7 @@
     import Seekbar from "../sidebar/Seekbar.svelte";
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
+    import { currentThemeObject } from "../../theming/store";
 
     let currentTime = 0;
 
@@ -50,7 +51,7 @@
         {:else}
             <Icon
                 icon={$isIAPlaying ? "fe:pause" : "fe:play"}
-                color="#ded2de"
+                color={$currentThemeObject["icon-primary"]}
                 size={30}
                 disabled={!$currentIAFile}
                 onClick={() => {

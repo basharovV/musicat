@@ -374,10 +374,13 @@
             grid-template-columns: auto 1fr auto;
             align-items: center;
             height: 60px;
-            background-color: #2e2a31b9;
-            border-top: 0.7px solid #ffffff19;
-            border-left: 0.7px solid #ffffff2a;
-            border-bottom: 0.7px solid #ffffff2a;
+            background-color: var(--panel-background);
+            border-top: 0.7px solid
+                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-left: 0.7px solid
+                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-bottom: 0.7px solid
+                color-mix(in srgb, var(--inverse) 30%, transparent);
             border-radius: 5px;
             margin-bottom: 5px;
 
@@ -388,7 +391,8 @@
                 align-items: center;
                 justify-self: flex-end;
                 padding: 0.5em 1em;
-                border-left: 0.7px solid #ffffff2a;
+                border-left: 0.7px solid
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
 
                 input {
                     -webkit-appearance: none;
@@ -425,7 +429,8 @@
                 padding: 0.5em 1em;
 
                 height: 100%;
-                border-right: 0.7px solid #ffffff2a;
+                border-right: 0.7px solid
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
                 h3 {
                     white-space: nowrap;
                 }
@@ -462,12 +467,15 @@
         overflow: hidden;
         > div {
             height: 100%;
-            border-top: 0.7px solid #ffffff2a;
+            border-top: 0.7px solid
+                color-mix(in srgb, var(--inverse) 30%, transparent);
             border-bottom-left-radius: 5px;
             border-bottom-right-radius: 5px;
-            border-left: 0.7px solid #ffffff2a;
-            border-bottom: 0.7px solid #ffffff2a;
-            background-color: #242026b3;
+            border-left: 0.7px solid
+                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-bottom: 0.7px solid
+                color-mix(in srgb, var(--inverse) 30%, transparent);
+            background-color: var(--panel-background);
             &:not(:nth-child(1)) {
                 border-left: 0.7px solid #ffffff2a;
             }
@@ -494,15 +502,24 @@
                 height: auto;
                 gap: 10px;
                 padding: 1em 2em;
-                border-top: 0.7px solid #ffffff2a;
+                border-top: 0.7px solid
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
                 opacity: 0.8;
                 &.selected {
-                    background-color: #464148b3;
+                    background-color: color-mix(
+                        in srgb,
+                        var(--inverse) 20%,
+                        transparent
+                    );
                     opacity: 1;
                 }
 
                 &:hover {
-                    background-color: #3d383fb3;
+                    background-color: color-mix(
+                        in srgb,
+                        var(--inverse) 10%,
+                        transparent
+                    );
                     opacity: 1;
                 }
 
@@ -533,7 +550,7 @@
                     margin: 0;
                     text-align: left;
                     flex: 50%;
-                    color: #ece8eeb3;
+                    color: var(--text-secondary);
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
@@ -563,10 +580,11 @@
                 flex-direction: column;
                 position: sticky;
                 top: 0;
-                background-color: #242026b3;
+                background-color: var(--panel-background);
                 backdrop-filter: blur(8px);
                 flex-wrap: wrap;
-                border-bottom: 0.7px solid #ffffff2a;
+                border-bottom: 0.7px solid
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
                 z-index: 2;
                 .top-row {
                     display: flex;
@@ -615,30 +633,40 @@
                     display: flex;
                     gap: 4px;
                     opacity: 0.8;
-
-                    &:hover {
-                        background-color: #423e44b3;
-                        opacity: 1;
-                    }
-
-                    &:active {
-                        background-color: #565159b3;
-                        opacity: 1;
-                    }
-
                     &.selected {
+                        background-color: color-mix(
+                            in srgb,
+                            var(--inverse) 20%,
+                            transparent
+                        );
                         opacity: 1;
-                        background-color: #565159b3;
                         &.playing {
-                            background-color: #5123dd;
-                            color: #00ddff;
+                            background-color: var(--library-playing-bg);
+                            color: var(--library-playing-text);
                         }
                     }
 
-                    &.playing {
+                    &:hover {
+                        background-color: color-mix(
+                            in srgb,
+                            var(--inverse) 10%,
+                            transparent
+                        );
                         opacity: 1;
-                        background-color: #5123dd;
-                        color: #00ddff;
+                    }
+                    &:active {
+                        background-color: color-mix(
+                            in srgb,
+                            var(--inverse) 30%,
+                            transparent
+                        );
+                        opacity: 1;
+                    }
+
+                    &.playing {
+                        background-color: var(--library-playing-bg);
+                        color: var(--library-playing-text);
+                        opacity: 1;
                     }
                     p {
                         margin: 0;
@@ -657,9 +685,10 @@
             .header {
                 display: flex;
                 flex-direction: column;
-                background-color: #242026b3;
+                background-color: var(--panel-background);
                 padding: 0.5em;
-                border-bottom: 0.7px solid #ffffff2a;
+                border-bottom: 0.7px solid
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
                 h2 {
                     padding: 1em;
                     margin: 0;
@@ -678,9 +707,9 @@
             }
 
             .date {
-                color: grey;
+                color: var(--text-secondary);
                 span {
-                    color: white;
+                    color: var(--text);
                 }
             }
 
@@ -698,7 +727,8 @@
 
             .hint {
                 padding-bottom: 1em;
-                border-bottom: 0.7px solid #ffffff2a;
+                border-bottom: 0.7px solid
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
             }
         }
     }

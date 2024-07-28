@@ -865,6 +865,7 @@
                                             on:click={() => {
                                                 $uiView = "playlists";
                                                 $query.orderBy = "none";
+                                                $query.reverse = false;
                                                 $selectedPlaylistId =
                                                     playlist.id;
                                                 $selectedSmartQuery = null;
@@ -962,7 +963,7 @@
 
                         {#if isSmartPlaylistsExpanded}
                             <div class="playlists">
-                                {#each Object.values(SmartQueries) as query (query.value)}
+                                {#each Object.values(SmartQueries) as smartQuery (smartQuery.value)}
                                     <div
                                         animate:flip={{
                                             duration: 300,
@@ -970,21 +971,24 @@
                                         }}
                                         class="playlist"
                                         class:hover={hoveringOverSmartPlaylistId ===
-                                            query.value}
+                                            smartQuery.value}
                                         class:selected={$selectedSmartQuery ===
-                                            query.value}
+                                            smartQuery.value}
                                         on:click={() => {
                                             $uiView = "smart-query";
-                                            $selectedSmartQuery = query.value;
+                                            $query.orderBy = "none";
+                                            $query.reverse = false;
+                                            $selectedSmartQuery = smartQuery.value;
                                             $selectedPlaylistId = null;
+                                            
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseOverSmartPlaylist(
-                                                query.value
+                                                smartQuery.value
                                             )}
                                     >
-                                        <p>{query.name}</p>
+                                        <p>{smartQuery.name}</p>
                                     </div>
                                 {/each}
                                 {#each $savedSmartQueries as query (query.id)}

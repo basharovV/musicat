@@ -201,7 +201,12 @@
     container {
         display: flex;
         flex-direction: column;
-        background-color: var(--smart-playlist-builder-bg)
+        background-color: var(--smart-playlist-builder-bg);
+        color: var(--smart-playlist-builder-text);
+
+        * {
+            color: var(--smart-playlist-builder-text);
+        }
     }
     .builder {
         padding: 0.5em 0.5em 0.5em 0;
@@ -232,6 +237,10 @@
             line-height: 1.8rem;
             width: fit-content;
             min-width: 100px;
+            color: var(--smart-playlist-builder-text);
+            &::placeholder {
+                color: var(--smart-playlist-builder-text);
+            }
         }
 
         img {
@@ -280,6 +289,10 @@
         line-height: 1.8rem;
         width: fit-content;
         min-width: 100px;
+        color: var(--smart-playlist-builder-text);
+        &::placeholder {
+            color: var(--smart-playlist-builder-text);
+        }
     }
 
     .validation {

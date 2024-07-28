@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { volume } from "../../data/store";
 import audioPlayer from "./WebAudioPlayer";
+import { currentThemeObject } from "../../theming/store";
 
 export interface IAnimation {
     draw: (
@@ -23,6 +24,7 @@ export class WebAudioVisualiser {
 
     timeDomain: Uint8Array;
     freqDomain: Uint8Array;
+    color: string;
 
     constructor(canvas: HTMLCanvasElement) {
         this.audioElement = audioPlayer.getCurrentAudioFile();
@@ -30,6 +32,10 @@ export class WebAudioVisualiser {
         this._canvasContext = this.canvas.getContext("2d");
         this.setupAnalyserAudio();
         this.setupAnalyserAnimation();
+
+        currentThemeObject.subscribe((theme) => {
+            this.color = theme.oscilloscope;
+        });
     }
 
     setCanvas(canvas: HTMLCanvasElement) {
@@ -49,11 +55,11 @@ export class WebAudioVisualiser {
             const percent = this.timeDomain[i] / 256;
             const x = i * step;
             const y = this._canvasContext.canvas.height * percent;
-            this._canvasContext.shadowColor = "#14D8BD";
+            this._canvasContext.shadowColor = this.color;
             this._canvasContext.shadowBlur = 10;
             this._canvasContext.shadowOffsetX = 2;
             this._canvasContext.shadowOffsetY = 2;
-            this._canvasContext.strokeStyle = "#14D8BD";
+            this._canvasContext.strokeStyle = this.color;
             this._canvasContext.lineTo(x, y);
         }
 

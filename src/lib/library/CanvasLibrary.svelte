@@ -350,6 +350,7 @@
     // COLORS
     let BG_COLOR: string;
     let HEADER_BG_COLOR: string;
+    let HEADER_TEXT_COLOR: string;
     let OFFSCREEN_BG_COLOR: string;
     let HEADER_BG_COLOR_HOVERED: string;
     let TEXT_COLOR: string;
@@ -436,6 +437,7 @@
         // COLORS
         BG_COLOR = $currentThemeObject["panel-background"];
         HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
+        HEADER_TEXT_COLOR = $currentThemeObject["library-header-text"];
         OFFSCREEN_BG_COLOR = "#71658e3b";
         HEADER_BG_COLOR_HOVERED =
             $currentThemeObject["library-header-active-bg"];
@@ -1964,7 +1966,7 @@
                                             verticalAlign: "middle",
                                             fontFamily:
                                                 "-apple-system, Avenir, Helvetica, Arial, sans-serif",
-                                            fill: TEXT_COLOR,
+                                            fill: HEADER_TEXT_COLOR,
                                             listening: false
                                         }}
                                     />
@@ -2006,8 +2008,10 @@
         justify-content: center;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
-        border-left: 0.7px solid color-mix(in srgb, var(--inverse) 40%, transparent);
-        border-bottom: 0.7px solid color-mix(in srgb, var(--inverse) 40%, transparent);
+        border-left: 0.7px solid
+            color-mix(in srgb, var(--inverse) 40%, transparent);
+        border-bottom: 0.7px solid
+            color-mix(in srgb, var(--inverse) 40%, transparent);
         overflow: hidden;
     }
     .container {
@@ -2212,5 +2216,4 @@
         right: 0;
         z-index: 15;
     }
-
 </style>

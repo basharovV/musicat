@@ -362,10 +362,10 @@
                     z-index: 10;
 
                     &:hover {
-                        background-color: var(--accent-secondary);
+                        background-color: var(--accent);
                     }
                     &:active {
-                        background-color: var(--accent-secondary);
+                        background-color: var(--accent);
                         transform: scale(0.9);
                     }
                     .play-button {

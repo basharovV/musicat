@@ -429,6 +429,7 @@
                     padding-right: 10px;
                     text-align: start;
                     opacity: 0.7;
+                    width: 40%;
                 }
                 td:nth-child(2) {
                     text-align: start;
