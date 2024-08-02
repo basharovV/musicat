@@ -17,25 +17,29 @@
         isSettingsOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
-        isWelcomeSeen,
         os,
         selectedPlaylistId,
         selectedSmartQuery,
-        smartQuery,
         uiView
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
+    import { getLocaleFromNavigator, init, register } from "svelte-i18n";
     import { fade, fly } from "svelte/transition";
     import { db } from "./data/db";
     import { startWatching } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryImporter";
+    import { findQuery } from "./data/SmartQueries";
+    import { setLocale } from "./i18n/i18n-svelte";
+    import { loadLocale } from "./i18n/i18n-util.sync";
+    import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
     import BottomBar from "./lib/library/BottomBar.svelte";
     import Dropzone from "./lib/library/Dropzone.svelte";
     import LyricsView from "./lib/library/LyricsView.svelte";
     import PlaylistHeader from "./lib/library/PlaylistHeader.svelte";
+    import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
     import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
@@ -45,20 +49,13 @@
     import AnalyticsView from "./lib/views/AnalyticsView.svelte";
     import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
     import CanvasLibraryView from "./lib/views/CanvasLibraryView.svelte";
+    import InternetArchiveView from "./lib/views/InternetArchiveView.svelte";
     import MapView from "./lib/views/MapView.svelte";
     import NotesView from "./lib/views/NotesView.svelte";
     import QueueOptions from "./lib/views/QueueOptions.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
-    import WelcomeView from "./lib/views/WelcomeView.svelte";
-    import { startMenuListener } from "./window/EventListener";
-    import InternetArchiveView from "./lib/views/InternetArchiveView.svelte";
-    import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
-    import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
-    import { findQuery } from "./data/SmartQueries";
-    import { getLocaleFromNavigator, init, register } from "svelte-i18n";
-    import { setLocale } from "./i18n/i18n-svelte";
-    import { loadLocale } from "./i18n/i18n-util.sync";
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
+    import { startMenuListener } from "./window/EventListener";
 
     console.log("locale", getLocaleFromNavigator());
 
@@ -236,81 +233,77 @@
         class:mini-player={$isMiniPlayer}
         class:transparent={$os === "Darwin"}
     >
-        {#if !$isWelcomeSeen}
-            <WelcomeView />
-        {:else}
-            <div class="sidebar">
-                <Sidebar />
-            </div>
+        <div class="sidebar">
+            <Sidebar />
+        </div>
 
-            <div class="queue">
-                {#if $isQueueOpen}
-                    <div
-                        class="queue-container"
-                        transition:fly={{ duration: 200, x: -200 }}
-                    >
-                        <!-- <QueueView /> -->
-                        <QueueView />
-                        <QueueOptions />
-                    </div>
-                {/if}
-            </div>
-
-            <div class="header">
-                {#if $uiView === "playlists"}
-                    <!-- <p class="label">playlist:</p> -->
-                    <div class="content">
-                        {#await selectedPlaylist then playlist}
-                            <PlaylistHeader {playlist} />
-                        {/await}
-                    </div>
-                {:else if $uiView === "smart-query"}
-                    <!-- <p class="label">playlist:</p> -->
-                    <div class="content">
-                        {#await selectedQuery then query}
-                            <SmartPlaylistHeader selectedQuery={query} />
-                        {/await}
-                    </div>
-                {/if}
-            </div>
-
-            <div class="panel">
-                {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
-                    <CanvasLibraryView />
-                {:else if $uiView === "playlists"}
-                    <CanvasLibraryView />
-                {:else if $uiView === "albums"}
-                    <AlbumView />
-                {:else if $uiView === "your-music"}
-                    <ArtistsToolkitView />
-                {:else if $uiView === "map"}
-                    <MapView />
-                {:else if $uiView === "analytics"}
-                    <AnalyticsView />
-                {:else if $uiView === "internet-archive"}
-                    <InternetArchiveView />
-                {/if}
-            </div>
-
-            {#if $isLyricsOpen}
-                <div class="lyrics" transition:fade={{ duration: 150 }}>
-                    <LyricsView />
+        <div class="queue">
+            {#if $isQueueOpen}
+                <div
+                    class="queue-container"
+                    transition:fly={{ duration: 200, x: -200 }}
+                >
+                    <!-- <QueueView /> -->
+                    <QueueView />
+                    <QueueOptions />
                 </div>
             {/if}
+        </div>
 
-            {#if $isWaveformOpen}
-                <div class="notes" transition:fly={{ duration: 200, y: 50 }}>
-                    <NotesView />
+        <div class="header">
+            {#if $uiView === "playlists"}
+                <!-- <p class="label">playlist:</p> -->
+                <div class="content">
+                    {#await selectedPlaylist then playlist}
+                        <PlaylistHeader {playlist} />
+                    {/await}
+                </div>
+            {:else if $uiView === "smart-query"}
+                <!-- <p class="label">playlist:</p> -->
+                <div class="content">
+                    {#await selectedQuery then query}
+                        <SmartPlaylistHeader selectedQuery={query} />
+                    {/await}
                 </div>
             {/if}
+        </div>
 
-            <div class="bottom-bar">
-                <BottomBar />
-            </div>
-
-            {#if $fileToDownload}
-                <DownloadPopup />
+        <div class="panel">
+            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
+                <CanvasLibraryView />
+            {:else if $uiView === "playlists"}
+                <CanvasLibraryView />
+            {:else if $uiView === "albums"}
+                <AlbumView />
+            {:else if $uiView === "your-music"}
+                <ArtistsToolkitView />
+            {:else if $uiView === "map"}
+                <MapView />
+            {:else if $uiView === "analytics"}
+                <AnalyticsView />
+            {:else if $uiView === "internet-archive"}
+                <InternetArchiveView />
             {/if}
+        </div>
+
+        {#if $isLyricsOpen}
+            <div class="lyrics" transition:fade={{ duration: 150 }}>
+                <LyricsView />
+            </div>
+        {/if}
+
+        {#if $isWaveformOpen}
+            <div class="notes" transition:fly={{ duration: 200, y: 50 }}>
+                <NotesView />
+            </div>
+        {/if}
+
+        <div class="bottom-bar">
+            <BottomBar />
+        </div>
+
+        {#if $fileToDownload}
+            <DownloadPopup />
         {/if}
     </main>
 </ThemeWrapper>
