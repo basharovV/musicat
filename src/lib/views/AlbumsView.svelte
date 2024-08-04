@@ -71,10 +71,14 @@
 
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
-
+        // Strip the song from album path
+        const albumPath = $currentSong.path.replace(
+            `/${$currentSong.file}`,
+            ""
+        );
         // Find the album currently playing
         currentAlbum = await db.albums.get(
-            md5(`${$currentSong.artist} - ${$currentSong.album}`.toLowerCase())
+            md5(`${albumPath} - ${$currentSong.album}`.toLowerCase())
         );
         if (!currentAlbum) return;
         // $albumPlaylist = tracks;
@@ -316,7 +320,7 @@
             >
                 {#if $albums}
                     {#each $albums as album, idx (album.id)}
-                        {#if (showSingles && album.trackCount > 0) || (!showSingles && album.trackCount > 1)}
+                        {#if (showSingles && album.tracksIds.length > 0) || (!showSingles && album.tracksIds.length > 1)}
                             <div
                                 on:contextmenu|preventDefault={(e) =>
                                     onRightClick(e, album, idx)}

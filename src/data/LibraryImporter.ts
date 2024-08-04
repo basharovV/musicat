@@ -8,13 +8,14 @@ import { appWindow } from "@tauri-apps/api/window";
 import md5 from "md5";
 import * as musicMetadata from "music-metadata-browser";
 import type {
+    ToImportAlbums,
     Album,
     LookForArtResult,
     MetadataEntry,
     Song,
     TagType,
     ToImport
-} from "src/App";
+} from "../App";
 import { get } from "svelte/store";
 import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
 import { getMapForTagType, getTagTypeFromCodec } from "./LabelMap";
@@ -130,34 +131,28 @@ export async function getSongFromMetadata(
 async function getAlbumFromSong(song: Song) {
     const albumPath = song.path.replace(`/${song.file}`, "");
     const existingAlbum = await db.albums.get(
-        md5(`${song.artist} - ${song.album}`.toLowerCase())
+        md5(`${albumPath} - ${song.album}`.toLowerCase())
     );
     if (existingAlbum) {
         console.log(
             "existing album",
-            `${song.artist} - ${song.album}`.toLowerCase()
+            `${albumPath} - ${song.album}`.toLowerCase()
         );
         existingAlbum.tracksIds.push(song.id);
-        existingAlbum.trackCount++;
         if (!existingAlbum.artwork) {
             // Done separately in addArtworksToAllAlbums
         }
         return existingAlbum;
         // Re-order trackIds in album order?
     } else {
-        console.log(
-            "new album",
-            `${song.artist} - ${song.album}`.toLowerCase()
-        );
+        console.log("new album", `${albumPath} - ${song.album}`.toLowerCase());
 
         const newAlbum: Album = {
-            id: md5(`${song.artist} - ${song.album}`.toLowerCase()),
+            id: md5(`${albumPath} - ${song.album}`.toLowerCase()),
             title: song.album,
             artist: song.artist,
             genre: song.genre,
-            duration: song.duration,
             path: song.path.replace(`/${song.file}`, ""),
-            trackCount: 1,
             year: song.year,
             tracksIds: [song.id],
             lossless: song.fileInfo.lossless // Will only be true if all songs are lossless
@@ -340,7 +335,8 @@ export async function importPaths(
     await invoke<ToImport>("scan_paths", {
         event: {
             paths: selected,
-            recursive: true
+            recursive: true,
+            process_albums: true
         }
     });
 
@@ -353,10 +349,146 @@ export async function importPaths(
 }
 
 export async function startImportListener() {
-    let allSongs: Song[] = [];
+    let songCount = 0;
+    let albumCount = 0;
     let chunksToProcess: ToImport[] = []; // progress numbers
     let gotAllChunks = false;
+    var albumChunksToProcess: ToImportAlbums[] = [];
+    let currentAlbumChunk = null;
+    let gotAllAlbums = false;
+    let isWaitingForAlbumChunk = false;
+    let worker: Worker;
+
+    const importAlbumChunk = async (chunk: ToImportAlbums) => {
+        console.log("import new chunk", chunk);
+        albumChunksToProcess.push(chunk);
+        currentAlbumChunk = chunk;
+        let isBackground = false;
+
+        if (chunk.albums.length) {
+            albumCount += chunk.albums.length;
+            // Import album chunk
+            importStatus.update((importStatus) => {
+                isBackground = importStatus.backgroundImport;
+                return {
+                    ...importStatus,
+                    status: "Processing albums",
+                    percent: chunk.progress
+                };
+            });
+            if (isBackground && albumCount) {
+                bottomBarNotification.set({
+                    text: `Updating library (${albumCount} albums imported)`
+                });
+            }
+            console.log("importing album chunk", chunk);
+            worker.postMessage({
+                function: "bulkAlbumPut",
+                toImport: chunk
+            });
+        }
+    };
+
+    const onBulkAlbumPutDone = async (ev) => {
+        console.log("bulkAlbumPutDone", ev.data, albumChunksToProcess);
+        // Import chunk completed
+        let idx = albumChunksToProcess.findIndex(
+            (c) => c.progress === ev.data.progress
+        );
+        console.log("idx", idx);
+        if (idx !== -1) {
+            albumChunksToProcess.splice(idx, 1);
+        }
+
+        console.log("albumChunksToProcess", albumChunksToProcess);
+        if (!ev.data.done && albumChunksToProcess.length === 0) {
+            // Wait for chunk
+            isWaitingForAlbumChunk = true;
+            return;
+        } else if (!ev.data.done && albumChunksToProcess.length) {
+            isWaitingForAlbumChunk = false;
+            await importAlbumChunk(albumChunksToProcess[0]);
+        } else if (
+            ev.data.done &&
+            gotAllAlbums &&
+            albumChunksToProcess.length === 0
+        ) {
+            console.log("ALL ALBUMS IMPORTED., TERMINATING");
+            worker.terminate();
+            gotAllAlbums = false;
+            worker = null;
+            currentAlbumChunk = null;
+        }
+
+        if (ev.data.done) {
+            importStatus.update((importStatus) => ({
+                ...importStatus,
+                status: "Done",
+                isImporting: false,
+                backgroundImport: false
+            }));
+            bottomBarNotification.set(null);
+        }
+    };
+
     await appWindow.listen<ToImport>("import_chunk", async (event) => {
+        if (!worker) {
+            worker = new ImportWorker();
+        }
+
+        worker.onmessage = async (ev) => {
+            switch (ev.data.event) {
+                case "handleImportDone":
+                    // Import chunk completed
+                    chunksToProcess.splice(
+                        chunksToProcess.findIndex(
+                            (c) => c.progress === ev.data.progress
+                        ),
+                        1
+                    );
+                    if (
+                        chunksToProcess.length === 0 &&
+                        !ev.data.done &&
+                        albumChunksToProcess.length &&
+                        !currentAlbumChunk
+                    ) {
+                        console.log("STARTING ALBUM IMPORT");
+                        // We have more stuff to import?
+                        await importAlbumChunk(albumChunksToProcess[0]);
+                        return;
+                    }
+                    // Terminate if last one
+                    else if (
+                        chunksToProcess.length === 0 &&
+                        gotAllChunks &&
+                        albumChunksToProcess.length === 0 &&
+                        toImport.done
+                    ) {
+                        console.log("Terminating");
+                        worker.terminate();
+                        chunksToProcess = [];
+                        gotAllChunks = false;
+                        worker = null;
+                    }
+
+                    // Import is complete (no albums)
+                    if (toImport.done) {
+                        importStatus.update((importStatus) => ({
+                            ...importStatus,
+                            status: "Done",
+                            isImporting: false,
+                            backgroundImport: false
+                        }));
+
+                        bottomBarNotification.set(null);
+                    }
+                    break;
+                case "bulkAlbumPutDone":
+                    await onBulkAlbumPutDone(ev);
+                    break;
+            }
+        };
+
         let isBackground = false;
         importStatus.update((importStatus) => {
             isBackground = importStatus.backgroundImport;
@@ -366,64 +498,35 @@ export async function startImportListener() {
                 percent: event.payload.progress
             };
         });
-        if (isBackground && allSongs.length) {
+        if (isBackground && songCount) {
             bottomBarNotification.set({
-                text: `Updating library (${allSongs.length} imported)`
+                text: `Updating library (${songCount} imported)`
             });
         }
         const toImport = event.payload;
         gotAllChunks = event.payload.progress === 100;
+        songCount += toImport.songs.length;
         if (toImport.songs.length) {
             chunksToProcess.push(toImport);
-            allSongs.push(...toImport.songs);
-            const worker = new ImportWorker();
-
             worker.postMessage({
                 function: "handleImport",
                 toImport: toImport
             });
+        }
+    });
 
-            worker.onmessage = async (ev) => {
-                switch (ev.data.event) {
-                    case "handleImportDone":
-                        // Import chunk completed
-                        chunksToProcess.splice(
-                            chunksToProcess.findIndex(
-                                (c) => c.progress === ev.data.progress
-                            ),
-                            1
-                        );
-                        if (chunksToProcess.length === 0 && gotAllChunks) {
-                            await addArtworksToAllAlbums(
-                                allSongs,
-                                isBackground,
-                                false,
-                                worker
-                            );
-                        }
-                        break;
-                    // Last step - finish after this
-                    case "bulkAlbumPutDone":
-                        importStatus.update((importStatus) => ({
-                            ...importStatus,
-                            status: "Processing albums",
-                            isImporting: false,
-                            backgroundImport: false,
-                            percent: 100
-                        }));
+    await appWindow.listen<ToImportAlbums>("import_albums", async (event) => {
+        console.log("import_albums", event, albumChunksToProcess.length);
+        gotAllAlbums = event.payload.progress === 100;
 
-                        bottomBarNotification.set(null);
-                        worker.terminate();
-
-                        // Reset stuff
-                        gotAllChunks = false;
-                        allSongs = [];
-                        chunksToProcess = [];
-                        break;
-                }
-            };
-        } else if (toImport.songs.length === 0 && toImport.progress === 100) {
-            await addArtworksToAllAlbums(allSongs, isBackground, false);
+        console.log("worker", worker);
+        console.log("chunksToProcess", chunksToProcess);
+        console.log("gotAllChunks", gotAllChunks);
+        console.log("currentAlbumChunk", currentAlbumChunk);
+        if (worker && chunksToProcess.length === 0 && gotAllChunks) {
+            console.log("STARTING ALBUM IMPORT");
+            // Start putting albums
+            await importAlbumChunk(event.payload);
         }
     });
 }
@@ -554,50 +657,12 @@ export async function rescanAlbumArtwork(album: Album) {
     const response = await invoke<ToImport>("scan_paths", {
         event: {
             paths: [album.path],
-            recursive: false
+            recursive: false,
+            process_albums: true
         }
     });
 
-    const artwork = await lookForArt(
-        response.songs[0].path,
-        response.songs[0].file
-    );
-    if (artwork) {
-        const artworkSrc = artwork.artworkSrc;
-        const artworkFormat = artwork.artworkFormat;
-        album.artwork = {
-            src: artworkSrc,
-            format: artworkFormat,
-            size: {
-                width: 200,
-                height: 200
-            }
-        };
-    } else {
-        Promise.all(
-            response.songs.map(async (song) => {
-                if (song.artwork?.data && song.artwork?.format) {
-                    const artworkFormat = song.artwork.format;
-
-                    const path = await cacheArtwork(
-                        Uint8Array.from(song.artwork.data),
-                        album.id,
-                        song.artwork.format
-                    );
-
-                    // console.log("artworkSrc", artworkSrc);
-                    album.artwork = {
-                        src: convertFileSrc(path),
-                        format: artworkFormat,
-                        size: {
-                            width: 200,
-                            height: 200
-                        }
-                    };
-                }
-            })
-        );
-    }
+    // TODO: Write updated album with updated artwork to DB
 }
 
 /**
@@ -631,10 +696,10 @@ export async function addArtworksToAllAlbums(
 
             const existingAlbum =
                 albumsToPut[
-                    md5(`${song.artist} - ${song.album}`.toLowerCase())
+                    md5(`${albumPath} - ${song.album}`.toLowerCase())
                 ] ||
                 (await db.albums.get(
-                    md5(`${song.artist} - ${song.album}`.toLowerCase())
+                    md5(`${albumPath} - ${song.album}`.toLowerCase())
                 ));
 
             if (existingAlbum) {

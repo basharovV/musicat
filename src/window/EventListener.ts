@@ -17,11 +17,10 @@ import { db } from "../data/db";
 import type { ToImport } from "../App";
 import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
 import { open } from "@tauri-apps/api/shell";
-import { appDataDir, dataDir } from "@tauri-apps/api/path";
+import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
 import { openTauriImportDialog } from "../data/LibraryImporter";
 
 export function startMenuListener() {
-
     appWindow.listen("menu", async ({ event, payload }) => {
         console.log("menu", event);
         switch (payload) {
@@ -77,6 +76,14 @@ export function startMenuListener() {
                     const dir = await appDataDir();
                     console.log("dir", dir);
                     open(`${dir}${CACHE_DIR}`);
+                } catch (err) {
+                    console.error(err);
+                }
+                break;
+            case "open-config":
+                try {
+                    const dir = await appConfigDir();
+                    open(dir);
                 } catch (err) {
                     console.error(err);
                 }

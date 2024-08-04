@@ -4,13 +4,19 @@ import { db } from "./data/db";
 self.window = self;
 
 import { invokeTauriCommand } from "@tauri-apps/api/helpers/tauri";
-import type { Album, LookForArtResult, Song, ToImport, UserSettings } from "./App";
+import type {
+    Album,
+    LookForArtResult,
+    Song,
+    ToImport,
+    UserSettings
+} from "./App";
 import { cacheArtwork } from "./data/Cacher";
 import { getImageFormat, isImageFile } from "./utils/FileUtils";
 
 export async function handleImport(toImport: ToImport) {
     await db
-        .transaction("rw", db.songs, db.albums, async () => {
+        .transaction("rw", db.songs, async () => {
             await db.songs
                 .bulkPut(
                     toImport.songs.map((s) => {
@@ -20,8 +26,7 @@ export async function handleImport(toImport: ToImport) {
                 )
                 .then(function (lastKey) {
                     console.log(`
-                        Done putting ${toImport.songs.length} songs`
-                    );
+                        Done putting ${toImport.songs.length} songs`);
                 })
                 .catch("BulkError", function (e) {
                     // Explicitly catching the bulkAdd() operation makes those successful
@@ -33,32 +38,35 @@ export async function handleImport(toImport: ToImport) {
                     );
                 });
 
-            const albumsToPut = toImport.songs.reduce((albums, song) => {
-                const albumPath = song.path.replace(`/${song.file}`, "");
+            // TODO: Remove
+            // const albumsToPut: { [key: string]: Album } = toImport.songs.reduce(
+            //     (albums: { [key: string]: Album }, song) => {
+            //         const albumPath = song.path.replace(`/${song.file}`, "");
 
-                let id = md5(`${song.artist} - ${song.album}`.toLowerCase());
-                if (albums[id] !== undefined) {
-                    albums[id].trackCount++;
-                    albums[id].tracksIds.push(song.id);
-                    albums[id].lossless = albums[id].lossless && song.fileInfo.lossless;
-                } else {
-                    albums[id] = {
-                        id,
-                        title: song.album,
-                        artist: song.artist,
-                        genre: song.genre,
-                        duration: song.duration,
-                        path: song.path.replace(`/${song.file}`, ""),
-                        trackCount: 1,
-                        year: song.year,
-                        tracksIds: [song.id],
-                        lossless: song.fileInfo.lossless
-                    };
-                }
-                return albums;
-            }, {});
+            //         let id = md5(`${albumPath} - ${song.album}`.toLowerCase());
+            //         console.log("album path", song.album, id);
+            //         if (albums[id] !== undefined) {
+            //             albums[id].tracksIds.push(song.id);
+            //             albums[id].lossless =
+            //                 albums[id].lossless && song.fileInfo.lossless;
+            //         } else {
+            //             albums[id] = {
+            //                 id,
+            //                 title: song.album,
+            //                 artist: song.artist,
+            //                 genre: song.genre,
+            //                 path: song.path.replace(`/${song.file}`, ""),
+            //                 year: song.year,
+            //                 tracksIds: [song.id],
+            //                 lossless: song.fileInfo.lossless
+            //             };
+            //         }
+            //         return albums;
+            //     },
+            //     {}
+            // );
 
-            await db.albums.bulkPut(Object.values(albumsToPut));
+            // await db.albums.bulkPut(Object.values(albumsToPut));
         })
         .catch("BulkError", (err) => {
             //
@@ -68,13 +76,11 @@ export async function handleImport(toImport: ToImport) {
             console.error(err.stack);
         })
         .then(() => {
-            console.log("Transaction completed")
+            console.log("Transaction completed");
         });
 }
 
-async function bulkAlbumPut(albumsToPut: Album[]) {
-
-    console.log("albumsToPut", albumsToPut);
+async function bulkAlbumPut(albumsToPut: { [key: string]: Album }) {
     await db.albums
         .bulkPut(Object.values(albumsToPut))
         .catch("BulkError", (err) => {
@@ -140,8 +146,9 @@ async function addArtworksToAllAlbums(
     // Here we can use Promise.all for concurrency since we don't depend on order
     const albumsToPut = await Promise.all(
         songs.map(async (song) => {
+            const albumPath = song.path.replace(`/${song.file}`, "");
             const existingAlbum = await db.albums.get(
-                md5(`${song.artist} - ${song.album}`.toLowerCase())
+                md5(`${albumPath} - ${song.album}`.toLowerCase())
             );
             if (existingAlbum) {
                 if (!existingAlbum.artwork) {
@@ -163,11 +170,19 @@ async function handleMessage(e) {
     switch (e.data.function) {
         case "handleImport":
             await handleImport(e.data.toImport);
-            postMessage({event: "handleImportDone", progress: e.data.toImport.progress});
+            postMessage({
+                event: "handleImportDone",
+                progress: e.data.toImport.progress,
+                done: e.data.toImport.done
+            });
             break;
         case "bulkAlbumPut":
-            await bulkAlbumPut(e.data.albums);
-            postMessage({event: "bulkAlbumPutDone"});
+            await bulkAlbumPut(e.data.toImport.albums);
+            postMessage({
+                event: "bulkAlbumPutDone",
+                progress: e.data.toImport.progress,
+                done: e.data.toImport.done
+            });
             break;
         default:
             break;

@@ -17,7 +17,7 @@ tauri-build = { version = "1.4.4", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.5.2", features = ["api-all", "macos-private-api"] }
+tauri = { version = "1.5.4", features = ["api-all", "macos-private-api"] }
 window-vibrancy = "0.3.0"
 lofty = { version = "0.20.1" }
 base64 = "0.13.0"
@@ -50,6 +50,8 @@ tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-works
 anyhow = "1.0.86"
 futures-util = "0.3.30"
 tempfile = "3.10.1"
+devtools = "0.3.3"
+color-print = "0.3.6"
 
 [patch.crates-io]
 webrtc = { git = "https://github.com/basharovV/webrtc.git" }

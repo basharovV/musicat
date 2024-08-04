@@ -142,7 +142,7 @@
         <div class="info">
             <small>{album?.year}</small>
             <small>•</small>
-            <small>{album?.trackCount} tracks</small>
+            <small>{album?.tracksIds.length} tracks</small>
         </div>
     {/if}
 </div>

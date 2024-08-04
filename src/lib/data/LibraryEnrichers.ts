@@ -59,7 +59,8 @@ export async function fetchAlbumArt(
     song: Song = null
 ): Promise<{ success?: string; error?: string }> {
     if (!album) {
-        album = await db.albums.get(md5(`${song.artist} - ${song.album}`.toLowerCase()));
+        const albumPath = song.path.replace(`/${song.file}`, "");
+        album = await db.albums.get(md5(`${albumPath} - ${song.album}`.toLowerCase()));
     }
     try {
         const dbpediaResult = await (

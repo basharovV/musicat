@@ -1,5 +1,5 @@
 import { type, type OsType } from "@tauri-apps/api/os";
-import { downloadDir } from "@tauri-apps/api/path";
+import { appConfigDir, downloadDir } from "@tauri-apps/api/path";
 import type {
     ActionEvent,
     AddOriginCountryStatus,
@@ -28,6 +28,7 @@ import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
+import { fs, path } from "@tauri-apps/api";
 
 export const L = derived(locale, (l) => {
     return i18nString(l);
@@ -169,13 +170,29 @@ const defaultSettings: UserSettings = {
     geniusApiKey: null,
     isArtistsToolkitEnabled: false,
     downloadLocation: null,
-    theme: 'dark'
+    theme: "dark"
 };
 
-export const userSettings: Writable<UserSettings> = writable(
-    { ...defaultSettings, ...JSON.parse(localStorage.getItem("settings")) } ||
-        defaultSettings
-);
+/**
+ * Retrieve settings from app config dir
+ */
+async function getSettings() {
+    // use fs to read stetings file
+    const configDir = await appConfigDir();
+    const settingsPath = await path.join(configDir, "settings.json");
+    // Read contents
+    const contents = await fs.readTextFile(settingsPath);
+    return JSON.parse(contents);
+}
+
+async function setSettings(settings: UserSettings) {
+    // use fs to write settings file
+    const configDir = await appConfigDir();
+    const settingsPath = await path.join(configDir, "settings.json");
+    await fs.writeTextFile(settingsPath, JSON.stringify(settings));
+}
+
+export const userSettings: Writable<UserSettings> = writable(defaultSettings);
 
 export const foldersToWatch = derived(
     userSettings,
@@ -183,9 +200,10 @@ export const foldersToWatch = derived(
 );
 
 // Auto-persist settings
-userSettings.subscribe((val) =>
-    localStorage.setItem("settings", JSON.stringify(val))
-);
+userSettings.subscribe(async (val) => {
+    // Write settings to file
+    await setSettings(val);
+});
 
 export const libraryScrollPos: Writable<number> = writable(
     localStorage.getItem("libraryScrollPos")
@@ -249,11 +267,12 @@ async function init() {
 
     // Set default download location
     const dir = await downloadDir();
-    userSettings.update((settings) => {
-        if (!settings.downloadLocation) {
-            return { ...settings, downloadLocation: dir };
-        }
-        return settings;
+
+    // Get user settings
+    userSettings.set({
+        ...defaultSettings,
+        downloadLocation: dir,
+        ...(await getSettings())
     });
 }
 

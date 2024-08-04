@@ -80,9 +80,7 @@ interface Album {
     artist: string;
     year: number;
     genre: string[];
-    trackCount: number;
     tracksIds: string[];
-    duration: string;
     path: string;
     artwork?: ArtworkSrc;
     lossless: boolean;
@@ -235,9 +233,18 @@ interface MapTooltipData {
 
 interface ToImport {
     songs: Song[];
-    progress: number;
+    progress: number; // After reaching 100, progress can jump back to 0 and start again (eg. processing tracks then albums)
+    done: boolean;
     error?: string;
 }
+
+interface ToImportAlbums {
+    albums: Album[];
+    progress: number;
+    done: boolean;
+    error?: string;
+}
+
 interface ReadMetadataStatus {
     progress: number;
 }
