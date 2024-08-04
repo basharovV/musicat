@@ -153,7 +153,8 @@
         .cd {
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
-            box-shadow: 2px 2px 50px 40px rgba(72, 16, 128, 0.481) !important;
+            box-shadow: 2px 2px 50px 40px
+                color-mix(in srgb, var(--library-playing-bg) 50%, transparent) !important;
             .hinge {
                 background-color: rgba(167, 164, 173, 0.078);
             }
@@ -353,7 +354,12 @@
                 .play-button-container {
                     position: absolute;
                     align-self: center;
-                    border: 1px solid #6651a3;
+                    border: 1px solid
+                        color-mix(
+                            in srgb,
+                            var(--library-playing-bg) 60%,
+                            transparent
+                        );
                     background-color: #25222b;
                     border-radius: 50px;
                     width: 40px;
@@ -362,10 +368,10 @@
                     z-index: 10;
 
                     &:hover {
-                        background-color: var(--accent);
+                        background-color: var(--library-playing-bg);
                     }
                     &:active {
-                        background-color: var(--accent);
+                        background-color: var(--library-playing-bg);
                         transform: scale(0.9);
                     }
                     .play-button {
