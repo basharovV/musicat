@@ -199,12 +199,6 @@ export const foldersToWatch = derived(
     (val) => val.foldersToWatch
 );
 
-// Auto-persist settings
-userSettings.subscribe(async (val) => {
-    // Write settings to file
-    await setSettings(val);
-});
-
 export const libraryScrollPos: Writable<number> = writable(
     localStorage.getItem("libraryScrollPos")
         ? parseFloat(localStorage.getItem("libraryScrollPos"))
@@ -268,11 +262,20 @@ async function init() {
     // Set default download location
     const dir = await downloadDir();
 
+    const fileSettings = await getSettings();
+    if (!fileSettings.downloadLocation) {
+        fileSettings.downloadLocation = dir;
+    }
     // Get user settings
     userSettings.set({
         ...defaultSettings,
-        downloadLocation: dir,
-        ...(await getSettings())
+        ...fileSettings
+    });
+
+    // Auto-persist settings
+    userSettings.subscribe(async (val) => {
+        // Write settings to file
+        await setSettings(val);
     });
 }
 
