@@ -676,8 +676,7 @@
             .equals(($rightClickedTrack || $rightClickedTracks[0]).artist)
             .toArray();
         artistSongs.forEach((s) => {
-            s.originCountry = originCountryEdited;
-            db.songs.update(s.id, s);
+            db.songs.update(s.id, { originCountry: originCountryEdited });
         });
     }
 

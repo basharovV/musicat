@@ -156,7 +156,7 @@ pub async fn write_metadata(
     let write_result = write_metadata_track(&event);
     match write_result {
         Ok(()) => {
-            let song = crate::metadata::extract_metadata(Path::new(&event.file_path), false);
+            let song = crate::metadata::extract_metadata(Path::new(&event.file_path), true);
             if song.is_some() {
                 songs.lock().unwrap().push(song.unwrap());
             }
@@ -195,7 +195,7 @@ pub async fn write_metadatas(
         match write_result {
             Ok(()) => {
                 // Emit result back to client
-                let song = crate::metadata::extract_metadata(Path::new(&track.file_path), false);
+                let song = crate::metadata::extract_metadata(Path::new(&track.file_path), true);
                 if song.is_some() {
                     songs.lock().unwrap().push(song.unwrap());
                 }
