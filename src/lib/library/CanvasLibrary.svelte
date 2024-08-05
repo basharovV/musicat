@@ -763,7 +763,23 @@
         $libraryScrollPos = scrollNormalized; // 0-1
     }
 
+    let lastScrollTime = 0;
+    let lastScrollTop = 0;
+    let timeout;
     function onScroll() {
+        if (
+            Date.now() - lastScrollTime < 20 &&
+            Math.abs(scrollContainer.scrollTop - lastScrollTop) > 500
+        ) {
+            clearTimeout(timeout);
+            // console.log("throttled");
+            timeout = setTimeout(() => {
+                onScroll();
+            }, 20);
+            return;
+        }
+        lastScrollTime = Date.now();
+        lastScrollTop = scrollContainer.scrollTop;
         scrollPos = scrollContainer.scrollTop;
         scrollNormalized = scrollPos / (contentHeight - viewportHeight);
 
