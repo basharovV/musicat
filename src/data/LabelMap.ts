@@ -69,7 +69,7 @@ Three character ids
 */
 const genericToId3v22Map: TagFieldMap = {
     title: "TT2",
-    artist: "TPE1",
+    artist: "TP1",
     album: "TAL",
     albumArtist: "TP2",
     composer: "TCM",
