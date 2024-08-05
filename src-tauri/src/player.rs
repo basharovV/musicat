@@ -412,6 +412,7 @@ pub mod file_streamer {
         let mut spec: SignalSpec = SignalSpec::new_with_layout(44100, Layout::Stereo);
         let mut duration: u64 = 512;
         let mut previous_sample_rate = 44100;
+        let mut previous_channels = 2;
 
         let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
         let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
@@ -597,12 +598,13 @@ pub mod file_streamer {
                                 .is_some();
                         })
                         .is_some();
-                    // If sample rate changed - reinit the audio device with the new sample rate
+                    // If sample rate or channels changed - reinit the audio device with the new spec
                     // (if this sample rate isn't supported, it will be resampled)
-                    should_reset_audio = supports_sample_rate && spec.rate != previous_sample_rate;
+                    should_reset_audio = supports_sample_rate && spec.rate != previous_sample_rate || spec.channels.count() != previous_channels;
                 }
 
                 previous_sample_rate = spec.rate;
+                previous_channels = spec.channels.count();
 
                 if (audio_output.is_none() || should_reset_audio) {
                     println!("player: Resetting audio device");

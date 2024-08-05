@@ -140,9 +140,9 @@ mod cpal {
                 config.sample_rate().0
             };
 
-            let spec = SignalSpec::new_with_layout(
+            let device_spec = SignalSpec::new_with_layout(
                 rate,
-                match config.channels() {
+                match spec.channels.count() {
                     1 => Layout::Mono,
                     2 => Layout::Stereo,
                     3 => Layout::TwoPointOne,
@@ -152,14 +152,16 @@ mod cpal {
             );
 
             let duration = match config.buffer_size() {
-                SupportedBufferSize::Range { min, max } => (*max * 2) as u64,
+                SupportedBufferSize::Range { min, max } => {
+                    (*max * device_spec.channels.count() as u32) as u64
+                }
                 SupportedBufferSize::Unknown => 4096 as u64,
             };
 
             // Select proper playback routine based on sample format.
             match config.sample_format() {
                 cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::try_open(
-                    spec,
+                    device_spec,
                     duration,
                     &device,
                     volume_control_receiver,
@@ -179,7 +181,7 @@ mod cpal {
                     app_handle,
                 ),
                 cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(
-                    spec,
+                    device_spec,
                     duration,
                     &device,
                     volume_control_receiver,
@@ -200,7 +202,7 @@ mod cpal {
                     app_handle,
                 ),
                 cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(
-                    spec,
+                    device_spec,
                     duration,
                     &device,
                     volume_control_receiver,
@@ -221,7 +223,7 @@ mod cpal {
                     app_handle,
                 ),
                 _ => CpalAudioOutputImpl::<f32>::try_open(
-                    spec,
+                    device_spec,
                     duration,
                     &device,
                     volume_control_receiver,
@@ -496,7 +498,7 @@ mod cpal {
                 samples = &samples[written..];
                 // Print written
                 // println!("written: {}", written);
-            }   
+            }
         }
 
         fn flush(&mut self) {
