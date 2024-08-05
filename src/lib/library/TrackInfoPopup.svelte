@@ -518,8 +518,8 @@
         }
     }
 
-    async function onArtistUpdated(evt) {
-        artistInput = evt.target.value;
+    async function onArtistUpdated(value) {
+        artistInput = value;
         const artistField = metadata?.mappedMetadata?.find(
             (m) => m.genericId === "artist"
         );
@@ -528,7 +528,7 @@
         }
         metadata = metadata;
         let matched = [];
-        const artist = evt.target.value;
+        const artist = value;
         if (artist && artist.trim().length > 0) {
             if (distinctArtists === undefined) {
                 distinctArtists = await db.songs.orderBy("artist").uniqueKeys();
@@ -770,6 +770,22 @@
             });
         }
         isFetchingArtwork = false;
+    }
+
+    function onTagLabelClick(tag: MetadataEntry) {
+        // Double-clicking on title populates the title from the filename
+        if (tag.genericId === "title") {
+            // Strip file extension from filename if any
+            const filename = $rightClickedTrack.file;
+            const extension = filename.split(".").pop();
+            const filenameWithoutExtension = filename.replace(
+                "." + extension,
+                ""
+            );
+            tag.value = filenameWithoutExtension;
+
+            metadata = metadata;
+        }
     }
 </script>
 
@@ -1033,7 +1049,11 @@
                                             content:
                                                 "Press ENTER to autocomplete",
                                             placement: "bottom",
-                                            show: firstMatch !== null,
+                                            show:
+                                                firstMatch !== null &&
+                                                firstMatch.toLowerCase() !==
+                                                    artistInput.toLowerCase() &&
+                                                artistInput.length > 0,
                                             showOnCreate: true,
                                             trigger: "manual"
                                         }}
@@ -1073,7 +1093,17 @@
                                         ? 'validation-error'
                                         : ''}"
                                 >
-                                    <p class="label">
+                                    <p
+                                        class="label"
+                                        data-tag-id={tag.genericId || tag.id}
+                                        on:click={() => onTagLabelClick(tag)}
+                                        use:optionalTippy={{
+                                            content:
+                                                "Click to set title from filename",
+                                            show: tag.genericId === "title",
+                                            placement: "bottom"
+                                        }}
+                                    >
                                         {tag.genericId ? tag.genericId : tag.id}
                                     </p>
                                     <div class="line" />
@@ -1702,6 +1732,18 @@
                 cursor: default;
                 white-space: nowrap;
                 text-transform: uppercase;
+                border: 1px solid transparent;
+                &[data-tag-id="title"] {
+                    &:hover {
+                        border: 1px solid
+                            color-mix(
+                                in srgb,
+                                var(--background) 60%,
+                                var(--inverse)
+                            );
+                        cursor: pointer;
+                    }
+                }
             }
 
             .line {
