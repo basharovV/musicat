@@ -75,6 +75,8 @@
     let artworkFormat;
     let artworkBuffer: Buffer;
     let artworkSrc;
+    let previousArtworkSrc;
+    let previousSongIdx;
     let codec;
 
     let duration;
@@ -121,6 +123,7 @@
             bitrate = songWithArtwork.fileInfo.bitDepth;
             sampleRate = songWithArtwork.fileInfo.sampleRate;
             duration = songWithArtwork.fileInfo.duration;
+            previousArtworkSrc = artworkSrc;
             if (songWithArtwork.artwork) {
                 artworkFormat = songWithArtwork.artwork.format;
                 artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
@@ -153,6 +156,8 @@
                 }
             }
         }
+        drawArtwork(previousSongIdx > $currentSongIdx);
+        previousSongIdx = $currentSongIdx;
     });
 
     function togglePlayPause() {
@@ -688,6 +693,152 @@
         }
         animate(0);
     }
+
+    let artworkCanvas: HTMLCanvasElement;
+
+    /**
+     * Draws artwork from artworkSrc and artworkFormat, otherwise shows the placeholder image
+     * Also animates changes between tracks by sliding the artwork to the left
+     */
+    function drawArtwork(isPrevious) {
+        if (artworkCanvas) {
+            const context = artworkCanvas.getContext("2d");
+            if (!context) return;
+
+            context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
+            if ($currentSong) {
+                const artwork = artworkSrc;
+                if (artwork) {
+                    const img = new Image();
+                    img.src = artwork;
+                    img.onload = () => {
+                        context.drawImage(
+                            img,
+                            0,
+                            0,
+                            artworkCanvas.width,
+                            artworkCanvas.height
+                        );
+                    };
+                } else {
+                    const img = new Image();
+                    img.src = "icon.png";
+                    img.onload = () => {
+                        context.clearRect(
+                            0,
+                            0,
+                            artworkCanvas.width,
+                            artworkCanvas.height
+                        );
+                        context.drawImage(img, 45, 45, 120, 120);
+                    };
+                }
+                // If previousArtworkSrc differs from artworkSrc, animate the artwork
+                if (previousArtworkSrc !== artworkSrc) {
+                    animateArtwork(
+                        context,
+                        previousArtworkSrc,
+                        artworkSrc,
+                        artworkCanvas.width,
+                        artworkCanvas.height,
+                        isPrevious ? "right" : "left"
+                    );
+                }
+            } else {
+                const img = new Image();
+                img.src = "icon.png";
+                img.onload = () => {
+                    context.clearRect(
+                        0,
+                        0,
+                        artworkCanvas.width,
+                        artworkCanvas.height
+                    );
+
+                    context.drawImage(img, 45, 45, 120, 120);
+                };
+            }
+        }
+    }
+
+    function animateArtwork(
+        ctx,
+        src1,
+        src2,
+        width,
+        height,
+        direction = "left"
+    ) {
+        const img1 = new Image();
+        const img2 = new Image();
+        let animationId;
+        let x = 0;
+        let startTime;
+
+        img1.src = src1;
+        img2.src = src2;
+
+        img1.onload = () => {
+            ctx.drawImage(
+                img1,
+                0,
+                0,
+                artworkCanvas.width,
+                artworkCanvas.height
+            );
+            img2.onload = startAnimation;
+        };
+
+        function easeInOutQuad(t) {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        }
+
+        function startAnimation() {
+            startTime = performance.now();
+            const duration = 200; // 1 second animation duration
+
+            const step = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = easeInOutQuad(progress);
+
+                const x = easedProgress * width;
+
+                const opacity = 1 - progress; // Fade out the first image, fade in the second image
+
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw the first image with fading out
+                ctx.globalAlpha = opacity;
+                ctx.drawImage(
+                    img1,
+                    direction === "left" ? -x : x,
+                    0,
+                    width,
+                    height
+                );
+
+                // Draw the second image with fading in
+                ctx.globalAlpha = 1 - opacity;
+                ctx.drawImage(
+                    img2,
+                    direction === "left" ? width - x : -width + x,
+                    0,
+                    width,
+                    height
+                );
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.drawImage(img2, 0, 0, width, height);
+                }
+            };
+
+            requestAnimationFrame(step);
+        }
+    }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -978,9 +1129,9 @@
                                             $uiView = "smart-query";
                                             $query.orderBy = "none";
                                             $query.reverse = false;
-                                            $selectedSmartQuery = smartQuery.value;
+                                            $selectedSmartQuery =
+                                                smartQuery.value;
                                             $selectedPlaylistId = null;
-                                            
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
@@ -1285,20 +1436,12 @@
     {#if $currentSong}
         <div class="artwork-container">
             <div class="artwork-frame">
-                {#if artworkSrc && artworkFormat}
-                    <img
-                        alt="Artwork"
-                        type={artworkFormat}
-                        class="artwork"
-                        src={artworkSrc}
-                        async
-                    />
-                {:else}
-                    <div class="artwork-placeholder">
-                        <img alt="placeholder" src="icon.png" />
-                        <!-- <small>No art</small> -->
-                    </div>
-                {/if}
+                <canvas
+                    class="artwork"
+                    bind:this={artworkCanvas}
+                    width={210}
+                    height={210}
+                />
             </div>
         </div>
     {/if}
@@ -1309,7 +1452,9 @@
                 onSeek={(time) => seekTime.set(time)}
                 playerTime={$playerTime}
             />
-            <p class="elapsed-time">{elapsedTime} / {durationText}</p>
+            <p class="elapsed-time">
+                <span class="elapsed">{elapsedTime}</span> / {durationText}
+            </p>
         </div>
         <transport>
             <Icon
@@ -1917,7 +2062,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            > img {
+            .artwork {
+                width: 100%;
+                height: 100%;
                 object-fit: cover;
             }
             .artwork-placeholder {
@@ -1967,7 +2114,17 @@
         .elapsed-time {
             opacity: 0.5;
             font-size: 12px;
-            margin: 0;
+            margin: auto;
+            padding: 0 5px;
+            width: fit-content;
+            border-radius: 5px;
+            user-select: none;
+            letter-spacing: 0.4px;
+            /* background-color: color-mix(in srgb, var(--background) 66%, black); */
+            .elapsed {
+                font-weight: 500;
+                color: var(--text-active);
+            }
         }
     }
     transport {
