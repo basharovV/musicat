@@ -1,10 +1,10 @@
-<script>
+<script lang="ts">
     import { onMount } from "svelte";
 
     export let value;
-    export let onChange = (evt) => {};
+    export let onChange = (val) => {};
     export let fullWidth = false;
-    export let autoCompleteValue = null;
+    export let autoCompleteValue: string | null = null;
     export let tabBehavesAsEnter = false;
     export let onEnterPressed = null;
     export let onBackspacePressed = null;
@@ -23,15 +23,17 @@
             }
         } else if (evt.keyCode === 9) {
             // Tab
-            if (autoCompleteValue?.length) {
+            if (autoCompleteValue?.length && autoCompleteValue !== value) {
                 evt.preventDefault();
                 if (tabBehavesAsEnter) {
                     onEnterPressed && onEnterPressed();
                 } else {
                     value = autoCompleteValue;
+                    onChange(value);
                 }
             }
         } else if (evt.keyCode === 27) {
+            inputField?.blur();
             if (autoCompleteValue?.length) {
                 // Esc
                 evt.preventDefault();
@@ -57,7 +59,7 @@
         bind:this={inputField}
         bind:value
         {placeholder}
-        on:input={onChange}
+        on:input={(evt) => onChange(evt.target.value)}
         class:full-width={fullWidth}
         class:minimal
         class:small
@@ -67,7 +69,7 @@
         autocomplete="off"
     />
 
-    {#if autoCompleteValue}
+    {#if autoCompleteValue && autoCompleteValue?.toLowerCase() !== value?.toLowerCase()}
         <p class="autocomplete">{autoCompleteValue}</p>
     {/if}
 </div>
@@ -80,13 +82,18 @@
         line-height: inherit;
         padding: 0.3em;
         background-color: var(--input-bg);
-        border: 1px solid color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
+        border: 1px solid
+            color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
         border-radius: 2px;
         font-size: 14px;
         z-index: 1;
         color: var(--text);
         &:focus {
-            background-color: color-mix(in srgb, vvar(--input-bg) 60%, var(--inverse));
+            background-color: color-mix(
+                in srgb,
+                vvar(--input-bg) 60%,
+                var(--inverse)
+            );
         }
 
         &.alt {
