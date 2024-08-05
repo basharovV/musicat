@@ -77,7 +77,7 @@ export const DEFAULT_THEME: Theme = {
     "library-playing-text": "#00ddff",
     "library-playing-icon": "#00ddff",
     "library-highlight-bg": "#2e3357",
-    "library-hover-bg": "#1f1f1f",
+    "library-hover-bg": "#2e335737",
     "library-header-bg": "#71658e7e",
     "library-header-text": "#ffffffde",
     "library-header-active-bg": "#604d8d",

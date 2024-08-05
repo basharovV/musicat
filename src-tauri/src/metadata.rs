@@ -211,11 +211,13 @@ pub async fn write_metadatas(
                             break;
                         }
                         _ => {
-                            panic!("{}", io_err);
+                            error.replace(String::from(io_err.to_string()));
+                            // panic!("{}", io_err);
                         }
                     },
                     None => {}
                 }
+                error.replace(String::from(err.to_string()));
                 println!("Error writing metadata: {}", err);
             }
         }
