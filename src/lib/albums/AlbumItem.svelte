@@ -22,7 +22,10 @@
     console.log("highlight", highlighted);
     let isHovered = false;
     async function playPauseToggle() {
-        if ($playlistType === "album" && $currentSong?.album === album.title) {
+        if (
+            $playlistType === "album" &&
+            $currentSong?.album.toLowerCase() === album.title.toLowerCase()
+        ) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
@@ -43,7 +46,8 @@
         }
     }
 
-    $: isPlayingCurrentAlbum = $currentSong?.album === album.title;
+    $: isPlayingCurrentAlbum =
+        $currentSong?.album.toLowerCase() === album.title.toLowerCase();
 </script>
 
 <div
@@ -137,7 +141,7 @@
         </div>
     </div>
     {#if showInfo}
-        <p class="title">{album.title}</p>
+        <p class="title">{album.displayTitle ?? album.title}</p>
         <p class="artist">{album?.artist}</p>
         <div class="info">
             <small>{album?.year}</small>

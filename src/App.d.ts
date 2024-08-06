@@ -76,7 +76,8 @@ interface Song {
 
 interface Album {
     id: string; // Hash of artist + album name
-    title: string;
+    title: string; // We store the title in lower case for indexed case insensitive searches
+    displayTitle?: string; // The display title with actual case
     artist: string;
     year: number;
     genre: string[];
@@ -233,6 +234,7 @@ interface MapTooltipData {
 
 interface ToImport {
     songs: Song[];
+    albums: Album[];
     progress: number; // After reaching 100, progress can jump back to 0 and start again (eg. processing tracks then albums)
     done: boolean;
     error?: string;

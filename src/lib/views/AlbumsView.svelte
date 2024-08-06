@@ -55,7 +55,7 @@
                       a.artist
                           .toLowerCase()
                           .includes($query.query.toLowerCase()) ||
-                      a.title.toLowerCase().includes($query.query.toLowerCase())
+                      a.title.includes($query.query.toLowerCase())
               )
             : [];
 

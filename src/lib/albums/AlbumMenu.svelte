@@ -3,13 +3,20 @@
     import { open } from "@tauri-apps/api/shell";
     import { onMount } from "svelte";
     import { db } from "../../data/db";
-    import { isTrackInfoPopupOpen, rightClickedAlbum } from "../../data/store";
+    import {
+        isTrackInfoPopupOpen,
+        rightClickedAlbum,
+        rightClickedTracks
+    } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import { addArtworksToAllAlbums, rescanAlbumArtwork } from "../../data/LibraryImporter";
-    import type { ToImport } from "../../App";
+    import {
+        addArtworksToAllAlbums,
+        rescanAlbumArtwork
+    } from "../../data/LibraryImporter";
+    import type { Album, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api";
 
     export let pos = { x: 0, y: 0 };
@@ -72,7 +79,9 @@
     }
     function searchSongOnYouTube() {
         closeMenu();
-        const query = encodeURIComponent($rightClickedAlbum.title);
+        const query = encodeURIComponent(
+            $rightClickedAlbum.displayTitle ?? $rightClickedAlbum.title
+        );
         open(`https://www.youtube.com/results?search_query=${query}`);
     }
     function searchArtistOnWikipedia() {
@@ -101,13 +110,34 @@
     async function rescanLocalArtwork() {
         rescanAlbumArtwork($rightClickedAlbum);
     }
+
+    let isReimporting = false;
+
+    async function reImportAlbum() {
+        isReimporting = true;
+        const response = await invoke<ToImport>("scan_paths", {
+            event: {
+                paths: [$rightClickedAlbum.path],
+                recursive: false,
+                process_albums: true,
+                is_async: false
+            }
+        });
+        console.log("response", response);
+        await db.transaction("rw", db.songs, db.albums, async () => {
+            await db.songs.bulkPut(response.songs);
+            await db.albums.bulkPut(response.albums);
+        });
+        isReimporting = false;
+    }
 </script>
 
 {#if showMenu}
     <Menu {...pos} onClickOutside={closeMenu}>
         <MenuOption
             isDisabled={true}
-            text="{$rightClickedAlbum.title} by {$rightClickedAlbum.artist}"
+            text="{$rightClickedAlbum.displayTitle ??
+                $rightClickedAlbum.title} by {$rightClickedAlbum.artist}"
         />
         <MenuOption
             isDestructive={true}
@@ -117,6 +147,11 @@
             confirmText="Click again to confirm"
         />
         {#if $rightClickedAlbum}
+            <MenuOption
+                onClick={reImportAlbum}
+                text="Re-import album"
+                isLoading={isReimporting}
+            />
             <MenuDivider />
             <MenuOption text="⚡️ Enrich" isDisabled />
             <MenuOption

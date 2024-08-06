@@ -149,7 +149,8 @@ async function getAlbumFromSong(song: Song) {
 
         const newAlbum: Album = {
             id: md5(`${albumPath} - ${song.album}`.toLowerCase()),
-            title: song.album,
+            title: song.album.toLowerCase(),
+            displayTitle: song.album,
             artist: song.artist,
             genre: song.genre,
             path: song.path.replace(`/${song.file}`, ""),
@@ -336,7 +337,8 @@ export async function importPaths(
         event: {
             paths: selected,
             recursive: true,
-            process_albums: true
+            process_albums: true,
+            is_async: true
         }
     });
 
@@ -658,7 +660,8 @@ export async function rescanAlbumArtwork(album: Album) {
         event: {
             paths: [album.path],
             recursive: false,
-            process_albums: true
+            process_albums: true,
+            is_async: false
         }
     });
 

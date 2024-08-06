@@ -13,6 +13,8 @@
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { findCountryByArtist } from "../data/LibraryEnrichers";
+    import { invoke } from "@tauri-apps/api";
+    import type { Album, ToImport } from "../../App";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -193,6 +195,40 @@
         }
         isFetchingOriginCountry = false;
     }
+
+    let isReimporting = false;
+    async function reImportAlbum(album: Album) {
+        const existingAlbum = await db.albums.get(album.id);
+        if (existingAlbum) {
+            existingAlbum.tracksIds = [
+                ...existingAlbum.tracksIds,
+                ...album.tracksIds
+            ];
+            await db.albums.put(existingAlbum);
+        } else {
+            await db.albums.add(album);
+        }
+    }
+
+    async function reImportTracks() {
+        isReimporting = true;
+        const response = await invoke<ToImport>("scan_paths", {
+            event: {
+                paths: $rightClickedTracks.map((t) => t.path),
+                recursive: false,
+                process_albums: true,
+                is_async: false
+            }
+        });
+        console.log('response', response);
+        await db.transaction("rw", db.songs, db.albums, async () => {
+            await db.songs.bulkPut(response.songs);
+            for (const album of response.albums) {
+                await reImportAlbum(album);
+            }
+        });
+        isReimporting = false;
+    }
 </script>
 
 {#if showMenu}
@@ -213,8 +249,18 @@
                     deleteTrack($selectedPlaylistId);
                 }
             }}
-            text={$rightClickedTrack ? "Remove track from library" : "Remove tracks from library"}
+            text={$rightClickedTrack
+                ? "Remove track from library"
+                : "Remove tracks from library"}
             confirmText="Click again to confirm"
+        />
+        <MenuOption
+            onClick={reImportTracks}
+            description="Will also re-import albums"
+            text={$rightClickedTrack
+                ? "Re-import track"
+                : `Re-import ${$rightClickedTracks.length} tracks`}
+            isLoading={isReimporting}
         />
         {#if $selectedPlaylistId}
             <MenuOption

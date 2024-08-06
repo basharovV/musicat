@@ -49,6 +49,7 @@ pub struct ScanPathsEvent {
     paths: Vec<String>,
     recursive: bool,
     process_albums: bool,
+    is_async: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -115,8 +116,9 @@ pub struct Song {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Album {
-    id: String, // Hash of artist + album name
-    title: String,
+    id: String,            // Hash of artist + album name
+    title: String,         // We store the title in lower case for indexed case insensitive searches
+    display_title: String, // The display title with actual case
     artist: String,
     year: i32,
     genre: Vec<String>,
@@ -143,42 +145,6 @@ pub struct GetSongMetadataEvent {
 }
 
 #[tauri::command]
-pub async fn write_metadata(
-    event: WriteMetatadaEvent,
-    app_handle: tauri::AppHandle,
-) -> ToImportEvent {
-    println!("{:?}", event);
-
-    // let payload: &str = event.payload().unwrap();
-    let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
-
-    // let v: WriteMetatadaEvent = serde_json::from_str(payload).unwrap();
-    let write_result = write_metadata_track(&event);
-    match write_result {
-        Ok(()) => {
-            let song = crate::metadata::extract_metadata(Path::new(&event.file_path), true);
-            if song.is_some() {
-                songs.lock().unwrap().push(song.unwrap());
-            }
-            // Emit result back to client
-            app_handle.emit_all("write-success", {}).unwrap();
-        }
-        Err(err) => {
-            println!("{}", err)
-        }
-    }
-
-    let to_import = ToImportEvent {
-        songs: songs.lock().unwrap().clone(),
-        albums: vec![],
-        progress: 100,
-        done: true,
-        error: None,
-    };
-    return to_import;
-}
-
-#[tauri::command]
 pub async fn write_metadatas(
     event: WriteMetatadasEvent,
     _app_handle: tauri::AppHandle,
@@ -186,6 +152,8 @@ pub async fn write_metadatas(
     println!("{:?}", event);
     // let payload: &str = event.payload().unwrap();
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
+    let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 
     let mut error: Option<String> = None;
 
@@ -194,10 +162,25 @@ pub async fn write_metadatas(
         let write_result = write_metadata_track(&track.clone());
         match write_result {
             Ok(()) => {
-                // Emit result back to client
-                let song = crate::metadata::extract_metadata(Path::new(&track.file_path), true);
-                if song.is_some() {
-                    songs.lock().unwrap().push(song.unwrap());
+                if let Some(song) =
+                    crate::metadata::extract_metadata(Path::new(&track.file_path), true)
+                {
+                    if let Some(album) = process_new_album(&song, _app_handle.config().as_ref()) {
+                        println!("Album: {:?}", album);
+                        let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
+                        if let Some(existing_album) = existing_album {
+                            // Merge with existing album
+                            let mut merged_album = existing_album.clone();
+                            merged_album.tracks_ids.push(song.id.clone());
+                            albums
+                                .lock()
+                                .unwrap()
+                                .insert(album.id.clone(), merged_album);
+                        } else {
+                            albums.lock().unwrap().insert(album.id.clone(), album);
+                        }
+                    }
+                    songs.lock().unwrap().push(song);
                 }
                 println!("Wrote metadata")
             }
@@ -226,7 +209,7 @@ pub async fn write_metadatas(
 
     let to_import = ToImportEvent {
         songs: songs.lock().unwrap().clone(),
-        albums: vec![],
+        albums: albums.lock().unwrap().values().cloned().collect(),
         progress: 100,
         done: true,
         error: error,
@@ -260,23 +243,19 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
         // println!("{:?}", path);
 
         if path.is_file() {
-            if let Some(song) = crate::metadata::extract_metadata(&path, true) {
+            if let Some(mut song) = crate::metadata::extract_metadata(&path, true) {
                 if let Some(album) = process_new_album(&song, app_handle.config().as_ref()) {
                     println!("Album: {:?}", album);
-                    let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
-                    if let Some(existing_album) = existing_album {
-                        // Merge with existing album
-                        let mut merged_album = existing_album.clone();
-                        merged_album.tracks_ids.push(song.id.clone());
-                        albums
-                            .lock()
-                            .unwrap()
-                            .insert(album.id.clone(), merged_album);
-                    } else {
-                        albums.lock().unwrap().insert(album.id.clone(), album);
-                    }
+                    albums
+                        .lock()
+                        .unwrap()
+                        .entry(album.id.clone())
+                        .and_modify(|a| {
+                            a.tracks_ids.push(song.id.clone());
+                        })
+                        .or_insert(album);
                 }
-
+                song.artwork = None;
                 songs.lock().unwrap().push(song);
             }
         } else if path.is_dir() {
@@ -410,8 +389,16 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
     );
 
     ToImportEvent {
-        songs: vec![],
-        albums: vec![],
+        songs: if event.is_async {
+            vec![]
+        } else {
+            songs.lock().unwrap().clone()
+        },
+        albums: if event.is_async {
+            vec![]
+        } else {
+            albums.lock().unwrap().values().cloned().collect()
+        },
         progress: 100,
         done: true,
         error: None,
@@ -440,8 +427,9 @@ fn process_new_album(song: &Song, app_config: &Config) -> Option<Album> {
     } else if let Err(e) = result {
         println!("Error looking for artwork: {}", e);
     }
-
+    println!("artwork found: {}", artwork_src);
     if (artwork_src.is_empty()) {
+        // println!("Song artwork: {:?}", &song.artwork);
         if let Some(art) = &song.artwork {
             // println!("Caching artwork for: {}", song.album);
             // Cache artwork using artwork_cacher
@@ -463,7 +451,8 @@ fn process_new_album(song: &Song, app_config: &Config) -> Option<Album> {
 
     return Some(Album {
         id: album_id,
-        title: song.album.clone(),
+        title: song.album.clone().to_lowercase(),
+        display_title: song.album.clone(),
         artist: song.artist.clone(),
         tracks_ids: vec![song.id.clone()],
         lossless: song.file_info.lossless,
@@ -514,7 +503,7 @@ fn process_directory(
 
                     // println!("{:?}", entry.path());
                     if path.is_file() {
-                        if let Some(song) = crate::metadata::extract_metadata(&path, true) {
+                        if let Some(mut song) = crate::metadata::extract_metadata(&path, true) {
                             if let Some(album) = process_new_album(&song, config) {
                                 // println!("Album: {:?}", album);
                                 let existing_album =
@@ -523,26 +512,27 @@ fn process_directory(
                                     subalbums.lock().unwrap().get_mut(&album.id).cloned();
                                 if let Some(existing_album) = existing_album {
                                     // Merge with existing album
-                                    let mut merged_album = existing_album.clone();
-                                    merged_album.tracks_ids.push(song.id.clone());
-                                    subalbums
-                                        .lock()
-                                        .unwrap()
-                                        .insert(album.id.clone(), merged_album.to_owned());
+                                    albums.lock().unwrap().entry(album.id.clone()).and_modify(
+                                        |a| {
+                                            a.tracks_ids.push(song.id.clone());
+                                        },
+                                    );
                                 } else if let Some(existing_album_subalbums) =
                                     existing_album_subalbums
                                 {
                                     // Merge with existing album
-                                    let mut merged_album = existing_album_subalbums.clone();
-                                    merged_album.tracks_ids.push(song.id.clone());
                                     subalbums
                                         .lock()
                                         .unwrap()
-                                        .insert(album.id.clone(), merged_album.to_owned());
+                                        .entry(album.id.clone())
+                                        .and_modify(|a| {
+                                            a.tracks_ids.push(song.id.clone());
+                                        });
                                 } else {
                                     subalbums.lock().unwrap().insert(album.id.clone(), album);
                                 }
                             }
+                            song.artwork = None;
                             subsongs.lock().unwrap().push(song);
                         }
                     } else if path.is_dir() && recursive {
@@ -682,7 +672,7 @@ pub fn extract_metadata(file_path: &Path, is_import: bool) -> Option<Song> {
                         }
                     });
 
-                    if tagged_file.primary_tag().is_some() && !is_import {
+                    if tagged_file.primary_tag().is_some() {
                         if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),

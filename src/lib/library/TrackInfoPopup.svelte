@@ -8,7 +8,13 @@
 
     import hotkeys from "hotkeys-js";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
-    import type { MetadataEntry, Song, TagType, ToImport } from "src/App";
+    import type {
+        Album,
+        MetadataEntry,
+        Song,
+        TagType,
+        ToImport
+    } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
@@ -279,7 +285,7 @@
             });
         }
         console.log($rightClickedTrack || $rightClickedTracks[0]);
-
+        console.log(toImport);
         if (toImport) {
             if (toImport.error) {
                 // Show error
@@ -295,35 +301,24 @@
         artworkFileToSet = null;
         isArtworkSet = false;
 
-        // Update album in DB as well
-        if ($rightClickedAlbum) {
-            const fieldsToUpdate = ALBUM_FIELDS.reduce((toUpdate, current) => {
-                const field = getField(current);
-                // Check if it differs from the album
-                if (
-                    field.value !== null &&
-                    field.value !== $rightClickedAlbum[field.genericId]
-                ) {
-                    if (field.genericId === "album") {
-                        // ALBUM is title in the DB
-                        toUpdate["title"] = field.value;
-                    } else if (field.genericId === "date") {
-                        // DATE tag is year in the DB
-                        toUpdate["year"] = Number(field.value);
-                    } else {
-                        toUpdate[field.genericId] = field.value;
-                    }
-                }
-                return toUpdate;
-            }, {});
-
-            console.log("Updating album with changes: ", fieldsToUpdate);
-
-            db.albums.update($rightClickedAlbum.id, {
-                ...fieldsToUpdate
-            });
+        if (toImport.albums.length) {
+            for (const album of toImport.albums) {
+                await reImportAlbum(album);
+            }
         }
     }
+
+    async function reImportAlbum(album: Album) {
+        const existingAlbum = await db.albums.get(album.id);
+        if (existingAlbum) {
+            existingAlbum.tracksIds = [
+                ...existingAlbum.tracksIds,
+                ...album.tracksIds
+            ];
+            await db.albums.put(existingAlbum);
+        }
+    }
+
     async function reImportTracks(toImport: ToImport) {
         console.log("toImport", toImport);
         toast.success("Successfully written metadata!", {
@@ -475,6 +470,7 @@
         if (unlisten) {
             unlisten();
         }
+        $isTrackInfoPopupOpen = false;
         hotkeys.unbind(`${modifier}+enter`);
         hotkeys.unbind("esc");
     });
@@ -512,6 +508,7 @@
             );
             if (artistField) {
                 artistField.value = firstMatch;
+                artistInput = firstMatch;
             }
             metadata = metadata;
             firstMatch = null;
@@ -519,6 +516,7 @@
     }
 
     async function onArtistUpdated(value) {
+        console.log("artist updated");
         artistInput = value;
         const artistField = metadata?.mappedMetadata?.find(
             (m) => m.genericId === "artist"
@@ -539,7 +537,7 @@
                 }
             });
 
-            firstMatch = matched.length && matched[0] ? matched[0] : "";
+            firstMatch = matched.length && matched[0] ? matched[0] : null;
         } else {
             firstMatch = null;
         }
@@ -745,8 +743,6 @@
                 }
             }
         });
-
-        unlisten = await listen("write-success", async (event) => {});
 
         onTableResize();
     });
@@ -1052,8 +1048,8 @@
                                             show:
                                                 firstMatch !== null &&
                                                 firstMatch.toLowerCase() !==
-                                                    artistInput.toLowerCase() &&
-                                                artistInput.length > 0,
+                                                    artistInput?.toLowerCase() &&
+                                                artistInput?.length > 0,
                                             showOnCreate: true,
                                             trigger: "manual"
                                         }}
@@ -1064,6 +1060,7 @@
                                             autoCompleteValue={firstMatch}
                                             onChange={onArtistUpdated}
                                             onEnterPressed={onArtistAutocompleteSelected}
+                                            tabBehavesAsEnter
                                             fullWidth
                                         />
                                     </div>

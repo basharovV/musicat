@@ -446,7 +446,6 @@ async fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            metadata::write_metadata,
             metadata::write_metadatas,
             metadata::scan_paths,
             metadata::get_song_metadata,
