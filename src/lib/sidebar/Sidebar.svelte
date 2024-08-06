@@ -108,6 +108,10 @@
         audioPlayer.togglePlay();
     });
 
+    let artworkCanvas: HTMLCanvasElement;
+
+    let placeholderArtwork: HTMLImageElement;
+
     currentSong.subscribe(async (song) => {
         if (song) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
@@ -694,7 +698,6 @@
         animate(0);
     }
 
-    let artworkCanvas: HTMLCanvasElement;
 
     /**
      * Draws artwork from artworkSrc and artworkFormat, otherwise shows the placeholder image
@@ -708,6 +711,7 @@
             context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
             if ($currentSong) {
                 const artwork = artworkSrc;
+                console.log('artwork', artwork);
                 if (artwork) {
                     const img = new Image();
                     img.src = artwork;
@@ -721,20 +725,37 @@
                         );
                     };
                 } else {
-                    const img = new Image();
-                    img.src = "icon.png";
-                    img.onload = () => {
+                    // Show placeholder
+                    if (!placeholderArtwork) {
+                        placeholderArtwork = new Image();
+                        placeholderArtwork.src = "icon.png";
+                        placeholderArtwork.onload = () => {
+                            context.clearRect(
+                                0,
+                                0,
+                                artworkCanvas.width,
+                                artworkCanvas.height
+                            );
+                            context.drawImage(
+                                placeholderArtwork,
+                                45,
+                                45,
+                                120,
+                                120
+                            );
+                        };
+                    } else {
                         context.clearRect(
                             0,
                             0,
                             artworkCanvas.width,
                             artworkCanvas.height
                         );
-                        context.drawImage(img, 45, 45, 120, 120);
-                    };
+                        context.drawImage(placeholderArtwork, 45, 45, 120, 120);
+                    }
                 }
                 // If previousArtworkSrc differs from artworkSrc, animate the artwork
-                if (previousArtworkSrc !== artworkSrc) {
+                if (artwork && previousArtworkSrc !== artworkSrc) {
                     animateArtwork(
                         context,
                         previousArtworkSrc,
@@ -877,14 +898,13 @@
                     {#if $query.query.length}
                         <Icon
                             icon="mingcute:close-circle-fill"
-                            color="#737373"
                             size={15}
                             onClick={() => {
                                 $query.query = "";
                             }}
                         />
                     {:else}
-                        <Icon icon="ion:search" color="#737373" size={16} />
+                        <Icon icon="ion:search" size={16} />
                     {/if}
                 </div>
             </div>
@@ -1829,6 +1849,7 @@
             padding-left: 5px;
             font-size: 13px;
             color: var(--text-active, initial);
+            border: 1px solid color-mix(in srgb, var(--inverse) 80%, transparent);
             backdrop-filter: blur(8px);
             z-index: 10;
             &::placeholder {
@@ -1836,14 +1857,12 @@
             }
             &:focus {
                 /* outline: 1px solid #5123dd; */
-                background-color: #504c4c;
+                background-color: color-mix(in srgb, var(--inverse) 80%, transparent);
                 &::placeholder {
                     color: var(--text-inactive, initial);
                 }
             }
             background-color: transparent;
-
-            border: 1px solid rgb(63, 63, 63);
         }
         .search-icon {
             position: absolute;
