@@ -181,13 +181,14 @@
         background-color: var(--smart-playlist-builder-block-input-bg);
         /* background-color: #45306A; */
         border: 1px solid #d4ccdd6c;
-        box-shadow: 0px 0px 1px 4px #3e286420 inset;
+        /* box-shadow: 0px 0px 1px 4px #3e286420 inset; */
         border-radius: 4px;
         padding: 0.2em;
         font-size: 14px;
         margin: 0;
         outline: none;
         transition: min-width 0.2s ease-in;
+        color: var(--smart-playlist-builder-block-input-text);
 
         &.is-number {
             min-width: 30px;

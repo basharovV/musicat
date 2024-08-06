@@ -887,7 +887,7 @@
 
     function onRightClick(e, song, idx) {
         if (!songsHighlighted.includes(song)) {
-            highlightSong(song, idx, false);
+            highlightSong(song, idx, false, false);
         }
 
         // console.log("songIdsHighlighted", songsHighlighted);
@@ -963,6 +963,14 @@
             songsHighlighted.push(song);
             rangeStartSongIdx = idx;
             $rightClickedTrack = null;
+        } else if (
+            isDefault &&
+            !$isTrackInfoPopupOpen &&
+            $rightClickedTracks?.length
+        ) {
+            songsHighlighted = $rightClickedTracks;
+        } else if (isDefault && !$isTrackInfoPopupOpen && $rightClickedTrack) {
+            songsHighlighted = [$rightClickedTrack];
         } else {
             // Highlight single song, via a good old click
             if (!isDefault) {
@@ -1408,24 +1416,6 @@
             >
                 {#if dim}
                     <div class="dimmer" />
-                {/if}
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                {#if $uiView === "library" && $isPlaying && $currentSong && !currentSongInView}
-                    <div
-                        in:fly={{ duration: 150, y: 30 }}
-                        out:fly={{ duration: 150, y: 30 }}
-                        class="scroll-now-playing"
-                        class:light={$currentThemeObject.type === "light"}
-                        on:click={scrollToCurrentSong}
-                    >
-                        <div class="eq">
-                            <span class="eq1" />
-                            <span class="eq2" />
-                            <span class="eq3" />
-                        </div>
-                        <p>Scroll to Now playing</p>
-                    </div>
                 {/if}
 
                 {#if $uiView.match(/^(smart-query)/)}
@@ -2011,6 +2001,24 @@
             </div>
         </div>
     {/if}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    {#if $uiView === "library" && $isPlaying && $currentSong && !currentSongInView}
+        <div
+            in:fly={{ duration: 150, y: 30 }}
+            out:fly={{ duration: 150, y: 30 }}
+            class="scroll-now-playing"
+            class:light={$currentThemeObject.type === "light"}
+            on:click={scrollToCurrentSong}
+        >
+            <div class="eq">
+                <span class="eq1" />
+                <span class="eq2" />
+                <span class="eq3" />
+            </div>
+            <p>Scroll to Now playing</p>
+        </div>
+    {/if}
     <ShadowGradient type="bottom" />
 </div>
 
@@ -2082,8 +2090,13 @@
         right: 0;
         padding: 0.5em 1em;
         border-radius: 10px;
-        background-color: #1b1b1c;
-        border: 1px solid rgb(58, 56, 56);
+        background-color: color-mix(
+            in srgb,
+            var(--panel-background) 80%,
+            var(--type-bw)
+        );
+        border: 1px solid
+            color-mix(in srgb, var(--panel-background) 80%, var(--inverse));
         box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.834);
         color: white;
         margin: auto;
@@ -2121,13 +2134,23 @@
             display: none;
         }
         &:hover {
-            background-color: #1f1f21;
-            border: 1px solid rgb(101, 98, 98);
+            background-color: color-mix(
+                in srgb,
+                var(--panel-background) 70%,
+                var(--type-bw)
+            );
+            border: 1px solid
+                color-mix(in srgb, var(--panel-background) 60%, var(--inverse));
             box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
         }
         &:active {
-            background-color: #2a2a2d;
-            border: 2px solid rgb(101, 98, 98);
+            background-color: color-mix(
+                in srgb,
+                var(--panel-background) 70%,
+                var(--type-bw)
+            );
+            border: 1px solid
+                color-mix(in srgb, var(--panel-background) 60%, var(--inverse));
             box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
         }
 

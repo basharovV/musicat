@@ -44,6 +44,7 @@ export interface Theme {
     "smart-playlist-builder-block-bg": string;
     "smart-playlist-builder-block-focused-bg": string;
     "smart-playlist-builder-block-input-bg": string;
+    "smart-playlist-builder-block-input-text": string;
     /** Oscilloscope line color */
     "oscilloscope": string;
 }
@@ -89,6 +90,7 @@ export const DEFAULT_THEME: Theme = {
     "smart-playlist-builder-block-bg": "#7256be56",
     "smart-playlist-builder-block-focused-bg": "#7256be99",
     "smart-playlist-builder-block-input-bg": "#231b4d45",
+    "smart-playlist-builder-block-input-text": "#ffffffde",
     oscilloscope: "#14D8BD"
 };
 
@@ -206,8 +208,39 @@ export const allThemes: { [key: string]: Theme } = {
     },
     turquoise: {
         ...DEFAULT_THEME,
-        "background": "#01796f",
-        "text-inactive": "#b0b0b0"
+        type: "dark",
+        "background": "#01796fda",
+        "text": "#eef4f1",
+        "text-secondary": "#e4d7c7ff",
+        "text-active": "#ffffff",
+        "text-inactive": "#a3ccc5",
+        accent: "#45fffcf3",
+        "accent-secondary": "#45fffcf3",
+        "overlay-bg": "#02564fc6",
+        "panel-background": "#027167",
+        "button-bg": "#282b2c",
+        "button-text": "#ede8f0",
+        "input-bg": "#0c5f58da",
+        "icon-primary": "white",
+        "icon-secondary": "white",
+        "library-text-color": "#e4eced",
+        "library-header-bg": "#03867b",
+        "library-header-active-bg": "#59b5ad",
+        "library-playing-bg": "#f3d2ba",
+        "library-highlight-bg": "#f3caad82",
+        "library-hover-bg": "#f4ceb238",
+        "library-playing-text": "#073d23",
+        "library-playing-icon": "#073d23",
+        "library-favourite-icon": "#cb6ee0",
+        "library-clickable-cell-bg": "#03867b",
+        "library-clickable-cell-hover-bg": "#0ca89b",
+        "smart-playlist-builder-bg": "#d6d5d0",
+        "smart-playlist-builder-block-bg": "#eee3e3",
+        "smart-playlist-builder-block-focused-bg": "#f5efef",
+        "smart-playlist-builder-block-input-bg": "#d6e1e090",
+        "smart-playlist-builder-block-input-text": "#675c5cde",
+        "smart-playlist-builder-text": "#1c4531",
+        oscilloscope: "#d2ff2e"
     },
     red: {
         ...DEFAULT_THEME,

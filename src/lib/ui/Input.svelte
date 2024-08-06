@@ -29,7 +29,6 @@
                     onEnterPressed && onEnterPressed();
                 } else {
                     value = autoCompleteValue;
-                    onChange(value);
                 }
             }
         } else if (evt.keyCode === 27) {
