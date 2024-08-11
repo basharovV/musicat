@@ -229,7 +229,7 @@ export const allThemes: { [key: string]: Theme } = {
         "library-playing-bg": "#f3d2ba",
         "library-highlight-bg": "#f3caad82",
         "library-hover-bg": "#f4ceb238",
-        "library-playing-text": "#073d23",
+        "library-playing-text": "#3d1507",
         "library-playing-icon": "#073d23",
         "library-favourite-icon": "#cb6ee0",
         "library-clickable-cell-bg": "#03867b",

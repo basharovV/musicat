@@ -281,6 +281,10 @@ interface GetLyricsResponse {
     lyrics?: string;
 }
 
+interface GetHTMLResponse {
+    html?: string;
+}
+
 interface CurrentSongLyrics {
     songId: string;
     lyrics?: string;

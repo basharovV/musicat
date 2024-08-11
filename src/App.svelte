@@ -17,6 +17,7 @@
         isSettingsOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
+        isWikiOpen,
         os,
         selectedPlaylistId,
         selectedSmartQuery,
@@ -27,7 +28,7 @@
     import { appWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
-    import { fade, fly } from "svelte/transition";
+    import { blur, fade, fly } from "svelte/transition";
     import { db } from "./data/db";
     import { startWatching } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryImporter";
@@ -56,6 +57,7 @@
     import QueueView from "./lib/views/QueueView.svelte";
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
     import { startMenuListener } from "./window/EventListener";
+    import WikiView from "./lib/views/WikiView.svelte";
 
     console.log("locale", getLocaleFromNavigator());
 
@@ -93,6 +95,9 @@
     let mouseY;
 
     let showDropzone = false;
+
+    let wikiPanelSize = 500;
+    const WIKI_PANEL_MIN_SIZE = 300;
 
     /**
      * Listen for native file drop and hover events here.
@@ -199,6 +204,36 @@
             $bottomBarNotification = null;
         }, $bottomBarNotification.timeout);
     }
+
+    let container: HTMLElement;
+    let isResizing = false;
+    let showCloseWikiPrompt = false;
+    function onResize(e: MouseEvent) {
+        e.stopPropagation();
+        e.preventDefault();
+        const containerWidth = window.innerWidth;
+        console.log("container width", containerWidth);
+        console.log("clientX", e.pageX);
+        if (containerWidth - e.clientX > WIKI_PANEL_MIN_SIZE) {
+            showCloseWikiPrompt = false;
+            wikiPanelSize = containerWidth - e.clientX;
+        } else if (containerWidth - e.clientX < WIKI_PANEL_MIN_SIZE - 10) {
+            showCloseWikiPrompt = true;
+        }
+    }
+    function startResizeListener() {
+        isResizing = true;
+        container.addEventListener("mousemove", onResize);
+        document.addEventListener("mouseup", stopResizeListener);
+    }
+    function stopResizeListener() {
+        isResizing = false;
+        container.removeEventListener("mousemove", onResize);
+        if (showCloseWikiPrompt) {
+            $isWikiOpen = false;
+            showCloseWikiPrompt = false;
+        }
+    }
 </script>
 
 <ThemeWrapper>
@@ -232,6 +267,7 @@
     <main
         class:mini-player={$isMiniPlayer}
         class:transparent={$os === "Darwin"}
+        bind:this={container}
     >
         <div class="sidebar">
             <Sidebar />
@@ -298,12 +334,39 @@
             </div>
         {/if}
 
+        <div class="wiki">
+            {#if $isWikiOpen}
+                <div
+                    class="wiki-container"
+                    style={`width: ${wikiPanelSize}px;`}
+                    transition:fly={{ duration: 200, x: -200 }}
+                >
+                    {#if showCloseWikiPrompt}
+                        <div
+                            class="close-wiki-prompt"
+                            transition:blur={{ duration: 100 }}
+                        >
+                            <h2>Close wiki</h2>
+                        </div>
+                    {/if}
+                    <WikiView />
+                </div>
+            {/if}
+        </div>
+
         <div class="bottom-bar">
             <BottomBar />
         </div>
 
         {#if $fileToDownload}
             <DownloadPopup />
+        {/if}
+
+        {#if $isWikiOpen}
+            <resize-handle
+                on:mousedown={startResizeListener}
+                class:resizing={isResizing}
+            />
         {/if}
     </main>
 </ThemeWrapper>
@@ -326,7 +389,7 @@
 
     main {
         display: grid;
-        grid-template-columns: auto auto 1fr;
+        grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
         grid-template-rows: auto 1fr auto auto;
         width: 100vw;
         height: 100vh;
@@ -392,7 +455,7 @@
             width: 100%;
             z-index: 15;
             grid-row: 4;
-            grid-column: 2 / 4;
+            grid-column: 2 / 6;
             margin-top: 5px;
             margin-bottom: 5px;
         }
@@ -415,6 +478,71 @@
                 gap: 5px;
                 /* display: grid; */
             }
+        }
+
+        .wiki {
+            grid-row: 1/3;
+            grid-column: 5;
+            overflow-y: hidden;
+            height: 100%;
+            position: relative;
+            .wiki-container {
+                height: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
+                border-bottom: 0.7px solid #ffffff36;
+                border-radius: 5px;
+                margin: 0px 7.5px 0 0;
+            }
+
+            .close-wiki-prompt {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                background-color: #33303ce2;
+                backdrop-filter: blur(5px);
+                z-index: 10;
+            }
+        }
+
+        resize-handle {
+            grid-column: 4;
+            grid-row: 1 / 3;
+            display: block;
+            position: relative;
+            height: 100%;
+            width: 4px;
+            left: -2px;
+            z-index: 100;
+
+            &::after {
+                content: "";
+                display: block;
+                position: absolute;
+                margin: auto;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 4px;
+                box-sizing: border-box;
+                background: url("/images/resize-handle.svg") no-repeat center;
+                opacity: 0.3;
+                /* border: 2px dotted color-mix(in srgb, var(--inverse) 90%, transparent); */
+                z-index: 10;
+            }
+            &:hover,
+            &.resizing {
+                background-color: var(--accent-secondary);
+            }
+
+            cursor: ew-resize;
         }
     }
 

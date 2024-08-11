@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
-		"typesafe-i18n": "typesafe-i18n"
+    "typesafe-i18n": "typesafe-i18n"
   },
   "devDependencies": {
     "@alexanderolsen/libsamplerate-js": "^2.1.1",
@@ -23,7 +23,7 @@
     "better-cue-parser": "^0.3.1",
     "dexie": "^4.0.4",
     "hotkeys-js": "^3.9.5",
-    "konva": "^9.3.1",
+    "konva": "^9.3.14",
     "lodash-es": "^4.17.21",
     "md5": "^2.3.0",
     "mdsvex": "^0.11.2",
@@ -53,7 +53,8 @@
     "vite-bundle-analyzer": "^0.10.3",
     "wavefile": "^11.0.0",
     "wavesurfer.js": "^7.7.11",
-    "wikibase-sdk": "^9.2.4"
+    "wikibase-sdk": "^9.2.4",
+    "wtf_wikipedia": "^10.3.2"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.1",
@@ -61,6 +62,7 @@
     "mousetrap": "^1.6.5",
     "music-metadata-browser": "^2.5.8",
     "rollup-plugin-node-polyfills": "^0.2.1",
-    "svrollbar": "^0.12.0"
+    "svrollbar": "^0.12.0",
+    "wtf-plugin-html": "^1.0.0"
   }
 }

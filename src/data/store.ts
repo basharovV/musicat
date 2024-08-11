@@ -242,6 +242,9 @@ export const isQueueOpen = writable(false);
 export const isQueueCleared = writable(false);
 export const queueMode: Writable<QueueMode> = writable("library");
 
+// Wiki
+export const isWikiOpen = writable(false);
+
 export const isCmdOrCtrlPressed = writable(false);
 
 export const isWaveformOpen = writable(false);

@@ -37,6 +37,7 @@
         isSmartQueryBuilderOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
+        isWikiOpen,
         os,
         playerTime,
         playlist,
@@ -698,7 +699,6 @@
         animate(0);
     }
 
-
     /**
      * Draws artwork from artworkSrc and artworkFormat, otherwise shows the placeholder image
      * Also animates changes between tracks by sliding the artwork to the left
@@ -711,7 +711,7 @@
             context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
             if ($currentSong) {
                 const artwork = artworkSrc;
-                console.log('artwork', artwork);
+                console.log("artwork", artwork);
                 if (artwork) {
                     const img = new Image();
                     img.src = artwork;
@@ -1409,6 +1409,7 @@
                         ? "gg:arrows-expand-up-right"
                         : "gg:arrows-expand-down-left"}
                     onClick={() => toggleMiniPlayer()}
+                    boxed
                 />
             </div>
             <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
@@ -1426,7 +1427,14 @@
                         </div>
                     {/if}
                     {#if artist}
-                        <p class="artist">{artist}</p>
+                        <p
+                            class="artist"
+                            on:click={() => {
+                                $isWikiOpen = !$isWikiOpen;
+                            }}
+                        >
+                            {artist}
+                        </p>
                     {/if}
                     {#if !title && !album && !artist}
                         <button
@@ -1849,7 +1857,8 @@
             padding-left: 5px;
             font-size: 13px;
             color: var(--text-active, initial);
-            border: 1px solid color-mix(in srgb, var(--inverse) 80%, transparent);
+            border: 1px solid
+                color-mix(in srgb, var(--inverse) 80%, transparent);
             backdrop-filter: blur(8px);
             z-index: 10;
             &::placeholder {
@@ -1857,7 +1866,11 @@
             }
             &:focus {
                 /* outline: 1px solid #5123dd; */
-                background-color: color-mix(in srgb, var(--inverse) 80%, transparent);
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 80%,
+                    transparent
+                );
                 &::placeholder {
                     color: var(--text-inactive, initial);
                 }
@@ -1921,19 +1934,13 @@
         font-size: 20px;
 
         position: absolute;
-        top: 15px;
+        top: 10px;
         right: 8px;
-        color: rgb(115, 115, 115);
         padding: 3px;
 
         &:active {
             color: rgb(141, 47, 47);
             opacity: 1;
-        }
-
-        &.hovered {
-            background-color: rgba(0, 0, 0, 0.457);
-            border-radius: 4px;
         }
     }
     .info {
@@ -1969,9 +1976,27 @@
             font-weight: 500;
             font-size: 0.9em;
             opacity: 0.9;
+            width: fit-content;
+            margin: auto;
+            padding: 0 5px;
             z-index: 1;
             text-overflow: ellipsis;
             overflow: hidden;
+            pointer-events: all;
+            &:hover {
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 80%,
+                    transparent
+                );
+            }
+            &:active {
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 90%,
+                    transparent
+                );
+            }
         }
         .title {
             white-space: nowrap;

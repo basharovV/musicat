@@ -62,8 +62,8 @@
                 collectionsPage += 1;
                 isLoadingCollections = true;
                 const newPage = await getIACollections(collectionsPage);
-                collections.push(...newPage);
-                collections = collections;
+                $iaCollections.push(...newPage);
+                $iaCollections = $iaCollections;
                 isLoadingCollections = false;
             }
             console.log("scrolled to bottom", scrolledToBottom);

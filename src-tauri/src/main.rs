@@ -23,6 +23,7 @@ mod metadata;
 mod output;
 mod player;
 mod resampler;
+mod scrape;
 
 #[cfg(test)]
 mod tests;
@@ -458,7 +459,8 @@ async fn main() {
             volume_control,
             get_waveform,
             loop_region,
-            download_file
+            download_file,
+            scrape::get_wikipedia
         ])
         .plugin(tauri_plugin_fs_watch::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
