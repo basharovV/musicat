@@ -166,6 +166,13 @@ const en = {
         aiModel: "AI Model (LLM)",
         openApiKey: "OpenAI API Key",
         geniusApiKey: "Genius API Key"
+    },
+    wiki: {
+        inArticle: "Found mentions from your library:",
+        clickHint: "Click to scroll to mention",
+        albums: "Albums",
+        songs: "Songs",
+        artists: "Artists",
     }
 } satisfies BaseTranslation;
 

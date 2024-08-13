@@ -87,9 +87,11 @@ export function createCSSTemplate(prefix, base = {}) {
         if (val[0] === "type" && val[1] === "dark") {
             acc += `--inverse: #ffffff2f;\n`;
             acc += `--type-bw: black;\n`;
+            acc += `--type-bw-inverse: white;\n`;
         } else if (val[0] === "type" && val[1] === "light") {
             acc += `--inverse: black;\n`;
             acc += `--type-bw: white;\n`;
+            acc += `--type-bw-inverse: black;\n`;
         }
         return (acc += `--${val[0]}: ${val[1]};\n`);
     }, "");

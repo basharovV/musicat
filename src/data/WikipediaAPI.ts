@@ -30,7 +30,7 @@ export async function getWikipediaUrlForArtist(artistName) {
         const siteLink = firstEntity?.["sitelinks"]?.enwiki?.title;
 
         if (!siteLink) return null;
-        return `https://en.wikipedia.org/wiki/${siteLink}`;
+        return `https://en.wikipedia.org/wiki/${siteLink}?useskin=vector-2022`;
     } catch (error) {
         console.error("Error fetching data from Wikipedia API:", error);
         return null;

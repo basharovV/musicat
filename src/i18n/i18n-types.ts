@@ -513,6 +513,28 @@ type RootTranslation = {
 		 */
 		geniusApiKey: string
 	}
+	wiki: {
+		/**
+		 * F​o​u​n​d​ ​m​e​n​t​i​o​n​s​ ​f​r​o​m​ ​y​o​u​r​ ​l​i​b​r​a​r​y​:
+		 */
+		inArticle: string
+		/**
+		 * C​l​i​c​k​ ​t​o​ ​s​c​r​o​l​l​ ​t​o​ ​m​e​n​t​i​o​n
+		 */
+		clickHint: string
+		/**
+		 * A​l​b​u​m​s
+		 */
+		albums: string
+		/**
+		 * S​o​n​g​s
+		 */
+		songs: string
+		/**
+		 * A​r​t​i​s​t​s
+		 */
+		artists: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -1013,6 +1035,28 @@ export type TranslationFunctions = {
 		 * Genius API Key
 		 */
 		geniusApiKey: () => LocalizedString
+	}
+	wiki: {
+		/**
+		 * Found mentions from your library:
+		 */
+		inArticle: () => LocalizedString
+		/**
+		 * Click to scroll to mention
+		 */
+		clickHint: () => LocalizedString
+		/**
+		 * Albums
+		 */
+		albums: () => LocalizedString
+		/**
+		 * Songs
+		 */
+		songs: () => LocalizedString
+		/**
+		 * Artists
+		 */
+		artists: () => LocalizedString
 	}
 }
 

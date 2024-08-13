@@ -28,6 +28,7 @@
         width: fit-content;
         display: flex;
         flex-direction: row;
+        height: fit-content;
         align-items: center;
         gap: 5px;
         /* margin-left: 1em; */
