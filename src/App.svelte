@@ -450,7 +450,7 @@
 
         .notes {
             grid-row: 3;
-            grid-column: 2 / 4;
+            grid-column: 2 / 6;
         }
 
         .bottom-bar {
