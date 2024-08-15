@@ -45,7 +45,7 @@
   -
 </p>
 
-![screenshot](docs/musicat-aug-2024.jpg)
+![screenshot](docs/musicat-aug-2024-promo.webp)
 
 > [!WARNING]
 > musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
@@ -55,7 +55,7 @@
 
 ## Introduction
 
-This is a player that I built for personal use, with the goal of re-connecting with my local music library in the age of streaming. It's pleasant to use, with a modern UX that is fresh yet feels familiar to classic software like Winamp, foobar2000. It's fast, audiophile-friendly and can handle large libraries of all formats. I wanted to create a tool that puts me as the listener back in the driver's seat, taking an active role in organizing and enriching my library of music that I curate with passion.
+This is a player that I built for personal use, with the goal of re-connecting with my local music library in the age of streaming. It's pleasant to use, with a modern UX that is fresh yet feels familiar to classic software like Winamp, foobar2000 and iTunes. It's fast, audiophile-friendly and can handle large libraries of all formats. I wanted to create a tool that puts me as the listener back in the driver's seat, taking an active role in organizing and enriching my library of music that I curate with passion.
 
 ## For melomaniacs
 
@@ -69,37 +69,37 @@ As a musician, I also wanted to organize my own music that I've made over the ye
 ## Features in progress
 There's a lot of things in my personal wishlist, but here are the things that I'm working on or thinking about currently: 
 
-<small style="margin-top: 0.5em;float:right;font-size: 12px">●●●●●○○○○○</small>
 🌐 **Internationalization**
+<small>&nbsp;&nbsp;&nbsp;●●●●●○○○○○</small>
 </br>
 <small>Once done, contributors can add new languages by adding a locale file eg. `src/i18n/it/index.ts`.</small>
 
-<small style="margin-top: 0.5em;float:right;font-size: 12px">●●●●●●●●○○</small>
 🎨 **Theme Support**
+<small>&nbsp;&nbsp;&nbsp;●●●●●●●●○○</small>
 </br>
 <small>[→ See built-in themes and discuss here](https://github.com/basharovV/musicat/discussions/15)</small>
 
-<small style="margin-top: 0.5em;float:right;font-size: 12px">●●●○○○○○○○</small>
 📖 **Knowledge/Wiki panel**
+<small>&nbsp;&nbsp;&nbsp;●●●○○○○○○○</small>
 </br>
 <small>A built-in Wikipedia reader for artists/albums/songs which makes interesting connections to your library.</small>
 
-<small style="margin-top: 0.5em;float:right;font-size: 12px">●○○○○○○○○○</small>
 📖 **Linux/Windows builds**
+<small>&nbsp;&nbsp;&nbsp;●○○○○○○○○○</small>
 </br>
 <small>via Tauri's Github action</small>
 
-<small style="margin-top: 0.5em;float:right;font-size: 12px">○○○○○○○○○○</small>
 📖 **Auto-updates**
+<small>&nbsp;&nbsp;&nbsp;○○○○○○○○○○</small>
 </br>
 <small>Need to see how to do this with Tauri and Github releases</small>
 
 ## Screenshots
 
-![screenshot](docs/albums.jpg)
+![screenshot](docs/albums.webp)
 ![screenshot](docs/queue.jpg)
-![screenshot](docs/track-info.jpg)
-![screenshot](docs/smart-query.jpg)
+![screenshot](docs/track-info.webp)
+![screenshot](docs/smart-query.webp)
 ![screenshot](docs/map.jpg)
 ![screenshot](docs/stats.jpg)
 
