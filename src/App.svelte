@@ -323,8 +323,11 @@
         </div>
 
         {#if $isLyricsOpen}
-            <div class="lyrics" transition:fade={{ duration: 150 }}>
-                <LyricsView />
+            <div
+                class="lyrics"
+                transition:fade={{ duration: 150 }}
+            >
+                <LyricsView right={$isWikiOpen ? wikiPanelSize + 15 : 0}/>
             </div>
         {/if}
 

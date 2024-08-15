@@ -622,7 +622,8 @@
                 }
             }
             :global(.hatnote),
-            :global(.infobox) {
+            :global(.infobox),
+            :global(.mw-editsection) {
                 display: none;
             }
             :global(p),

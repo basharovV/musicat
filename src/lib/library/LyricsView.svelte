@@ -14,6 +14,7 @@
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
     export var isFullScreen = false;
+    export var right = 0;
     var onLyricsUpdated;
 
     function onLyricsChanged(e) {
@@ -121,6 +122,7 @@
     class="container"
     class:full-screen={isFullScreen}
     class:extra-space={$isWaveformOpen}
+    style="right: {right + 24}px"
     on:mouseenter={() => {
         $isLyricsHovered = true;
     }}
