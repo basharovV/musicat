@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - v[12].[0-9]+.[0-9]+
+    branches:
+      - release
 
 # This workflow will trigger on each push to a version tag to create or update a GitHub release, build your app, and upload the artifacts to the release.
 
