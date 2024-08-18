@@ -245,6 +245,10 @@ export const queueMode: Writable<QueueMode> = writable("library");
 // Wiki
 export const isWikiOpen = writable(false);
 
+// Sidebar 
+export const isSidebarOpen = writable(true);
+export const sidebarManuallyOpened = writable(false);
+export const sidebarTogglePos = writable({x: 0, y: 0});
 export const isCmdOrCtrlPressed = writable(false);
 
 export const isWaveformOpen = writable(false);

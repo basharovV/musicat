@@ -41,6 +41,7 @@
         isQueueCleared,
         isQueueOpen,
         isShuffleEnabled,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
@@ -339,13 +340,16 @@
     let dpr;
 
     // CONSTANTS
-    const HEADER_HEIGHT = 26;
+    const HEADER_HEIGHT = 23.5;
     const ROW_HEIGHT = 26;
     const DROP_HINT_HEIGHT = 2;
     const BORDER_WIDTH = 1;
     const SCROLL_PADDING = 200;
     const DUMMY_COUNT = 5;
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
+
+    // PLATFORM SPECIFIC
+    const WINDOW_CONTROLS_WIDTH = 70;
 
     // COLORS
     let BG_COLOR: string;
@@ -1953,6 +1957,13 @@
                                     {/if}
                                     <Text
                                         config={{
+                                            x:
+                                                !$isSidebarOpen &&
+                                                !$isQueueOpen &&
+                                                $os === "Darwin" &&
+                                                idx === 0
+                                                    ? WINDOW_CONTROLS_WIDTH
+                                                    : null,
                                             text: f.name,
                                             align: "left",
                                             padding:

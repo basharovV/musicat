@@ -42,6 +42,7 @@
         isPlaying,
         isQueueOpen,
         isShuffleEnabled,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTrackInfoPopupOpen,
@@ -86,6 +87,8 @@
     export let isLoading = false;
     export let theme = "default";
     export let isInit = true;
+
+    const WINDOW_CONTROLS_WIDTH = 70;
 
     $: queue = ($isShuffleEnabled ? $shuffledPlaylist : $playlist).map(
         (s, idx) => ({
@@ -1440,6 +1443,10 @@
                                 />
                                 <Text
                                     config={{
+                                        x:
+                                            !$isSidebarOpen && $os === "Darwin"
+                                                ? WINDOW_CONTROLS_WIDTH
+                                                : null,
                                         text: "Queue",
                                         align: "left",
                                         padding: 10,
@@ -1456,7 +1463,10 @@
                                 />
                                 <Text
                                     config={{
-                                        x: 50,
+                                        x:
+                                            !$isSidebarOpen && $os === "Darwin"
+                                                ? 50 + WINDOW_CONTROLS_WIDTH
+                                                : 50,
                                         text:
                                             $playlistType === "album"
                                                 ? "(album mode)"
@@ -1684,5 +1694,4 @@
         right: 0;
         z-index: 15;
     }
-
 </style>

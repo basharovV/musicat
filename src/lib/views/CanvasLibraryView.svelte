@@ -198,7 +198,7 @@
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
-        margin: 5px 5px 0 0;
+        margin: 3.5px 5px 0 0;
         border-radius: 5px;
         box-sizing: content-box;
         overflow: hidden;

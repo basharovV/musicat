@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { debounce } from "lodash-es";
     import { Toaster } from "svelte-french-toast";
     import {
         bottomBarNotification,
@@ -15,12 +16,15 @@
         isMiniPlayer,
         isQueueOpen,
         isSettingsOpen,
+        isSidebarOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
         isWikiOpen,
         os,
         selectedPlaylistId,
         selectedSmartQuery,
+        sidebarManuallyOpened,
+        sidebarTogglePos,
         uiView
     } from "./data/store";
 
@@ -58,6 +62,9 @@
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
     import { startMenuListener } from "./window/EventListener";
     import WikiView from "./lib/views/WikiView.svelte";
+    import Icon from "./lib/ui/Icon.svelte";
+    import TopBar from "./lib/views/TopBar.svelte";
+    import { currentThemeObject } from "./theming/store";
 
     console.log("locale", getLocaleFromNavigator());
 
@@ -208,7 +215,7 @@
     let container: HTMLElement;
     let isResizing = false;
     let showCloseWikiPrompt = false;
-    function onResize(e: MouseEvent) {
+    function onWikiResize(e: MouseEvent) {
         e.stopPropagation();
         e.preventDefault();
         const containerWidth = window.innerWidth;
@@ -223,18 +230,44 @@
     }
     function startResizeListener() {
         isResizing = true;
-        container.addEventListener("mousemove", onResize);
+        container.addEventListener("mousemove", onWikiResize);
         document.addEventListener("mouseup", stopResizeListener);
     }
     function stopResizeListener() {
         isResizing = false;
-        container.removeEventListener("mousemove", onResize);
+        container.removeEventListener("mousemove", onWikiResize);
         if (showCloseWikiPrompt) {
             $isWikiOpen = false;
             showCloseWikiPrompt = false;
         }
     }
+
+    function onResize() {
+        // If sidebar is open and width is below 400px, collapse it
+        if ($isSidebarOpen && window.innerWidth < 400) {
+            if (window.innerHeight <= 210 && window.innerWidth <= 210) {
+                $isSidebarOpen = true;
+            } else {
+                $isSidebarOpen = false;
+            }
+        } else if (
+            !$isSidebarOpen &&
+            $sidebarManuallyOpened &&
+            window.innerWidth > 400
+        ) {
+            $isSidebarOpen = true;
+        } else if (window.innerHeight <= 210 && window.innerWidth <= 210) {
+            $isSidebarOpen = true;
+        }
+
+        $sidebarTogglePos = {
+            x: 0,
+            y: window.innerHeight / 2 - 30
+        };
+    }
 </script>
+
+<svelte:window on:resize={debounce(onResize, 5)} />
 
 <ThemeWrapper>
     <!-- <svelte:body on:click={onPageClick} /> -->
@@ -269,9 +302,35 @@
         class:transparent={$os === "Darwin"}
         bind:this={container}
     >
-        <div class="sidebar">
-            <Sidebar />
+        <div class="window-padding">
+            <!-- {#if !$isSidebarOpen}
+                <div data-tauri-drag-region></div>
+            {/if} -->
         </div>
+        <div class="top-bar">
+            {#if !$isSidebarOpen}
+                <TopBar />
+            {/if}
+        </div>
+
+        <div class="sidebar" class:visible={$isSidebarOpen}>
+            {#if $isSidebarOpen}
+                <Sidebar />
+            {/if}
+        </div>
+
+        {#if !$isSidebarOpen}
+            <div class="sidebar-toggle" style="top: {$sidebarTogglePos.y}px">
+                <Icon
+                    icon="tabler:layout-sidebar-left-expand"
+                    size={22}
+                    onClick={() => {
+                        $isSidebarOpen = true;
+                        $sidebarManuallyOpened = true;
+                    }}
+                />
+            </div>
+        {/if}
 
         <div class="queue">
             {#if $isQueueOpen}
@@ -323,11 +382,8 @@
         </div>
 
         {#if $isLyricsOpen}
-            <div
-                class="lyrics"
-                transition:fade={{ duration: 150 }}
-            >
-                <LyricsView right={$isWikiOpen ? wikiPanelSize + 15 : 0}/>
+            <div class="lyrics" transition:fade={{ duration: 150 }}>
+                <LyricsView right={$isWikiOpen ? wikiPanelSize + 15 : 0} />
             </div>
         {/if}
 
@@ -393,7 +449,7 @@
     main {
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
-        grid-template-rows: auto 1fr auto auto;
+        grid-template-rows: auto auto 1fr auto auto auto;
         width: 100vw;
         height: 100vh;
         opacity: 1;
@@ -404,6 +460,10 @@
             background-color: color-mix(in srgb, var(--background, initial) 86%, transparent);
         } */
 
+        @media screen and (max-width: 210px) and (max-height: 210px) {
+            grid-template-columns: auto; // Sidebar, queue, panel, resizer, wiki
+        }
+
         &.mini-player {
             border-radius: 5px;
             overflow: hidden;
@@ -411,23 +471,50 @@
 
         .sidebar {
             width: 100%;
-            grid-row: 1 / 3;
+            grid-row: 1 / 4;
             grid-column: 1;
+            width: 5px;
+            &.visible {
+                width: 210px;
+            }
         }
 
-        @media only screen and (max-width: 320px) {
-            grid-template-columns: 1fr;
-        }
-        @media only screen and (max-width: 320px) and (min-height: 300px) {
-            grid-template-columns: 1fr;
-            .sidebar {
-                display: none;
+        .sidebar-toggle {
+            position: absolute;
+            left: -12px;
+            margin: auto;
+            z-index: 20;
+            transition: all 0.1s ease-in-out;
+
+            &:hover {
+                transform: translateX(5px);
             }
-            padding-top: 2em;
+        }
+
+        @keyframes appear {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 0.6;
+            }
+        }
+
+        .window-padding {
+            grid-row: 1;
+            grid-column: 2 / 6;
+            div {
+                height: 30px;
+            }
+        }
+
+        .top-bar {
+            grid-row: 5;
+            grid-column: 2 / 6;
         }
 
         .header {
-            grid-row: 1;
+            grid-row: 2;
             grid-column: 3;
 
             .content {
@@ -442,14 +529,14 @@
         }
 
         .panel {
-            grid-row: 2;
+            grid-row: 3 / 5;
             grid-column: 3;
             display: grid;
             overflow: hidden;
         }
 
         .notes {
-            grid-row: 3;
+            grid-row: 4;
             grid-column: 2 / 6;
         }
 
@@ -457,14 +544,14 @@
             position: relative;
             width: 100%;
             z-index: 15;
-            grid-row: 4;
+            grid-row: 6;
             grid-column: 2 / 6;
             margin-top: 5px;
             margin-bottom: 5px;
         }
 
         .queue {
-            grid-row: 1/3;
+            grid-row: 3/5;
             grid-column: 2;
             overflow: hidden;
             height: 100%;
@@ -484,7 +571,7 @@
         }
 
         .wiki {
-            grid-row: 1/3;
+            grid-row: 3/5;
             grid-column: 5;
             overflow-y: hidden;
             height: 100%;
@@ -516,7 +603,7 @@
 
         resize-handle {
             grid-column: 4;
-            grid-row: 1 / 3;
+            grid-row: 3 / 5;
             display: block;
             position: relative;
             height: 100%;

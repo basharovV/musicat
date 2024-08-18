@@ -6,6 +6,8 @@
     export let playerTime = 0;
     export let onSeek = (val) => {};
     export let buffered: TimeRanges | null = null; // For Web Audio player
+    export let style: "normal" | "thin" = "normal";
+    export let showProgress = false;
     let bufferedRanges = [];
     // Function to update buffered ranges
 
@@ -54,7 +56,7 @@
     };
 </script>
 
-<div class="container">
+<div class="container" class:thin={style === "thin"}>
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div
         role="progressbar"
@@ -67,7 +69,12 @@
             onSeek && onSeek(duration * percent);
         }}
     >
-        <div class="seekbar" bind:this={seekBar} class:hovered={showHoverHead} class:light={$currentThemeObject.type === 'light'}>
+        <div
+            class="seekbar"
+            bind:this={seekBar}
+            class:hovered={showHoverHead}
+            class:light={$currentThemeObject.type === "light"}
+        >
             <svg
                 class="playhead"
                 style="left:{playheadPos}%;"
@@ -105,6 +112,13 @@
                     ></div>
                 {/each}
             {/if}
+
+            {#if showProgress}
+                <div
+                    class="seekbar progress"
+                    style="width: {playheadPos}%;"
+                ></div>
+            {/if}
         </div>
     </div>
 </div>
@@ -114,7 +128,7 @@
         display: flex;
         flex-direction: column;
         height: auto;
-        padding: 0 1em 0;
+        width: 100%;
         align-items: center;
         justify-content: space-between;
 
@@ -122,6 +136,29 @@
         color: white;
         /* box-shadow: -5px -10px 5px rgba(0, 0, 0, 0.071); */
         z-index: 4;
+        * {
+            user-select: none;
+        }
+    }
+
+    .thin {
+        .seekbar {
+            height: 0.75px;
+            background: linear-gradient(
+                to right,
+                transparent,
+                color-mix(in srgb, var(--background) 76%, white) 50%,
+                transparent
+            );
+            &.light {
+                background: linear-gradient(
+                    to right,
+                    transparent,
+                    color-mix(in srgb, var(--background) 56%, black) 50%,
+                    transparent
+                );
+            }
+        }
     }
 
     p {
@@ -147,7 +184,7 @@
 
     .seekbar {
         background-color: color-mix(in srgb, var(--background) 76%, white);
-        
+
         &.light {
             background-color: color-mix(in srgb, var(--background) 56%, black);
         }
@@ -167,6 +204,21 @@
             bottom: 0;
             background-color: color-mix(in srgb, var(--background) 76%, black);
             z-index: 1;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to right,
+                transparent,
+                color-mix(in srgb, var(--accent) 56%, black) 98%,
+                transparent
+            );
+            z-index: 10;
             transition: all 0.2s ease-in-out;
         }
 
@@ -197,7 +249,7 @@
             overflow: visible;
             pointer-events: none;
             transition: all 0.16s cubic-bezier(0.075, 0.82, 0.165, 1);
-            z-index: 2;
+            z-index: 3;
             top: -4px;
 
             &.hoverhead {

@@ -34,6 +34,7 @@
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
@@ -48,6 +49,8 @@
         selectedPlaylistId,
         selectedSmartQuery,
         shouldFocusFind,
+        sidebarManuallyOpened,
+        sidebarTogglePos,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         uiView,
@@ -66,6 +69,7 @@
     import type { SavedSmartQuery } from "../smart-query/QueryPart";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
+    import VolumeSlider from "../ui/VolumeSlider.svelte";
 
     // What to show in the sidebar
     let title;
@@ -195,6 +199,8 @@
     let width = 0;
     let hasDecorations = false;
 
+    let sidebarToggleX = 0;
+    let sidebarToggleY = 0;
     async function onResize() {
         // Check if is miniplayer mode
         height = window.innerHeight;
@@ -208,6 +214,16 @@
             $isMiniPlayer = false;
             console.log("setting to true");
             await tauriWindow.getCurrent().setDecorations(true);
+        }
+
+        // Get bottom coordinates of top container
+        const topContainer = sidebar?.querySelector(".top");
+
+        if (topContainer) {
+            $sidebarTogglePos = {
+                x: topContainer.getBoundingClientRect().right,
+                y: topContainer.getBoundingClientRect().bottom
+            };
         }
     }
 
@@ -613,6 +629,16 @@
             titleElement?.scrollWidth > titleElement?.clientWidth;
 
         resetMarquee();
+
+        // Get bottom coordinates of top container
+        const topContainer = sidebar.querySelector(".top");
+
+        if (topContainer) {
+            $sidebarTogglePos = {
+                x: topContainer.getBoundingClientRect().right - 15,
+                y: topContainer.getBoundingClientRect().bottom - 10
+            };
+        }
     }
 
     function clearMarquee() {
@@ -868,6 +894,7 @@
     class:has-current-song={$currentSong}
     class:empty={!$currentSong}
     class:hovered={isMiniPlayerHovered}
+    class:visible={$isSidebarOpen}
     transition:fly={{ duration: 200, x: -200 }}
     bind:this={sidebar}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
@@ -1392,6 +1419,27 @@
 
         <div class="track-info-content">
             <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+
+            <div
+                class="sidebar-toggle"
+                class:visible={$isSidebarOpen}
+                use:tippy={{
+                    content: "Toggle the sidebar.",
+                    placement: "right"
+                }}
+            >
+                <Icon
+                    icon="tabler:layout-sidebar-left-collapse"
+                    size={22}
+                    color={$currentThemeObject["icon-secondary"]}
+                    onClick={(e) => {
+                        $isSidebarOpen = false;
+                        $sidebarManuallyOpened = false;
+                        $sidebarTogglePos = { x: e.clientX, y: e.clientY };
+                    }}
+                />
+            </div>
+
             <div
                 bind:this={miniToggleBtn}
                 class="mini-toggle"
@@ -1408,6 +1456,7 @@
                     icon={$isMiniPlayer
                         ? "gg:arrows-expand-up-right"
                         : "gg:arrows-expand-down-left"}
+                    color={$currentThemeObject["icon-secondary"]}
                     onClick={() => toggleMiniPlayer()}
                     boxed
                 />
@@ -1547,17 +1596,7 @@
                 />
             </div>
 
-            <div class="volume">
-                <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    bind:value={$volume}
-                    class="slider"
-                    id="myRange"
-                />
-            </div>
+            <VolumeSlider />
 
             <div
                 class="visualizer-icon"
@@ -1579,7 +1618,6 @@
 </sidebar>
 
 <style lang="scss">
-    $thumb_size: 22px;
     $mini_y_breakpoint: 460px;
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
@@ -1927,6 +1965,14 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 14px;
+            left: 12px;
+            padding: 3px;
+            pointer-events: all;
+        }
     }
 
     .mini-toggle {
@@ -2153,6 +2199,7 @@
 
     .seekbar {
         width: 100%;
+        padding: 0 1em;
         display: flex;
         flex-direction: column;
         .elapsed-time {
@@ -2214,38 +2261,6 @@
             .track-info-icon,
             .visualizer-icon {
                 display: none;
-            }
-        }
-    }
-
-    .volume {
-        width: 100%;
-        display: flex;
-        align-items: center;
-
-        input {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 5px;
-            background: color-mix(in srgb, var(--inverse) 20%, transparent);
-            outline: none;
-            opacity: 1;
-            border-radius: 3px;
-            -webkit-transition: 0.2s;
-            transition: opacity 0.2s;
-
-            &::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: $thumb_size;
-                height: $thumb_size;
-                background: url("/images/volume-up.svg");
-            }
-
-            &::-moz-range-thumb {
-                width: $thumb_size;
-                height: $thumb_size;
-                background: #04aa6d;
             }
         }
     }

@@ -13,6 +13,7 @@
         isFolderWatchUpdate,
         isLyricsOpen,
         isQueueOpen,
+        isSidebarOpen,
         nextUpSong,
         uiView,
         userSettings
@@ -55,17 +56,20 @@
         }, 200);
     });
 
+    let wasSidebarOpen = $isSidebarOpen;
+
     function onResize() {
         if (nextUp?.getBoundingClientRect()) {
             // calculate remaining space for spectroscope visualizer
             const nextUpRight = nextUp?.getBoundingClientRect()?.right;
             const rightXPos = right?.getBoundingClientRect()?.left;
             const diff = Math.abs(nextUpRight - rightXPos);
-            console.log("diff", diff);
+            // console.log("diff", diff);
             visualiserWidth = Math.min(150, diff - 13);
             showVisualiser = window.innerWidth > 900 && diff > 150;
         }
     }
+
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
@@ -213,6 +217,12 @@
             flex-grow: 1;
             align-items: center;
             position: relative;
+
+            @media only screen and (max-width: 500px) {
+                .lossy-selector {
+                    display: none;
+                }
+            }
 
             .next-up {
                 display: flex;

@@ -4,6 +4,7 @@
         currentSong,
         isQueueCleared,
         isShuffleEnabled,
+        isSidebarOpen,
         playlist,
         queriedSongs,
         queueMode,
@@ -29,7 +30,7 @@
     }
 </script>
 
-<div class="container">
+<div class="container" class:extra-margin={!$isSidebarOpen}>
     <div class="new-playlist">
         {#if !isPlaylistInputShown}
             <button
@@ -88,6 +89,10 @@
         gap: 5px;
         overflow: visible;
         position: relative;
+
+        &.extra-margin {
+            margin-bottom: 5px;
+        }
 
         .new-playlist {
             grid-column: 1 / 3;
