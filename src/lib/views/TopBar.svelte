@@ -7,9 +7,13 @@
         isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
+        isTrackInfoPopupOpen,
+        isWaveformOpen,
         playerTime,
         playlist,
         queriedSongs,
+        rightClickedTrack,
+        rightClickedTracks,
         seekTime,
         volume
     } from "../../data/store";
@@ -21,6 +25,7 @@
     import { lookForArt } from "../../data/LibraryImporter";
     import { Buffer } from "buffer";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
+    import tippy from "tippy.js";
 
     let duration;
     let artworkSrc;
@@ -136,33 +141,67 @@
         </div>
     </div>
     <div class="middle-container" data-tauri-drag-region>
-        <div class="middle"  data-tauri-drag-region>
+        <div class="middle" data-tauri-drag-region>
             {#if artworkSrc}
                 <div class="artwork">
                     <img src={artworkSrc} alt="artwork" />
                 </div>
             {/if}
-            <div class="song-info"  data-tauri-drag-region>
+            <div class="song-info" data-tauri-drag-region>
                 <small
                     >{$currentSong?.title}
                     <span> • {$currentSong?.artist}</span>
                     <span> • {$currentSong?.album}</span>
                 </small>
             </div>
+
+            <div class="track-info-icon">
+                <Icon
+                    size={16}
+                    icon="mdi:information"
+                    onClick={() => {
+                        $rightClickedTrack = $currentSong;
+                        $rightClickedTracks = [];
+                        $isTrackInfoPopupOpen = true;
+                    }}
+                    color={$currentThemeObject["icon-secondary"]}
+                />
+            </div>
         </div>
     </div>
     <div class="right" data-tauri-drag-region>
         <VolumeSlider />
+
+        <div
+            class="visualizer-icon"
+            use:tippy={{
+                content: "waveform, loop region, marker editor",
+                placement: "top"
+            }}
+        >
+            <Icon
+                icon="ph:wave-sine-duotone"
+                onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+                color={$isWaveformOpen
+                    ? $currentThemeObject["accent-secondary"]
+                    : $currentThemeObject["icon-secondary"]}
+            />
+        </div>
     </div>
-    <div class="seekbar">
-        <Seekbar
-            {duration}
-            onSeek={(time) => seekTime.set(time)}
-            playerTime={$playerTime}
-            style="thin"
-            showProgress
-        />
+    <div></div>
+
+    <div class="seekbar-outer">
+        <div class="seekbar">
+            <Seekbar
+                {duration}
+                onSeek={(time) => seekTime.set(time)}
+                playerTime={$playerTime}
+                style="thin"
+                showProgress
+            />
+        </div>
     </div>
+    <div></div>
 </top-bar>
 
 <style lang="scss">
@@ -182,7 +221,7 @@
 
         @media screen and (max-width: 600px) {
             grid-template-columns: 120px 1fr 120px;
-            }
+        }
 
         &.sidebar-collapsed {
             /* margin-left: 70px; */
@@ -276,12 +315,22 @@
                     }
                 }
             }
+
+            .track-info-icon {
+                display: flex;
+                align-items: center;
+                margin-right: 10px;
+                margin-bottom: 2px;
+                z-index: 10;
+                pointer-events: all;
+            }
         }
 
         .right {
             display: flex;
             justify-self: flex-end;
             margin: 0 1em;
+            gap: 10px;
         }
 
         .filler {
@@ -289,17 +338,21 @@
         }
 
         .seekbar-outer {
-            grid-row: 1;
+            grid-row: 2;
             grid-column: 2;
             width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
         .seekbar {
             position: absolute;
-            top: -13px;
+            width: 100%;
+            max-width: 600px;
             margin: 0 5px;
-            left: 0;
-            right: 0;
             z-index: 12;
+            top: -7.5px;
             .elapsed-time {
                 width: max-content;
                 white-space: nowrap;

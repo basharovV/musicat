@@ -63,7 +63,7 @@ export const DEFAULT_THEME: Theme = {
     "background": "#242026cb",
     "overlay-bg": "#3c3c3f33",
     "accent": "#45fffcf3",
-    "accent-secondary": "#5123dd",
+    "accent-secondary": "#632fff",
     "button-bg": "#1c1b1b",
     "button-text": "#ffffff",
     "input-bg": "#4d494966",

@@ -307,11 +307,6 @@
                 <div data-tauri-drag-region></div>
             {/if} -->
         </div>
-        <div class="top-bar">
-            {#if !$isSidebarOpen}
-                <TopBar />
-            {/if}
-        </div>
 
         <div class="sidebar" class:visible={$isSidebarOpen}>
             {#if $isSidebarOpen}
@@ -386,12 +381,13 @@
                 <LyricsView right={$isWikiOpen ? wikiPanelSize + 15 : 0} />
             </div>
         {/if}
-
-        {#if $isWaveformOpen}
-            <div class="notes" transition:fly={{ duration: 200, y: 50 }}>
-                <NotesView />
+        <div class="waveform">
+            <div transition:fly={{ duration: 200, y: 50 }}>
+                {#if $isWaveformOpen}
+                    <NotesView />
+                {/if}
             </div>
-        {/if}
+        </div>
 
         <div class="wiki">
             {#if $isWikiOpen}
@@ -410,6 +406,12 @@
                     {/if}
                     <WikiView />
                 </div>
+            {/if}
+        </div>
+
+        <div class="top-bar">
+            {#if !$isSidebarOpen}
+                <TopBar />
             {/if}
         </div>
 
@@ -449,7 +451,7 @@
     main {
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
-        grid-template-rows: auto auto 1fr auto auto auto;
+        grid-template-rows: auto auto 1fr auto auto auto; // (padding), header, panel, waveform, topbar, bottombar
         width: 100vw;
         height: 100vh;
         opacity: 1;
@@ -507,12 +509,6 @@
                 height: 30px;
             }
         }
-
-        .top-bar {
-            grid-row: 5;
-            grid-column: 2 / 6;
-        }
-
         .header {
             grid-row: 2;
             grid-column: 3;
@@ -529,14 +525,19 @@
         }
 
         .panel {
-            grid-row: 3 / 5;
+            grid-row: 3;
             grid-column: 3;
             display: grid;
             overflow: hidden;
         }
 
-        .notes {
+        .waveform {
             grid-row: 4;
+            grid-column: 2 / 6;
+        }
+
+        .top-bar {
+            grid-row: 5;
             grid-column: 2 / 6;
         }
 
@@ -551,7 +552,7 @@
         }
 
         .queue {
-            grid-row: 3/5;
+            grid-row: 2/4;
             grid-column: 2;
             overflow: hidden;
             height: 100%;
