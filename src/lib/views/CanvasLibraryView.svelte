@@ -204,5 +204,7 @@
         overflow: hidden;
         border-top: 0.7px solid
             color-mix(in srgb, var(--inverse) 40%, transparent);
+        border-bottom: 0.7px solid
+            color-mix(in srgb, var(--inverse) 30%, transparent);
     }
 </style>

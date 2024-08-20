@@ -9,7 +9,6 @@
 
 <style lang="scss">
     div {
-        min-height: 70px;
         border-radius: 5px;
         border-left: 0.7px solid #ffffff13;
         border-right: 0.7px solid #ffffff09;

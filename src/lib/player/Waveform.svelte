@@ -323,9 +323,10 @@
         margin: auto 0;
         height: 100%;
         position: relative;
+        padding: 8px 0;
         .waveform {
             margin: auto;
-            max-height: 70px;
+            max-height: 40px;
 
             &.zoomed {
                 mask-image: linear-gradient(

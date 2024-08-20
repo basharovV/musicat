@@ -24,6 +24,7 @@ mod output;
 mod player;
 mod resampler;
 mod scrape;
+mod dsp;
 
 #[cfg(test)]
 mod tests;

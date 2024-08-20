@@ -48,8 +48,7 @@ pub mod file_streamer {
     use crate::output::{self, AudioOutput};
     use crate::resampler::Resampler;
     use crate::{
-        GetWaveformRequest, GetWaveformResponse, LoopRegionRequest, SampleOffsetEvent,
-        StreamFileRequest, VolumeControlEvent,
+        dsp, GetWaveformRequest, GetWaveformResponse, LoopRegionRequest, SampleOffsetEvent, StreamFileRequest, VolumeControlEvent
     };
 
     #[derive(Debug)]
@@ -1023,7 +1022,9 @@ pub mod file_streamer {
 
         let expected_peaks_size = (track.codec_params.n_frames.unwrap()
             * new_spec.channels.count() as u64
-            / 256) as usize;
+            / 4000) as usize;
+        
+        let mut window: Vec<f32> = Vec::with_capacity(4000);
         let mut peaks: Vec<f32> = Vec::new();
 
         let mut avg = 0f32;
@@ -1058,19 +1059,12 @@ pub mod file_streamer {
                     sample_buf.copy_interleaved_ref(_decoded);
                     let mut i = 0;
                     sample_buf.samples().iter().for_each(|f| {
-                        if i % 2 == 0 {
-                            total += f;
-                            count += 1;
-                            n_frames += 1;
+                        if (window.len() < 4000) {
+                            window.push(*f);
+                        } else {
+                            peaks.push(dsp::calculate_rms(&window));
+                            window.clear();
                         }
-                        if (n_frames % 256 == 0) {
-                            avg = total / count as f32;
-                            peaks.push(avg);
-                            total = 0f32;
-                            count = 0;
-                            n_adds += 1;
-                        }
-                        i += 1;
                     });
 
                     total_count += 1;
