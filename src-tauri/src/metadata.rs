@@ -21,7 +21,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::{fmt, thread, time};
-use tauri::{Config, Manager};
+use tauri::path::PathResolver;
+use tauri::{AppHandle, Config, Emitter, Manager};
 
 mod artwork_cacher;
 
@@ -165,7 +166,7 @@ pub async fn write_metadatas(
                 if let Some(song) =
                     crate::metadata::extract_metadata(Path::new(&track.file_path), true)
                 {
-                    if let Some(album) = process_new_album(&song, _app_handle.config().as_ref()) {
+                    if let Some(album) = process_new_album(&song, &_app_handle) {
                         println!("Album: {:?}", album);
                         let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
                         if let Some(existing_album) = existing_album {
@@ -231,7 +232,10 @@ pub async fn get_song_metadata(event: GetSongMetadataEvent) -> Option<Song> {
 }
 
 #[tauri::command]
-pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> ToImportEvent {
+pub async fn scan_paths(
+    event: ScanPathsEvent,
+    app_handle: tauri::AppHandle,
+) -> Option<ToImportEvent> {
     // println!("scan_paths", event);
     let start = Instant::now();
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
@@ -244,7 +248,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
 
         if path.is_file() {
             if let Some(mut song) = crate::metadata::extract_metadata(&path, true) {
-                if let Some(album) = process_new_album(&song, app_handle.config().as_ref()) {
+                if let Some(album) = process_new_album(&song, &app_handle) {
                     println!("Album: {:?}", album);
                     albums
                         .lock()
@@ -264,7 +268,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
                 &songs,
                 &albums,
                 event.recursive,
-                app_handle.config().as_ref(),
+                &app_handle,
             ) {
                 if (!sub_results.songs.is_empty()) {
                     songs.lock().unwrap().extend(sub_results.songs);
@@ -300,7 +304,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
                 )
             };
             println!("{:?}", progress);
-            let _ = app_handle.emit_all(
+            let _ = app_handle.emit(
                 "import_chunk",
                 ToImportEvent {
                     songs: slice.to_vec(),
@@ -315,7 +319,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
         // Send album artworks first - client needs to process the songs, which in turn needs to process the albums
         // Once this is done the client can update all existing albums with the artworks
         // The done flag is true - this determines when the client is done importing
-        let _ = app_handle.emit_all(
+        let _ = app_handle.emit(
             "import_albums",
             ToImportEvent {
                 songs: vec![],
@@ -325,7 +329,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
                 error: None,
             },
         );
-        let _ = app_handle.emit_all(
+        let _ = app_handle.emit(
             "import_chunk",
             ToImportEvent {
                 songs: songs.lock().unwrap().clone(),
@@ -356,7 +360,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
                 )
             };
             println!("{:?}", progress);
-            let _ = app_handle.emit_all(
+            let _ = app_handle.emit(
                 "import_albums",
                 ToImportEvent {
                     songs: vec![],
@@ -368,7 +372,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
             );
         });
     } else {
-        let _ = app_handle.emit_all(
+        let _ = app_handle.emit(
             "import_albums",
             ToImportEvent {
                 songs: vec![],
@@ -388,7 +392,7 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
         (Instant::now() - start).as_secs_f32()
     );
 
-    ToImportEvent {
+    Some(ToImportEvent {
         songs: if event.is_async {
             vec![]
         } else {
@@ -402,10 +406,10 @@ pub async fn scan_paths(event: ScanPathsEvent, app_handle: tauri::AppHandle) -> 
         progress: 100,
         done: true,
         error: None,
-    }
+    })
 }
 
-fn process_new_album(song: &Song, app_config: &Config) -> Option<Album> {
+fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
     let mut artwork_src = String::new();
     let mut artwork_format = String::new();
     // Strip song from path
@@ -417,7 +421,7 @@ fn process_new_album(song: &Song, app_config: &Config) -> Option<Album> {
     )
     .to_hex_lowercase();
     // println!("album: {} , {}", song.album, album_id);
-    let result = look_for_art(&song.path, &song.file, &app_config);
+    let result = look_for_art(&song.path, &song.file, app);
     if let Ok(res) = result {
         if let Some(art) = res.clone() {
             // println!("Found existing artwork in folder for: {}", song.album);
@@ -434,7 +438,7 @@ fn process_new_album(song: &Song, app_config: &Config) -> Option<Album> {
             // println!("Caching artwork for: {}", song.album);
             // Cache artwork using artwork_cacher
             let cached_art_path =
-                artwork_cacher::cache_artwork(&art.data, &album_id, &art.format, app_config);
+                artwork_cacher::cache_artwork(&art.data, &album_id, &art.format, app);
             if let Ok(p) = cached_art_path {
                 artwork_src = p.to_str().unwrap().to_string();
                 artwork_format = art.format.clone();
@@ -489,7 +493,7 @@ fn process_directory(
     songs: &Arc<std::sync::Mutex<Vec<Song>>>,
     albums: &Arc<std::sync::Mutex<HashMap<String, Album>>>,
     recursive: bool,
-    config: &Config,
+    app: &AppHandle,
 ) -> Option<ProcessDirectoryResult> {
     let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
     let subalbums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
@@ -504,7 +508,7 @@ fn process_directory(
                     // println!("{:?}", entry.path());
                     if path.is_file() {
                         if let Some(mut song) = crate::metadata::extract_metadata(&path, true) {
-                            if let Some(album) = process_new_album(&song, config) {
+                            if let Some(album) = process_new_album(&song, app) {
                                 // println!("Album: {:?}", album);
                                 let existing_album =
                                     albums.lock().unwrap().get_mut(&album.id).cloned();
@@ -537,7 +541,7 @@ fn process_directory(
                         }
                     } else if path.is_dir() && recursive {
                         if let Some(sub_results) =
-                            process_directory(&path, songs, albums, true, config)
+                            process_directory(&path, songs, albums, true, app)
                         {
                             if (!sub_results.songs.is_empty()) {
                                 songs.lock().unwrap().extend(sub_results.songs);

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ArtistLinkItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
-    import { open } from "@tauri-apps/api/shell";
+    import { open } from "@tauri-apps/plugin-shell";
     import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistLinkItem;

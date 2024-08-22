@@ -1,9 +1,6 @@
-import { exists } from "@tauri-apps/api/fs";
+import { exists, watchImmediate } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
-import {
-    watchImmediate
-} from "tauri-plugin-fs-watch-api";
 import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
 import { addSong, importPaths } from "./LibraryImporter";
 import { db } from "./db";

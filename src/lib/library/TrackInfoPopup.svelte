@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { readText } from "@tauri-apps/api/clipboard";
-    import { open } from "@tauri-apps/api/dialog";
-    import { open as fileOpen } from "@tauri-apps/api/shell";
+    import { readText } from "@tauri-apps/plugin-clipboard-manager";
+    import { open } from "@tauri-apps/plugin-dialog";
+    import { open as fileOpen } from "@tauri-apps/plugin-shell";
 
     import { listen } from "@tauri-apps/api/event";
     import { pictureDir } from "@tauri-apps/api/path";
@@ -38,7 +38,7 @@
     import Input from "../ui/Input.svelte";
     import { optionalTippy } from "../ui/TippyAction";
 
-    import { invoke } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
     import {
         ENCODINGS,
         decodeLegacy,
@@ -456,7 +456,7 @@
     }
 
     // Shortcuts
-    let modifier = $os === "Darwin" ? "cmd" : "ctrl";
+    let modifier = $os === "macos" ? "cmd" : "ctrl";
     hotkeys(`${modifier}+enter`, function (event, handler) {
         if (hasChanges) {
             writeMetadata();

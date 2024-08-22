@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { open } from "@tauri-apps/api/dialog";
+    import { open } from "@tauri-apps/plugin-dialog";
     import { audioDir } from "@tauri-apps/api/path";
     import type { Song, SongProject, SongProjectRecording } from "src/App";
     import { currentSong, songDetailsUpdater } from "../../data/store";

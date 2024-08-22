@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import type { GetFileSizeResponse } from "../../App";
 import { MPEGDecoderWebWorker } from "mpg123-decoder";
 import { create, ConverterType } from "@alexanderolsen/libsamplerate-js";

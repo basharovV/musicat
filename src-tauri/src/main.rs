@@ -13,18 +13,21 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs;
 use std::{io::Write, path::Path};
-use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
+use tauri::menu::{
+    Menu, MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
+};
+use tauri::{AppHandle, Emitter, EventLoopMessage, Listener, Wry};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
+mod dsp;
 mod metadata;
 mod output;
 mod player;
 mod resampler;
 mod scrape;
-mod dsp;
 
 #[cfg(test)]
 mod tests;
@@ -47,9 +50,13 @@ struct GetLyricsResponse {
 #[tauri::command]
 async fn get_lyrics(event: GetLyricsEvent) -> GetLyricsResponse {
     let lyrics = fetch_lyrics(event.url.as_str()).await;
-    return GetLyricsResponse {
-        lyrics: lyrics.map_or(None, |l| Some(l)),
-    };
+    match lyrics {
+        Ok(l) => return GetLyricsResponse { lyrics: Some(l) },
+        Err(err) => {
+            println!("Lyrics not found {:?}", err);
+            return GetLyricsResponse { lyrics: None }
+        }
+    }
 }
 
 async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
@@ -81,61 +88,13 @@ async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
     }
 }
 
-fn build_menu() -> Menu {
-    let menu = Menu::new()
-        .add_submenu(Submenu::new(
-            "Musicat",
-            Menu::new()
-                .add_item(CustomMenuItem::new("about", "About Musicat"))
-                .add_item(
-                    CustomMenuItem::new("settings", "Settings").accelerator("CommandOrControl+,"),
-                )
-                .add_native_item(MenuItem::Hide)
-                .add_native_item(MenuItem::Quit),
-        ))
-        .add_submenu(Submenu::new(
-            "File",
-            Menu::new().add_item(
-                CustomMenuItem::new("import", "Import folder").accelerator("CommandOrControl+O"),
-            ),
-        ))
-        .add_submenu(Submenu::new(
-            "Edit",
-            Menu::new()
-                .add_native_item(MenuItem::Copy)
-                .add_native_item(MenuItem::Cut)
-                .add_native_item(MenuItem::Paste)
-                .add_native_item(MenuItem::Separator)
-                .add_native_item(MenuItem::Undo)
-                .add_native_item(MenuItem::Redo)
-                .add_native_item(MenuItem::Separator)
-                .add_native_item(MenuItem::SelectAll)
-                .add_item(CustomMenuItem::new("find", "Find").accelerator("CommandOrControl+F")),
-        ))
-        .add_submenu(Submenu::new(
-            "View",
-            Menu::new()
-                .add_item(CustomMenuItem::new("albums", "Go to Albums").accelerator("A"))
-                .add_item(CustomMenuItem::new("library", "Go to Library").accelerator("L"))
-                .add_item(CustomMenuItem::new("queue", "Toggle Queue").accelerator("Q"))
-                .add_item(
-                    CustomMenuItem::new("lyrics", "Toggle Lyrics")
-                        .accelerator("CommandOrControl+L"),
-                ),
-        ));
-    #[cfg(dev)]
-    let newMenu = menu.add_submenu(Submenu::new(
-        "DevTools",
-        Menu::new()
-            .add_item(CustomMenuItem::new("clear-db", "Clear DB"))
-            .add_item(CustomMenuItem::new("open-cache", "Open cache directory"))
-            .add_item(CustomMenuItem::new("open-config", "Open config directory")),
-    ));
-    #[cfg(dev)]
-    return newMenu;
+// fn build_menu(app: &AppHandle) -> Result<(), tauri::Error> {
 
-    return menu;
-}
+// #[cfg(dev)]
+// return newMenu;
+
+// return menu;
+// }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct GetFileSizeRequest {
@@ -343,7 +302,7 @@ async fn download_file(
         // Emit progress to the frontend
         let progress = (downloaded as f64 / total_size as f64) * 100.0;
         _app_handle
-            .emit_all("download-progress", progress)
+            .emit("download-progress", progress)
             .map_err(|e| e.to_string())?;
     }
 
@@ -372,7 +331,7 @@ async fn main() {
 
     let streamer = player::file_streamer::AudioStreamer::create().unwrap();
 
-    // let mut builder = tauri::Builder::default();
+    // let mut builder = tauri::Builder::default().plugin(tauri_plugin_window::init());
 
     // #[cfg(dev)]
     // {
@@ -380,20 +339,92 @@ async fn main() {
     // }
 
     tauri::Builder::default()
-        .menu(build_menu())
+        .menu(|app| {
+            let app_submenu = SubmenuBuilder::new(app, "Musicat")
+                .items(&[
+                    &MenuItemBuilder::with_id("about", "About Musicat").build(app)?,
+                    &MenuItemBuilder::with_id("settings", "Settings")
+                        .accelerator("CommandOrControl+,")
+                        .build(app)?,
+                    &PredefinedMenuItem::hide(app, Some("Hide"))?,
+                    &PredefinedMenuItem::quit(app, Some("Quit"))?,
+                ])
+                .build()?;
+            let file_submenu = SubmenuBuilder::new(app, "File")
+                .items(&[&MenuItemBuilder::with_id("import", "Import folder")
+                    .accelerator("CommandOrControl+O")
+                    .build(app)?])
+                .build()?;
+
+            let edit_submenu = SubmenuBuilder::new(app, "Edit")
+                .items(&[
+                    &PredefinedMenuItem::copy(app, Some("Copy"))?,
+                    &PredefinedMenuItem::cut(app, Some("Cut"))?,
+                    &PredefinedMenuItem::paste(app, Some("Paste"))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::undo(app, Some("Undo"))?,
+                    &PredefinedMenuItem::redo(app, Some("Redo"))?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::select_all(app, Some("Select All"))?,
+                    &MenuItemBuilder::with_id("find", "Find")
+                        .accelerator("CommandOrControl+F")
+                        .build(app)?,
+                ])
+                .build()?;
+
+            let view_submenu = SubmenuBuilder::new(app, "View")
+                .items(&[
+                    &MenuItemBuilder::with_id("albums", "Albums")
+                        .accelerator("Option+A")
+                        .build(app)?,
+                    &MenuItemBuilder::with_id("library", "Library")
+                        .accelerator("Option+L")
+                        .build(app)?,
+                    &MenuItemBuilder::with_id("queue", "Queue")
+                        .accelerator("Option+Q")
+                        .build(app)?,
+                    &MenuItemBuilder::with_id("lyrics", "Lyrics")
+                        .accelerator("Option+L")
+                        .build(app)?,
+                ])
+                .build()?;
+
+            let mut builder = MenuBuilder::new(app)
+                .item(&app_submenu)
+                .item(&file_submenu)
+                .item(&edit_submenu)
+                .item(&view_submenu);
+
+            if cfg!(dev) {
+                let devtools_submenu = SubmenuBuilder::new(app, "DevTools")
+                    .items(&[
+                        &MenuItemBuilder::with_id("clear-db", "Clear DB").build(app)?,
+                        &MenuItemBuilder::with_id("open-cache", "Open cache directory")
+                            .build(app)?,
+                        &MenuItemBuilder::with_id("open-config", "Open config directory")
+                            .build(app)?,
+                    ])
+                    .build()?;
+                builder = builder.item(&devtools_submenu);
+            }
+
+            let menu = builder.build()?;
+
+            Ok(menu.to_owned())
+        })
         .manage(streamer)
         .setup(|app| {
             let app_ = app.handle();
-            let app2_ = app.handle();
+            let app2_ = app_.clone();
             let state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
-            state.init(app_);
+            state.init(app_.clone());
             let strm1 = state.inner().to_owned();
             let strm2 = strm1.clone();
 
-            let window = app.get_window("main").unwrap();
+            let window = app.get_webview_window("main").unwrap();
             let window_reference = window.clone();
-            window.on_menu_event(move |event| {
-                window_reference.emit("menu", event.menu_item_id()).unwrap();
+            app.on_menu_event(move |app, event| {
+                app.emit("menu", event.id.0).unwrap();
             });
 
             #[cfg(target_os = "macos")]
@@ -409,15 +440,15 @@ async fn main() {
 
             let window_clone = Box::new(window.clone());
 
-            let _id2 = app.listen_global("show-toolbar", move |_| {
+            let _id2 = app.listen_any("show-toolbar", move |_| {
                 window.set_decorations(true).unwrap();
             });
 
-            let _id2 = app.listen_global("hide-toolbar", move |_| {
+            let _id2 = app.listen_any("hide-toolbar", move |_| {
                 window_clone.set_decorations(false).unwrap();
             });
 
-            let _id3 = app.listen_global("webrtc-signal", move |event| {
+            let _id3 = app.listen_any("webrtc-signal", move |event| {
                 println!("webrtc-signal {:?}", event);
                 let event_clone = event.clone();
                 let app_clone = app2_.clone();
@@ -427,12 +458,12 @@ async fn main() {
                     // Handle client's offer
                     let answer = handle_clone.handle_signal(event_clone.payload()).await;
                     if let Some(ans) = answer {
-                        let _ = app_clone.emit_all("webrtc-answer", ans.clone());
+                        let _ = app_clone.emit("webrtc-answer", ans.clone());
                     }
                 });
             });
 
-            let _id3 = app.listen_global("webrtc-icecandidate-server", move |event| {
+            let _id3 = app.listen_any("webrtc-icecandidate-server", move |event| {
                 println!("webrtc-signal {:?}", event);
                 let event_clone = event.clone();
                 let handle_clone = strm2.clone();
@@ -463,8 +494,12 @@ async fn main() {
             download_file,
             scrape::get_wikipedia
         ])
-        .plugin(tauri_plugin_fs_watch::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_http::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

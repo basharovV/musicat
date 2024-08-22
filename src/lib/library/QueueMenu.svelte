@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { type } from "@tauri-apps/api/os";
-    import { open } from "@tauri-apps/api/shell";
+    import { type } from "@tauri-apps/plugin-os";
+    import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
     import { db } from "../../data/db";
     import {
@@ -25,10 +25,10 @@
     onMount(async () => {
         const os = await type();
         switch (os) {
-            case "Darwin":
+            case "macos":
                 explorerName = "Finder";
                 break;
-            case "Windows_NT":
+            case "windows":
                 explorerName = "Explorer";
                 break;
             case "Linux":

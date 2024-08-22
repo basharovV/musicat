@@ -72,7 +72,7 @@
                 size={15}
                 color={$uiView === "smart-query" ? "#45fffcf3" : "currentColor"}
             /></span
-        >&nbsp;{selectedQuery.name}
+        >&nbsp;{selectedQuery?.name}
     </h3>
 {/if}
 {#if durationText}

@@ -23,8 +23,9 @@
         SongProject
     } from "src/App";
     import { db } from "../../data/db";
-    import { appWindow } from "@tauri-apps/api/window";
+    import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { resolve } from "@tauri-apps/api/path";
+const appWindow = getCurrentWebviewWindow()
 
     export let songProject: SongProject;
     let highlightedOption: "add-to-scrapbook" | "add-to-song-project";

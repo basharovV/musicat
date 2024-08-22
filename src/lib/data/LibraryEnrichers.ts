@@ -1,9 +1,9 @@
-import { writeBinaryFile } from "@tauri-apps/api/fs";
+import { writeFile } from "@tauri-apps/plugin-fs";
 import WBK from "wikibase-sdk";
 import { getImageFormat } from "../../utils/FileUtils";
 import { db } from "../../data/db";
 import type { Album, Song } from "../../App";
-import { convertFileSrc } from "@tauri-apps/api/tauri";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import md5 from "md5";
 import { addOriginCountryStatus } from "../../data/store";
 
@@ -109,7 +109,7 @@ export async function fetchAlbumArt(
             const imageData = await fetch(imageUrl);
             let imageArray = await imageData.body.getReader().read();
 
-            let imageBody = imageArray.value.buffer;
+            let imageBody = imageArray.value;
 
             console.log("imageData");
 
@@ -117,7 +117,7 @@ export async function fetchAlbumArt(
                 const filePath = album.path + "/cover." + imageExtension;
                 console.log("filepath", filePath);
                 // Write a binary file to the `$APPDATA/avatar.png` path
-                await writeBinaryFile(filePath, imageBody);
+                await writeFile(filePath, imageBody);
                 let format = getImageFormat(imageExtension);
                 // Success! Let's write the artwork to the album
 

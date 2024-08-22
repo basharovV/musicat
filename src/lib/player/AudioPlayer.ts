@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { get } from "svelte/store";
 import type { ArtworkSrc, LastPlayedInfo, Song } from "../../App";
 import { db } from "../../data/db";
@@ -19,10 +19,11 @@ import {
 import { shuffleArray } from "../../utils/ArrayUtils";
 
 import type { Event } from "@tauri-apps/api/event";
-import { appWindow } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import WebRTCReceiver from "./WebRTCReceiver";
-import { register } from "@tauri-apps/api/globalShortcut";
+import { register } from "@tauri-apps/plugin-global-shortcut";
 import webAudioPlayer, { isIAPlaying } from "./WebAudioPlayer";
+const appWindow = getCurrentWebviewWindow()
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {

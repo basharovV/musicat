@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Error;
 use serde::Deserialize;
 use serde::Serialize;
+use tauri::AppHandle;
 use tauri::Config;
 use tauri::Manager;
 
@@ -42,9 +43,9 @@ pub fn cache_artwork(
     image_data: &Vec<u8>,
     album_id: &str,
     format: &str,
-    app_config: &Config,
+    app: &AppHandle,
 ) -> Result<PathBuf, CacheError> {
-    let data_dir = app_data_dir(app_config.to_owned()).ok_or(CacheError::AppDataDirError)?;
+    let data_dir = app_data_dir(app).or(Err(CacheError::AppDataDirError))?;
 
     let image_path = get_image_path(&data_dir, album_id, format)?;
 
@@ -75,8 +76,8 @@ fn create_cache_directory(data_dir: &Path) -> Result<(), CacheError> {
     Ok(())
 }
 
-fn delete_cache_directory(app_config: Config) -> Result<(), CacheError> {
-    let data_dir = app_data_dir(app_config).ok_or(CacheError::AppDataDirError)?;
+fn delete_cache_directory(app: &AppHandle) -> Result<(), CacheError> {
+    let data_dir = app_data_dir(app).or(Err(CacheError::AppDataDirError))?;
 
     let mut path = data_dir.to_path_buf();
     path.push(CACHE_DIR);
@@ -96,8 +97,8 @@ fn write_image_data_to_cache(image_path: &Path, image_data: &[u8]) -> Result<(),
     Ok(())
 }
 
-fn app_data_dir(app_config: Config) -> Option<PathBuf> {
-    return tauri::api::path::app_data_dir(&app_config);
+fn app_data_dir(app: &AppHandle) -> Result<PathBuf, tauri::Error> {
+    return app.path().app_data_dir();
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -148,7 +149,7 @@ fn check_folder_artwork_by_filename(
     let src = format!("{}{}", folder, artwork_filename);
     let extension = Path::new(&src).extension().unwrap().to_str().unwrap();
     let mime_type = get_image_format(extension);
-    // println!("Looking for: {}", src);
+    println!("Looking for: {}", src);
     if Path::new(&src).exists() {
         return Ok(Some(LookForArtResult {
             artwork_src: src,
@@ -162,17 +163,17 @@ fn check_folder_artwork_by_filename(
 pub fn look_for_art(
     song_path: &str,
     song_file_name: &str,
-    config: &Config,
+    app: &AppHandle,
 ) -> Result<Option<LookForArtResult>, anyhow::Error> {
     let folder = song_path.replace(song_file_name, "");
 
     // println!("Looking for artwork in: {}", folder);
-    let settings: UserSettings = load_settings(config.to_owned())?;
+    let settings: UserSettings = load_settings(app)?;
     // println!("Settings: {:?}", settings);
     let filenames_to_search = settings.album_artwork_filenames;
 
-    // println!("Looking for artwork in: {}", folder);
-    // println!("Looking for filenames: {:?}", filenames_to_search);
+    println!("Looking for artwork in: {}", folder);
+    println!("Looking for filenames: {:?}", filenames_to_search);
 
     // Check if any of the filenames are in the folder
     for filename in filenames_to_search {
@@ -207,8 +208,8 @@ pub fn look_for_art(
     Ok(None)
 }
 
-fn load_settings(config: Config) -> Result<UserSettings, anyhow::Error> {
-    let config_dir = tauri::api::path::app_config_dir(&config).unwrap();
+fn load_settings(app: &AppHandle) -> Result<UserSettings, anyhow::Error> {
+    let config_dir = app.path().app_config_dir().unwrap();
     // join the config dir with the path to the settings file
     let settings_path = config_dir.join("settings.json");
     let settings_data = fs::read_to_string(settings_path)?;

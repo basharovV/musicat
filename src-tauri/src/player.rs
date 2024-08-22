@@ -28,7 +28,7 @@ pub mod file_streamer {
     use symphonia::core::probe::Hint;
     use symphonia::core::units::Time;
     use symphonia::default::get_probe;
-    use tauri::{AppHandle, Manager};
+    use tauri::{AppHandle, Emitter, Manager};
     use tokio::sync::{Mutex, MutexGuard};
     use tokio::time::Duration;
 
@@ -48,7 +48,8 @@ pub mod file_streamer {
     use crate::output::{self, AudioOutput};
     use crate::resampler::Resampler;
     use crate::{
-        dsp, GetWaveformRequest, GetWaveformResponse, LoopRegionRequest, SampleOffsetEvent, StreamFileRequest, VolumeControlEvent
+        dsp, GetWaveformRequest, GetWaveformResponse, LoopRegionRequest, SampleOffsetEvent,
+        StreamFileRequest, VolumeControlEvent,
     };
 
     #[derive(Debug)]
@@ -233,8 +234,8 @@ pub mod file_streamer {
                 if let Some(cand) = c {
                     // let candidate = serde_json::to_string(&cand.to_json().unwrap());
                     if (cand.address.contains("127.0.0.1")) {
-                        let _ = app_handle
-                            .emit_all("webrtc-icecandidate-client", &cand.to_json().unwrap());
+                        let _ =
+                            app_handle.emit("webrtc-icecandidate-client", &cand.to_json().unwrap());
                     }
                 }
                 Box::pin(async {})
@@ -255,37 +256,32 @@ pub mod file_streamer {
 
         pub async fn handle_ice_candidate(
             self,
-            candidate: Option<&str>,
+            candidate: &str,
         ) -> Result<(), Box<dyn std::error::Error + Send>> {
             println!("handle_ice_candidate {:?}", candidate);
-            if let Some(candidate) = candidate {
-                let parsed: RTCIceCandidateInit = serde_json::from_str(candidate).unwrap();
+            let parsed: RTCIceCandidateInit = serde_json::from_str(candidate).unwrap();
 
-                if let Ok(pc_mutex) = self.peer_connection.try_lock() {
-                    if let Some(pc) = pc_mutex.clone().or(None) {
-                        pc.add_ice_candidate(parsed).await;
-                    }
+            if let Ok(pc_mutex) = self.peer_connection.try_lock() {
+                if let Some(pc) = pc_mutex.clone().or(None) {
+                    pc.add_ice_candidate(parsed).await;
                 }
             }
             Ok(())
         }
 
-        pub async fn handle_signal(self, answer: Option<&str>) -> Option<RTCSessionDescription> {
+        pub async fn handle_signal(self, answer: &str) -> Option<RTCSessionDescription> {
             // self.peer_connection.close()
             // Apply the answer as the remote description
             // self.peer_connection.set_remote_description(answer).await?;
-            if let Some(answer) = answer {
-                let parsed_description: RTCSessionDescription =
-                    serde_json::from_str(answer).unwrap();
-                println!("handle_signal {:?}", parsed_description);
+            let parsed_description: RTCSessionDescription = serde_json::from_str(answer).unwrap();
+            println!("handle_signal {:?}", parsed_description);
 
-                if let Ok(pc_mutex) = self.peer_connection.try_lock() {
-                    if let Some(pc) = pc_mutex.clone().or(None) {
-                        let _ = pc.set_remote_description(parsed_description).await;
-                        let ans = Some(pc.create_answer(None).await.unwrap());
-                        let _ = pc.set_local_description(ans.clone().unwrap()).await;
-                        return ans;
-                    }
+            if let Ok(pc_mutex) = self.peer_connection.try_lock() {
+                if let Some(pc) = pc_mutex.clone().or(None) {
+                    let _ = pc.set_remote_description(parsed_description).await;
+                    let ans = Some(pc.create_answer(None).await.unwrap());
+                    let _ = pc.set_local_description(ans.clone().unwrap()).await;
+                    return ans;
                 }
             }
             None
@@ -438,10 +434,7 @@ pub mod file_streamer {
             path_str_clone = path_str.clone(); // Used for looping
             if let None = path_str {
                 is_transition = false;
-                let event = player_control_receiver
-                    .try_lock()
-                    .unwrap()
-                    .recv();
+                let event = player_control_receiver.try_lock().unwrap().recv();
 
                 println!("audio: waiting for file! {:?}", event);
                 if let Ok(result) = event {
@@ -516,9 +509,9 @@ pub mod file_streamer {
                 let mut reader = probe_result.unwrap().format;
 
                 let track = reader.default_track().unwrap().clone();
-                
+
                 if let Some(frames) = track.codec_params.n_frames {
-                    app_handle.emit_all("file-samples", frames);
+                    app_handle.emit("file-samples", frames);
                 }
 
                 let mut track_id = track.id;
@@ -539,7 +532,7 @@ pub mod file_streamer {
                     // that no samples are trimmed.
                     match reader.seek(symphonia::core::formats::SeekMode::Accurate, seek_to) {
                         Ok(seeked_to) => seeked_to.required_ts,
-                        Err(ResetRequired) => { 
+                        Err(ResetRequired) => {
                             track_id = first_supported_track(reader.tracks()).unwrap().id;
                             0
                         }
@@ -553,7 +546,7 @@ pub mod file_streamer {
                     // If not seeking, the seek timestamp is 0.
                     0
                 };
-        
+
                 println!("codec params: {:?}", &track.codec_params);
 
                 // Create a decoder for the track.
@@ -599,7 +592,8 @@ pub mod file_streamer {
                         .is_some();
                     // If sample rate or channels changed - reinit the audio device with the new spec
                     // (if this sample rate isn't supported, it will be resampled)
-                    should_reset_audio = supports_sample_rate && spec.rate != previous_sample_rate || spec.channels.count() != previous_channels;
+                    should_reset_audio = supports_sample_rate && spec.rate != previous_sample_rate
+                        || spec.channels.count() != previous_channels;
                 }
 
                 previous_sample_rate = spec.rate;
@@ -709,13 +703,13 @@ pub mod file_streamer {
                                     println!("Sending paused state to output");
                                     guard.pause();
                                     let _ = playback_state_sender.send(false);
-                                    app_handle.emit_all("paused", {});
+                                    app_handle.emit("paused", {});
                                 }
 
                                 // waits while the value is PAUSED (0)
                                 atomic_wait::wait(&decoding_active, PAUSED);
 
-                                app_handle.emit_all("playing", {});
+                                app_handle.emit("playing", {});
 
                                 if (is_paused) {
                                     is_paused = false;
@@ -831,7 +825,7 @@ pub mod file_streamer {
                                                         false,
                                                     )
                                                 {
-                                                    app_handle.emit_all("song_change", Some(song));
+                                                    app_handle.emit("song_change", Some(song));
 
                                                     let _ = reset_control_sender.send(true);
                                                     let _ = sender_sample_offset.send(
@@ -929,7 +923,7 @@ pub mod file_streamer {
                                             }
                                             println!("Buffer is now empty. Pausing stream...");
                                             guard.pause();
-                                            app_handle.emit_all("stopped", Some(0.0f64));
+                                            app_handle.emit("stopped", Some(0.0f64));
                                         }
                                     }
                                     // Do not treat "end of stream" as a fatal error. It's the currently only way a
@@ -1023,7 +1017,7 @@ pub mod file_streamer {
         let expected_peaks_size = (track.codec_params.n_frames.unwrap()
             * new_spec.channels.count() as u64
             / 4000) as usize;
-        
+
         let mut window: Vec<f32> = Vec::with_capacity(4000);
         let mut peaks: Vec<f32> = Vec::new();
 
@@ -1073,7 +1067,7 @@ pub mod file_streamer {
                         let len = expected_peaks_size.saturating_sub(peaks.len());
                         // println!("expected peaks size: {}, len: {}, n_adds: {}", expected_peaks_size, peaks.len(), n_adds);
                         let cln = [peaks.clone().as_slice(), vec![0f32; len].as_slice()].concat();
-                        app_handle.emit_all("waveform", GetWaveformResponse { data: Some(cln) });
+                        app_handle.emit("waveform", GetWaveformResponse { data: Some(cln) });
                     }
 
                     // Get waveform here

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
     import type { Album, GetHTMLResponse, Song } from "../../App";
     import wtf, { type Document } from "wtf_wikipedia";
     import type { Section } from "wtf_wikipedia";

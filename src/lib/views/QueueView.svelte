@@ -1444,7 +1444,7 @@
                                 <Text
                                     config={{
                                         x:
-                                            !$isSidebarOpen && $os === "Darwin"
+                                            !$isSidebarOpen && $os === "macos"
                                                 ? WINDOW_CONTROLS_WIDTH
                                                 : null,
                                         text: "Queue",
@@ -1464,7 +1464,7 @@
                                 <Text
                                     config={{
                                         x:
-                                            !$isSidebarOpen && $os === "Darwin"
+                                            !$isSidebarOpen && $os === "macos"
                                                 ? 50 + WINDOW_CONTROLS_WIDTH
                                                 : 50,
                                         text:

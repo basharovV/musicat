@@ -8,7 +8,7 @@
     import MenuOption from "../menu/MenuOption.svelte";
     import FileBlock from "./FileBlock.svelte";
     import LinkBlock from "./LinkBlock.svelte";
-    import { open } from "@tauri-apps/api/dialog";
+    import { open } from "@tauri-apps/plugin-dialog";
     import { audioDir } from "@tauri-apps/api/path";
 
     export let items: ArtistContentItem[];

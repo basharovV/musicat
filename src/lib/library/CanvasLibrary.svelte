@@ -1448,7 +1448,7 @@
                         config={{
                             width,
                             height: virtualViewportHeight,
-                            y: -sandwichTopHeight
+                            y: -sandwichTopHeight,
                         }}
                         bind:handle={stage}
                     >
@@ -1960,7 +1960,7 @@
                                             x:
                                                 !$isSidebarOpen &&
                                                 !$isQueueOpen &&
-                                                $os === "Darwin" &&
+                                                $os === "macos" &&
                                                 idx === 0
                                                     ? WINDOW_CONTROLS_WIDTH
                                                     : null,

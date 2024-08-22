@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Event } from "@tauri-apps/api/event";
-    import { appWindow } from "@tauri-apps/api/window";
+    import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { onDestroy, onMount } from "svelte";
     import md5 from "md5";
     import { db } from "../../data/db";
@@ -14,6 +14,7 @@
     import { fly } from "svelte/transition";
     import Icon from "../ui/Icon.svelte";
     import ProgressBar from "../ui/ProgressBar.svelte";
+const appWindow = getCurrentWebviewWindow()
 
     let unlistenFn;
 

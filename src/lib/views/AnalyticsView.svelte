@@ -12,7 +12,7 @@
     import { groupBy } from "../../utils/ArrayUtils";
     import OpenAI from "openai";
     import Icon from "../ui/Icon.svelte";
-    import { Body, fetch } from "@tauri-apps/api/http";
+    import { fetch } from "@tauri-apps/plugin-http";
     import AlbumsTimeline from "../ui/AlbumsTimeline.svelte";
     import { fade } from "svelte/transition";
     import { cubicInOut } from "svelte/easing";
@@ -221,7 +221,7 @@
                 "http://localhost:11434/api/generate",
                 {
                     method: "POST",
-                    body: Body.json({
+                    body: JSON.stringify({
                         "model": "mistral",
                         "prompt": prompt,
                         "stream": false

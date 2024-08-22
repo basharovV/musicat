@@ -39,5 +39,4 @@ fn write_track_number() {
             println!("Found tag: {:?}", tag);
         }
     }
-
 }

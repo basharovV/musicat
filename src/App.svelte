@@ -29,7 +29,7 @@
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
-    import { appWindow } from "@tauri-apps/api/window";
+    import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { onDestroy, onMount } from "svelte";
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
     import { blur, fade, fly } from "svelte/transition";
@@ -65,6 +65,7 @@
     import Icon from "./lib/ui/Icon.svelte";
     import TopBar from "./lib/views/TopBar.svelte";
     import { currentThemeObject } from "./theming/store";
+const appWindow = getCurrentWebviewWindow()
 
     console.log("locale", getLocaleFromNavigator());
 
@@ -114,7 +115,7 @@
      * - Artist's toolkit view: Add to scrapbook or song project
      */
     onMount(async () => {
-        unlistenFileDrop = await appWindow.onFileDropEvent((evt) => {
+        unlistenFileDrop = await appWindow.onDragDropEvent((evt) => {
             switch (evt.payload.type) {
                 case "drop":
                     showDropzone = false;
@@ -133,14 +134,14 @@
 
                     // Let the destination ui handle the files, and set the array to empty again.
                     break;
-                case "hover":
+                case "enter":
                     $hoveredFiles = evt.payload.paths;
                     console.log("files:", $hoveredFiles);
                     if ($uiView === "library" && $hoveredFiles.length) {
                         showDropzone = true;
                     }
                     break;
-                case "cancel":
+                case "leave":
                     $droppedFiles = [];
                     $hoveredFiles = [];
                     if ($uiView === "library") {
@@ -299,7 +300,7 @@
 
     <main
         class:mini-player={$isMiniPlayer}
-        class:transparent={$os === "Darwin"}
+        class:transparent={$os === "macos"}
         bind:this={container}
     >
         <div class="window-padding">
@@ -424,7 +425,9 @@
         {/if}
 
         {#if $isWikiOpen}
+            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
             <resize-handle
+                role="separator"
                 on:mousedown={startResizeListener}
                 class:resizing={isResizing}
             />

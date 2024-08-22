@@ -85,23 +85,6 @@
         // loading order: saved, prefers, fallback
         const saved = key ? localStorage && localStorage.getItem(key) : null;
 
-        if (theme && themes[theme]) {
-            // if starting theme is specified, always use
-            currentThemeName.set(theme);
-        } else if (saved && themes[saved]) {
-            // use saved theme
-            currentThemeName.set(saved);
-        } else {
-            // fallback
-            if (mode === "auto" && preferredMode && themes[preferredMode]) {
-                currentThemeName.set(preferredMode);
-            } else if (["light", "dark"].includes(mode) && themes[mode]) {
-                currentThemeName.set(mode);
-            } else {
-                currentThemeName.set(fallback);
-            }
-        }
-
         return () =>
             key && localStorage && localStorage.setItem(key, $currentThemeName);
     });

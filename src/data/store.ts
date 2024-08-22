@@ -1,4 +1,4 @@
-import { type, type OsType } from "@tauri-apps/api/os";
+import { type, type OsType } from "@tauri-apps/plugin-os";
 import { appConfigDir, downloadDir } from "@tauri-apps/api/path";
 import type {
     ActionEvent,
@@ -28,7 +28,8 @@ import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
-import { fs, path } from "@tauri-apps/api";
+import {  path } from "@tauri-apps/api";
+import * as fs from "@tauri-apps/plugin-fs"
 
 export const L = derived(locale, (l) => {
     return i18nString(l);
@@ -210,7 +211,7 @@ libraryScrollPos.subscribe((scrollPos) => {
     localStorage.setItem("libraryScrollPos", String(scrollPos));
 });
 
-export const os: Writable<OsType> = writable("Darwin");
+export const os: Writable<OsType> = writable("macos");
 
 export const importStatus: Writable<ImportStatus> = writable({
     totalTracks: 0,

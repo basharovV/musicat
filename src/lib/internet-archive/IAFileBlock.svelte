@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
     import type { IAFile } from "../../App";
     import { fileToDownload, userSettings } from "../../data/store";
     import webAudioPlayer, {

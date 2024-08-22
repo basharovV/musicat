@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { type } from "@tauri-apps/api/os";
-    import { open } from "@tauri-apps/api/shell";
+    import { type } from "@tauri-apps/plugin-os";
+    import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
     import { db } from "../../data/db";
     import {
@@ -12,12 +12,9 @@
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import {
-        addArtworksToAllAlbums,
-        rescanAlbumArtwork
-    } from "../../data/LibraryImporter";
+    import { rescanAlbumArtwork } from "../../data/LibraryImporter";
     import type { Album, ToImport } from "../../App";
-    import { invoke } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -28,13 +25,13 @@
     onMount(async () => {
         const os = await type();
         switch (os) {
-            case "Darwin":
+            case "macos":
                 explorerName = "Finder";
                 break;
-            case "Windows_NT":
+            case "windows":
                 explorerName = "Explorer";
                 break;
-            case "Linux":
+            case "linux":
                 explorerName = "File manager";
                 break;
         }

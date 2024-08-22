@@ -1,4 +1,3 @@
-
 pub fn calculate_db(rms: f32) -> f32 {
     // Ensure the RMS is greater than a very small value to avoid log(0)
     if rms <= 0.0 {

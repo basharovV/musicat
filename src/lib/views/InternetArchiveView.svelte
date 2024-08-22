@@ -25,7 +25,7 @@
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
-    import { open } from "@tauri-apps/api/shell";
+    import { open } from "@tauri-apps/plugin-shell";
 
     let audios;
     let minWidth = 300;

@@ -12,16 +12,18 @@ rust-version = "1.57"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.4.4", features = [] }
+tauri-build = { version = "2.0.0-rc", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.5.4", features = ["api-all", "macos-private-api"] }
-window-vibrancy = "0.3.0"
+tauri = { version = "2.0.0-rc", features = [
+    "protocol-asset",
+    "macos-private-api",
+] }
+window-vibrancy = "0.5.1"
 lofty = { version = "0.20.1" }
 base64 = "0.13.0"
-tauri-plugin-fs-watch = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 filetime = "0.2.22"
 chksum-md5 = "0.0.0"
 rayon = "1.8.0"
@@ -30,7 +32,7 @@ tokio = { version = "1", features = ["full"] }
 scraper = "0.12"
 http = "1.0.0"
 http-range = "0.1.5"
-tauri-utils = "1.5.2"
+tauri-utils = "2.0.0-rc"
 percent-encoding = "2.3.1"
 symphonia = { version = "0.5.4", features = ["mp3", "flac", "opt-simd"] }
 webrtc = { git = "https://github.com/basharovV/webrtc.git" }
@@ -46,12 +48,16 @@ rubato = "0.15.0"
 arrayvec = "0.7.4"
 env_logger = "0.11.3"
 rustfft = "6.2.0"
-tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+tauri-plugin-window-state = { version = "2.0.0-rc" }
 anyhow = "1.0.86"
 futures-util = "0.3.30"
 tempfile = "3.10.1"
-devtools = "0.3.3"
 color-print = "0.3.6"
+tauri-plugin-fs = { version = "2.0.0-rc", features = ["watch"] }
+tauri-plugin-os = "2.0.0-rc"
+tauri-plugin-dialog = "2.0.0-rc"
+tauri-plugin-shell = "2.0.0-rc"
+tauri-plugin-http = "2.0.0-rc"
 
 [patch.crates-io]
 webrtc = { git = "https://github.com/basharovV/webrtc.git" }
@@ -61,14 +67,14 @@ webrtc-sctp = { git = "https://github.com/basharovV/webrtc.git" }
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
-default = [ "custom-protocol" ]
+default = ["custom-protocol"]
 # this feature is used used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
-custom-protocol = [ "tauri/custom-protocol" ]
+custom-protocol = ["tauri/custom-protocol"]
 
 [profile.release]
-panic = "abort" # Strip expensive panic clean-up logic
+panic = "abort"   # Strip expensive panic clean-up logic
 codegen-units = 1 # Compile crates one after another so the compiler can optimize better
-lto = true # Enables link to optimizations
-opt-level = "s" # Optimize for binary size
-strip = true # Remove debug symbols
+lto = true        # Enables link to optimizations
+opt-level = "s"   # Optimize for binary size
+strip = true      # Remove debug symbols

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { open } from "@tauri-apps/api/shell";
+    import { open } from "@tauri-apps/plugin-shell";
     import type { ArtistFileItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
     import {
@@ -7,7 +7,7 @@
         getSongFromMetadata
     } from "../../data/LibraryImporter";
     import audioPlayer from "../player/AudioPlayer";
-    import { convertFileSrc } from "@tauri-apps/api/tauri";
+    import { convertFileSrc } from "@tauri-apps/api/core";
     import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistFileItem;

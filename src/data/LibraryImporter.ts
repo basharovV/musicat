@@ -1,10 +1,10 @@
-import { open } from "@tauri-apps/api/dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import ImportWorker from "../ImportWorker?worker";
-import { invoke } from "@tauri-apps/api";
-import { BaseDirectory, exists, readDir } from "@tauri-apps/api/fs";
+import { invoke } from "@tauri-apps/api/core";
+import { BaseDirectory, exists, readDir } from "@tauri-apps/plugin-fs";
 import { audioDir } from "@tauri-apps/api/path";
-import { convertFileSrc } from "@tauri-apps/api/tauri";
-import { appWindow } from "@tauri-apps/api/window";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import md5 from "md5";
 import * as musicMetadata from "music-metadata-browser";
 import type {
@@ -27,7 +27,7 @@ import {
     songsJustAdded,
     userSettings
 } from "./store";
-import { cacheArtwork } from "./Cacher";
+const appWindow = getCurrentWebviewWindow();
 
 let addedSongs: Song[] = [];
 
@@ -363,7 +363,6 @@ export async function startImportListener() {
 
     const importAlbumChunk = async (chunk: ToImportAlbums) => {
         console.log("import new chunk", chunk);
-        albumChunksToProcess.push(chunk);
         currentAlbumChunk = chunk;
         let isBackground = false;
 
@@ -448,6 +447,11 @@ export async function startImportListener() {
                         ),
                         1
                     );
+
+                    console.log("handleImportDone");
+                    console.log("chunksToProcess", chunksToProcess);
+                    console.log("albumChunksToProcess", albumChunksToProcess);
+                    console.log("gotAllChunks", gotAllChunks);
                     if (
                         chunksToProcess.length === 0 &&
                         !ev.data.done &&
@@ -520,7 +524,7 @@ export async function startImportListener() {
     await appWindow.listen<ToImportAlbums>("import_albums", async (event) => {
         console.log("import_albums", event, albumChunksToProcess.length);
         gotAllAlbums = event.payload.progress === 100;
-
+        albumChunksToProcess.push(event.payload);
         console.log("worker", worker);
         console.log("chunksToProcess", chunksToProcess);
         console.log("gotAllChunks", gotAllChunks);
@@ -528,7 +532,7 @@ export async function startImportListener() {
         if (worker && chunksToProcess.length === 0 && gotAllChunks) {
             console.log("STARTING ALBUM IMPORT");
             // Start putting albums
-            await importAlbumChunk(event.payload);
+            await importAlbumChunk(albumChunksToProcess[0]);
         }
     });
 }
@@ -668,81 +672,6 @@ export async function rescanAlbumArtwork(album: Album) {
     // TODO: Write updated album with updated artwork to DB
 }
 
-/**
- * To improve performance, we process the album artworks (including looking in folders as fallbacks)
- * after the songs have been imported, and the albums have been added.
- * @param songs List of songs that have been imported
- */
-export async function addArtworksToAllAlbums(
-    songs: Song[],
-    isBackground = false,
-    override = false,
-    worker: Worker = null
-) {
-    const albumsToPut = {};
-
-    importStatus.update((importStatus) => ({
-        ...importStatus,
-        status: "Processing albums"
-    }));
-
-    if (isBackground) {
-        bottomBarNotification.set({
-            text: `Processing albums`
-        });
-    }
-
-    // Here we can use Promise.all for concurrency since we don't depend on order
-    await Promise.all(
-        songs.map(async (song, idx) => {
-            const albumPath = song.path.replace(`/${song.file}`, "");
-
-            const existingAlbum =
-                albumsToPut[
-                    md5(`${albumPath} - ${song.album}`.toLowerCase())
-                ] ||
-                (await db.albums.get(
-                    md5(`${albumPath} - ${song.album}`.toLowerCase())
-                ));
-
-            if (existingAlbum) {
-                if (!existingAlbum.artwork) {
-                    await addAlbumArtworkFromSong(song, existingAlbum);
-                }
-                if (!albumsToPut[existingAlbum.id]) {
-                    albumsToPut[existingAlbum.id] = existingAlbum;
-                }
-                // Re-order trackIds in album order?
-            } else {
-                // console.error("Couldn't find album: ", song.album)
-            }
-        }, {})
-    );
-
-    if (!worker) {
-        worker = new ImportWorker();
-        worker.onmessage = (ev) => {
-            if (ev.data === "bulkAlbumPut") {
-                importStatus.update((importStatus) => ({
-                    ...importStatus,
-                    status: "Processing albums",
-                    isImporting: false,
-                    backgroundImport: false,
-                    percent: 100
-                }));
-
-                bottomBarNotification.set(null);
-                worker.terminate();
-            }
-        };
-    } // Otherwise - handled by existing worker
-
-    worker.postMessage({
-        function: "bulkAlbumPut",
-        albums: albumsToPut
-    });
-    // console.log("albums to put: ", albumsToPut);
-}
 export async function runScan() {
     const settings = get(userSettings);
 

@@ -1,25 +1,25 @@
 <script lang="ts">
     import { getVersion } from "@tauri-apps/api/app";
 
-    import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
+    import { audioDir, downloadDir } from "@tauri-apps/api/path";
+    import { open } from "@tauri-apps/plugin-dialog";
+    import hotkeys from "hotkeys-js";
     import type { LLM, MiniPlayerLocation } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
+    import tippy from "svelte-tippy";
+    import { importPaths } from "../../data/LibraryImporter";
     import {
         importStatus,
         isSettingsOpen,
         userSettings
     } from "../../data/store";
-    import { clickOutside } from "../../utils/ClickOutside";
-    import Input from "../ui/Input.svelte";
-    import Icon from "../ui/Icon.svelte";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { open } from "@tauri-apps/api/dialog";
-    import { audioDir, downloadDir } from "@tauri-apps/api/path";
-    import { importPaths } from "../../data/LibraryImporter";
-    import tippy from "svelte-tippy";
     import LL from "../../i18n/i18n-svelte";
     import { allThemes } from "../../theming/themes";
+    import { clickOutside } from "../../utils/ClickOutside";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import Icon from "../ui/Icon.svelte";
+    import Input from "../ui/Input.svelte";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
@@ -100,13 +100,13 @@
     }
 
     onMount(async () => {
-        await register("Esc", () => {
+        hotkeys("esc", () => {
             onClose();
-        });
+        })
     });
 
     onDestroy(() => {
-        unregisterAll();
+        hotkeys.unbind("esc");
     });
 </script>
 

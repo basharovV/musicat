@@ -63,7 +63,7 @@ mod cpal {
     use rb::*;
 
     use log::{error, info};
-    use tauri::{AppHandle, Manager};
+    use tauri::{AppHandle, Emitter, Manager};
     use tokio::sync::Mutex;
     use webrtc::data_channel::RTCDataChannel;
 
@@ -324,7 +324,7 @@ mod cpal {
                             *frame_idx = 0;
                             let mut elapsed_time = elapsed_time_state.write().unwrap();
                             *elapsed_time = 0;
-                            let _ = app_handle.emit_all("timestamp", Some(0f64));
+                            let _ = app_handle.emit("timestamp", Some(0f64));
                         }
                     }
 
@@ -393,8 +393,7 @@ mod cpal {
                         if prev_duration != next_duration {
                             let new_duration = Duration::from_secs(next_duration);
 
-                            let _ =
-                                app_handle.emit_all("timestamp", Some(new_duration.as_secs_f64()));
+                            let _ = app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
 
                             let mut duration = elapsed_time_state.write().unwrap();
                             *duration = new_duration.as_secs();

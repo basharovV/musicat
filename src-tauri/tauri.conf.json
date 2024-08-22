@@ -3,86 +3,50 @@
     "build": {
         "beforeBuildCommand": "npm run build",
         "beforeDevCommand": "npm run dev",
-        "devPath": "http://localhost:5173",
-        "distDir": "../dist",
-        "withGlobalTauri": false
+        "frontendDist": "../dist",
+        "devUrl": "http://localhost:5173"
     },
-    "package": {
-        "productName": "Musicat",
-        "version": "0.8.0"
-    },
-    "tauri": {
-        "macOSPrivateApi": true,
-        "allowlist": {
-            "all": true,
-            "fs": {
-                "all": true,
-                "scope": {
-                    "allow": ["**"],
-                    "requireLiteralLeadingDot": false
-                }
-            },
-            "globalShortcut": {
-                "all": true
-            },
-            "path": {
-                "all": true
-            },
-            "protocol": {
-                "all": true,
-                "asset": true,
-                "assetScope": ["**"]
-            },
-            "http": {
-                "all": true,
-                "request": true,
-                "scope": [
-                    "http://**",
-                    "https://**",
-                    "asset://**",
-                    "stream://**"
-                ]
-            }
+    "bundle": {
+        "active": true,
+        "category": "DeveloperTool",
+        "copyright": "Copyright (c) 2022-2024 Slav Basharov",
+        "targets": "all",
+        "externalBin": [],
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "windows": {
+            "certificateThumbprint": null,
+            "digestAlgorithm": "sha256",
+            "timestampUrl": ""
         },
-        "bundle": {
-            "active": true,
-            "category": "DeveloperTool",
-            "copyright": "",
+        "longDescription": "",
+        "macOS": {
+            "entitlements": null,
+            "exceptionDomain": "",
+            "frameworks": [],
+            "providerShortName": null,
+            "signingIdentity": null
+        },
+        "resources": [],
+        "shortDescription": "",
+        "linux": {
             "deb": {
                 "depends": []
-            },
-            "externalBin": [],
-            "icon": [
-                "icons/32x32.png",
-                "icons/128x128.png",
-                "icons/128x128@2x.png",
-                "icons/icon.icns",
-                "icons/icon.ico"
-            ],
-            "identifier": "com.vbapps.musicat",
-            "longDescription": "",
-            "macOS": {
-                "entitlements": null,
-                "exceptionDomain": "",
-                "frameworks": [],
-                "providerShortName": null,
-                "signingIdentity": null
-            },
-            "resources": [],
-            "shortDescription": "",
-            "targets": "all",
-            "windows": {
-                "certificateThumbprint": null,
-                "digestAlgorithm": "sha256",
-                "timestampUrl": ""
             }
-        },
-        "security": {
-            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org"
-        },
-        "updater": {
-            "active": false
-        },
+        }
+    },
+    "productName": "Musicat",
+    "version": "0.8.0",
+    "identifier": "com.vbapps.musicat",
+    "plugins": {},
+    "app": {
+        "macOSPrivateApi": true,
+        "withGlobalTauri": false,
         "windows": [
             {
                 "theme": "Dark",
@@ -96,11 +60,19 @@
                 "minWidth": 210,
                 "transparent": true,
                 "visible": true,
-                "fileDropEnabled": true,
+                "dragDropEnabled": true,
                 "hiddenTitle": true,
                 "decorations": true,
                 "titleBarStyle": "Overlay"
             }
-        ]
+        ],
+        "security": {
+            "capabilities": ["main-capability"],
+            "assetProtocol": {
+                "scope": ["**"],
+                "enable": true
+            },
+            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org; connect-src ipc: http://ipc.localhost"
+        }
     }
 }

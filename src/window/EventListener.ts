@@ -1,5 +1,5 @@
 import { TauriEvent, type Event } from "@tauri-apps/api/event";
-import { appWindow } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { get } from "svelte/store";
 
 import {
@@ -16,9 +16,10 @@ import {
 import { db } from "../data/db";
 import type { ToImport } from "../App";
 import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
-import { open } from "@tauri-apps/api/shell";
+import { open } from "@tauri-apps/plugin-shell";
 import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
 import { openTauriImportDialog } from "../data/LibraryImporter";
+const appWindow = getCurrentWebviewWindow()
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {

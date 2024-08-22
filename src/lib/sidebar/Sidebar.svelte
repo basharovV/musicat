@@ -1,11 +1,6 @@
 <script lang="ts">
-    import { invoke, window as tauriWindow } from "@tauri-apps/api";
-    import {
-        LogicalSize,
-        PhysicalPosition,
-        appWindow,
-        currentMonitor
-    } from "@tauri-apps/api/window";
+    import { invoke } from "@tauri-apps/api/core";
+    import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { Buffer } from "buffer";
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
@@ -70,6 +65,11 @@
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
+    import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
+    import { currentMonitor } from "@tauri-apps/api/window";
+    import { window as tauriWindow } from "@tauri-apps/api";
+
+    const appWindow = tauriWindow.getCurrentWindow();
 
     // What to show in the sidebar
     let title;
@@ -205,15 +205,15 @@
         // Check if is miniplayer mode
         height = window.innerHeight;
         width = window.innerWidth;
-        hasDecorations = await tauriWindow.getCurrent().isDecorated();
+        hasDecorations = await appWindow.isDecorated();
         if (!$isMiniPlayer && height <= 220 && width <= 210) {
             $isMiniPlayer = true;
             console.log("setting to false");
-            await tauriWindow.getCurrent().setDecorations(false);
+            await appWindow.setDecorations(false);
         } else if ($isMiniPlayer && (height > 220 || width > 210)) {
             $isMiniPlayer = false;
             console.log("setting to true");
-            await tauriWindow.getCurrent().setDecorations(true);
+            await appWindow.setDecorations(true);
         }
 
         // Get bottom coordinates of top container
@@ -273,89 +273,75 @@
             widthToRestore = window.innerWidth;
             heightToRestore = window.innerHeight;
 
-            await tauriWindow.getCurrent().hide();
-            await tauriWindow.getCurrent().setSize(new LogicalSize(210, 210));
+            await appWindow.hide();
+            await appWindow.setSize(new LogicalSize(210, 210));
             const monitor = await currentMonitor();
-            const windowSize = await tauriWindow.getCurrent().innerSize();
+            const windowSize = await appWindow.innerSize();
             switch ($userSettings.miniPlayerLocation) {
                 case "bottom-left":
-                    await tauriWindow
-                        .getCurrent()
-                        .setPosition(
-                            new PhysicalPosition(
-                                monitor.position.x + paddingPx,
-                                monitor.position.y +
-                                    monitor.size.height -
-                                    windowSize.height -
-                                    paddingPx
-                            )
-                        );
+                    await appWindow.setPosition(
+                        new PhysicalPosition(
+                            monitor.position.x + paddingPx,
+                            monitor.position.y +
+                                monitor.size.height -
+                                windowSize.height -
+                                paddingPx
+                        )
+                    );
                     break;
                 case "bottom-right":
-                    await tauriWindow
-                        .getCurrent()
-                        .setPosition(
-                            new PhysicalPosition(
-                                monitor.position.x +
-                                    monitor.size.width -
-                                    windowSize.width -
-                                    paddingPx,
-                                monitor.position.y +
-                                    monitor.size.height -
-                                    windowSize.height -
-                                    paddingPx
-                            )
-                        );
+                    await appWindow.setPosition(
+                        new PhysicalPosition(
+                            monitor.position.x +
+                                monitor.size.width -
+                                windowSize.width -
+                                paddingPx,
+                            monitor.position.y +
+                                monitor.size.height -
+                                windowSize.height -
+                                paddingPx
+                        )
+                    );
                     break;
                 case "top-left":
-                    await tauriWindow
-                        .getCurrent()
-                        .setPosition(
-                            new PhysicalPosition(
-                                monitor.position.x + paddingPx,
-                                monitor.position.y +
-                                    ($os === "Darwin"
-                                        ? paddingPx + 40
-                                        : paddingPx)
-                            )
-                        );
+                    await appWindow.setPosition(
+                        new PhysicalPosition(
+                            monitor.position.x + paddingPx,
+                            monitor.position.y +
+                                ($os === "macos" ? paddingPx + 40 : paddingPx)
+                        )
+                    );
                     break;
                 case "top-right":
-                    await tauriWindow
-                        .getCurrent()
-                        .setPosition(
-                            new PhysicalPosition(
-                                monitor.position.x +
-                                    monitor.size.width -
-                                    windowSize.width -
-                                    paddingPx,
-                                monitor.position.y +
-                                    ($os === "Darwin"
-                                        ? paddingPx + 40
-                                        : paddingPx)
-                            )
-                        );
+                    await appWindow.setPosition(
+                        new PhysicalPosition(
+                            monitor.position.x +
+                                monitor.size.width -
+                                windowSize.width -
+                                paddingPx,
+                            monitor.position.y +
+                                ($os === "macos" ? paddingPx + 40 : paddingPx)
+                        )
+                    );
                     break;
             }
 
-            await tauriWindow.getCurrent().show();
-            await tauriWindow.getCurrent().setAlwaysOnTop(true);
+            await appWindow.show();
+            await appWindow.setAlwaysOnTop(true);
             isMiniPlayerHovered = false; // By default we want to show the pretty artwork
         } else {
-            await tauriWindow.getCurrent().hide();
+            await appWindow.hide();
             if (widthToRestore && heightToRestore) {
-                await tauriWindow
-                    .getCurrent()
-                    .setSize(new LogicalSize(widthToRestore, heightToRestore));
+                await appWindow.setSize(
+                    new LogicalSize(widthToRestore, heightToRestore)
+                );
             } else {
-                await tauriWindow
-                    .getCurrent()
-                    .setSize(new LogicalSize(1100, 750));
+                await appWindow.setSize(new LogicalSize(1100, 750));
             }
 
-            await tauriWindow.getCurrent().center();
-            await tauriWindow.getCurrent().show();
-            await tauriWindow.getCurrent().setAlwaysOnTop(false);
+            await appWindow.center();
+            await appWindow.show();
+            await appWindow.setAlwaysOnTop(false);
         }
 
         isMiniToggleHovered = false;
@@ -915,7 +901,7 @@
                     type="text"
                     autocomplete="off"
                     spellcheck="false"
-                    placeholder="{$LL.sidebar.search()} ({$os === 'Darwin'
+                    placeholder="{$LL.sidebar.search()} ({$os === 'macos'
                         ? 'Cmd + F'
                         : 'Ctrl + F'})"
                     bind:value={$query.query}

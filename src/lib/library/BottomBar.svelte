@@ -24,8 +24,6 @@
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
 
-    export let counts;
-
     let right;
     let nextUp;
 

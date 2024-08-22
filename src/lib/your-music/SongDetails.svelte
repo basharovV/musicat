@@ -22,7 +22,7 @@
     import MusicTab from "./MusicTab.svelte";
     import OtherTab from "./OtherTab.svelte";
 
-    import { readTextFile } from "@tauri-apps/api/fs";
+    import { readTextFile } from "@tauri-apps/plugin-fs";
     import toast from "svelte-french-toast";
     import {
         getMetadataFromFile,
@@ -357,7 +357,7 @@
 
     // Shortcuts
 
-    let modifier = $os === "Darwin" ? "cmd" : "ctrl";
+    let modifier = $os === "macos" ? "cmd" : "ctrl";
     hotkeys(`${modifier}+=`, function (event, handler) {
         increaseFontSize();
     });

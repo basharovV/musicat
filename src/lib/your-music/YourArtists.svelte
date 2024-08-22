@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { open } from "@tauri-apps/api/dialog";
+    import { open } from "@tauri-apps/plugin-dialog";
     import { pictureDir } from "@tauri-apps/api/path";
     import { liveQuery } from "dexie";
     import tippy from "tippy.js";

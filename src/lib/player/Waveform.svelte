@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/tauri";
+    import { invoke } from "@tauri-apps/api/core";
     import { onMount } from "svelte";
     import type WaveSurfer from "wavesurfer.js";
     import ZoomPlugin from "wavesurfer.js/dist/plugins/zoom.esm.js";
@@ -14,13 +14,14 @@
     } from "../../data/store";
 
     import type { Event } from "@tauri-apps/api/event";
-    import { appWindow } from "@tauri-apps/api/window";
+    import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { fade } from "svelte/transition";
     import type { Marker, Waveform } from "../../App";
     import RegionsPlugin from "./RegionsPlugin";
     import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
     import hotkeys from "hotkeys-js";
     import { db } from "../../data/db";
+const appWindow = getCurrentWebviewWindow()
 
     let container;
     let isMounted = false;

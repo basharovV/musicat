@@ -1,14 +1,14 @@
 import { get } from "svelte/store";
 import { userSettings } from "./store";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import type { GetLyricsResponse } from "../App";
-import { fetch } from "@tauri-apps/api/http";
+import { fetch } from "@tauri-apps/plugin-http";
 
 export async function getLyrics(songTitle: string, artist: string) {
     let result = {
         lyrics: null,
         writers: []
-    }
+    };
     let geniusPage;
 
     const settings = get(userSettings);
@@ -19,24 +19,30 @@ export async function getLyrics(songTitle: string, artist: string) {
 
         const query = encodeURIComponent(`${songTitle} ${artist}`);
 
-        const geniusResult = await fetch(
-            `https://api.genius.com/search?q=${query}`,
-            {
+        const geniusResult = await (
+            await fetch(`https://api.genius.com/search?q=${query}`, {
                 method: "GET",
                 headers: {
                     "Accept": "application/json",
                     "Authorization": `Bearer ${settings.geniusApiKey}`
                 }
-            }
+            })
         );
-        console.log('result', geniusResult);
+        const geniusData = await geniusResult.json();
+        console.log("result", geniusResult);
         if (!geniusResult.ok) {
-            throw new Error("Genius API: " + JSON.stringify(geniusResult.data))
+            throw new Error("Genius API: " + JSON.stringify(geniusResult));
         }
-        const hits = geniusResult.data?.response?.hits;
-        if (hits?.filter(h => artist.toLowerCase() === h?.result?.artist_names?.toLowerCase()).length) {
+        const hits = geniusData?.response?.hits;
+        if (
+            hits?.filter(
+                (h) =>
+                    artist.toLowerCase() ===
+                    h?.result?.artist_names?.toLowerCase()
+            ).length
+        ) {
             geniusPage = hits[0]?.result?.url;
-           let  songId = hits[0]?.result?.id;
+            let songId = hits[0]?.result?.id;
 
             const songResult = await fetch(
                 `https://api.genius.com/songs/${songId}`,
@@ -48,8 +54,10 @@ export async function getLyrics(songTitle: string, artist: string) {
                     }
                 }
             );
-            result.writers = songResult.data?.response?.song?.writer_artists?.map(w => w?.name);
-            
+            result.writers =
+                songResult.data?.response?.song?.writer_artists?.map(
+                    (w) => w?.name
+                );
         }
         console.log("geniusPage", geniusPage);
     } catch (err) {

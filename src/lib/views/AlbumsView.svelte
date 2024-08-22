@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { convertFileSrc } from "@tauri-apps/api/tauri";
+    import { convertFileSrc } from "@tauri-apps/api/core";
     import { liveQuery } from "dexie";
     import md5 from "md5";
     import * as musicMetadata from "music-metadata-browser";
