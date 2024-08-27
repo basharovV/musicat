@@ -1,12 +1,9 @@
 <script lang="ts">
-    import { convertFileSrc } from "@tauri-apps/api/core";
     import { liveQuery } from "dexie";
     import md5 from "md5";
-    import * as musicMetadata from "music-metadata-browser";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
     import type { Album, Song } from "../../App";
-    import { lookForArt } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
         compressionSelected,
@@ -120,67 +117,6 @@
             artworkSrc: string;
         };
     } = null;
-
-    async function addArtwork(albumId: string, track) {
-        if (track) {
-            const result = await getArtwork(track);
-            albumsData[albumId].artworkFormat = result.artworkFormat;
-            albumsData[albumId].artworkSrc = result.artworkSrc;
-        }
-    }
-
-    async function getAlbumTrack(albums: Album[]) {
-        console.log("albumdata", albums);
-        await Promise.all(
-            albums.map(
-                (album) =>
-                    new Promise<void>(async (resolve) => {
-                        if (albumsData === null) albumsData = {};
-                        if (albumsData[album.id] === undefined) {
-                            albumsData[album.id] = {
-                                album,
-                                tracks: [],
-                                artworkFormat: null,
-                                artworkSrc: null
-                            };
-                        }
-                        const firstTrack = await db.songs.get(
-                            album.tracksIds[0]
-                        );
-
-                        addArtwork(album.id, firstTrack);
-                        resolve();
-                    })
-            )
-        );
-    }
-
-    async function getArtwork(firstTrack: Song) {
-        let artworkFormat;
-        let artworkBuffer;
-        let artworkSrc;
-        const metadata = await musicMetadata.fetchFromUrl(
-            convertFileSrc(firstTrack.path)
-        );
-        if (metadata.common.picture?.length) {
-            artworkFormat = metadata.common.picture[0].format;
-            artworkBuffer = metadata.common.picture[0].data;
-            artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                "base64"
-            )}`;
-        } else {
-            artworkSrc = null;
-            const artwork = await lookForArt(firstTrack.path, firstTrack.file);
-            if (artwork) {
-                artworkSrc = artwork.artworkSrc;
-                artworkFormat = artwork.artworkFormat;
-            }
-        }
-        return {
-            artworkFormat,
-            artworkSrc
-        };
-    }
 
     let minWidth = 197;
 

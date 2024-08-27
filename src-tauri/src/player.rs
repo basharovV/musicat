@@ -16,7 +16,7 @@ pub mod file_streamer {
 
     use atomic_wait::{wake_all, wake_one};
     use cpal::traits::{DeviceTrait, HostTrait};
-    use log::warn;
+    use log::{info, warn};
     use symphonia::core::audio::{
         AudioBufferRef, Layout, RawSampleBuffer, SampleBuffer, SignalSpec,
     };
@@ -168,7 +168,7 @@ pub mod file_streamer {
 
             // Register default codecs
             m.register_default_codecs()?;
-            println!("WEBRTC streamer");
+            info!("WEBRTC streamer");
 
             // Create a InterceptorRegistry. This is the user configurable RTP/RTCP Pipeline.
             // This provides NACKs, RTCP Reports and other features. If you use `webrtc.NewPeerConnection`
@@ -207,7 +207,7 @@ pub mod file_streamer {
                 .await?;
             // &self.data_channel.on_close(Box::new(move || {}));
             data_channel.on_open(Box::new(move || {
-                println!("Data channel opened");
+                info!("Data channel opened");
                 Box::pin(async {})
             }));
 
@@ -215,13 +215,13 @@ pub mod file_streamer {
             // This will notify you when the peer has connected/disconnected
             peer_connection.on_peer_connection_state_change(Box::new(
                 move |s: RTCPeerConnectionState| {
-                    println!("Peer Connection State has changed: {s}");
+                    info!("Peer Connection State has changed: {s}");
 
                     if s == RTCPeerConnectionState::Failed {
                         // Wait until PeerConnection has had no network activity for 30 seconds or another failure. It may be reconnected using an ICE Restart.
                         // Use webrtc.PeerConnectionStateDisconnected if you are interested in detecting faster timeout.
                         // Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
-                        println!("Peer Connection has gone to failed exiting");
+                        info!("Peer Connection has gone to failed exiting");
                     }
 
                     Box::pin(async {})
@@ -230,7 +230,7 @@ pub mod file_streamer {
 
             // Listen for ICE candidates
             peer_connection.on_ice_candidate(Box::new(move |c| {
-                println!("on_ice_candidate {:?}", c);
+                info!("on_ice_candidate {:?}", c);
                 if let Some(cand) = c {
                     // let candidate = serde_json::to_string(&cand.to_json().unwrap());
                     if (cand.address.contains("127.0.0.1")) {
@@ -258,7 +258,7 @@ pub mod file_streamer {
             self,
             candidate: &str,
         ) -> Result<(), Box<dyn std::error::Error + Send>> {
-            println!("handle_ice_candidate {:?}", candidate);
+            info!("handle_ice_candidate {:?}", candidate);
             let parsed: RTCIceCandidateInit = serde_json::from_str(candidate).unwrap();
 
             if let Ok(pc_mutex) = self.peer_connection.try_lock() {
@@ -274,7 +274,7 @@ pub mod file_streamer {
             // Apply the answer as the remote description
             // self.peer_connection.set_remote_description(answer).await?;
             let parsed_description: RTCSessionDescription = serde_json::from_str(answer).unwrap();
-            println!("handle_signal {:?}", parsed_description);
+            info!("handle_signal {:?}", parsed_description);
 
             if let Ok(pc_mutex) = self.peer_connection.try_lock() {
                 if let Some(pc) = pc_mutex.clone().or(None) {
@@ -288,17 +288,17 @@ pub mod file_streamer {
         }
 
         pub async fn reset(&self) {
-            println!("Resetting streamer");
+            info!("Resetting streamer");
 
             if let Ok(dc_mutex) = self.data_channel.try_lock() {
                 if let Some(dc) = dc_mutex.clone().or(None) {
-                    println!("Closing data channel...");
+                    info!("Closing data channel...");
                     match dc.close().await {
                         Ok(()) => {
-                            println!("Closed data channel");
+                            info!("Closed data channel");
                         }
                         Err(err) => {
-                            println!("Error closing data channel{}", err);
+                            info!("Error closing data channel{}", err);
                         }
                     }
                 }
@@ -306,13 +306,13 @@ pub mod file_streamer {
 
             if let Ok(pc_mutex) = self.peer_connection.try_lock() {
                 if let Some(pc) = pc_mutex.clone().or(None) {
-                    println!("Closing peer connection...");
+                    info!("Closing peer connection...");
                     match pc.close().await {
                         Ok(()) => {
-                            println!("Closed peer connection");
+                            info!("Closed peer connection");
                         }
                         Err(err) => {
-                            println!("Error closing peer connection {}", err);
+                            info!("Error closing peer connection {}", err);
                         }
                     }
                 }
@@ -326,7 +326,7 @@ pub mod file_streamer {
         //     path: &str,
         //     boundary_id: &Arc<Mutex<i32>>,
         // ) -> Result<tauri::http::Response, Box<dyn std::error::Error>> {
-        //     println!("File chunk handler:path {:?}", &path);
+        //     info!("File chunk handler:path {:?}", &path);
         //     let mut file = std::fs::File::open(&path)?;
 
         //     // get file length
@@ -337,7 +337,7 @@ pub mod file_streamer {
         //         len
         //     };
 
-        //     println!("File chunk handler: Length: {:?}", len);
+        //     info!("File chunk handler: Length: {:?}", len);
         // }
     }
 
@@ -402,7 +402,6 @@ pub mod file_streamer {
         let mut seek = None;
         let mut end_pos = None; // for loop region
         let mut volume = None;
-        let mut file = Arc::new(Mutex::new(None));
 
         let mut spec: SignalSpec = SignalSpec::new_with_layout(44100, Layout::Stereo);
         let mut duration: u64 = 512;
@@ -430,25 +429,24 @@ pub mod file_streamer {
         // Loop here!
         loop {
             cancel_token = CancellationToken::new();
-            // println!("path_str is {:?}", path_str);
+            // info!("path_str is {:?}", path_str);
             path_str_clone = path_str.clone(); // Used for looping
             if let None = path_str {
                 is_transition = false;
                 let event = player_control_receiver.try_lock().unwrap().recv();
 
-                println!("audio: waiting for file! {:?}", event);
+                info!("audio: waiting for file! {:?}", event);
                 if let Ok(result) = event {
                     match result {
                         PlayerControlEvent::StreamFile(request) => {
-                            println!("audio: got file request! {:?}", request);
+                            info!("audio: got file request! {:?}", request);
                             path_str.replace(request.path.unwrap());
                             seek.replace(request.seek.unwrap());
                             volume.replace(request.volume.unwrap());
-                            file.try_lock().unwrap().replace(request.file_info.unwrap());
                             is_looping = false;
                         }
                         PlayerControlEvent::LoopRegion(request) => {
-                            println!("audio: loop region! {:?}", request);
+                            info!("audio: loop region! {:?}", request);
                             path_str.replace(path_str_clone.unwrap());
                             seek.replace(request.start_pos.unwrap());
                             end_pos.replace(request.end_pos.unwrap());
@@ -459,15 +457,14 @@ pub mod file_streamer {
                 }
             } else if let Some(ref p) = path_str.clone() {
                 let path = Path::new(p.as_str());
-                let file_info = file.try_lock().unwrap().clone().unwrap();
 
                 // Create a hint to help the format registry guess what format reader is appropriate.
                 let mut hint = Hint::new();
                 let source = Box::new(File::open(path).unwrap());
-                println!("source {:?}", source);
+                info!("source {:?}", source);
 
                 // Provide the file extension as a hint.
-                println!("extension: {:?}", path.extension());
+                info!("extension: {:?}", path.extension());
                 if let Some(extension) = path.extension() {
                     if let Some(extension_str) = extension.to_str() {
                         hint.with_extension(extension_str);
@@ -491,19 +488,19 @@ pub mod file_streamer {
 
                 // Get the value of the track option, if provided.
                 let track: Option<Track> = None;
-                println!("probing {:?}", hint);
-                println!("opts {:?}", format_opts);
-                println!("meta {:?}", metadata_opts);
+                info!("probing {:?}", hint);
+                info!("opts {:?}", format_opts);
+                info!("meta {:?}", metadata_opts);
 
                 let probe_result = get_probe().format(&hint, mss, &format_opts, &metadata_opts);
-                println!("probe format {:?}", probe_result.is_ok());
+                info!("probe format {:?}", probe_result.is_ok());
 
                 if probe_result.is_err() {
                     path_str = None;
                     continue;
                 }
 
-                println!("Resetting path_str");
+                info!("Resetting path_str");
                 path_str = None;
 
                 let mut reader = probe_result.unwrap().format;
@@ -547,7 +544,7 @@ pub mod file_streamer {
                     0
                 };
 
-                println!("codec params: {:?}", &track.codec_params);
+                info!("codec params: {:?}", &track.codec_params);
 
                 // Create a decoder for the track.
                 let mut decoder = symphonia::default::get_codecs()
@@ -563,7 +560,7 @@ pub mod file_streamer {
                 let mut new_duration = 1152;
 
                 let max_frames = decoder.codec_params().max_frames_per_packet;
-                // println!("max frames: {:?}", max_frames);
+                // info!("max frames: {:?}", max_frames);
                 if let Some(dur) = max_frames {
                     new_duration = dur;
                 }
@@ -578,7 +575,7 @@ pub mod file_streamer {
 
                 // Check if track sample rate differs from current OS config
                 if let Some(device) = output_device {
-                    println!("cpal: Default device {:?}", device.name());
+                    info!("cpal: Default device {:?}", device.name());
                     // Only resample when audio device doesn't support file sample rate
                     // so we can't switch the device rate to match.
                     let supports_sample_rate = device
@@ -600,7 +597,7 @@ pub mod file_streamer {
                 previous_channels = spec.channels.count();
 
                 if (audio_output.is_none() || should_reset_audio) {
-                    println!("player: Resetting audio device");
+                    info!("player: Resetting audio device");
                     // Try to open the audio output.
                     audio_output.replace(output::try_open(
                         spec,
@@ -613,7 +610,7 @@ pub mod file_streamer {
                         app_handle.clone(),
                     ));
                 } else {
-                    println!("player: Re-using existing audio output");
+                    info!("player: Re-using existing audio output");
                 }
 
                 let mut last_sent_time = Instant::now();
@@ -650,9 +647,9 @@ pub mod file_streamer {
                             if is_reset {
                                 while guard.has_remaining_samples() {
                                     guard.flush();
-                                    println!("Buffer is not empty yet, waiting to continue...");
+                                    info!("Buffer is not empty yet, waiting to continue...");
                                 }
-                                println!("Buffer is now empty. Continuing decoding...");
+                                info!("Buffer is now empty. Continuing decoding...");
                             }
 
                             // Decode all packets, ignoring all decode errors.
@@ -662,7 +659,7 @@ pub mod file_streamer {
                                 if let Ok(result) = event {
                                     match result {
                                         PlayerControlEvent::StreamFile(request) => {
-                                            println!(
+                                            info!(
                                                 "audio: source changed during decoding! {:?}",
                                                 request
                                             );
@@ -670,16 +667,13 @@ pub mod file_streamer {
                                             seek.replace(request.seek.unwrap());
                                             end_pos = None;
                                             volume.replace(request.volume.unwrap());
-                                            file.try_lock()
-                                                .unwrap()
-                                                .replace(request.file_info.unwrap());
                                             cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
                                             is_looping = false;
                                         }
                                         PlayerControlEvent::LoopRegion(request) => {
-                                            println!("audio: loop region! {:?}", request);
+                                            info!("audio: loop region! {:?}", request);
                                             if (request.enabled.unwrap()) {
                                                 seek.replace(request.start_pos.unwrap());
                                                 end_pos.replace(request.end_pos.unwrap());
@@ -700,7 +694,7 @@ pub mod file_streamer {
                                     == PAUSED)
                                 {
                                     is_paused = true;
-                                    println!("Sending paused state to output");
+                                    info!("Sending paused state to output");
                                     guard.pause();
                                     let _ = playback_state_sender.send(false);
                                     app_handle.emit("paused", {});
@@ -718,7 +712,7 @@ pub mod file_streamer {
                                     if let Ok(result) = ctrl_event {
                                         match result {
                                             PlayerControlEvent::StreamFile(request) => {
-                                                println!(
+                                                info!(
                                                     "audio: source changed during decoding! {:?}",
                                                     request
                                                 );
@@ -726,16 +720,13 @@ pub mod file_streamer {
                                                 seek.replace(request.seek.unwrap());
                                                 end_pos = None;
                                                 volume.replace(request.volume.unwrap());
-                                                file.try_lock()
-                                                    .unwrap()
-                                                    .replace(request.file_info.unwrap());
                                                 cancel_token.cancel();
                                                 guard.flush();
                                                 is_reset = true;
                                                 is_looping = false;
                                             }
                                             PlayerControlEvent::LoopRegion(request) => {
-                                                println!("audio: loop region! {:?}", request);
+                                                info!("audio: loop region! {:?}", request);
                                                 if (request.enabled.unwrap()) {
                                                     seek.replace(request.start_pos.unwrap());
                                                     end_pos.replace(request.end_pos.unwrap());
@@ -811,9 +802,7 @@ pub mod file_streamer {
                                                     let _ = sender_sample_offset.send(
                                                         SampleOffsetEvent {
                                                             sample_offset: Some(
-                                                                seek_ts
-                                                                    * file_info.channels.unwrap()
-                                                                        as u64,
+                                                                seek_ts * previous_channels as u64,
                                                             ),
                                                         },
                                                     );
@@ -823,6 +812,8 @@ pub mod file_streamer {
                                                     crate::metadata::extract_metadata(
                                                         &Path::new(&p.clone().as_str()),
                                                         false,
+                                                        false,
+                                                        &app_handle,
                                                     )
                                                 {
                                                     app_handle.emit("song_change", Some(song));
@@ -842,7 +833,7 @@ pub mod file_streamer {
                                                         },
                                                     );
                                                 } else {
-                                                    println!("ERROR getting song");
+                                                    info!("ERROR getting song");
                                                 }
                                                 is_transition = false;
                                                 started_transition = false;
@@ -880,7 +871,7 @@ pub mod file_streamer {
                                         continue;
                                     }
                                     Err(symphonia::core::errors::Error::DecodeError(err)) => {
-                                        println!("decode error: {}", err)
+                                        info!("decode error: {}", err)
                                     }
                                     Err(err) => break Err(err),
                                 }
@@ -892,36 +883,33 @@ pub mod file_streamer {
                                     if err.kind() == std::io::ErrorKind::UnexpectedEof
                                         && err.to_string() == "end of stream" =>
                                 {
-                                    println!("End of stream!!");
+                                    info!("End of stream!!");
                                     let mut next_track = None;
                                     while let Ok(value) =
                                         next_track_receiver.try_lock().unwrap().try_recv()
                                     {
-                                        println!("received {:?}", value);
+                                        info!("received {:?}", value);
                                         next_track.replace(value);
                                     }
                                     if let Some(request) = next_track {
                                         if let Some(path) = request.path.clone() {
                                             is_transition = true;
-                                            println!("player: next track received! {:?}", request);
+                                            info!("player: next track received! {:?}", request);
                                             path_str.replace(path);
                                             seek.replace(request.seek.unwrap());
                                             volume.replace(request.volume.unwrap());
-                                            file.try_lock()
-                                                .unwrap()
-                                                .replace(request.file_info.unwrap());
                                             is_reset = false;
                                         } else {
-                                            println!("player: nothing else in the queue");
+                                            info!("player: nothing else in the queue");
 
                                             // Keep checking until all samples have been played (buffer is empty)
                                             while guard.has_remaining_samples() {
-                                                println!(
+                                                info!(
                                                     "Buffer is not empty yet, waiting to pause..."
                                                 );
                                                 thread::sleep(Duration::from_millis(500));
                                             }
-                                            println!("Buffer is now empty. Pausing stream...");
+                                            info!("Buffer is now empty. Pausing stream...");
                                             guard.pause();
                                             app_handle.emit("stopped", Some(0.0f64));
                                         }
@@ -958,10 +946,10 @@ pub mod file_streamer {
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
         let source = Box::new(File::open(path).unwrap());
-        println!("source {:?}", source);
+        info!("source {:?}", source);
 
         // Provide the file extension as a hint.
-        println!("extension: {:?}", path.extension());
+        info!("extension: {:?}", path.extension());
         if let Some(extension) = path.extension() {
             if let Some(extension_str) = extension.to_str() {
                 hint.with_extension(extension_str);
@@ -985,12 +973,12 @@ pub mod file_streamer {
 
         // Get the value of the track option, if provided.
         let track: Option<Track> = None;
-        println!("probing {:?}", hint);
-        println!("opts {:?}", format_opts);
-        println!("meta {:?}", metadata_opts);
+        info!("probing {:?}", hint);
+        info!("opts {:?}", format_opts);
+        info!("meta {:?}", metadata_opts);
 
         let probe_result = get_probe().format(&hint, mss, &format_opts, &metadata_opts);
-        println!("probe format {:?}", probe_result.is_ok());
+        info!("probe format {:?}", probe_result.is_ok());
 
         if probe_result.is_err() {
             return Err(probe_result.err().unwrap());
@@ -1003,7 +991,7 @@ pub mod file_streamer {
 
         let seek_ts = 0;
 
-        println!("codec params: {:?}", &track.codec_params);
+        info!("codec params: {:?}", &track.codec_params);
 
         // Create a decoder for the track.
         let mut decoder = symphonia::default::get_codecs()
@@ -1065,7 +1053,7 @@ pub mod file_streamer {
                     if (total_count > 100) {
                         total_count = 0;
                         let len = expected_peaks_size.saturating_sub(peaks.len());
-                        // println!("expected peaks size: {}, len: {}, n_adds: {}", expected_peaks_size, peaks.len(), n_adds);
+                        // info!("expected peaks size: {}, len: {}, n_adds: {}", expected_peaks_size, peaks.len(), n_adds);
                         let cln = [peaks.clone().as_slice(), vec![0f32; len].as_slice()].concat();
                         app_handle.emit("waveform", GetWaveformResponse { data: Some(cln) });
                     }
@@ -1074,7 +1062,7 @@ pub mod file_streamer {
                     continue;
                 }
                 Err(symphonia::core::errors::Error::DecodeError(err)) => {
-                    println!("decode error: {}", err)
+                    info!("decode error: {}", err)
                 }
                 Err(err) => break Err(err),
             }
@@ -1086,8 +1074,8 @@ pub mod file_streamer {
                 if err.kind() == std::io::ErrorKind::UnexpectedEof
                     && err.to_string() == "end of stream" =>
             {
-                println!("End of stream!!");
-                println!(
+                info!("End of stream!!");
+                info!(
                     "Number of frames: {} (actual), {} (expected)",
                     n_frames,
                     track.codec_params.n_frames.unwrap()

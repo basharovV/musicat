@@ -3,7 +3,6 @@
     import { open } from "@tauri-apps/plugin-dialog";
     import { open as fileOpen } from "@tauri-apps/plugin-shell";
 
-    import { listen } from "@tauri-apps/api/event";
     import { pictureDir } from "@tauri-apps/api/path";
 
     import hotkeys from "hotkeys-js";
@@ -21,15 +20,12 @@
     import { fade, fly } from "svelte/transition";
     import { getMapForTagType } from "../../data/LabelMap";
     import {
-        importSong,
-        lookForArt,
         readMappedMetadataFromSong
     } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
         isTrackInfoPopupOpen,
         os,
-        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks
     } from "../../data/store";
@@ -38,7 +34,7 @@
     import Input from "../ui/Input.svelte";
     import { optionalTippy } from "../ui/TippyAction";
 
-    import { invoke } from "@tauri-apps/api/core";
+    import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import {
         ENCODINGS,
         decodeLegacy,
@@ -176,30 +172,24 @@
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path, isImport: false }
+                event: { path, isImport: false, includeFolderArtwork: true }
             });
             if (songWithArtwork.artwork) {
                 console.log("artwork");
                 artworkFormat = songWithArtwork.artwork.format;
-                artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
-                artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                    "base64"
-                )}`;
+                if (songWithArtwork.artwork.data.length) {
+                    artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
+                    artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
+                        "base64"
+                    )}`;
+                } else if (songWithArtwork.artwork.src) {
+                    artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                }
 
                 previousArtworkFormat = artworkFormat;
                 previousArtworkSrc = artworkSrc;
             } else {
-                foundArtwork = await lookForArt(
-                    ($rightClickedTrack || $rightClickedTracks[0]).path,
-                    ($rightClickedTrack || $rightClickedTracks[0]).file
-                );
-                if (foundArtwork) {
-                    artworkSrc = foundArtwork.artworkSrc;
-                    artworkFormat = foundArtwork.artworkFormat;
-
-                    previousArtworkFormat = artworkFormat;
-                    previousArtworkSrc = artworkSrc;
-                }
+                artworkSrc = null;
             }
 
             // Avoid a 'flash' while scrolling through same album (with same art from same source)
@@ -216,10 +206,6 @@
         } else {
             // artworkSrc = null;
         }
-    }
-
-    function getField(fieldKey: string) {
-        return metadata?.mappedMetadata.find((m) => m.genericId === fieldKey);
     }
 
     /**
@@ -294,7 +280,7 @@
                 artworkToSetFormat = null;
                 artworkToSetSrc = null;
             } else {
-                await reImportTracks(toImport);
+                await reImportTracks(toImport.songs);
             }
         }
 
@@ -306,6 +292,12 @@
                 await reImportAlbum(album);
             }
         }
+
+        toast.success("Successfully written metadata!", {
+            position: "top-right"
+        });
+
+        await reset();
     }
 
     async function reImportAlbum(album: Album) {
@@ -319,20 +311,8 @@
         }
     }
 
-    async function reImportTracks(toImport: ToImport) {
-        console.log("toImport", toImport);
-        toast.success("Successfully written metadata!", {
-            position: "top-right"
-        });
-        console.log("right clicked ok?", $rightClickedTrack);
-
-        const songs = await Promise.all(
-            toImport.songs.map((s) => importSong(s, true))
-        );
-        console.log("right clicked ok?", $rightClickedTrack);
-        console.log("songs imported", songs);
-
-        await reset();
+    async function reImportTracks(songs: Song[]) {
+        await db.songs.bulkPut(songs);
     }
 
     /**

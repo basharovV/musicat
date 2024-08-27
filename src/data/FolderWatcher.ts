@@ -2,7 +2,7 @@ import { exists, watchImmediate } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
 import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
-import { addSong, importPaths } from "./LibraryImporter";
+import { importPaths } from "./LibraryImporter";
 import { db } from "./db";
 import {
     bottomBarNotification,
@@ -49,7 +49,7 @@ export async function startWatching() {
                                     text: "Folder watcher: File added - updating library...",
                                     timeout: 2000
                                 });
-                                await addSong(path, file, true, false);
+                                await importPaths([path], true);
                             }
                             // Deletion
                             else if (!fileExists && song) {

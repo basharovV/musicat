@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use log::info;
 use rubato::{calculate_cutoff, SincInterpolationParameters};
 use symphonia::core::audio::{AudioBuffer, AudioBufferRef, Signal, SignalSpec};
 use symphonia::core::conv::{FromSample, IntoSample};
@@ -123,7 +124,7 @@ where
     pub fn flush(&mut self) -> Option<&[T]> {
         let len = self.input[0].len();
 
-        println!("Flushing resampler, len: {}", len);
+        info!("Flushing resampler, len: {}", len);
         if len == 0 {
             return None;
         }

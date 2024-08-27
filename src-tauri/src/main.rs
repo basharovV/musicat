@@ -55,7 +55,7 @@ async fn get_lyrics(event: GetLyricsEvent) -> GetLyricsResponse {
     match lyrics {
         Ok(l) => return GetLyricsResponse { lyrics: Some(l) },
         Err(err) => {
-            println!("Lyrics not found {:?}", err);
+            info!("Lyrics not found {:?}", err);
             return GetLyricsResponse { lyrics: None };
         }
     }
@@ -72,7 +72,7 @@ async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
 
     // Get the HTML content from the response
     let body = response.text().await?;
-    // println!("{:?}", body);
+    // info!("{:?}", body);
 
     // Parse the HTML content using the scraper crate
     let document = Html::parse_document(&body);
@@ -81,7 +81,7 @@ async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
     let lyrics_selector = Selector::parse("[data-lyrics-container=\"true\"]").unwrap();
 
     let lyrics_element = document.select(&lyrics_selector).next();
-    // println!("{:?}", lyrics_element);
+    // info!("{:?}", lyrics_element);
 
     // Extract and return the lyrics
     match lyrics_element {
@@ -150,7 +150,7 @@ fn stream_file(
     state: State<AudioStreamer>,
     _app_handle: tauri::AppHandle,
 ) {
-    println!("Stream file {:?}", event);
+    info!("Stream file {:?}", event);
     let _ = state
         .player_control_sender
         .send(player::file_streamer::PlayerControlEvent::StreamFile(event));
@@ -163,7 +163,7 @@ fn queue_next(
     state: State<AudioStreamer>,
     _app_handle: tauri::AppHandle,
 ) {
-    println!("Queue next file {:?}", event);
+    info!("Queue next file {:?}", event);
     // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
 }
@@ -174,7 +174,7 @@ fn loop_region(
     state: State<AudioStreamer>,
     _app_handle: tauri::AppHandle,
 ) {
-    println!("Loop region{:?}", event);
+    info!("Loop region{:?}", event);
     let _ = state
         .player_control_sender
         .send(player::file_streamer::PlayerControlEvent::LoopRegion(event));
@@ -186,7 +186,7 @@ fn get_waveform(
     state: State<AudioStreamer>,
     _app_handle: tauri::AppHandle,
 ) -> () {
-    println!("Get waveform {:?}", event);
+    info!("Get waveform {:?}", event);
 
     let evt = event.clone();
     let token = CancellationToken::new();
@@ -205,7 +205,7 @@ fn get_waveform(
     std::thread::spawn(move || {
         // Handle client's offer
         let result = player::file_streamer::get_peaks(evt, &_app_handle, token_clone);
-        // println!("Waveform: {:?}", result);
+        // info!("Waveform: {:?}", result);
     });
 }
 
@@ -221,13 +221,13 @@ pub struct VolumeControlEvent {
 
 #[tauri::command]
 fn volume_control(event: VolumeControlEvent, state: State<AudioStreamer>) {
-    println!("Received volume_control event");
+    info!("Received volume_control event");
     match state.volume_control_sender.send(event) {
         Ok(_) => {
-            // println!("Sent control flow info");
+            // info!("Sent control flow info");
         }
         Err(_err) => {
-            println!("Error sending volume control info (channel inactive");
+            info!("Error sending volume control info (channel inactive");
         }
     }
 }
@@ -240,7 +240,7 @@ pub struct FlowControlEvent {
 
 #[tauri::command]
 fn decode_control(event: FlowControlEvent, state: State<AudioStreamer>) {
-    println!("Received decode control event: {:?}", event);
+    info!("Received decode control event: {:?}", event);
     match event.decoding_active {
         Some(true) => {
             state.resume();
@@ -264,7 +264,7 @@ async fn init_streamer(
     state: State<'_, AudioStreamer<'_>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<StreamStatus, ()> {
-    println!("Get stream status {:?}", event);
+    info!("Get stream status {:?}", event);
     // Close existing connection
     state.clone().reset().await;
 
@@ -392,7 +392,7 @@ async fn main() {
 
             let opened_urls = if let Some(urls) = &*file_urls.0.lock().unwrap() {
                 urls.iter()
-                    .map(|u| u.as_str().replace("\\", "\\\\"))
+                    .map(|u| urlencoding::decode(u.as_str()).unwrap().replace("\\", "\\\\"))
                     .collect::<Vec<_>>()
                     .join(", ")
             } else {
@@ -447,7 +447,7 @@ async fn main() {
             });
 
             let _id3 = app.listen_any("webrtc-signal", move |event| {
-                println!("webrtc-signal {:?}", event);
+                info!("webrtc-signal {:?}", event);
                 let event_clone = event.clone();
                 let app_clone = app2_.clone();
 
@@ -462,7 +462,7 @@ async fn main() {
             });
 
             let _id3 = app.listen_any("webrtc-icecandidate-server", move |event| {
-                println!("webrtc-signal {:?}", event);
+                info!("webrtc-signal {:?}", event);
                 let event_clone = event.clone();
                 let handle_clone = strm2.clone();
                 tokio::spawn(async move {
@@ -584,7 +584,7 @@ async fn main() {
                 if let Some(w) = app.get_webview_window("main") {
                     let urls = urls
                         .iter()
-                        .map(|u| u.as_str())
+                        .map(|u| urlencoding::decode(u.as_str()).unwrap())
                         .collect::<Vec<_>>()
                         .join(",");
                     let _ = w.eval(&format!("window.onFileOpen(`{urls}`)"));

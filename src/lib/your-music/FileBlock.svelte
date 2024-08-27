@@ -1,13 +1,12 @@
 <script lang="ts">
+    import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { open } from "@tauri-apps/plugin-shell";
-    import type { ArtistFileItem } from "src/App";
-    import { draggedScrapbookItems } from "../../data/store";
+    import type { ArtistFileItem, Song } from "src/App";
     import {
-        getMetadataFromFile,
-        getSongFromMetadata
+        getMetadataFromFile
     } from "../../data/LibraryImporter";
+    import { draggedScrapbookItems } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
-    import { convertFileSrc } from "@tauri-apps/api/core";
     import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistFileItem;
@@ -21,11 +20,13 @@
                 open(item.path);
                 return;
             }
-            const song = await getSongFromMetadata(
-                item.path,
-                item.name,
-                metadata
-            );
+            const song = await invoke<Song>("get_song_metadata", {
+                event: {
+                    path: item.path,
+                    isImport: false,
+                    includeFolderArtwork: false
+                }
+            });
             audioPlayer.playSong(song);
         } else {
             // Play in default system app
@@ -62,14 +63,14 @@
             </video>
         {:else}
             <div class="background">
-                <Icon icon="system-uicons:audio-wave" size={40}/>
+                <Icon icon="system-uicons:audio-wave" size={40} />
             </div>
         {/if}
         <div class="item-info">
             {#if item.fileType.type === "audio"}
-                <Icon icon="bi:file-earmark-play" color="#c745c7"/>
+                <Icon icon="bi:file-earmark-play" color="#c745c7" />
             {:else if item.fileType.type === "video"}
-                <Icon icon="dashicons:editor-video" color="#e04848"/>
+                <Icon icon="dashicons:editor-video" color="#e04848" />
             {:else if item.fileType.type === "image"}
                 <Icon icon="dashicons:editor-video" />
             {:else if item.fileType.type === "txt"}

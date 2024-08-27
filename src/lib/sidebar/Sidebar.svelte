@@ -1,6 +1,8 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/core";
-    import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+    import { window as tauriWindow } from "@tauri-apps/api";
+    import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+    import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
+    import { currentMonitor } from "@tauri-apps/api/window";
     import { Buffer } from "buffer";
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
@@ -12,7 +14,6 @@
     import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
     import type { Playlist, Song } from "../../App";
-    import { lookForArt } from "../../data/LibraryImporter";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -24,7 +25,6 @@
         draggedSongs,
         isDraggingFromQueue,
         isFindFocused,
-        isFullScreenVisualiser,
         isInfoPopupOpen,
         isMiniPlayer,
         isPlaying,
@@ -49,25 +49,20 @@
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         uiView,
-        userSettings,
-        volume
+        userSettings
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
+    import { currentThemeObject } from "../../theming/store";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import audioPlayer from "../player/AudioPlayer";
+    import { isIAPlaying } from "../player/WebAudioPlayer";
+    import type { SavedSmartQuery } from "../smart-query/QueryPart";
     import "../tippy.css";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
-    import Seekbar from "./Seekbar.svelte";
-    import { isIAPlaying } from "../player/WebAudioPlayer";
-    import SmartQuery from "../smart-query/Query";
-    import type { SavedSmartQuery } from "../smart-query/QueryPart";
-    import LL from "../../i18n/i18n-svelte";
-    import { currentThemeObject } from "../../theming/store";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
-    import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
-    import { currentMonitor } from "@tauri-apps/api/window";
-    import { window as tauriWindow } from "@tauri-apps/api";
+    import Seekbar from "./Seekbar.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -120,9 +115,13 @@
     currentSong.subscribe(async (song) => {
         if (song) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path: song.path, isImport: false }
+                event: {
+                    path: song.path,
+                    isImport: false,
+                    includeFolderArtwork: true
+                }
             });
-            console.log("test", songWithArtwork);
+            console.log("sidebar::currentSong listener", songWithArtwork);
             title = songWithArtwork.title;
             fileName = song.file;
             artist = songWithArtwork.artist;
@@ -135,10 +134,15 @@
             previousArtworkSrc = artworkSrc;
             if (songWithArtwork.artwork) {
                 artworkFormat = songWithArtwork.artwork.format;
-                artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
-                artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                    "base64"
-                )}`;
+                if (songWithArtwork.artwork.data?.length) {
+                    artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
+                    artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
+                        "base64"
+                    )}`;
+                } else if (songWithArtwork.artwork.src) {
+                    artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                }
+
                 console.log("artworkSrc", artworkSrc);
                 $currentSongArtworkSrc = {
                     src: artworkSrc,
@@ -150,19 +154,6 @@
                 };
             } else {
                 artworkSrc = null;
-                const artwork = await lookForArt(song.path, song.file);
-                if (artwork) {
-                    artworkSrc = artwork.artworkSrc;
-                    artworkFormat = artwork.artworkFormat;
-                    $currentSongArtworkSrc = {
-                        src: artworkSrc,
-                        format: artworkFormat,
-                        size: {
-                            width: 200,
-                            height: 200
-                        }
-                    };
-                }
             }
         }
         drawArtwork(previousSongIdx > $currentSongIdx);

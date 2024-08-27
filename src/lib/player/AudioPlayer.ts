@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { get } from "svelte/store";
-import type { ArtworkSrc, LastPlayedInfo, Song } from "../../App";
+import type { ArtworkSrc, LastPlayedInfo, Song, ToImport } from "../../App";
 import { db } from "../../data/db";
 import {
     currentSong,
@@ -23,7 +23,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import WebRTCReceiver from "./WebRTCReceiver";
 import { register } from "@tauri-apps/plugin-global-shortcut";
 import webAudioPlayer, { isIAPlaying } from "./WebAudioPlayer";
-const appWindow = getCurrentWebviewWindow()
+const appWindow = getCurrentWebviewWindow();
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
@@ -450,6 +450,34 @@ class AudioPlayer {
                 songId: this.currentSong.id,
                 position: 0
             });
+        }
+    }
+
+    async handleOpenedUrls(openedUrls: string) {
+        window["openedUrls"] = null;
+        console.log("handleOpenedUrls", openedUrls);
+        const paths = openedUrls.split(",").map((p) => {
+            // Strip file:// prefix
+            if (p.startsWith("file://")) {
+                p = p.slice(7);
+            }
+            return p.trim();
+        });
+
+        console.log("handleOpenedUrls paths", paths);
+
+        const response = await invoke<ToImport>("scan_paths", {
+            event: {
+                paths: paths,
+                recursive: false,
+                process_albums: false,
+                is_async: false
+            }
+        });
+        console.log("scan_paths response", response);
+        if (response.songs) {
+            this.shouldPlay = true;
+            playlist.set(response.songs);
         }
     }
 

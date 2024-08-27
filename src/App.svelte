@@ -65,7 +65,8 @@
     import Icon from "./lib/ui/Icon.svelte";
     import TopBar from "./lib/views/TopBar.svelte";
     import { currentThemeObject } from "./theming/store";
-const appWindow = getCurrentWebviewWindow()
+    import audioPlayer from "./lib/player/AudioPlayer";
+    const appWindow = getCurrentWebviewWindow();
 
     console.log("locale", getLocaleFromNavigator());
 
@@ -115,15 +116,14 @@ const appWindow = getCurrentWebviewWindow()
      * - Artist's toolkit view: Add to scrapbook or song project
      */
     onMount(async () => {
-        // Check for opened urls on the window
-        console.log('window opened urls: ', window.openedUrls);
-        if (window.openedUrls) {
-            alert("opened urls: " + window.openedUrls);
-        }
-        window.onFileOpen = (urls) => {
-            console.log('onFileOpen: ', urls);
-            alert("File opened: " + urls);
-        }
+        // File associations: check for opened urls on the window
+        console.log("window opened urls: ", window.openedUrls);
+
+        window["onFileOpen"] = (urls) => {
+            console.log("onFileOpen: ", urls);
+            audioPlayer.handleOpenedUrls(window.openedUrls);
+        };
+
         unlistenFileDrop = await appWindow.onDragDropEvent((evt) => {
             switch (evt.payload.type) {
                 case "drop":

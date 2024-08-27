@@ -8,6 +8,7 @@ use lofty::picture::Picture;
 use lofty::probe::Probe;
 use lofty::read_from_path;
 use lofty::tag::{Accessor, ItemKey, ItemValue, TagItem, TagType};
+use log::info;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
 use reqwest;
@@ -85,6 +86,7 @@ impl FileInfo {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Artwork {
     data: Vec<u8>,
+    src: Option<String>,
     format: String,
 }
 
@@ -143,6 +145,7 @@ pub struct ToImportEvent {
 pub struct GetSongMetadataEvent {
     path: String,
     is_import: bool,
+    include_folder_artwork: bool,
 }
 
 #[tauri::command]
@@ -150,7 +153,7 @@ pub async fn write_metadatas(
     event: WriteMetatadasEvent,
     _app_handle: tauri::AppHandle,
 ) -> ToImportEvent {
-    println!("{:?}", event);
+    info!("{:?}", event);
     // let payload: &str = event.payload().unwrap();
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
     let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
@@ -163,11 +166,14 @@ pub async fn write_metadatas(
         let write_result = write_metadata_track(&track.clone());
         match write_result {
             Ok(()) => {
-                if let Some(song) =
-                    crate::metadata::extract_metadata(Path::new(&track.file_path), true)
-                {
+                if let Some(song) = crate::metadata::extract_metadata(
+                    Path::new(&track.file_path),
+                    true,
+                    false,
+                    &_app_handle,
+                ) {
                     if let Some(album) = process_new_album(&song, &_app_handle) {
-                        println!("Album: {:?}", album);
+                        info!("Album: {:?}", album);
                         let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
                         if let Some(existing_album) = existing_album {
                             // Merge with existing album
@@ -183,7 +189,7 @@ pub async fn write_metadatas(
                     }
                     songs.lock().unwrap().push(song);
                 }
-                println!("Wrote metadata")
+                info!("Wrote metadata")
             }
             Err(err) => {
                 match err.downcast_ref::<std::io::Error>() {
@@ -202,7 +208,7 @@ pub async fn write_metadatas(
                     None => {}
                 }
                 error.replace(String::from(err.to_string()));
-                println!("Error writing metadata: {}", err);
+                info!("Error writing metadata: {}", err);
             }
         }
     }
@@ -219,12 +225,17 @@ pub async fn write_metadatas(
 }
 
 #[tauri::command]
-pub async fn get_song_metadata(event: GetSongMetadataEvent) -> Option<Song> {
+pub async fn get_song_metadata(event: GetSongMetadataEvent, app: AppHandle) -> Option<Song> {
     let path = Path::new(event.path.as_str());
 
     if path.is_file() {
-        // println!("{:?}", entry.path());
-        if let Some(song) = crate::metadata::extract_metadata(&path, event.is_import) {
+        // info!("{:?}", entry.path());
+        if let Some(song) = crate::metadata::extract_metadata(
+            &path,
+            event.is_import,
+            event.include_folder_artwork,
+            &app,
+        ) {
             return Some(song);
         }
     }
@@ -236,7 +247,7 @@ pub async fn scan_paths(
     event: ScanPathsEvent,
     app_handle: tauri::AppHandle,
 ) -> Option<ToImportEvent> {
-    // println!("scan_paths", event);
+    // info!("scan_paths", event);
     let start = Instant::now();
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
     let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
@@ -244,20 +255,24 @@ pub async fn scan_paths(
 
     event.paths.par_iter().for_each(|p| {
         let path = Path::new(p.as_str());
-        // println!("{:?}", path);
+        // info!("{:?}", path);
 
         if path.is_file() {
-            if let Some(mut song) = crate::metadata::extract_metadata(&path, true) {
-                if let Some(album) = process_new_album(&song, &app_handle) {
-                    println!("Album: {:?}", album);
-                    albums
-                        .lock()
-                        .unwrap()
-                        .entry(album.id.clone())
-                        .and_modify(|a| {
-                            a.tracks_ids.push(song.id.clone());
-                        })
-                        .or_insert(album);
+            if let Some(mut song) =
+                crate::metadata::extract_metadata(&path, true, false, &app_handle)
+            {
+                if (event.process_albums) {
+                    if let Some(album) = process_new_album(&song, &app_handle) {
+                        info!("Album: {:?}", album);
+                        albums
+                            .lock()
+                            .unwrap()
+                            .entry(album.id.clone())
+                            .and_modify(|a| {
+                                a.tracks_ids.push(song.id.clone());
+                            })
+                            .or_insert(album);
+                    }
                 }
                 song.artwork = None;
                 songs.lock().unwrap().push(song);
@@ -268,6 +283,7 @@ pub async fn scan_paths(
                 &songs,
                 &albums,
                 event.recursive,
+                event.process_albums,
                 &app_handle,
             ) {
                 if (!sub_results.songs.is_empty()) {
@@ -282,12 +298,12 @@ pub async fn scan_paths(
 
     // Print the collected songs for demonstration purposes
     // for song in songs.lock().unwrap().clone(){
-    //     println!("{:?}", song);
+    //     info!("{:?}", song);
     // }
 
     // First send all songs in chunks
     let length = songs.lock().unwrap().clone().len();
-    if length > 500 {
+    if event.is_async && length > 500 {
         let songs_clone = songs.lock().unwrap();
         let enumerator = songs_clone.chunks(200);
         let chunks = enumerator.len();
@@ -303,7 +319,7 @@ pub async fn scan_paths(
                     100,
                 )
             };
-            println!("{:?}", progress);
+            info!("{:?}", progress);
             let _ = app_handle.emit(
                 "import_chunk",
                 ToImportEvent {
@@ -315,7 +331,7 @@ pub async fn scan_paths(
                 },
             );
         });
-    } else {
+    } else if (event.is_async) {
         // Send album artworks first - client needs to process the songs, which in turn needs to process the albums
         // Once this is done the client can update all existing albums with the artworks
         // The done flag is true - this determines when the client is done importing
@@ -345,7 +361,7 @@ pub async fn scan_paths(
 
     // If more than 100 albums, also send them in chunks
 
-    if (albums.lock().unwrap().clone().len() > 100) {
+    if (event.is_async && albums.lock().unwrap().clone().len() > 100) {
         let albums_clone: Vec<Album> = albums.lock().unwrap().values().cloned().collect();
         let enumerator = albums_clone.chunks(100);
         let chunks = enumerator.len();
@@ -359,7 +375,7 @@ pub async fn scan_paths(
                     100,
                 )
             };
-            println!("{:?}", progress);
+            info!("{:?}", progress);
             let _ = app_handle.emit(
                 "import_albums",
                 ToImportEvent {
@@ -371,7 +387,7 @@ pub async fn scan_paths(
                 },
             );
         });
-    } else {
+    } else if (event.is_async) {
         let _ = app_handle.emit(
             "import_albums",
             ToImportEvent {
@@ -385,7 +401,7 @@ pub async fn scan_paths(
     }
 
     // Print how many songs and albums were imported, and how long the import took
-    cprintln!(
+    info!(
         "<bold><green>Imported {} songs and {} albums in {:.2} seconds</green></bold>",
         songs.lock().unwrap().len(),
         albums.lock().unwrap().len(),
@@ -420,22 +436,22 @@ fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
             .as_bytes(),
     )
     .to_hex_lowercase();
-    // println!("album: {} , {}", song.album, album_id);
+    // info!("album: {} , {}", song.album, album_id);
     let result = look_for_art(&song.path, &song.file, app);
     if let Ok(res) = result {
         if let Some(art) = res.clone() {
-            // println!("Found existing artwork in folder for: {}", song.album);
+            // info!("Found existing artwork in folder for: {}", song.album);
             artwork_src = art.artwork_src;
             artwork_format = art.artwork_format;
         }
     } else if let Err(e) = result {
-        println!("Error looking for artwork: {}", e);
+        info!("Error looking for artwork: {}", e);
     }
-    println!("artwork found: {}", artwork_src);
+    info!("artwork found: {}", artwork_src);
     if (artwork_src.is_empty()) {
-        // println!("Song artwork: {:?}", &song.artwork);
+        // info!("Song artwork: {:?}", &song.artwork);
         if let Some(art) = &song.artwork {
-            // println!("Caching artwork for: {}", song.album);
+            // info!("Caching artwork for: {}", song.album);
             // Cache artwork using artwork_cacher
             let cached_art_path =
                 artwork_cacher::cache_artwork(&art.data, &album_id, &art.format, app);
@@ -443,7 +459,7 @@ fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
                 artwork_src = p.to_str().unwrap().to_string();
                 artwork_format = art.format.clone();
             } else {
-                println!("Error caching artwork: {}", cached_art_path.unwrap_err());
+                info!("Error caching artwork: {}", cached_art_path.unwrap_err());
             }
         }
     }
@@ -493,6 +509,7 @@ fn process_directory(
     songs: &Arc<std::sync::Mutex<Vec<Song>>>,
     albums: &Arc<std::sync::Mutex<HashMap<String, Album>>>,
     recursive: bool,
+    process_albums: bool,
     app: &AppHandle,
 ) -> Option<ProcessDirectoryResult> {
     let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
@@ -505,35 +522,39 @@ fn process_directory(
                 if let Ok(entry) = entry {
                     let path = entry.path();
 
-                    // println!("{:?}", entry.path());
+                    // info!("{:?}", entry.path());
                     if path.is_file() {
-                        if let Some(mut song) = crate::metadata::extract_metadata(&path, true) {
-                            if let Some(album) = process_new_album(&song, app) {
-                                // println!("Album: {:?}", album);
-                                let existing_album =
-                                    albums.lock().unwrap().get_mut(&album.id).cloned();
-                                let existing_album_subalbums =
-                                    subalbums.lock().unwrap().get_mut(&album.id).cloned();
-                                if let Some(existing_album) = existing_album {
-                                    // Merge with existing album
-                                    albums.lock().unwrap().entry(album.id.clone()).and_modify(
-                                        |a| {
-                                            a.tracks_ids.push(song.id.clone());
-                                        },
-                                    );
-                                } else if let Some(existing_album_subalbums) =
-                                    existing_album_subalbums
-                                {
-                                    // Merge with existing album
-                                    subalbums
-                                        .lock()
-                                        .unwrap()
-                                        .entry(album.id.clone())
-                                        .and_modify(|a| {
-                                            a.tracks_ids.push(song.id.clone());
-                                        });
-                                } else {
-                                    subalbums.lock().unwrap().insert(album.id.clone(), album);
+                        if let Some(mut song) =
+                            crate::metadata::extract_metadata(&path, true, false, &app)
+                        {
+                            if (process_albums) {
+                                if let Some(album) = process_new_album(&song, app) {
+                                    // info!("Album: {:?}", album);
+                                    let existing_album =
+                                        albums.lock().unwrap().get_mut(&album.id).cloned();
+                                    let existing_album_subalbums =
+                                        subalbums.lock().unwrap().get_mut(&album.id).cloned();
+                                    if let Some(existing_album) = existing_album {
+                                        // Merge with existing album
+                                        albums.lock().unwrap().entry(album.id.clone()).and_modify(
+                                            |a| {
+                                                a.tracks_ids.push(song.id.clone());
+                                            },
+                                        );
+                                    } else if let Some(existing_album_subalbums) =
+                                        existing_album_subalbums
+                                    {
+                                        // Merge with existing album
+                                        subalbums
+                                            .lock()
+                                            .unwrap()
+                                            .entry(album.id.clone())
+                                            .and_modify(|a| {
+                                                a.tracks_ids.push(song.id.clone());
+                                            });
+                                    } else {
+                                        subalbums.lock().unwrap().insert(album.id.clone(), album);
+                                    }
                                 }
                             }
                             song.artwork = None;
@@ -541,7 +562,7 @@ fn process_directory(
                         }
                     } else if path.is_dir() && recursive {
                         if let Some(sub_results) =
-                            process_directory(&path, songs, albums, true, app)
+                            process_directory(&path, songs, albums, true, process_albums, app)
                         {
                             if (!sub_results.songs.is_empty()) {
                                 songs.lock().unwrap().extend(sub_results.songs);
@@ -561,7 +582,12 @@ fn process_directory(
     });
 }
 
-pub fn extract_metadata(file_path: &Path, is_import: bool) -> Option<Song> {
+pub fn extract_metadata(
+    file_path: &Path,
+    is_import: bool,
+    include_folder_artwork: bool,
+    app: &AppHandle,
+) -> Option<Song> {
     if let Some(extension) = file_path.extension() {
         if let Some(ext_str) = extension.to_str() {
             if ext_str.eq_ignore_ascii_case("mp3")
@@ -590,7 +616,7 @@ pub fn extract_metadata(file_path: &Path, is_import: bool) -> Option<Song> {
                     if tagged_file.tags().is_empty() {
                         title = file.to_string();
                     }
-                    // println!("bit depth {:?}", tagged_file.properties().bit_depth());
+                    // info!("bit depth {:?}", tagged_file.properties().bit_depth());
                     file_info = FileInfo {
                         duration: Some(tagged_file.properties().duration().as_secs_f64()),
                         channels: tagged_file.properties().channels(),
@@ -639,10 +665,10 @@ pub fn extract_metadata(file_path: &Path, is_import: bool) -> Option<Song> {
                         duration = seconds_to_hms(tagged_file.properties().duration().as_secs());
                     }
 
-                    // println!("Tag properties {:?}", file_info);
+                    // info!("Tag properties {:?}", file_info);
                     tagged_file.tags().iter().for_each(|tag| {
-                        // println!("Tag type {:?}", tag.tag_type());
-                        // println!("Tag items {:?}", tag.items());
+                        // info!("Tag type {:?}", tag.tag_type());
+                        // info!("Tag items {:?}", tag.items());
                         if title.is_empty() {
                             title = tag
                                 .title()
@@ -680,8 +706,24 @@ pub fn extract_metadata(file_path: &Path, is_import: bool) -> Option<Song> {
                         if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
                             artwork = Some(Artwork {
                                 data: pic.data().to_vec(),
+                                src: None,
                                 format: pic.mime_type().unwrap().to_string(),
                             })
+                        }
+                    }
+
+                    if (include_folder_artwork && artwork.is_none()) {
+                        let result = look_for_art(&path, &file, app);
+                        if let Ok(res) = result {
+                            if let Some(art) = res.clone() {
+                                artwork = Some(Artwork {
+                                    data: vec![],
+                                    src: Some(art.artwork_src),
+                                    format: art.artwork_format,
+                                })
+                            }
+                        } else if let Err(e) = result {
+                            info!("Error looking for artwork: {}", e);
                         }
                     }
 
@@ -747,15 +789,15 @@ fn map_id3v1_to_id3v2_4(key: &str) -> Option<&'static str> {
 }
 
 fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
-    // println!("got event-name with payload {:?}", event.payload());
+    // info!("got event-name with payload {:?}", event.payload());
 
     // Parse JSON
-    // println!("v {:?}", v);
+    // info!("v {:?}", v);
     if v.tag_type.is_some() {
         // We know which tag type this is, continue with writing...
 
         if !v.metadata.is_empty() {
-            // println!("{:?}", v.metadata);
+            // info!("{:?}", v.metadata);
             let mut tag_type: Option<TagType> = None;
             let tag_type_evt = v.tag_type.as_deref().unwrap();
             match tag_type_evt {
@@ -764,13 +806,13 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 "ID3v2.2" => tag_type = Some(TagType::Id3v2),
                 "ID3v2.3" => tag_type = Some(TagType::Id3v2),
                 "ID3v2.4" => tag_type = Some(TagType::Id3v2),
-                _ => println!("Unhandled tag type: {:?}", v.tag_type),
+                _ => info!("Unhandled tag type: {:?}", v.tag_type),
             }
             let tag_type_value = tag_type.unwrap();
             let probe = Probe::open(&v.file_path).unwrap().guess_file_type()?;
             // &probe.guess_file_type();
             let file_type = &probe.file_type();
-            println!("fileType: {:?}", &file_type);
+            info!("fileType: {:?}", &file_type);
             let mut tag = read_from_path(&v.file_path).unwrap();
             let tag_file_type = tag.file_type();
             let mut to_write = lofty::tag::Tag::new(tag_type.unwrap());
@@ -783,7 +825,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                     .enumerate()
                     .for_each(|(idx, pic)| to_write.set_picture(idx, pic.clone()));
             }
-            println!("tag fileType: {:?}", &tag_file_type);
+            info!("tag fileType: {:?}", &tag_file_type);
 
             // let primary_tag = tag.primary_tag_mut().unwrap();
             for item in v.metadata.iter() {
@@ -794,27 +836,27 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         let mut tag_key: String = item.id.clone();
 
                         if tag_type_evt == "ID3v1" {
-                            println!("Upgrading v1 to v2.4 tag: {}", tag_key);
+                            info!("Upgrading v1 to v2.4 tag: {}", tag_key);
                             let item_keyv4 = map_id3v1_to_id3v2_4(&tag_key);
-                            println!("Result v4: {:?}", item_keyv4);
+                            info!("Result v4: {:?}", item_keyv4);
                             if item_keyv4.is_some() {
                                 tag_key = item_keyv4.unwrap().to_string();
-                                println!("Upgraded ID3v1 tag to ID3v2.4: {}", tag_key);
+                                info!("Upgraded ID3v1 tag to ID3v2.4: {}", tag_key);
                             }
                         } else if tag_type_evt == "ID3v2.2" {
-                            println!("Upgrading v2.2 to v2.3 tag: {}", tag_key);
+                            info!("Upgrading v2.2 to v2.3 tag: {}", tag_key);
                             let item_keyv4 = upgrade_v2(tag_key.as_str());
-                            println!("Result v4: {:?}", item_keyv4);
+                            info!("Result v4: {:?}", item_keyv4);
                             if item_keyv4.is_some() {
                                 tag_key = item_keyv4.unwrap().to_string();
-                                println!("Upgraded ID3v2.2 tag to ID3v2.4: {}", tag_key);
+                                info!("Upgraded ID3v2.2 tag to ID3v2.4: {}", tag_key);
                             }
                         } else if tag_type_evt == "ID3v2.3" {
                             let item_keyv4 = upgrade_v3(tag_key.as_str());
-                            println!("Result v4: {:?}", item_keyv4);
+                            info!("Result v4: {:?}", item_keyv4);
                             if item_keyv4.is_some() {
                                 tag_key = item_keyv4.unwrap().to_string();
-                                println!("Upgraded ID3v2.3 tag to ID3v2.4: {}", tag_key);
+                                info!("Upgraded ID3v2.3 tag to ID3v2.4: {}", tag_key);
                             }
                         }
                         let mut item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
@@ -858,12 +900,12 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
 
             for tag_item in tag.tags() {
                 for tag in tag_item.items() {
-                    println!("{:?}", tag);
+                    info!("{:?}", tag);
                 }
             }
             let mut file = File::options().read(true).write(true).open(&v.file_path)?;
-            println!("{:?}", file);
-            println!("FILETYPE: {:?}", file_type);
+            info!("{:?}", file);
+            info!("FILETYPE: {:?}", file_type);
 
             // Keep picture, overwrite everything else
             let pictures = to_write.pictures();
@@ -871,10 +913,10 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
             tag.clear();
             tag.insert_tag(to_write);
             tag.save_to(&mut file, WriteOptions::new())?;
-            println!("File saved succesfully!");
+            info!("File saved succesfully!");
         }
     } else {
-        println!("tagType is missing");
+        info!("tagType is missing");
     }
     Ok(())
     // println("title:")

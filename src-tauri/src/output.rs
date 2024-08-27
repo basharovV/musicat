@@ -107,7 +107,7 @@ mod cpal {
                 }
             };
 
-            println!("Default audio device: {:?}", device.name());
+            info!("Default audio device: {:?}", device.name());
 
             let config = match device.default_output_config() {
                 Ok(config) => config,
@@ -129,7 +129,7 @@ mod cpal {
                 })
                 .is_some();
 
-            println!(
+            info!(
                 "output: supports sample rate ({}) ? {}",
                 spec.rate, supports_sample_rate
             );
@@ -300,7 +300,7 @@ mod cpal {
 
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
-            println!("Ring buffer capacity: {:?}", ring_buf.capacity());
+            info!("Ring buffer capacity: {:?}", ring_buf.capacity());
             // States
             let volume_state = Arc::new(RwLock::new(vol.unwrap()));
             let frame_idx_state = Arc::new(RwLock::new(0));
@@ -314,12 +314,12 @@ mod cpal {
             let stream_result = device.build_output_stream(
                 &config,
                 move |data: &mut [T], _cb: &cpal::OutputCallbackInfo| {
-                    // println!("playing back {:?}", data.len());
+                    // info!("playing back {:?}", data.len());
                     // If file changed, reset
                     let reset = reset_control_receiver.try_lock().unwrap().try_recv();
                     if let Ok(rst) = reset {
                         if rst {
-                            println!("Got rst: {:?}", rst);
+                            info!("Got rst: {:?}", rst);
                             let mut frame_idx = frame_idx_state.write().unwrap();
                             *frame_idx = 0;
                             let mut elapsed_time = elapsed_time_state.write().unwrap();
@@ -331,13 +331,13 @@ mod cpal {
                     // Get volume
                     let volume = volume_control_receiver.try_lock().unwrap().try_recv();
                     if let Ok(vol) = volume {
-                        println!("Got volume: {:?}", vol);
+                        info!("Got volume: {:?}", vol);
                         let mut current_volume = volume_state.write().unwrap();
                         *current_volume = vol.volume.unwrap();
                     }
 
                     let current_volume = { *volume_state.read().unwrap() };
-                    // println!("Current volume: {:?}", current_volume);
+                    // info!("Current volume: {:?}", current_volume);
 
                     let playing = playback_state_receiver.try_lock().unwrap().try_recv();
                     if let Ok(pl) = playing {
@@ -354,7 +354,7 @@ mod cpal {
                         let sample_offset = sample_offset_receiver.try_lock().unwrap().try_recv();
 
                         if let Ok(offset) = sample_offset {
-                            println!("Got sample offset: {:?}", offset);
+                            info!("Got sample offset: {:?}", offset);
                             let mut current_sample_offset = frame_idx_state.write().unwrap();
                             *current_sample_offset = offset.sample_offset.unwrap();
                         }
@@ -386,7 +386,7 @@ mod cpal {
                         };
                         // new duration
                         let next_duration = time_base.calc_time(new_sample_offset as u64).seconds;
-                        // println!("Next duration: {:?}", next_duration);
+                        // info!("Next duration: {:?}", next_duration);
 
                         let prev_duration = { *elapsed_time_state.read().unwrap() };
 
@@ -457,16 +457,16 @@ mod cpal {
         ) -> () {
             // Do nothing if there are no audio frames.
             if decoded.frames() == 0 {
-                println!("No more samples.");
+                info!("No more samples.");
                 return;
             }
 
             // Print buffer size
             {
-                // println!("decoded samples: {}", decoded.frames());
+                // info!("decoded samples: {}", decoded.frames());
                 // // Current Buffer size
-                // println!("buffer samples: {}", self.sample_buf.samples().len());
-                // println!("ring buffer size: {}", self.ring_buf.count());
+                // info!("buffer samples: {}", self.sample_buf.samples().len());
+                // info!("ring buffer size: {}", self.ring_buf.count());
             }
 
             let mut samples = if let Some(resampler) = &mut self.resampler {
@@ -479,11 +479,11 @@ mod cpal {
             } else {
                 // Resampling is not required. Interleave the sample for cpal using a sample buffer.
                 if (ramp_up_samples > 0) {
-                    println!("Ramping up first {:?}", ramp_up_samples);
+                    info!("Ramping up first {:?}", ramp_up_samples);
                     self.ramp_up(decoded, ramp_up_samples as usize);
                     self.sample_buf.samples()
                 } else if (ramp_down_samples > 0) {
-                    println!("Ramping down last {:?}", ramp_down_samples);
+                    info!("Ramping down last {:?}", ramp_down_samples);
                     self.ramp_down(decoded, ramp_down_samples as usize);
                     self.sample_buf.samples()
                 } else {
@@ -496,7 +496,7 @@ mod cpal {
             while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
                 samples = &samples[written..];
                 // Print written
-                // println!("written: {}", written);
+                // info!("written: {}", written);
             }
         }
 
@@ -505,7 +505,7 @@ mod cpal {
             // depending on the number of samples it has.
             if let Some(resampler) = &mut self.resampler {
                 while let Some(remaining_samples) = resampler.flush() {
-                    println!("Flushed samples {:?}", remaining_samples.len());
+                    info!("Flushed samples {:?}", remaining_samples.len());
                 }
             }
 
@@ -515,7 +515,7 @@ mod cpal {
             self.ring_buf.clear();
 
             // Check what's left now
-            println!(
+            info!(
                 "Sample buf empty: {}, Ring buf empty:{} ",
                 self.sample_buf.is_empty(),
                 self.ring_buf.is_empty()
@@ -528,12 +528,12 @@ mod cpal {
 
         fn pause(&self) {
             let pause_result = self.stream.pause();
-            println!("cpal: Stream pause result: {:?}", pause_result);
+            info!("cpal: Stream pause result: {:?}", pause_result);
         }
 
         fn resume(&self) {
             let resume_result = self.stream.play();
-            println!("cpal: Stream resume result: {:?}", resume_result);
+            info!("cpal: Stream resume result: {:?}", resume_result);
         }
 
         fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool {
@@ -545,7 +545,7 @@ mod cpal {
             // if it does - resample the decoded audio using Symphonia.
 
             if self.sample_rate != spec.rate {
-                println!("resampling {} Hz to {} Hz", spec.rate, self.sample_rate);
+                info!("resampling {} Hz to {} Hz", spec.rate, self.sample_rate);
                 self.resampler
                     .replace(Resampler::new(spec, self.sample_rate as usize, max_frames));
                 return true;
@@ -685,7 +685,7 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
             // let magnitude1 = (freq1.re.powi(2) + freq1.im.powi(2)).sqrt();
             // let magnitude2 = (freq2.re.powi(2) + freq2.im.powi(2)).sqrt();
             let summed = (((freq1 - freq2) * 0.8 / 2.0) + 128.0) as u8;
-            // println!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
+            // info!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
 
             // Split the f32 into its individual bytes
             // let bytes = summed.to_ne_bytes();

@@ -1,6 +1,9 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/core";
+    import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+    import { Buffer } from "buffer";
+    import tippy from "tippy.js";
     import type { Song } from "../../App";
+    import { db } from "../../data/db";
     import {
         currentSong,
         currentSongIdx,
@@ -14,18 +17,13 @@
         queriedSongs,
         rightClickedTrack,
         rightClickedTracks,
-        seekTime,
-        volume
+        seekTime
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
-    import Icon from "../ui/Icon.svelte";
     import audioPlayer from "../player/AudioPlayer";
-    import { db } from "../../data/db";
     import Seekbar from "../sidebar/Seekbar.svelte";
-    import { lookForArt } from "../../data/LibraryImporter";
-    import { Buffer } from "buffer";
+    import Icon from "../ui/Icon.svelte";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
-    import tippy from "tippy.js";
 
     let duration;
     let artworkSrc;
@@ -45,23 +43,29 @@
     currentSong.subscribe(async (song) => {
         if (song) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path: song.path, isImport: false }
+                event: {
+                    path: song.path,
+                    isImport: false,
+                    includeFolderArtwork: true
+                }
             });
             console.log("test", songWithArtwork);
             duration = songWithArtwork.fileInfo.duration;
 
             if (songWithArtwork.artwork) {
-                let artworkFormat = songWithArtwork.artwork.format;
-                let artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
-                artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                    "base64"
-                )}`;
+                if (songWithArtwork.artwork.data.length) {
+                    let artworkBuffer = Buffer.from(
+                        songWithArtwork.artwork.data
+                    );
+                    let artworkFormat = songWithArtwork.artwork.format;
+                    artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
+                        "base64"
+                    )}`;
+                } else if (songWithArtwork.artwork.src) {
+                    artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                }
             } else {
                 artworkSrc = null;
-                const artwork = await lookForArt(song.path, song.file);
-                if (artwork) {
-                    artworkSrc = artwork.artworkSrc;
-                }
             }
         }
     });

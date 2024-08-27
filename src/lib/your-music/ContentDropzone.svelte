@@ -4,28 +4,15 @@
   https://github.com/probablykasper/svelte-tauri-filedrop/issues/2
   */
 
-    import { listenForFileDrop } from "../../window/EventListener";
-
-    import {
-        addFolder,
-        addSong,
-        getMetadataFromFile,
-        getSongFromMetadata
-    } from "../../data/LibraryImporter";
-
+    
+    import { invoke } from "@tauri-apps/api/core";
     import type { Event, UnlistenFn } from "@tauri-apps/api/event";
-    import { getContentFileType, isAudioFile } from "../../utils/FileUtils";
-    import { isDraggingExternalFiles } from "../../data/store";
-    import type {
-        ArtistFileItem,
-        ContentFileType,
-        ContentItem,
-        SongProject
-    } from "src/App";
-    import { db } from "../../data/db";
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-    import { resolve } from "@tauri-apps/api/path";
-const appWindow = getCurrentWebviewWindow()
+    import type { ArtistFileItem, Song, SongProject } from "src/App";
+    import { db } from "../../data/db";
+    import { isDraggingExternalFiles } from "../../data/store";
+    import { getContentFileType } from "../../utils/FileUtils";
+    const appWindow = getCurrentWebviewWindow();
 
     export let songProject: SongProject;
     let highlightedOption: "add-to-scrapbook" | "add-to-song-project";
@@ -54,13 +41,14 @@ const appWindow = getCurrentWebviewWindow()
             ) {
                 switch (fileType.type) {
                     case "audio":
-                        const metadata = await getMetadataFromFile(entry, file);
-                        if (metadata) {
-                            const song = await getSongFromMetadata(
-                                entry,
-                                file,
-                                metadata
-                            );
+                        const song = await invoke<Song>("get_song_metadata", {
+                            event: {
+                                path: entry,
+                                isImport: false,
+                                includeFolderArtwork: false
+                            }
+                        });
+                        if (song) {
                             await db.songProjects.update(songProject, {
                                 recordings: [
                                     ...songProject.recordings,

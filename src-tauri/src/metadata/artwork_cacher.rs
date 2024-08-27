@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::Error;
+use log::info;
 use serde::Deserialize;
 use serde::Serialize;
 use tauri::AppHandle;
@@ -149,7 +150,7 @@ fn check_folder_artwork_by_filename(
     let src = format!("{}{}", folder, artwork_filename);
     let extension = Path::new(&src).extension().unwrap().to_str().unwrap();
     let mime_type = get_image_format(extension);
-    println!("Looking for: {}", src);
+    info!("Looking for: {}", src);
     if Path::new(&src).exists() {
         return Ok(Some(LookForArtResult {
             artwork_src: src,
@@ -167,13 +168,13 @@ pub fn look_for_art(
 ) -> Result<Option<LookForArtResult>, anyhow::Error> {
     let folder = song_path.replace(song_file_name, "");
 
-    // println!("Looking for artwork in: {}", folder);
+    // info!("Looking for artwork in: {}", folder);
     let settings: UserSettings = load_settings(app)?;
-    // println!("Settings: {:?}", settings);
+    // info!("Settings: {:?}", settings);
     let filenames_to_search = settings.album_artwork_filenames;
 
-    println!("Looking for artwork in: {}", folder);
-    println!("Looking for filenames: {:?}", filenames_to_search);
+    info!("Looking for artwork in: {}", folder);
+    info!("Looking for filenames: {:?}", filenames_to_search);
 
     // Check if any of the filenames are in the folder
     for filename in filenames_to_search {

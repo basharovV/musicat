@@ -176,7 +176,12 @@
         if ($uiView === "library" && get(isInit)) {
             console.log("init");
             const lastPlayed = get(lastPlayedInfo);
-            if (lastPlayed.songId) {
+            // TESTING ONLY: Uncomment when needed
+            // window["openedUrls"] = "file:///Users/slav/Downloads/Intrusive Thoughts 14-12-2023.mp3";
+
+            if (window["openedUrls"]?.length) {
+                await audioPlayer.handleOpenedUrls(window["openedUrls"]);
+            } else if (lastPlayed.songId) {
                 audioPlayer.shouldRestoreLastPlayed = lastPlayed;
                 audioPlayer.currentSong = await db.songs.get(lastPlayed.songId);
                 playlist.set(resultsArray);

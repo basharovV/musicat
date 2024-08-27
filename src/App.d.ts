@@ -69,6 +69,7 @@ interface Song {
     artwork?: {
         data: number[];
         format: string;
+        src?: string;
     };
     markers: Marker[];
     dateAdded?: number; // unix timestamp

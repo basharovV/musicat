@@ -22,22 +22,19 @@
     import MusicTab from "./MusicTab.svelte";
     import OtherTab from "./OtherTab.svelte";
 
+    import { invoke } from "@tauri-apps/api/core";
     import { readTextFile } from "@tauri-apps/plugin-fs";
     import toast from "svelte-french-toast";
-    import {
-        getMetadataFromFile,
-        getSongFromMetadata
-    } from "../../data/LibraryImporter";
     import {
         droppedFiles,
         fileDropHandler,
         hoveredFiles
     } from "../../data/store";
     import { getContentFileType } from "../../utils/FileUtils";
-    import Input from "../ui/Input.svelte";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
+    import Input from "../ui/Input.svelte";
     import KeySelector from "../ui/KeySelector.svelte";
 
     export let songProject: SongProject;
@@ -265,9 +262,14 @@
             return;
         }
         console.log("filename", filename);
-        const metadata = await getMetadataFromFile(filePath, filename);
-        if (!metadata) return;
-        const song = await getSongFromMetadata(filePath, filename, metadata);
+        const song = await invoke<Song>("get_song_metadata", {
+            event: {
+                path: filePath,
+                isImport: false,
+                includeFolderArtwork: false
+            }
+        });
+        if (!song) return;
         console.log("song", song);
 
         if (!songProjectClone?.recordings) songProjectClone.recordings = [];
