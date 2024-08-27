@@ -115,6 +115,15 @@ const appWindow = getCurrentWebviewWindow()
      * - Artist's toolkit view: Add to scrapbook or song project
      */
     onMount(async () => {
+        // Check for opened urls on the window
+        console.log('window opened urls: ', window.openedUrls);
+        if (window.openedUrls) {
+            alert("opened urls: " + window.openedUrls);
+        }
+        window.onFileOpen = (urls) => {
+            console.log('onFileOpen: ', urls);
+            alert("File opened: " + urls);
+        }
         unlistenFileDrop = await appWindow.onDragDropEvent((evt) => {
             switch (evt.payload.type) {
                 case "drop":

@@ -4,6 +4,7 @@
 )]
 
 use futures_util::StreamExt;
+use log::{debug, error, info, trace, warn};
 use metadata::FileInfo;
 use player::file_streamer::AudioStreamer;
 use reqwest;
@@ -11,7 +12,8 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use std::fs;
+use std::sync::Mutex;
+use std::{env, fs};
 use std::{io::Write, path::Path};
 use tauri::menu::{
     Menu, MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
@@ -54,7 +56,7 @@ async fn get_lyrics(event: GetLyricsEvent) -> GetLyricsResponse {
         Ok(l) => return GetLyricsResponse { lyrics: Some(l) },
         Err(err) => {
             println!("Lyrics not found {:?}", err);
-            return GetLyricsResponse { lyrics: None }
+            return GetLyricsResponse { lyrics: None };
         }
     }
 }
@@ -321,17 +323,26 @@ async fn download_file(
     Ok(())
 }
 
+struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
+
+#[derive(Clone, serde::Serialize)]
+struct Payload {
+  args: Vec<String>,
+  cwd: String,
+}
+
 #[tokio::main]
 async fn main() {
+    info!("Starting Musicat");
     // std::env::set_var("RUST_LOG", "debug");
-    env_logger::init();
+    // env_logger::init();
 
     // #[cfg(dev)]
     // let devtools = devtools::init(); // initialize the plugin as early as possible
 
     let streamer = player::file_streamer::AudioStreamer::create().unwrap();
 
-    // let mut builder = tauri::Builder::default().plugin(tauri_plugin_window::init());
+    // let mut builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
 
     // #[cfg(dev)]
     // {
@@ -339,6 +350,132 @@ async fn main() {
     // }
 
     tauri::Builder::default()
+        .manage(streamer)
+        .manage(OpenedUrls(Default::default()))
+        .setup(|app| {
+            let app_ = app.handle();
+            let app2_ = app_.clone();
+            let state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
+
+            let resource_path = app
+                .path()
+                .resolve("resources/log4rs.yml", tauri::path::BaseDirectory::Resource)
+                .expect("failed to resolve resource");
+            env::set_var("MUSICAT_LOG_DIR", app.path().app_log_dir().unwrap());
+            log4rs::init_file(resource_path, Default::default()).unwrap();
+
+            info!("Goes to stderr and file");
+
+            // File associations
+
+            let opened_urls: State<OpenedUrls> = app.state();
+            let file_urls = opened_urls.inner().to_owned();
+
+            state.init(app_.clone());
+            let strm1 = state.inner().to_owned();
+            let strm2 = strm1.clone();
+
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                // NOTICE: `args` may include URL protocol (`your-app-protocol://`) or arguments (`--`) if app supports them.
+                let mut urls = Vec::new();
+                for arg in env::args().skip(1) {
+                    if let Ok(url) = url::Url::parse(&arg) {
+                        urls.push(url);
+                    }
+                }
+
+                if !urls.is_empty() {
+                    file_urls.0.lock().unwrap().replace(urls);
+                }
+            }
+
+            let opened_urls = if let Some(urls) = &*file_urls.0.lock().unwrap() {
+                urls.iter()
+                    .map(|u| u.as_str().replace("\\", "\\\\"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            } else {
+                "".into()
+            };
+
+            info!("Initial opened urls: {:?}", opened_urls);
+
+            let window = tauri::WebviewWindowBuilder::new(app, "main", Default::default())
+                .initialization_script(&format!("window.openedUrls = `{opened_urls}`"))
+                .initialization_script(&format!("console.log(`{opened_urls}`)"))
+                .theme(Some(tauri::Theme::Dark))
+                .fullscreen(false)
+                .inner_size(1200f64, 780f64)
+                .min_inner_size(210f64, 210f64)
+                .accept_first_mouse(true)
+                .transparent(true)
+                .visible(true)
+                .title_bar_style(tauri::TitleBarStyle::Overlay)
+                .decorations(true)
+                .hidden_title(true)
+                .resizable(true)
+                .title("Musicat")
+                .build()
+                .unwrap();
+
+            // let window = app.get_webview_window("main").unwrap();
+            let window_reference = window.clone();
+            app.on_menu_event(move |app, event| {
+                app.emit("menu", event.id.0).unwrap();
+            });
+
+            #[cfg(target_os = "macos")]
+            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
+                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+
+            #[cfg(target_os = "windows")]
+            apply_blur(&window, Some((18, 18, 18, 125)))
+                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+
+            // Listen for metadata write event
+            // listen to the `event-name` (emitted on any window)
+
+            let window_clone = Box::new(window.clone());
+
+            let _id2 = app.listen_any("show-toolbar", move |_| {
+                window.set_decorations(true).unwrap();
+            });
+
+            let _id2 = app.listen_any("hide-toolbar", move |_| {
+                window_clone.set_decorations(false).unwrap();
+            });
+
+            let _id3 = app.listen_any("webrtc-signal", move |event| {
+                println!("webrtc-signal {:?}", event);
+                let event_clone = event.clone();
+                let app_clone = app2_.clone();
+
+                let handle_clone = strm1.clone();
+                tokio::spawn(async move {
+                    // Handle client's offer
+                    let answer = handle_clone.handle_signal(event_clone.payload()).await;
+                    if let Some(ans) = answer {
+                        let _ = app_clone.emit("webrtc-answer", ans.clone());
+                    }
+                });
+            });
+
+            let _id3 = app.listen_any("webrtc-icecandidate-server", move |event| {
+                println!("webrtc-signal {:?}", event);
+                let event_clone = event.clone();
+                let handle_clone = strm2.clone();
+                tokio::spawn(async move {
+                    // Handle client's offer
+                    let _answer = handle_clone
+                        .clone()
+                        .handle_ice_candidate(event_clone.payload())
+                        .await;
+                });
+            });
+
+            Ok(())
+        })
         .menu(|app| {
             let app_submenu = SubmenuBuilder::new(app, "Musicat")
                 .items(&[
@@ -412,72 +549,6 @@ async fn main() {
 
             Ok(menu.to_owned())
         })
-        .manage(streamer)
-        .setup(|app| {
-            let app_ = app.handle();
-            let app2_ = app_.clone();
-            let state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
-            state.init(app_.clone());
-            let strm1 = state.inner().to_owned();
-            let strm2 = strm1.clone();
-
-            let window = app.get_webview_window("main").unwrap();
-            let window_reference = window.clone();
-            app.on_menu_event(move |app, event| {
-                app.emit("menu", event.id.0).unwrap();
-            });
-
-            #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
-                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-
-            #[cfg(target_os = "windows")]
-            apply_blur(&window, Some((18, 18, 18, 125)))
-                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
-
-            // Listen for metadata write event
-            // listen to the `event-name` (emitted on any window)
-
-            let window_clone = Box::new(window.clone());
-
-            let _id2 = app.listen_any("show-toolbar", move |_| {
-                window.set_decorations(true).unwrap();
-            });
-
-            let _id2 = app.listen_any("hide-toolbar", move |_| {
-                window_clone.set_decorations(false).unwrap();
-            });
-
-            let _id3 = app.listen_any("webrtc-signal", move |event| {
-                println!("webrtc-signal {:?}", event);
-                let event_clone = event.clone();
-                let app_clone = app2_.clone();
-
-                let handle_clone = strm1.clone();
-                tokio::spawn(async move {
-                    // Handle client's offer
-                    let answer = handle_clone.handle_signal(event_clone.payload()).await;
-                    if let Some(ans) = answer {
-                        let _ = app_clone.emit("webrtc-answer", ans.clone());
-                    }
-                });
-            });
-
-            let _id3 = app.listen_any("webrtc-icecandidate-server", move |event| {
-                println!("webrtc-signal {:?}", event);
-                let event_clone = event.clone();
-                let handle_clone = strm2.clone();
-                tokio::spawn(async move {
-                    // Handle client's offer
-                    let _answer = handle_clone
-                        .clone()
-                        .handle_ice_candidate(event_clone.payload())
-                        .await;
-                });
-            });
-
-            Ok(())
-        })
         .invoke_handler(tauri::generate_handler![
             metadata::write_metadatas,
             metadata::scan_paths,
@@ -494,12 +565,35 @@ async fn main() {
             download_file,
             scrape::get_wikipedia
         ])
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            info!("{}, {argv:?}, {cwd}", app.package_info().name);
+            app.emit("single-instance", Payload { args: argv, cwd }).unwrap();
+        }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .unwrap()
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { urls } = event {
+                info!("Opened urls: {:?}", urls);
+                if let Some(w) = app.get_webview_window("main") {
+                    let urls = urls
+                        .iter()
+                        .map(|u| u.as_str())
+                        .collect::<Vec<_>>()
+                        .join(",");
+                    let _ = w.eval(&format!("window.onFileOpen(`{urls}`)"));
+                }
+
+                let opened_urls = app.try_state::<OpenedUrls>();
+                if let Some(u) = opened_urls {
+                    u.0.lock().unwrap().replace(urls);
+                }
+            }
+        });
 }
