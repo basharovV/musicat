@@ -224,7 +224,9 @@
         }
 
         @media screen and (max-width: 600px) {
-            grid-template-columns: 120px 1fr 120px;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto 40px;
+
         }
 
         &.sidebar-collapsed {
@@ -244,6 +246,7 @@
             justify-content: flex-start;
 
             @media screen and (max-width: 600px) {
+                grid-row: 3;
                 .favourite,
                 .shuffle {
                     display: none;
@@ -259,6 +262,11 @@
             position: relative;
             justify-content: center;
             overflow: hidden;
+
+            @media screen and (max-width: 600px) {
+                grid-row: 1;
+                grid-column: 1 / 3;
+            }
         }
 
         .middle {
@@ -335,6 +343,10 @@
             justify-self: flex-end;
             margin: 0 1em;
             gap: 10px;
+
+            @media screen and (max-width: 600px) {
+                grid-row: 3;
+            }
         }
 
         .filler {
@@ -349,6 +361,11 @@
             justify-content: center;
             align-items: center;
             position: relative;
+
+            @media screen and (max-width: 600px) {
+                grid-row: 2;
+                grid-column: 1 / 3;
+            }
         }
         .seekbar {
             position: absolute;

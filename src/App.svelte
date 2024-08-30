@@ -419,14 +419,18 @@
             {/if}
         </div>
 
-        <div class="top-bar">
-            {#if !$isSidebarOpen}
-                <TopBar />
-            {/if}
-        </div>
+        <!-- <div class="top-bar">
+        </div> -->
 
         <div class="bottom-bar">
-            <BottomBar />
+            {#if !$isSidebarOpen}
+                <div class="top" in:fly={{ duration: 200, y: 30 }}>
+                    <TopBar />
+                </div>
+            {/if}
+            <div class="bottom" in:fly={{ duration: 200, y: -30 }}>
+                <BottomBar />
+            </div>
         </div>
 
         {#if $fileToDownload}
@@ -463,7 +467,7 @@
     main {
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
-        grid-template-rows: auto auto 1fr auto auto auto; // (padding), header, panel, waveform, topbar, bottombar
+        grid-template-rows: auto auto 1fr auto auto; // (padding), header, panel, waveform, topbar, bottombar
         width: 100vw;
         height: 100vh;
         opacity: 1;
@@ -557,10 +561,21 @@
             position: relative;
             width: 100%;
             z-index: 15;
-            grid-row: 6;
+            grid-row: 5;
             grid-column: 2 / 6;
-            margin-top: 5px;
-            margin-bottom: 5px;
+            @media only screen and (max-width: 600px) {
+                .top {
+                    margin-bottom: 5px;
+                    margin-top: 0px;
+                }
+                .bottom {
+                    display: none;
+                }
+            }
+            .bottom {
+                margin-top: 5px;
+                margin-bottom: 5px;
+            }
         }
 
         .queue {

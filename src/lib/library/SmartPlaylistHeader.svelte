@@ -4,6 +4,8 @@
     import { findQuery } from "../../data/SmartQueries";
     import {
         forceRefreshLibrary,
+        isQueueOpen,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
@@ -56,12 +58,12 @@
 </script>
 
 {#if $isSmartQueryBuilderOpen}
-    <form on:submit|preventDefault={save}>
+    <form on:submit|preventDefault={save} class:window-padding={!$isSidebarOpen && !$isQueueOpen}>
         <Input
             bind:value={$smartQuery.name}
             fullWidth
             alt
-            placeholder="My New Smart Playlist"
+            placeholder={$LL.smartPlaylists.builder.placeholder()}
         />
     </form>
 {:else}
@@ -120,6 +122,11 @@
 {/if}
 
 <style lang="scss">
+    form {
+        &.window-padding {
+            padding-left: 70px;
+        }
+    }
     .label {
         font-size: 1em;
         color: rgb(104, 96, 113);

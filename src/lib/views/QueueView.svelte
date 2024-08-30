@@ -102,7 +102,7 @@
 
     $: songs = queue.length
         ? queue.filter((v, i) =>
-              $playlistType === "album"
+              $playlistType.match(/(album|country)/)
                   ? true
                   : v.viewModel.index >= $currentSongIdx
           )
@@ -168,7 +168,7 @@
     let dpr;
 
     // CONSTANTS
-    const HEADER_HEIGHT = 26;
+    const HEADER_HEIGHT = 22;
     const ROW_HEIGHT = 26;
     const DROP_HINT_HEIGHT = 2;
     const BORDER_WIDTH = 1;
@@ -300,7 +300,7 @@
         }, 50);
         isInit = false;
         $forceRefreshLibrary = false;
-    } else if ($uiView === "playlists") {
+    } else if ($uiView.match(/^(playlists|map)/)) {
         scrollContainer?.scrollTo({
             top: 0
         });
@@ -600,7 +600,7 @@
 
     let currentSongY = 0;
     $: if (
-        $playlistType !== "album" &&
+        !$playlistType.match(/^(album|country)$/) &&
         !$isShuffleEnabled &&
         $currentSongIdx !== null
     ) {
@@ -1468,9 +1468,11 @@
                                                 ? 50 + WINDOW_CONTROLS_WIDTH
                                                 : 50,
                                         text:
-                                            $playlistType === "album"
-                                                ? "(album mode)"
-                                                : "(library mode)",
+                                            $playlistType === "country"
+                                                ? "(country mode)"
+                                                : $playlistType === "album"
+                                                  ? "(album mode)"
+                                                  : "(library mode)",
                                         align: "left",
                                         padding: 10,
                                         height: HEADER_HEIGHT,
@@ -1511,7 +1513,7 @@
         border-bottom: 0.7px solid #ffffff2a;
         border-right: 0.7px solid #ffffff2a;
         overflow: hidden;
-        margin: 5px 0 0 0;
+        margin: 4px 0 0 0;
     }
     .container {
         width: 100%;

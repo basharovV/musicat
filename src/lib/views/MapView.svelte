@@ -27,7 +27,10 @@
         smartQueryResults,
         smartQueryUpdater,
         uiView,
-        playlistType
+        playlistType,
+        currentSongIdx,
+        isShuffleEnabled,
+        isQueueOpen
     } from "../../data/store";
     import SmartQuery from "../smart-query/Query";
     import { codes, countries } from "../data/CountryCodes";
@@ -428,10 +431,10 @@
     function onCountryClicked() {
         // Should play immediately after setting playlist (and shuffling if necessary)
         audioPlayer.shouldPlay = true;
-        $playlist = dataSetCountryValue.data;
-        console.log(dataSetCountryValue.data[0]);
         $playlistCountry = selectedCountry;
         $playlistType = "country";
+        $playlist = dataSetCountryValue.data;
+        console.log(dataSetCountryValue.data[0]);
     }
 
     // Selected country

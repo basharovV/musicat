@@ -340,7 +340,7 @@
     let dpr;
 
     // CONSTANTS
-    const HEADER_HEIGHT = 26;
+    const HEADER_HEIGHT = 22;
     const ROW_HEIGHT = 26;
     const DROP_HINT_HEIGHT = 2;
     const BORDER_WIDTH = 1;
