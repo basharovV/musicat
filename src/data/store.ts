@@ -171,7 +171,8 @@ const defaultSettings: UserSettings = {
     geniusApiKey: null,
     isArtistsToolkitEnabled: false,
     downloadLocation: null,
-    theme: "dark"
+    theme: "dark",
+    outputDevice: null // default system device
 };
 
 /**

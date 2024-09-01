@@ -152,6 +152,9 @@ const en = {
     settings: {
         title: "Settings",
         library: "Library",
+        audio: "Audio",
+        outputDevice: "Output device",
+        defaultDevice: "Same as system device",
         interface: "Interface",
         features: "Features",
         subtitle: "Configure stuff",

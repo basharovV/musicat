@@ -6,7 +6,7 @@
 use futures_util::StreamExt;
 use log::{debug, error, info, trace, warn};
 use metadata::FileInfo;
-use player::file_streamer::AudioStreamer;
+use player::AudioStreamer;
 use reqwest;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -30,6 +30,7 @@ mod output;
 mod player;
 mod resampler;
 mod scrape;
+mod store;
 
 #[cfg(test)]
 mod tests;
@@ -124,13 +125,7 @@ pub struct StreamFileRequest {
     seek: Option<f64>,
     file_info: Option<FileInfo>,
     volume: Option<f64>, // 0 to 1
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct LoopRegionRequest {
-    enabled: Option<bool>,
-    start_pos: Option<f64>,
-    end_pos: Option<f64>,
+    output_device: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -153,7 +148,7 @@ fn stream_file(
     info!("Stream file {:?}", event);
     let _ = state
         .player_control_sender
-        .send(player::file_streamer::PlayerControlEvent::StreamFile(event));
+        .send(player::PlayerControlEvent::StreamFile(event));
     state.resume();
 }
 
@@ -168,17 +163,6 @@ fn queue_next(
     let _ = state.next_track_sender.send(event);
 }
 
-#[tauri::command]
-fn loop_region(
-    event: LoopRegionRequest,
-    state: State<AudioStreamer>,
-    _app_handle: tauri::AppHandle,
-) {
-    info!("Loop region{:?}", event);
-    let _ = state
-        .player_control_sender
-        .send(player::file_streamer::PlayerControlEvent::LoopRegion(event));
-}
 
 #[tauri::command]
 fn get_waveform(
@@ -204,7 +188,7 @@ fn get_waveform(
 
     std::thread::spawn(move || {
         // Handle client's offer
-        let result = player::file_streamer::get_peaks(evt, &_app_handle, token_clone);
+        let result = player::get_peaks(evt, &_app_handle, token_clone);
         // info!("Waveform: {:?}", result);
     });
 }
@@ -340,7 +324,7 @@ async fn main() {
     // #[cfg(dev)]
     // let devtools = devtools::init(); // initialize the plugin as early as possible
 
-    let streamer = player::file_streamer::AudioStreamer::create().unwrap();
+    let streamer = player::AudioStreamer::create().unwrap();
 
     // let mut builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
 
@@ -355,7 +339,7 @@ async fn main() {
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app_.clone();
-            let state: State<player::file_streamer::AudioStreamer<'static>> = app.state();
+            let state: State<player::AudioStreamer<'static>> = app.state();
 
             let resource_path = app
                 .path()
@@ -553,6 +537,7 @@ async fn main() {
             metadata::write_metadatas,
             metadata::scan_paths,
             metadata::get_song_metadata,
+            player::get_devices,
             get_lyrics,
             get_file_size,
             stream_file,
@@ -561,7 +546,8 @@ async fn main() {
             decode_control,
             volume_control,
             get_waveform,
-            loop_region,
+            player::loop_region,
+            player::change_audio_device,
             download_file,
             scrape::get_wikipedia
         ])

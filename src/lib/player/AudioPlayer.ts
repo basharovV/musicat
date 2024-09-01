@@ -14,6 +14,7 @@ import {
     playlist,
     seekTime,
     shuffledPlaylist,
+    userSettings,
     volume
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
@@ -209,6 +210,13 @@ class AudioPlayer {
             this.isStopped = false;
             isPlaying.set(true);
         });
+
+        appWindow.listen("audio_device_changed", async (event: any) => {
+            userSettings.update(userSettings => {
+                userSettings.outputDevice = event.payload;
+                return userSettings;
+            })
+        })
     }
 
     async setupBuffers() {

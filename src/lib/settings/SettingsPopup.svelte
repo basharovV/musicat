@@ -4,7 +4,12 @@
     import { audioDir, downloadDir } from "@tauri-apps/api/path";
     import { open } from "@tauri-apps/plugin-dialog";
     import hotkeys from "hotkeys-js";
-    import type { LLM, MiniPlayerLocation } from "src/App";
+    import type {
+        AudioDevice,
+        AudioDevices,
+        LLM,
+        MiniPlayerLocation
+    } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
     import tippy from "svelte-tippy";
@@ -20,6 +25,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
+    import { invoke } from "@tauri-apps/api/core";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
@@ -99,10 +105,37 @@
             .filter((f) => f !== folder);
     }
 
+    let audioDevices: AudioDevices = {
+        devices: [],
+        default: null
+    };
+
+    let defaultAudioDevice: AudioDevice;
+
+    let devicesLoaded = false;
+    function onAudioDeviceSelected(event) {
+        $userSettings.outputDevice = event.target.value;
+        invoke("change_audio_device", {
+            event: {
+                audioDevice: $userSettings.outputDevice
+            }
+        });
+    }
+
     onMount(async () => {
         hotkeys("esc", () => {
             onClose();
-        })
+        });
+
+        // Init
+        try {
+            const response: AudioDevices = await invoke("get_devices");
+            audioDevices.devices.push(...response.devices);
+            defaultAudioDevice = response.default;
+            devicesLoaded = true;
+        } catch (error) {
+            console.error(error);
+        }
     });
 
     onDestroy(() => {
@@ -201,6 +234,29 @@
                         </td>
                     </tr>
                 </tbody>
+
+                {#if devicesLoaded}
+                    <tbody>
+                        <tr>
+                            <th colspan="2">{$LL.settings.audio()}</th>
+                        </tr>
+                        <tr>
+                            <td>{$LL.settings.outputDevice()}</td>
+                            <td>
+                                <select
+                                    bind:value={$userSettings.outputDevice}
+                                    on:change={onAudioDeviceSelected}
+                                >
+                                    {#each audioDevices?.devices as device}
+                                        <option value={device.name}
+                                            >{device.name}</option
+                                        >
+                                    {/each}
+                                </select></td
+                            >
+                        </tr>
+                    </tbody>
+                {/if}
                 <tbody>
                     <tr>
                         <th colspan="2">{$LL.settings.interface()}</th>
@@ -228,6 +284,7 @@
                         >
                     </tr>
                 </tbody>
+
                 <tbody>
                     <tr>
                         <th colspan="2">{$LL.settings.features()}</th>

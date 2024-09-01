@@ -11,6 +11,9 @@ use tauri::AppHandle;
 use tauri::Config;
 use tauri::Manager;
 
+use crate::store::load_settings;
+use crate::store::UserSettings;
+
 const CACHE_DIR: &str = if cfg!(debug_assertions) {
     "cache-dev"
 } else {
@@ -102,40 +105,6 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, tauri::Error> {
     return app.path().app_data_dir();
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct UserSettings {
-    folders_to_watch: Vec<String>,
-    album_artwork_filenames: Vec<String>,
-    mini_player_location: MiniPlayerLocation,
-    ai_features_enabled: bool,
-    llm: LLM,
-    open_ai_api_key: Option<String>,
-    genius_api_key: Option<String>,
-    is_artists_toolkit_enabled: bool,
-    download_location: Option<String>,
-    theme: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "kebab-case")]
-enum MiniPlayerLocation {
-    BottomLeft,
-    BottomRight,
-    TopLeft,
-    TopRight,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-enum LLM {
-    #[serde(rename = "gpt-3.5-turbo")]
-    Gpt35Turbo,
-    #[serde(rename = "gpt-4")]
-    Gpt4,
-    #[serde(rename = "ollama")]
-    Ollama,
-}
-
 #[derive(Debug, Clone)]
 pub struct LookForArtResult {
     pub artwork_src: String,
@@ -207,15 +176,6 @@ pub fn look_for_art(
     }
 
     Ok(None)
-}
-
-fn load_settings(app: &AppHandle) -> Result<UserSettings, anyhow::Error> {
-    let config_dir = app.path().app_config_dir().unwrap();
-    // join the config dir with the path to the settings file
-    let settings_path = config_dir.join("settings.json");
-    let settings_data = fs::read_to_string(settings_path)?;
-    let settings: UserSettings = serde_json::from_str(&settings_data)?;
-    Ok(settings)
 }
 
 fn is_image_file(filename: &str) -> bool {

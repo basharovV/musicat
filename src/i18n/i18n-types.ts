@@ -457,6 +457,18 @@ type RootTranslation = {
 		 */
 		library: string
 		/**
+		 * A​u​d​i​o
+		 */
+		audio: string
+		/**
+		 * O​u​t​p​u​t​ ​d​e​v​i​c​e
+		 */
+		outputDevice: string
+		/**
+		 * S​a​m​e​ ​a​s​ ​s​y​s​t​e​m​ ​d​e​v​i​c​e
+		 */
+		defaultDevice: string
+		/**
 		 * I​n​t​e​r​f​a​c​e
 		 */
 		'interface': string
@@ -979,6 +991,18 @@ export type TranslationFunctions = {
 		 * Library
 		 */
 		library: () => LocalizedString
+		/**
+		 * Audio
+		 */
+		audio: () => LocalizedString
+		/**
+		 * Output device
+		 */
+		outputDevice: () => LocalizedString
+		/**
+		 * Same as system device
+		 */
+		defaultDevice: () => LocalizedString
 		/**
 		 * Interface
 		 */

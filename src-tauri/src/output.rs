@@ -10,6 +10,8 @@
 use std::f32::consts::PI;
 use std::result;
 
+use ::cpal::traits::{DeviceTrait, HostTrait};
+use ::cpal::{default_host, Device};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
@@ -45,7 +47,7 @@ mod cpal {
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
-    use crate::output::{fft, ifft};
+    use crate::output::{fft, get_device_by_name, ifft};
     use crate::resampler::Resampler;
     use crate::{SampleOffsetEvent, VolumeControlEvent};
 
@@ -86,26 +88,18 @@ mod cpal {
 
     impl CpalAudioOutput {
         pub fn try_open(
+            device_name: &String,
             spec: SignalSpec,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
+            device_change_receiver: Arc<Mutex<Receiver<String>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             vol: Option<f64>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
-            // Get default host.
-            let host = cpal::default_host();
-
-            // Get the default audio output device.
-            let device = match host.default_output_device() {
-                Some(device) => device,
-                _ => {
-                    error!("failed to get default audio output device");
-                    return Err(AudioOutputError::OpenStreamError);
-                }
-            };
+            let device = get_device_by_name(Some(device_name.clone())).unwrap();
 
             info!("Default audio device: {:?}", device.name());
 
@@ -168,6 +162,7 @@ mod cpal {
                     sample_offset_receiver,
                     playback_state_receiver,
                     reset_control_receiver,
+                    device_change_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
@@ -188,6 +183,7 @@ mod cpal {
                     sample_offset_receiver,
                     playback_state_receiver,
                     reset_control_receiver,
+                    device_change_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as i16,
                     |data| {
@@ -209,6 +205,7 @@ mod cpal {
                     sample_offset_receiver,
                     playback_state_receiver,
                     reset_control_receiver,
+                    device_change_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as u16,
                     |data| {
@@ -230,6 +227,7 @@ mod cpal {
                     sample_offset_receiver,
                     playback_state_receiver,
                     reset_control_receiver,
+                    device_change_receiver,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
@@ -256,6 +254,7 @@ mod cpal {
         stream: cpal::Stream,
         resampler: Option<Resampler<T>>,
         sample_rate: u32,
+        name: String,
     }
 
     impl<T: AudioOutputSample + Send + Sync> CpalAudioOutputImpl<T> {
@@ -267,6 +266,7 @@ mod cpal {
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
+            device_change_receiver: Arc<Mutex<Receiver<String>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             volume_change: fn(T, f64) -> T,
             get_viz_bytes: fn(Vec<T>) -> Bytes,
@@ -274,7 +274,6 @@ mod cpal {
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
-
             // Output audio stream config.
             let config = if cfg!(not(target_os = "windows")) {
                 cpal::StreamConfig {
@@ -306,6 +305,12 @@ mod cpal {
             let frame_idx_state = Arc::new(RwLock::new(0));
             let elapsed_time_state = Arc::new(RwLock::new(0));
             let playback_state = Arc::new(RwLock::new(true));
+            let device_state = Arc::new(RwLock::new(
+                device.name().unwrap_or(String::from("Unknown")),
+            ));
+            let device_name_state = Arc::new(RwLock::new(
+                device.name().unwrap_or(String::from("Unknown")),
+            ));
             let dc = Arc::new(data_channel);
 
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -314,104 +319,134 @@ mod cpal {
             let stream_result = device.build_output_stream(
                 &config,
                 move |data: &mut [T], _cb: &cpal::OutputCallbackInfo| {
+                    // If the device changed, ignore callback
+                    if let Ok(device_change) = device_change_receiver.try_lock() {
+                        if let Ok(result) = device_change.try_recv() {
+                            info!("Got device change: {:?}", result);
+                            let mut dvc_state = device_state.write().unwrap();
+                            *dvc_state = result;
+                        }
+                    }
+
+                    if let Ok(dvc_state) = device_state.try_read() {
+                        if *dvc_state != *device_name_state.try_read().unwrap() {
+                            data.iter_mut().for_each(|s| *s = T::MID);
+                            return;
+                        }
+                    }
+
                     // info!("playing back {:?}", data.len());
                     // If file changed, reset
-                    let reset = reset_control_receiver.try_lock().unwrap().try_recv();
-                    if let Ok(rst) = reset {
-                        if rst {
-                            info!("Got rst: {:?}", rst);
-                            let mut frame_idx = frame_idx_state.write().unwrap();
-                            *frame_idx = 0;
-                            let mut elapsed_time = elapsed_time_state.write().unwrap();
-                            *elapsed_time = 0;
-                            let _ = app_handle.emit("timestamp", Some(0f64));
+                    let reset = reset_control_receiver.try_lock();
+                    if let Ok(reset_lock) = reset {
+                        if let Ok(rst) = reset_lock.try_recv() {
+                            if (rst) {
+                                info!("Got rst: {:?}", rst);
+                                let mut frame_idx = frame_idx_state.write().unwrap();
+                                *frame_idx = 0;
+                                let mut elapsed_time = elapsed_time_state.write().unwrap();
+                                *elapsed_time = 0;
+                                let _ = app_handle.emit("timestamp", Some(0f64));
+                            }
                         }
                     }
 
                     // Get volume
-                    let volume = volume_control_receiver.try_lock().unwrap().try_recv();
-                    if let Ok(vol) = volume {
-                        info!("Got volume: {:?}", vol);
-                        let mut current_volume = volume_state.write().unwrap();
-                        *current_volume = vol.volume.unwrap();
+                    let volume = volume_control_receiver.try_lock();
+                    if let Ok(volume_lock) = volume {
+                        if let Ok(vol) = volume_lock.try_recv() {
+                            info!("Got volume: {:?}", vol);
+                            let mut current_volume = volume_state.write().unwrap();
+                            *current_volume = vol.volume.unwrap();
+                        }
                     }
 
                     let current_volume = { *volume_state.read().unwrap() };
                     // info!("Current volume: {:?}", current_volume);
 
-                    let playing = playback_state_receiver.try_lock().unwrap().try_recv();
-                    if let Ok(pl) = playing {
-                        let mut current_playing = playback_state.write().unwrap();
-                        *current_playing = pl;
+                    let playing = playback_state_receiver.try_lock();
+                    if let Ok(play_lock) = playing {
+                        if let Ok(pl) = play_lock.try_recv() {
+                            let mut current_playing = playback_state.write().unwrap();
+                            *current_playing = pl;
+                        }
                     }
 
                     // update duration if seconds changed
-                    if *playback_state.try_read().unwrap() {
-                        // Write out as many samples as possible from the ring buffer to the audio
-                        // output.
-                        let written = ring_buf_consumer.read(data).unwrap_or(0);
+                    if let Ok(pl_state) = playback_state.try_read() {
+                        if *pl_state {
+                            // Write out as many samples as possible from the ring buffer to the audio
+                            // output.
+                            let written = ring_buf_consumer.read(data).unwrap_or(0);
 
-                        let sample_offset = sample_offset_receiver.try_lock().unwrap().try_recv();
-
-                        if let Ok(offset) = sample_offset {
-                            info!("Got sample offset: {:?}", offset);
-                            let mut current_sample_offset = frame_idx_state.write().unwrap();
-                            *current_sample_offset = offset.sample_offset.unwrap();
-                        }
-
-                        let mut i = 0;
-                        for d in &mut *data {
-                            *d = volume_change(*d, current_volume);
-                            i += 1;
-                        }
-
-                        let length = data.len();
-
-                        let mut u = 0;
-                        let mut should_send = false;
-                        for d in &mut *data {
-                            if viz_data.len() < length {
-                                viz_data.push(*d);
-                            } else {
-                                should_send = true;
-                            }
-                            u += 1;
-                        }
-
-                        // new offset
-                        let new_sample_offset = {
-                            let mut sample_offset = frame_idx_state.write().unwrap();
-                            *sample_offset += i;
-                            *sample_offset
-                        };
-                        // new duration
-                        let next_duration = time_base.calc_time(new_sample_offset as u64).seconds;
-                        // info!("Next duration: {:?}", next_duration);
-
-                        let prev_duration = { *elapsed_time_state.read().unwrap() };
-
-                        if prev_duration != next_duration {
-                            let new_duration = Duration::from_secs(next_duration);
-
-                            let _ = app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
-
-                            let mut duration = elapsed_time_state.write().unwrap();
-                            *duration = new_duration.as_secs();
-                        }
-                        let viz = viz_data.clone();
-                        // Every x samples - send viz data to frontend
-                        if should_send {
-                            viz_data.clear();
-                            if let Ok(dc_guard) = dc.try_lock() {
-                                if let Some(dc1) = dc_guard.as_ref().cloned() {
-                                    rt.spawn(async move {
-                                        let _ = dc1.send(&get_viz_bytes(viz)).await;
-                                    });
+                            let sample_offset = sample_offset_receiver.try_lock();
+                            if let Ok(offset_lock) = sample_offset {
+                                if let Ok(offset) = offset_lock.try_recv() {
+                                    info!("Got sample offset: {:?}", offset);
+                                    let mut current_sample_offset =
+                                        frame_idx_state.write().unwrap();
+                                    *current_sample_offset = offset.sample_offset.unwrap();
                                 }
                             }
+
+                            let mut i = 0;
+                            for d in &mut *data {
+                                *d = volume_change(*d, current_volume);
+                                i += 1;
+                            }
+
+                            let length = data.len();
+
+                            let mut u = 0;
+                            let mut should_send = false;
+                            for d in &mut *data {
+                                if viz_data.len() < length {
+                                    viz_data.push(*d);
+                                } else {
+                                    should_send = true;
+                                }
+                                u += 1;
+                            }
+
+                            // new offset
+                            let new_sample_offset = {
+                                let mut sample_offset = frame_idx_state.write().unwrap();
+                                *sample_offset += i;
+                                *sample_offset
+                            };
+                            // new duration
+                            let next_duration =
+                                time_base.calc_time(new_sample_offset as u64).seconds;
+                            // info!("Next duration: {:?}", next_duration);
+
+                            let prev_duration = { *elapsed_time_state.read().unwrap() };
+
+                            if prev_duration != next_duration {
+                                let new_duration = Duration::from_secs(next_duration);
+
+                                let _ =
+                                    app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
+
+                                let mut duration = elapsed_time_state.write().unwrap();
+                                *duration = new_duration.as_secs();
+                            }
+                            let viz = viz_data.clone();
+                            // Every x samples - send viz data to frontend
+                            if should_send {
+                                viz_data.clear();
+                                if let Ok(dc_guard) = dc.try_lock() {
+                                    if let Some(dc1) = dc_guard.as_ref().cloned() {
+                                        rt.spawn(async move {
+                                            let _ = dc1.send(&get_viz_bytes(viz)).await;
+                                        });
+                                    }
+                                }
+                            }
+                            // Mute any remaining samples.
+                            data[written..].iter_mut().for_each(|s| *s = T::MID);
+                        } else {
+                            data.iter_mut().for_each(|s| *s = T::MID);
                         }
-                        // Mute any remaining samples.
-                        data[written..].iter_mut().for_each(|s| *s = T::MID);
                     } else {
                         data.iter_mut().for_each(|s| *s = T::MID);
                     }
@@ -444,7 +479,14 @@ mod cpal {
                 stream,
                 resampler: None,
                 sample_rate: config.sample_rate.0,
+                name: device.name().unwrap_or(String::from("Unknown"))
             })))
+        }
+    }
+    
+    impl<T: AudioOutputSample + Send + Sync> Drop for CpalAudioOutputImpl<T> {
+        fn drop(&mut self) {
+            info!("Audio output dropped: {}", self.name);
         }
     }
 
@@ -589,6 +631,7 @@ mod cpal {
 }
 
 pub fn try_open(
+    device_name: &String,
     spec: SignalSpec,
     volume_control_receiver: Arc<
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::VolumeControlEvent>>,
@@ -598,20 +641,35 @@ pub fn try_open(
     >,
     playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     reset_control_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
+    device_change_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<String>>>,
     data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
     vol: Option<f64>,
     app_handle: tauri::AppHandle,
 ) -> Result<Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
     cpal::CpalAudioOutput::try_open(
+        device_name,
         spec,
         volume_control_receiver,
         sample_offset_receiver,
         playback_state_receiver,
         reset_control_receiver,
+        device_change_receiver,
         data_channel,
         vol,
         app_handle,
     )
+}
+
+pub fn get_device_by_name(name: Option<String>) -> Option<Device> {
+    let host = default_host();
+    if (name.is_none()) {
+        return host.default_output_device();
+    }
+    let name = name.unwrap();
+    return host
+        .devices()
+        .unwrap()
+        .find(|device| device.name().unwrap() == name);
 }
 
 fn hanning_window(n: usize, N: usize) -> f32 {

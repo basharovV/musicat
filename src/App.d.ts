@@ -158,6 +158,7 @@ interface UserSettings {
     isArtistsToolkitEnabled: boolean;
     downloadLocation: string;
     theme: string;
+    outputDevice?: string;
 }
 
 type MiniPlayerLocation =
@@ -396,4 +397,13 @@ interface IAItem {
     performer?: string;
     writer?: string;
     original: IAFile;
+}
+
+interface AudioDevice {
+    name: string;
+}
+
+interface AudioDevices {
+    devices: AudioDevice[];
+    default: AudioDevice
 }
