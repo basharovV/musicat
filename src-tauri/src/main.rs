@@ -125,7 +125,7 @@ pub struct StreamFileRequest {
     seek: Option<f64>,
     file_info: Option<FileInfo>,
     volume: Option<f64>, // 0 to 1
-    output_device: Option<String>
+    output_device: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -162,7 +162,6 @@ fn queue_next(
     // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
 }
-
 
 #[tauri::command]
 fn get_waveform(
@@ -311,8 +310,8 @@ struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
-  args: Vec<String>,
-  cwd: String,
+    args: Vec<String>,
+    cwd: String,
 }
 
 #[tokio::main]
@@ -376,7 +375,11 @@ async fn main() {
 
             let opened_urls = if let Some(urls) = &*file_urls.0.lock().unwrap() {
                 urls.iter()
-                    .map(|u| urlencoding::decode(u.as_str()).unwrap().replace("\\", "\\\\"))
+                    .map(|u| {
+                        urlencoding::decode(u.as_str())
+                            .unwrap()
+                            .replace("\\", "\\\\")
+                    })
                     .collect::<Vec<_>>()
                     .join(", ")
             } else {
@@ -385,23 +388,39 @@ async fn main() {
 
             info!("Initial opened urls: {:?}", opened_urls);
 
-            let window = tauri::WebviewWindowBuilder::new(app, "main", Default::default())
-                .initialization_script(&format!("window.openedUrls = `{opened_urls}`"))
-                .initialization_script(&format!("console.log(`{opened_urls}`)"))
-                .theme(Some(tauri::Theme::Dark))
-                .fullscreen(false)
-                .inner_size(1200f64, 780f64)
-                .min_inner_size(210f64, 210f64)
-                .accept_first_mouse(true)
-                .transparent(true)
-                .visible(true)
-                .title_bar_style(tauri::TitleBarStyle::Overlay)
-                .decorations(true)
-                .hidden_title(true)
-                .resizable(true)
-                .title("Musicat")
-                .build()
-                .unwrap();
+            let mut window_builder =
+                tauri::WebviewWindowBuilder::new(app, "main", Default::default())
+                    .initialization_script(&format!("window.openedUrls = `{opened_urls}`"))
+                    .initialization_script(&format!("console.log(`{opened_urls}`)"))
+                    .theme(Some(tauri::Theme::Dark))
+                    .fullscreen(false)
+                    .inner_size(1200f64, 780f64)
+                    .min_inner_size(210f64, 210f64)
+                    .accept_first_mouse(true)
+                    .visible(true)
+                    .decorations(true)
+                    .hidden_title(true)
+                    .resizable(true)
+                    .title("Musicat");
+
+            #[cfg(target_os = "macos")]
+            {
+                window_builder = window_builder
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .transparent(true);
+            }
+            
+            #[cfg(target_os = "windows")]
+            {
+                window_builder = window_builder.transparent(true);
+            }
+
+            #[cfg(target_os = "linux")]
+            {
+                window_builder = window_builder.transparent(false);
+            }
+
+            let window = window_builder.build().unwrap();
 
             // let window = app.get_webview_window("main").unwrap();
             let window_reference = window.clone();
@@ -553,7 +572,8 @@ async fn main() {
         ])
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);
-            app.emit("single-instance", Payload { args: argv, cwd }).unwrap();
+            app.emit("single-instance", Payload { args: argv, cwd })
+                .unwrap();
         }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_fs::init())

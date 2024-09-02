@@ -1,3 +1,6 @@
+### 📦 0.9.0
+-   **Theme support**. You can switch themes 
+
 ### 📦 0.8.0
 
 _BREAKING RELEASE_. The storage of Smart Playlists has been updated. Please re-install.
