@@ -1,7 +1,6 @@
 use lofty::{
     config::WriteOptions,
     file::TaggedFileExt,
-    probe::Probe,
     read_from_path,
     tag::{Accessor, ItemKey, ItemValue, TagExt, TagItem, TagType},
 };
@@ -31,7 +30,7 @@ fn write_track_number() {
     info!("{:?}", tag.track()); // None
     info!("{:?}\n", tag.track_total()); // None
 
-    tag.save_to_path("src/blank.mp3", WriteOptions::new());
+    let _ = tag.save_to_path("src/blank.mp3", WriteOptions::new());
 
     let mp3_file = read_from_path("src/blank.mp3").unwrap();
 

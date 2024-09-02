@@ -6,7 +6,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use log::info;
-use rubato::{calculate_cutoff, SincInterpolationParameters};
 use symphonia::core::audio::{AudioBuffer, AudioBufferRef, Signal, SignalSpec};
 use symphonia::core::conv::{FromSample, IntoSample};
 use symphonia::core::sample::Sample;
@@ -14,6 +13,7 @@ use symphonia::core::sample::Sample;
 pub struct Resampler<T> {
     resampler: rubato::FftFixedIn<f32>,
     input: Vec<Vec<f32>>,
+    #[allow(dead_code)]
     output: Vec<Vec<f32>>,
     interleaved: Vec<T>,
     duration: usize,
@@ -24,7 +24,7 @@ where
     T: Sample + FromSample<f32> + IntoSample<f32>,
 {
     fn resample_inner(&mut self) -> &[T] {
-        let mut output: Vec<Vec<f32>> = Default::default();
+        let output: Vec<Vec<f32>>;
 
         {
             let mut input: arrayvec::ArrayVec<&[f32], 32> = Default::default();

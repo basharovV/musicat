@@ -22,7 +22,7 @@ pub struct UserSettings {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
-enum MiniPlayerLocation {
+pub enum MiniPlayerLocation {
     BottomLeft,
     BottomRight,
     TopLeft,
@@ -30,7 +30,7 @@ enum MiniPlayerLocation {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum LLM {
+pub enum LLM {
     #[serde(rename = "gpt-3.5-turbo")]
     Gpt35Turbo,
     #[serde(rename = "gpt-4")]

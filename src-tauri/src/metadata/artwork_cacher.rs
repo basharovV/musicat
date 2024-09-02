@@ -1,14 +1,10 @@
 use std::fmt;
 use std::fs;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use anyhow::Error;
 use log::info;
-use serde::Deserialize;
-use serde::Serialize;
 use tauri::AppHandle;
-use tauri::Config;
 use tauri::Manager;
 
 use crate::store::load_settings;
@@ -80,6 +76,7 @@ fn create_cache_directory(data_dir: &Path) -> Result<(), CacheError> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn delete_cache_directory(app: &AppHandle) -> Result<(), CacheError> {
     let data_dir = app_data_dir(app).or(Err(CacheError::AppDataDirError))?;
 
@@ -109,6 +106,7 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, tauri::Error> {
 pub struct LookForArtResult {
     pub artwork_src: String,
     pub artwork_format: String,
+    #[allow(dead_code)]
     pub artwork_filename_match: String,
 }
 

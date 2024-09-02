@@ -1,9 +1,8 @@
 use artwork_cacher::look_for_art;
 use chksum_md5::MD5;
-use color_print::cprintln;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
-use lofty::id3::v2::{upgrade_v2, upgrade_v3, Frame, FrameId, Id3v2Tag, TextInformationFrame};
+use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::picture::Picture;
 use lofty::probe::Probe;
 use lofty::read_from_path;
@@ -11,19 +10,17 @@ use lofty::tag::{Accessor, ItemKey, ItemValue, TagItem, TagType};
 use log::info;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
-use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{BufReader, ErrorKind, Write};
+use std::io::{BufReader, ErrorKind};
 use std::ops::{Deref, Mul};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
-use std::{fmt, thread, time};
-use tauri::path::PathResolver;
-use tauri::{AppHandle, Config, Emitter, Manager};
+use std::{thread, time};
+use tauri::{AppHandle, Emitter};
 
 mod artwork_cacher;
 
@@ -66,21 +63,6 @@ pub struct FileInfo {
     lossless: bool,
     tag_type: Option<String>,
     codec: Option<String>,
-}
-impl FileInfo {
-    fn new() -> FileInfo {
-        FileInfo {
-            duration: None,
-            overall_bitrate: None,
-            audio_bitrate: None,
-            sample_rate: None,
-            bit_depth: None,
-            channels: None,
-            lossless: false,
-            tag_type: None,
-            codec: None,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -193,7 +175,7 @@ pub async fn write_metadatas(
             }
             Err(err) => {
                 match err.downcast_ref::<std::io::Error>() {
-                    Some(io_err) => match (io_err.kind()) {
+                    Some(io_err) => match io_err.kind() {
                         ErrorKind::PermissionDenied => {
                             error.replace(String::from(
                                 "Permission denied. Check your file permissions and try again",
@@ -261,7 +243,7 @@ pub async fn scan_paths(
             if let Some(mut song) =
                 crate::metadata::extract_metadata(&path, true, false, &app_handle)
             {
-                if (event.process_albums) {
+                if event.process_albums {
                     if let Some(album) = process_new_album(&song, &app_handle) {
                         info!("Album: {:?}", album);
                         albums
@@ -286,10 +268,10 @@ pub async fn scan_paths(
                 event.process_albums,
                 &app_handle,
             ) {
-                if (!sub_results.songs.is_empty()) {
+                if !sub_results.songs.is_empty() {
                     songs.lock().unwrap().extend(sub_results.songs);
                 }
-                if (!sub_results.albums.is_empty()) {
+                if !sub_results.albums.is_empty() {
                     albums.lock().unwrap().extend(sub_results.albums);
                 }
             }
@@ -331,7 +313,7 @@ pub async fn scan_paths(
                 },
             );
         });
-    } else if (event.is_async) {
+    } else if event.is_async {
         // Send album artworks first - client needs to process the songs, which in turn needs to process the albums
         // Once this is done the client can update all existing albums with the artworks
         // The done flag is true - this determines when the client is done importing
@@ -361,7 +343,7 @@ pub async fn scan_paths(
 
     // If more than 100 albums, also send them in chunks
 
-    if (event.is_async && albums.lock().unwrap().clone().len() > 100) {
+    if event.is_async && albums.lock().unwrap().clone().len() > 100 {
         let albums_clone: Vec<Album> = albums.lock().unwrap().values().cloned().collect();
         let enumerator = albums_clone.chunks(100);
         let chunks = enumerator.len();
@@ -387,7 +369,7 @@ pub async fn scan_paths(
                 },
             );
         });
-    } else if (event.is_async) {
+    } else if event.is_async {
         let _ = app_handle.emit(
             "import_albums",
             ToImportEvent {
@@ -448,7 +430,7 @@ fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
         info!("Error looking for artwork: {}", e);
     }
     info!("artwork found: {}", artwork_src);
-    if (artwork_src.is_empty()) {
+    if artwork_src.is_empty() {
         // info!("Song artwork: {:?}", &song.artwork);
         if let Some(art) = &song.artwork {
             // info!("Caching artwork for: {}", song.album);
@@ -527,21 +509,21 @@ fn process_directory(
                         if let Some(mut song) =
                             crate::metadata::extract_metadata(&path, true, false, &app)
                         {
-                            if (process_albums) {
+                            if process_albums {
                                 if let Some(album) = process_new_album(&song, app) {
                                     // info!("Album: {:?}", album);
                                     let existing_album =
                                         albums.lock().unwrap().get_mut(&album.id).cloned();
                                     let existing_album_subalbums =
                                         subalbums.lock().unwrap().get_mut(&album.id).cloned();
-                                    if let Some(existing_album) = existing_album {
+                                    if let Some(_existing_album) = existing_album {
                                         // Merge with existing album
                                         albums.lock().unwrap().entry(album.id.clone()).and_modify(
                                             |a| {
                                                 a.tracks_ids.push(song.id.clone());
                                             },
                                         );
-                                    } else if let Some(existing_album_subalbums) =
+                                    } else if let Some(_existing_album_subalbums) =
                                         existing_album_subalbums
                                     {
                                         // Merge with existing album
@@ -564,10 +546,10 @@ fn process_directory(
                         if let Some(sub_results) =
                             process_directory(&path, songs, albums, true, process_albums, app)
                         {
-                            if (!sub_results.songs.is_empty()) {
+                            if !sub_results.songs.is_empty() {
                                 songs.lock().unwrap().extend(sub_results.songs);
                             }
-                            if (!sub_results.albums.is_empty()) {
+                            if !sub_results.albums.is_empty() {
                                 albums.lock().unwrap().extend(sub_results.albums);
                             }
                         }
@@ -610,7 +592,7 @@ pub fn extract_metadata(
                     let mut composer = Vec::new();
                     let mut track_number = -1;
                     let mut duration = String::new();
-                    let mut file_info = FileInfo::new();
+                    let file_info;
                     let mut artwork = None;
 
                     if tagged_file.tags().is_empty() {
@@ -712,7 +694,7 @@ pub fn extract_metadata(
                         }
                     }
 
-                    if (include_folder_artwork && artwork.is_none()) {
+                    if include_folder_artwork && artwork.is_none() {
                         let result = look_for_art(&path, &file, app);
                         if let Ok(res) = result {
                             if let Some(art) = res.clone() {
@@ -760,21 +742,6 @@ pub fn extract_metadata(
     None
 }
 
-#[derive(Debug)]
-pub enum MyCustomError {
-    TagWritingError,
-}
-
-impl std::error::Error for MyCustomError {}
-
-impl fmt::Display for MyCustomError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            MyCustomError::TagWritingError => write!(f, "Error writing tag to file!"),
-        }
-    }
-}
-
 fn map_id3v1_to_id3v2_4(key: &str) -> Option<&'static str> {
     match key {
         "title" => Some("TIT2"),
@@ -817,7 +784,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
             let tag_file_type = tag.file_type();
             let mut to_write = lofty::tag::Tag::new(tag_type.unwrap());
 
-            if (tag.primary_tag().is_some()) {
+            if tag.primary_tag().is_some() {
                 tag.primary_tag()
                     .unwrap()
                     .pictures()
@@ -877,7 +844,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         } else {
                             let item_value: ItemValue =
                                 ItemValue::Text(String::from(item.value.as_str().unwrap()));
-                            if (tag_key.eq_ignore_ascii_case("TRCK")) {
+                            if tag_key.eq_ignore_ascii_case("TRCK") {
                                 item_key = ItemKey::TrackNumber;
                             }
                             to_write.insert(TagItem::new(item_key, item_value));
@@ -908,7 +875,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
             info!("FILETYPE: {:?}", file_type);
 
             // Keep picture, overwrite everything else
-            let pictures = to_write.pictures();
+            let _pictures = to_write.pictures();
 
             tag.clear();
             tag.insert_tag(to_write);

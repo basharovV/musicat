@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use std::sync::mpsc::{Receiver, Sender, TryRecvError};
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Instant;
 
@@ -10,25 +10,24 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::marker::PhantomData;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicU32};
+use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 
-use atomic_wait::{wake_all, wake_one};
+use atomic_wait::wake_all;
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::Device;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
-use symphonia::core::audio::{AudioBufferRef, Layout, RawSampleBuffer, SampleBuffer, SignalSpec};
-use symphonia::core::codecs::{DecoderOptions, FinalizeResult, CODEC_TYPE_NULL};
-use symphonia::core::errors::Error::{self, ResetRequired};
+use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
+use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
+use symphonia::core::errors::Error::ResetRequired;
 use symphonia::core::formats::{FormatOptions, SeekTo, Track};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::core::units::Time;
 use symphonia::default::get_probe;
-use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::sync::{Mutex, MutexGuard};
+use tauri::{AppHandle, Emitter, State};
+use tokio::sync::Mutex;
 use tokio::time::Duration;
 
 use tokio_util::sync::CancellationToken;
@@ -45,8 +44,7 @@ use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
 use crate::output::{self, AudioOutput};
-use crate::resampler::Resampler;
-use crate::store::{load_settings, UserSettings};
+use crate::store::load_settings;
 use crate::{
     dsp, GetWaveformRequest, GetWaveformResponse, SampleOffsetEvent, StreamFileRequest,
     VolumeControlEvent,
@@ -106,8 +104,6 @@ pub const ACTIVE: u32 = 1;
 pub struct AudioStreamer<'a> {
     pub peer_connection: Arc<Mutex<Option<Arc<RTCPeerConnection>>>>,
     pub data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
-    pub is_open: Arc<AtomicBool>,
-    pub path: Arc<String>,
     pub cancel_tokens: Arc<Mutex<HashMap<String, CancellationToken>>>,
     phantom: PhantomData<&'a RTCPeerConnection>,
     phantom2: PhantomData<&'a RTCDataChannel>,
@@ -116,7 +112,6 @@ pub struct AudioStreamer<'a> {
     pub next_track_receiver: Arc<Mutex<Receiver<StreamFileRequest>>>,
     pub next_track_sender: Sender<StreamFileRequest>,
     pub decoding_active: Arc<AtomicU32>,
-    pub audio_output: Arc<Mutex<Option<Box<dyn output::AudioOutput + Send + Sync>>>>,
     pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
     pub volume_control_sender: Sender<VolumeControlEvent>,
 }
@@ -132,14 +127,9 @@ impl<'a> AudioStreamer<'a> {
         let (sender_next, receiver_next): (Sender<StreamFileRequest>, Receiver<StreamFileRequest>) =
             std::sync::mpsc::channel();
 
-        let (sender_transition, receiver_transition): (Sender<bool>, Receiver<bool>) =
-            std::sync::mpsc::channel();
-
         Ok(AudioStreamer {
             peer_connection: Arc::new(Mutex::new(None)),
             data_channel: Arc::new(Mutex::new(None)),
-            is_open: Arc::new(AtomicBool::new(false)),
-            path: Arc::new(String::new()),
             cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
             phantom: PhantomData,
             phantom2: PhantomData,
@@ -148,7 +138,6 @@ impl<'a> AudioStreamer<'a> {
             next_track_receiver: Arc::new(Mutex::new(receiver_next)),
             next_track_sender: sender_next,
             decoding_active: Arc::new(AtomicU32::new(ACTIVE)),
-            audio_output: Arc::new(Mutex::new(None)),
             volume_control_receiver: Arc::new(Mutex::new(receiver_vol)),
             volume_control_sender: sender_vol,
         })
@@ -157,7 +146,6 @@ impl<'a> AudioStreamer<'a> {
     pub fn init(&self, app_handle: AppHandle) -> () {
         let receiver = self.player_control_receiver.clone();
         let next_track_receiver = self.next_track_receiver.clone();
-        let cancel_tokens = self.cancel_tokens.clone();
         let decoding_active = self.decoding_active.clone();
         let volume_control_receiver = self.volume_control_receiver.clone();
         let data_channel = self.data_channel.clone();
@@ -174,12 +162,6 @@ impl<'a> AudioStreamer<'a> {
                 data_channel,
                 &app_handle,
             );
-
-            // on file (seek)
-
-            // on pause
-
-            // on play
         });
     }
 
@@ -270,7 +252,7 @@ impl<'a> AudioStreamer<'a> {
             info!("on_ice_candidate {:?}", c);
             if let Some(cand) = c {
                 // let candidate = serde_json::to_string(&cand.to_json().unwrap());
-                if (cand.address.contains("127.0.0.1")) {
+                if cand.address.contains("127.0.0.1") {
                     let _ = app_handle.emit("webrtc-icecandidate-client", &cand.to_json().unwrap());
                 }
             }
@@ -299,16 +281,14 @@ impl<'a> AudioStreamer<'a> {
 
         if let Ok(pc_mutex) = self.peer_connection.try_lock() {
             if let Some(pc) = pc_mutex.clone().or(None) {
-                pc.add_ice_candidate(parsed).await;
+                let _ = pc.add_ice_candidate(parsed).await;
             }
         }
         Ok(())
     }
 
     pub async fn handle_signal(self, answer: &str) -> Option<RTCSessionDescription> {
-        // self.peer_connection.close()
         // Apply the answer as the remote description
-        // self.peer_connection.set_remote_description(answer).await?;
         let parsed_description: RTCSessionDescription = serde_json::from_str(answer).unwrap();
         info!("handle_signal {:?}", parsed_description);
 
@@ -354,49 +334,6 @@ impl<'a> AudioStreamer<'a> {
             }
         }
     }
-
-    // /**
-    //  * Grab the PCM samples to send to the webview.
-    //  */
-    // pub fn get_stream_response(
-    //     path: &str,
-    //     boundary_id: &Arc<Mutex<i32>>,
-    // ) -> Result<tauri::http::Response, Box<dyn std::error::Error>> {
-    //     info!("File chunk handler:path {:?}", &path);
-    //     let mut file = std::fs::File::open(&path)?;
-
-    //     // get file length
-    //     let len = {
-    //         let old_pos = file.stream_position()?;
-    //         let len = file.seek(SeekFrom::End(0))?;
-    //         file.seek(SeekFrom::Start(old_pos))?;
-    //         len
-    //     };
-
-    //     info!("File chunk handler: Length: {:?}", len);
-    // }
-}
-
-// Peeking channel receiver without consuming
-// From https://stackoverflow.com/questions/59447577/how-to-peek-on-channels-without-blocking-and-still-being-able-to-detect-hangup
-pub struct TryIterResult<'a, T: 'a> {
-    rx: &'a Receiver<T>,
-}
-
-pub fn try_iter_result<'a, T>(rx: &'a MutexGuard<Receiver<T>>) -> TryIterResult<'a, T> {
-    TryIterResult { rx: &rx }
-}
-
-impl<'a, T> Iterator for TryIterResult<'a, T> {
-    type Item = Result<T, TryRecvError>;
-
-    fn next(&mut self) -> Option<Result<T, TryRecvError>> {
-        match self.rx.try_recv() {
-            Ok(data) => Some(Ok(data)),
-            Err(TryRecvError::Empty) => Some(Err(TryRecvError::Empty)),
-            Err(TryRecvError::Disconnected) => None,
-        }
-    }
 }
 
 pub fn start_audio(
@@ -434,15 +371,13 @@ fn decode_loop(
 ) {
     // These will be reset when changing tracks
     let mut path_str: Option<String> = None;
-    let mut path_str_clone: Option<String> = None;
+    let mut path_str_clone: Option<String>;
     let mut seek = None;
     let mut end_pos = None; // for loop region
     let mut volume = None;
     let mut audio_device_name = None;
     let mut previous_audio_device_name: String = String::new();
 
-    let mut spec: SignalSpec = SignalSpec::new_with_layout(44100, Layout::Stereo);
-    let mut duration: u64 = 512;
     let mut previous_sample_rate = 44100;
     let mut previous_channels = 2;
 
@@ -463,7 +398,6 @@ fn decode_loop(
 
     let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
     let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
-    let mut is_looping = false;
 
     // Loop here!
     loop {
@@ -482,7 +416,6 @@ fn decode_loop(
                         path_str.replace(request.path.unwrap());
                         seek.replace(request.seek.unwrap());
                         volume.replace(request.volume.unwrap());
-                        is_looping = false;
                         audio_device_name = request.output_device;
                     }
                     PlayerControlEvent::LoopRegion(request) => {
@@ -491,7 +424,6 @@ fn decode_loop(
                         seek.replace(request.start_pos.unwrap());
                         end_pos.replace(request.end_pos.unwrap());
                         cancel_token.cancel();
-                        is_looping = true;
                     }
                     PlayerControlEvent::ChangeAudioDevice(request) => {
                         info!("audio: change audio device! {:?}", request);
@@ -521,7 +453,7 @@ fn decode_loop(
             }
 
             // Create the media source stream using the boxed media source from above.
-            let mut mss = MediaSourceStream::new(source, Default::default());
+            let mss = MediaSourceStream::new(source, Default::default());
 
             // Use the default options for format readers other than for gapless playback.
             let format_opts = FormatOptions {
@@ -536,7 +468,6 @@ fn decode_loop(
             };
 
             // Get the value of the track option, if provided.
-            let track: Option<Track> = None;
             info!("probing {:?}", hint);
             info!("opts {:?}", format_opts);
             info!("meta {:?}", metadata_opts);
@@ -557,7 +488,7 @@ fn decode_loop(
             let track = reader.default_track().unwrap().clone();
 
             if let Some(frames) = track.codec_params.n_frames {
-                app_handle.emit("file-samples", frames);
+                let _ = app_handle.emit("file-samples", frames);
             }
 
             let mut track_id = track.id;
@@ -615,7 +546,6 @@ fn decode_loop(
             }
 
             // Check if audio device changed
-            let host = cpal::default_host();
             if let Ok(settings) = load_settings(app_handle) {
                 audio_device_name = settings.output_device;
             }
@@ -630,6 +560,7 @@ fn decode_loop(
                 info!("cpal: Default device {:?}", device.name());
                 // Only resample when audio device doesn't support file sample rate
                 // so we can't switch the device rate to match.
+                info!("cpal: device default config {:?}", device.default_output_config());
                 let supports_sample_rate = device
                     .supported_output_configs()
                     .unwrap()
@@ -650,7 +581,7 @@ fn decode_loop(
             previous_channels = spec.channels.count();
             previous_audio_device_name = device_name.clone();
 
-            if (audio_output.is_none() || should_reset_audio) {
+            if audio_output.is_none() || should_reset_audio {
                 info!("player: Resetting audio device");
                 // Try to open the audio output.
 
@@ -670,7 +601,7 @@ fn decode_loop(
                 info!("player: Re-using existing audio output");
             }
 
-            let mut last_sent_time = Instant::now();
+            let mut last_sent_time;
 
             if !is_transition {
                 let clone_device_name = device_name.clone();
@@ -731,11 +662,10 @@ fn decode_loop(
                                         cancel_token.cancel();
                                         guard.flush();
                                         is_reset = true;
-                                        is_looping = false;
                                     }
                                     PlayerControlEvent::LoopRegion(request) => {
                                         info!("audio: loop region! {:?}", request);
-                                        if (request.enabled.unwrap()) {
+                                        if request.enabled.unwrap() {
                                             seek.replace(request.start_pos.unwrap());
                                             end_pos.replace(request.end_pos.unwrap());
                                         } else {
@@ -745,7 +675,6 @@ fn decode_loop(
                                         cancel_token.cancel();
                                         guard.flush();
                                         is_reset = true;
-                                        is_looping = true;
                                     }
                                     PlayerControlEvent::ChangeAudioDevice(request) => {
                                         info!("audio: change audio device! {:?}", request);
@@ -760,20 +689,20 @@ fn decode_loop(
                             }
 
                             let mut is_paused = false;
-                            if (decoding_active.load(std::sync::atomic::Ordering::Relaxed)
-                                == PAUSED)
+                            if decoding_active.load(std::sync::atomic::Ordering::Relaxed)
+                                == PAUSED
                             {
                                 is_paused = true;
                                 info!("Sending paused state to output");
                                 guard.pause();
                                 let _ = playback_state_sender.send(false);
-                                app_handle.emit("paused", {});
+                                let _ = app_handle.emit("paused", {});
                             }
 
                             // waits while the value is PAUSED (0)
                             atomic_wait::wait(&decoding_active, PAUSED);
 
-                            if (is_paused) {
+                            if is_paused {
                                 let ctrl_event = receiver.try_recv();
                                 if let Ok(result) = ctrl_event {
                                     match result {
@@ -789,11 +718,10 @@ fn decode_loop(
                                             cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
-                                            is_looping = false;
                                         }
                                         PlayerControlEvent::LoopRegion(request) => {
                                             info!("audio: loop region! {:?}", request);
-                                            if (request.enabled.unwrap()) {
+                                            if request.enabled.unwrap() {
                                                 seek.replace(request.start_pos.unwrap());
                                                 end_pos.replace(request.end_pos.unwrap());
                                             } else {
@@ -803,7 +731,6 @@ fn decode_loop(
                                             cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
-                                            is_looping = true;
                                         }
                                         PlayerControlEvent::ChangeAudioDevice(request) => {
                                             info!("audio: change audio device! {:?}", request);
@@ -813,7 +740,7 @@ fn decode_loop(
                                             guard.flush();
                                             guard.pause();
                                             is_reset = true;
-                                            if (is_paused) {
+                                            if is_paused {
                                                 // Restore pause state after device change
                                                 let _ = &decoding_active.store(
                                                     PAUSED,
@@ -824,13 +751,12 @@ fn decode_loop(
                                         }
                                     }
                                 }
-                                is_paused = false;
                                 guard.resume();
                             }
 
                             let _ = playback_state_sender.send(true);
 
-                            app_handle.emit("playing", {});
+                            let _ = app_handle.emit("playing", {});
                             if cancel_token.is_cancelled() {
                                 break Ok(());
                             }
@@ -847,7 +773,7 @@ fn decode_loop(
 
                             // Loop region mode: If this packet is past the loop region,
                             // seek the reader back to the start point
-                            if (end_pos.is_some() && packet.ts > end_pos_frame_idx) {
+                            if end_pos.is_some() && packet.ts > end_pos_frame_idx {
                                 let seek_to = SeekTo::Time {
                                     time: Time::from(seek.unwrap()),
                                     track_id: Some(track_id),
@@ -885,7 +811,7 @@ fn decode_loop(
                                         transition_time = last_sent_time;
                                     } else if is_transition && started_transition {
                                         if transition_time.elapsed().as_secs() >= 5 {
-                                            if (end_pos.is_some()) {
+                                            if end_pos.is_some() {
                                                 let _ =
                                                     sender_sample_offset.send(SampleOffsetEvent {
                                                         sample_offset: Some(
@@ -900,7 +826,7 @@ fn decode_loop(
                                                 false,
                                                 &app_handle,
                                             ) {
-                                                app_handle.emit("song_change", Some(song));
+                                                let _ = app_handle.emit("song_change", Some(song));
 
                                                 let _ = reset_control_sender.send(true);
                                                 let _ =
@@ -929,7 +855,7 @@ fn decode_loop(
                                     "slowing down" decoding to allow the audio stream to read from the
                                     buffer as it's playing.
                                      */
-                                    if (!cancel_token.is_cancelled()) {
+                                    if !cancel_token.is_cancelled() {
                                         // Write the decoded audio samples to the audio output if the presentation timestamp
                                         // for the packet is >= the seeked position (0 if not seeking).
                                         if packet.ts() >= seek_ts {
@@ -937,9 +863,9 @@ fn decode_loop(
                                             let mut ramp_down_smpls = 0;
                                             // Avoid clicks by ramping down and up quickly
                                             if let Some(frames) = track.codec_params.n_frames {
-                                                if (packet.ts >= frames - packet.dur) {
+                                                if packet.ts >= frames - packet.dur {
                                                     ramp_down_smpls = packet.dur;
-                                                } else if (packet.ts < packet.dur) {
+                                                } else if packet.ts < packet.dur {
                                                     ramp_up_smpls = packet.dur;
                                                 }
                                             }
@@ -988,7 +914,7 @@ fn decode_loop(
                                         }
                                         info!("Buffer is now empty. Pausing stream...");
                                         guard.pause();
-                                        app_handle.emit("stopped", Some(0.0f64));
+                                        let _ = app_handle.emit("stopped", Some(0.0f64));
                                     }
                                 }
                                 // Do not treat "end of stream" as a fatal error. It's the currently only way a
@@ -1034,7 +960,7 @@ pub fn get_peaks(
     }
 
     // Create the media source stream using the boxed media source from above.
-    let mut mss = MediaSourceStream::new(source, Default::default());
+    let mss = MediaSourceStream::new(source, Default::default());
 
     // Use the default options for format readers other than for gapless playback.
     let format_opts = FormatOptions {
@@ -1049,7 +975,6 @@ pub fn get_peaks(
     };
 
     // Get the value of the track option, if provided.
-    let track: Option<Track> = None;
     info!("probing {:?}", hint);
     info!("opts {:?}", format_opts);
     info!("meta {:?}", metadata_opts);
@@ -1064,9 +989,7 @@ pub fn get_peaks(
 
     let track = reader.default_track().unwrap().clone();
 
-    let mut track_id = track.id;
-
-    let seek_ts = 0;
+    let track_id = track.id;
 
     info!("codec params: {:?}", &track.codec_params);
 
@@ -1075,9 +998,7 @@ pub fn get_peaks(
         .make(&track.codec_params, &DecoderOptions { verify: false })
         .unwrap();
 
-    let mut spec_changed = false;
-    let mut new_spec = SignalSpec::new_with_layout(44100, Layout::Stereo);
-    let mut new_duration = 1152;
+    let new_spec = SignalSpec::new_with_layout(44100, Layout::Stereo);
 
     let expected_peaks_size =
         (track.codec_params.n_frames.unwrap() * new_spec.channels.count() as u64 / 4000) as usize;
@@ -1085,12 +1006,8 @@ pub fn get_peaks(
     let mut window: Vec<f32> = Vec::with_capacity(4000);
     let mut peaks: Vec<f32> = Vec::new();
 
-    let mut avg = 0f32;
-    let mut total = 0f32;
-    let mut count = 0;
     let mut total_count = 0;
-    let mut n_frames = 0;
-    let mut n_adds = 0;
+    let n_frames = 0;
 
     let result = loop {
         let packet = match reader.next_packet() {
@@ -1105,7 +1022,7 @@ pub fn get_peaks(
         // Decode the packet into audio samples.
         match decoder.decode(&packet) {
             Ok(_decoded) => {
-                if (cancel_token.is_cancelled()) {
+                if cancel_token.is_cancelled() {
                     break Err(symphonia::core::errors::Error::LimitError("cancelled"));
                 }
                 // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
@@ -1115,9 +1032,8 @@ pub fn get_peaks(
                 // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
                 // any required conversions.
                 sample_buf.copy_interleaved_ref(_decoded);
-                let mut i = 0;
                 sample_buf.samples().iter().for_each(|f| {
-                    if (window.len() < 4000) {
+                    if window.len() < 4000 {
                         window.push(*f);
                     } else {
                         peaks.push(dsp::calculate_rms(&window));
@@ -1126,12 +1042,12 @@ pub fn get_peaks(
                 });
 
                 total_count += 1;
-                if (total_count > 100) {
+                if total_count > 100 {
                     total_count = 0;
                     let len = expected_peaks_size.saturating_sub(peaks.len());
                     // info!("expected peaks size: {}, len: {}, n_adds: {}", expected_peaks_size, peaks.len(), n_adds);
                     let cln = [peaks.clone().as_slice(), vec![0f32; len].as_slice()].concat();
-                    app_handle.emit("waveform", GetWaveformResponse { data: Some(cln) });
+                    let _ = app_handle.emit("waveform", GetWaveformResponse { data: Some(cln) });
                 }
 
                 // Get waveform here
@@ -1177,7 +1093,7 @@ pub struct AudioDevices {
 }
 
 #[tauri::command]
-pub fn get_devices(app_handle: tauri::AppHandle) -> Option<AudioDevices> {
+pub fn get_devices(_app_handle: tauri::AppHandle) -> Option<AudioDevices> {
     // Get default host.
     let host = cpal::default_host();
 

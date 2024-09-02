@@ -7,7 +7,6 @@
 
 //! Platform-dependant Audio Outputs
 
-use std::f32::consts::PI;
 use std::result;
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
@@ -15,13 +14,13 @@ use ::cpal::{default_host, Device};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
-use symphonia::core::audio::{AudioBufferRef, SampleBuffer, SignalSpec};
-use symphonia::core::units::Duration;
+use symphonia::core::audio::{AudioBufferRef, SignalSpec};
 use webrtc::data_channel::RTCDataChannel;
 
 pub trait AudioOutput {
     fn write(&mut self, decoded: AudioBufferRef<'_>, ramp_up_samples: u64, ramp_down_samples: u64);
     fn flush(&mut self);
+    #[allow(dead_code)]
     fn get_sample_rate(&self) -> u32;
     fn pause(&self);
     fn resume(&self);
@@ -55,17 +54,15 @@ mod cpal {
 
     use bytes::Bytes;
     use cpal::{Sample, SupportedBufferSize};
-    use symphonia::core::audio::{
-        AudioBufferRef, Channels, Layout, RawSample, SampleBuffer, SignalSpec,
-    };
+    use symphonia::core::audio::{AudioBufferRef, Layout, RawSample, SampleBuffer, SignalSpec};
     use symphonia::core::conv::{ConvertibleSample, IntoSample};
     use symphonia::core::units::TimeBase;
 
-    use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+    use cpal::traits::{DeviceTrait, StreamTrait};
     use rb::*;
 
     use log::{error, info};
-    use tauri::{AppHandle, Emitter, Manager};
+    use tauri::{AppHandle, Emitter};
     use tokio::sync::Mutex;
     use webrtc::data_channel::RTCDataChannel;
 
@@ -146,7 +143,7 @@ mod cpal {
             );
 
             let duration = match config.buffer_size() {
-                SupportedBufferSize::Range { min, max } => {
+                SupportedBufferSize::Range { min: _, max } => {
                     (*max * device_spec.channels.count() as u32) as u64
                 }
                 SupportedBufferSize::Unknown => 4096 as u64,
@@ -340,7 +337,7 @@ mod cpal {
                     let reset = reset_control_receiver.try_lock();
                     if let Ok(reset_lock) = reset {
                         if let Ok(rst) = reset_lock.try_recv() {
-                            if (rst) {
+                            if rst {
                                 info!("Got rst: {:?}", rst);
                                 let mut frame_idx = frame_idx_state.write().unwrap();
                                 *frame_idx = 0;
@@ -397,7 +394,6 @@ mod cpal {
 
                             let length = data.len();
 
-                            let mut u = 0;
                             let mut should_send = false;
                             for d in &mut *data {
                                 if viz_data.len() < length {
@@ -405,7 +401,6 @@ mod cpal {
                                 } else {
                                     should_send = true;
                                 }
-                                u += 1;
                             }
 
                             // new offset
@@ -479,11 +474,11 @@ mod cpal {
                 stream,
                 resampler: None,
                 sample_rate: config.sample_rate.0,
-                name: device.name().unwrap_or(String::from("Unknown"))
+                name: device.name().unwrap_or(String::from("Unknown")),
             })))
         }
     }
-    
+
     impl<T: AudioOutputSample + Send + Sync> Drop for CpalAudioOutputImpl<T> {
         fn drop(&mut self) {
             info!("Audio output dropped: {}", self.name);
@@ -520,11 +515,11 @@ mod cpal {
                 }
             } else {
                 // Resampling is not required. Interleave the sample for cpal using a sample buffer.
-                if (ramp_up_samples > 0) {
+                if ramp_up_samples > 0 {
                     info!("Ramping up first {:?}", ramp_up_samples);
                     self.ramp_up(decoded, ramp_up_samples as usize);
                     self.sample_buf.samples()
-                } else if (ramp_down_samples > 0) {
+                } else if ramp_down_samples > 0 {
                     info!("Ramping down last {:?}", ramp_down_samples);
                     self.ramp_down(decoded, ramp_down_samples as usize);
                     self.sample_buf.samples()
@@ -579,9 +574,6 @@ mod cpal {
         }
 
         fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool {
-            let host = cpal::default_host();
-            let output_device = host.default_output_device();
-
             // If we have a default audio device (we always should, but just in case)
             // we check if the track spec differs from the output device
             // if it does - resample the decoded audio using Symphonia.
@@ -662,22 +654,15 @@ pub fn try_open(
 
 pub fn get_device_by_name(name: Option<String>) -> Option<Device> {
     let host = default_host();
-    if (name.is_none()) {
+    if name.is_none() {
         return host.default_output_device();
     }
     let name = name.unwrap();
     return host
         .devices()
         .unwrap()
-        .find(|device| device.name().unwrap() == name);
-}
-
-fn hanning_window(n: usize, N: usize) -> f32 {
-    0.5 * (1.0 - ((2.0 * PI * n as f32) / (N as f32 - 1.0)).cos())
-}
-
-fn hamming_window(n: usize, N: usize) -> f32 {
-    0.54 - 0.46 * ((2.0 * std::f32::consts::PI * n as f32) / (N as f32 - 1.0)).cos()
+        .find(|device| device.name().unwrap() == name)
+        .or(host.default_output_device());
 }
 
 fn fft(input: &[f32]) -> Vec<Complex<f32>> {
@@ -757,10 +742,6 @@ fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
     }
 
     interleaved_bytes
-}
-
-fn linear_interpolate(x0: f32, x1: f32, t: f32) -> f32 {
-    x0 * (1.0 - t) + x1 * t
 }
 
 fn smoothing(x0: f32, x1: f32, factor: f32) -> f32 {

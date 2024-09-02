@@ -4,7 +4,7 @@
 )]
 
 use futures_util::StreamExt;
-use log::{debug, error, info, trace, warn};
+use log::info;
 use metadata::FileInfo;
 use player::AudioStreamer;
 use reqwest;
@@ -16,13 +16,13 @@ use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
 use tauri::menu::{
-    Menu, MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
+    MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
 };
-use tauri::{AppHandle, Emitter, EventLoopMessage, Listener, Wry};
+use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
-use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
+use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 mod dsp;
 mod metadata;
@@ -187,7 +187,7 @@ fn get_waveform(
 
     std::thread::spawn(move || {
         // Handle client's offer
-        let result = player::get_peaks(evt, &_app_handle, token_clone);
+        let _ = player::get_peaks(evt, &_app_handle, token_clone);
         // info!("Waveform: {:?}", result);
     });
 }
@@ -422,8 +422,6 @@ async fn main() {
 
             let window = window_builder.build().unwrap();
 
-            // let window = app.get_webview_window("main").unwrap();
-            let window_reference = window.clone();
             app.on_menu_event(move |app, event| {
                 app.emit("menu", event.id.0).unwrap();
             });
@@ -431,10 +429,6 @@ async fn main() {
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-
-            #[cfg(target_os = "windows")]
-            apply_blur(&window, Some((18, 18, 18, 125)))
-                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
 
             // Listen for metadata write event
             // listen to the `event-name` (emitted on any window)
