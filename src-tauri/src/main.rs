@@ -399,7 +399,6 @@ async fn main() {
                     .accept_first_mouse(true)
                     .visible(true)
                     .decorations(true)
-                    .hidden_title(true)
                     .resizable(true)
                     .title("Musicat");
 
@@ -407,9 +406,10 @@ async fn main() {
             {
                 window_builder = window_builder
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .hidden_title(true)
                     .transparent(true);
             }
-            
+
             #[cfg(target_os = "windows")]
             {
                 window_builder = window_builder.transparent(true);
