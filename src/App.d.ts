@@ -160,6 +160,7 @@ interface UserSettings {
     downloadLocation: string;
     theme: string;
     outputDevice?: string;
+    followSystemOutput: boolean
 }
 
 type MiniPlayerLocation =

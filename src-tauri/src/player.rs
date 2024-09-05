@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use atomic_wait::wake_all;
 use cpal::traits::{DeviceTrait, HostTrait};
-use log::{info, warn};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
@@ -43,7 +43,7 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
-use crate::output::{self, AudioOutput};
+use crate::output::{self, get_device_by_name, AudioOutput};
 use crate::store::load_settings;
 use crate::{
     dsp, GetWaveformRequest, GetWaveformResponse, SampleOffsetEvent, StreamFileRequest,
@@ -546,30 +546,59 @@ fn decode_loop(
             }
 
             // Check if audio device changed
+            let mut follow_system_output = false;
             if let Ok(settings) = load_settings(app_handle) {
                 audio_device_name = settings.output_device;
+                follow_system_output = settings.follow_system_output;
             }
-            let output_device = output::get_device_by_name(audio_device_name.clone());
+            let output_device = output::get_device_by_name(if follow_system_output {
+                None
+            } else {
+                audio_device_name.clone()
+            });
+
             let device_name = output_device.clone().unwrap().name().unwrap();
             // If we have a default audio device (we always should, but just in case)
             // we check if the track spec differs from the output device
             // if it does - resample the decoded audio using Symphonia.
 
             // Check if track sample rate differs from current OS config
-            if let Some(device) = output_device {
+            if let Some(mut device) = output_device {
                 info!("cpal: Default device {:?}", device.name());
                 // Only resample when audio device doesn't support file sample rate
                 // so we can't switch the device rate to match.
-                info!("cpal: device default config {:?}", device.default_output_config());
-                let supports_sample_rate = device
-                    .supported_output_configs()
-                    .unwrap()
-                    .find(|c| {
-                        return c
-                            .try_with_sample_rate(cpal::SampleRate(spec.rate))
-                            .is_some();
-                    })
-                    .is_some();
+                // info!(
+                //     "cpal: device default config {:?}",
+                //     device.default_output_config()
+                // );
+                let supported_output_configs = device.supported_output_configs();
+                let mut supports_sample_rate = false;
+                if let Ok(mut output_configs) = supported_output_configs {
+                    info!(
+                        "cpal: device supported configs {:?}",
+                        output_configs
+                            .by_ref()
+                            .map(|c| format!(
+                                "min: {}, max: {}",
+                                c.min_sample_rate().0,
+                                c.max_sample_rate().0
+                            ))
+                            .collect::<Vec<String>>()
+                    );
+                    supports_sample_rate = output_configs
+                        .find(|c| {
+                            return c
+                                .try_with_sample_rate(cpal::SampleRate(spec.rate))
+                                .is_some();
+                        })
+                        .is_some();
+                } else if (supported_output_configs.is_err()) {
+                    error!(
+                        "failed to get audio output device config: {}",
+                        supported_output_configs.err().unwrap()
+                    );
+                    device = get_device_by_name(None).unwrap();
+                }
                 // If sample rate or channels changed - reinit the audio device with the new spec
                 // (if this sample rate isn't supported, it will be resampled)
                 should_reset_audio = previous_audio_device_name != device.name().unwrap()
@@ -689,8 +718,7 @@ fn decode_loop(
                             }
 
                             let mut is_paused = false;
-                            if decoding_active.load(std::sync::atomic::Ordering::Relaxed)
-                                == PAUSED
+                            if decoding_active.load(std::sync::atomic::Ordering::Relaxed) == PAUSED
                             {
                                 is_paused = true;
                                 info!("Sending paused state to output");
@@ -1105,10 +1133,11 @@ pub fn get_devices(_app_handle: tauri::AppHandle) -> Option<AudioDevices> {
         })
         .collect();
 
-    let cpal_default = host.default_output_device().unwrap();
-    let default = Some(AudioDevice {
-        name: cpal_default.name().unwrap(),
-    });
+    let cpal_default = host.default_output_device();
+    
+    let default = if cpal_default.is_none() { None } else { Some(AudioDevice {
+        name: cpal_default.unwrap().name().unwrap(),
+    }) };
 
     Some(AudioDevices {
         devices: cpal_devices,

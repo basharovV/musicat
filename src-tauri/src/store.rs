@@ -18,6 +18,7 @@ pub struct UserSettings {
     pub download_location: Option<String>,
     pub theme: String,
     pub output_device: Option<String>,
+    pub follow_system_output: bool
 }
 
 #[derive(Serialize, Deserialize, Debug)]

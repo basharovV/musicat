@@ -110,7 +110,7 @@
         default: null
     };
 
-    let defaultAudioDevice: AudioDevice;
+    let fallbackAudioDevice: AudioDevice;
 
     let devicesLoaded = false;
     function onAudioDeviceSelected(event) {
@@ -122,6 +122,18 @@
         });
     }
 
+    function onFollowSystemOutputChange(event) {
+        console.log("onFollowSystemOutputChange", event.target.checked);
+        if (event.target.checked) {
+            $userSettings.outputDevice = fallbackAudioDevice.name;
+            invoke("change_audio_device", {
+                event: {
+                    audioDevice: $userSettings.outputDevice
+                }
+            });
+        }
+    }
+
     onMount(async () => {
         hotkeys("esc", () => {
             onClose();
@@ -130,8 +142,13 @@
         // Init
         try {
             const response: AudioDevices = await invoke("get_devices");
+            console.log("audio devices", response);
+            console.log("saved audio device", $userSettings.outputDevice);
             audioDevices.devices.push(...response.devices);
-            defaultAudioDevice = response.default;
+            fallbackAudioDevice = response.default;
+            if ($userSettings.followSystemOutput) {
+                $userSettings.outputDevice = fallbackAudioDevice.name;
+            }
             devicesLoaded = true;
         } catch (error) {
             console.error(error);
@@ -244,7 +261,8 @@
                             <td>{$LL.settings.outputDevice()}</td>
                             <td>
                                 <select
-                                    bind:value={$userSettings.outputDevice}
+                                    disabled={$userSettings.followSystemOutput}
+                                    value={$userSettings.outputDevice}
                                     on:change={onAudioDeviceSelected}
                                 >
                                     {#each audioDevices?.devices as device}
@@ -254,6 +272,18 @@
                                     {/each}
                                 </select></td
                             >
+                        </tr>
+                        <tr>
+                            <td>{$LL.settings.followSystem()}</td>
+                            <td>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={$userSettings.followSystemOutput}
+                                        on:change={onFollowSystemOutputChange}
+                                    /></label
+                                >
+                            </td>
                         </tr>
                     </tbody>
                 {/if}

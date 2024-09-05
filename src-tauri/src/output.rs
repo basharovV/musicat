@@ -328,6 +328,7 @@ mod cpal {
                     if let Ok(dvc_state) = device_state.try_read() {
                         if *dvc_state != *device_name_state.try_read().unwrap() {
                             data.iter_mut().for_each(|s| *s = T::MID);
+                            info!("Ignoring this device");
                             return;
                         }
                     }
