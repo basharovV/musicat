@@ -200,6 +200,8 @@
 <style lang="scss">
     container {
         display: flex;
+        border-radius: 5px;
+        margin-right: 5px;
         flex-direction: column;
         background-color: var(--smart-playlist-builder-bg);
         color: var(--smart-playlist-builder-text);
@@ -214,7 +216,7 @@
         grid-template-columns: 1fr auto;
         overflow: visible;
         position: relative;
-        border-bottom: 0.7px solid rgba(255, 255, 255, 0.16);
+        /* border-bottom: 0.7px solid rgba(255, 255, 255, 0.16); */
     }
 
     .smart-query-actions {

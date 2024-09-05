@@ -1,5 +1,6 @@
 <script lang="ts">
     import isDarkColor from "is-dark-color";
+    import Icon from "../ui/Icon.svelte";
 
     export let isDisabled = false;
     export let isDestructive = false;
@@ -15,10 +16,6 @@
     export let checked = null;
     export let isLoading = false;
     export let singleSelection = false;
-
-    import { createEventDispatcher } from "svelte";
-    import Icon from "../ui/Icon.svelte";
-    const dispatch = createEventDispatcher();
 
     $: {
         console.log("highlighted", isHighlighted);
@@ -81,7 +78,7 @@
         {#if onDelete}
             <Icon
                 icon="mingcute:close-circle-fill"
-                onСlick={onDelete}
+                onClick={onDelete}
             />
         {/if}
     {:else}

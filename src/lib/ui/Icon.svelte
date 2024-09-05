@@ -193,6 +193,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
     on:click={(e) => {
+        console.log("click", onClick);
         if (onClick) {
             e.stopPropagation();
             onClick(e);

@@ -13,8 +13,9 @@
         Tag,
         type KonvaDragTransformEvent
     } from "svelte-konva";
-
-    import { liveQuery } from "dexie";
+    import { Stage as Stg } from "konva/lib/Stage";
+    import { Layer as Lyr } from "konva/lib/Layer";
+    import { add, liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { debounce } from "lodash-es";
     import type { Song } from "src/App";
@@ -44,6 +45,7 @@
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
+        isTagCloudOpen,
         isTrackInfoPopupOpen,
         libraryScrollPos,
         os,
@@ -57,6 +59,7 @@
         rightClickedTracks,
         scrollToSong,
         selectedPlaylistId,
+        selectedTags,
         shouldFocusFind,
         shuffledPlaylist,
         singleKeyShortcutsEnabled,
@@ -86,6 +89,9 @@
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeName, currentThemeObject } from "../../theming/store";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import { Context } from "konva/lib/Context";
+    import { StageConfig } from "konva/lib/Stage";
+    import TagCloud from "./TagCloud.svelte";
 
     export let allSongs = null;
     export let dim = false;
@@ -115,6 +121,10 @@
                             index: idx,
                             timeSinceAdded
                         };
+                    }
+
+                    if (s.tags) {
+                        console.log("songs.tags", s.tags);
                     }
                     if (s?.album !== status.state.previousAlbum) {
                         if (status.state.firstSongInPreviousAlbum) {
@@ -290,6 +300,16 @@
                 x: 0,
                 autoWidth: false
             }
+        },
+        {
+            name: $LL.library.fields.tags(),
+            value: "tags",
+            show: false,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
         }
     ];
 
@@ -300,7 +320,7 @@
     let columnToInsertIdx = null;
     let columnToInsertXPos = 0;
     let hoveredField = null;
-
+    let hoveredTag = null;
     $: isOrderChanged =
         JSON.stringify($columnOrder) !==
         JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
@@ -321,7 +341,16 @@
     let libraryContainer: HTMLDivElement;
     let scrollContainer: HTMLDivElement;
     let container: HTMLElement;
-    let stage;
+    let stage: Stg;
+    let layer: Lyr;
+
+    $: if (layer) {
+        context = layer.getContext();
+        context.font = "13.5px sans-serif";
+        context.textAlign = "center";
+    }
+
+    let context: Context;
     let isScrollable = false;
     let prevScrollPos = 0;
     let scrollPos = 0;
@@ -347,6 +376,8 @@
     const SCROLL_PADDING = 200;
     const DUMMY_COUNT = 5;
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
+    const TAG_PADDING = 10;
+    const TAG_MARGIN = 5;
 
     // PLATFORM SPECIFIC
     const WINDOW_CONTROLS_WIDTH = 70;
@@ -570,6 +601,8 @@
                 case "originCountry":
                     return width > 650;
                 case "dateAdded":
+                    return width > 650;
+                case "tags":
                     return width > 650;
                 default:
                     return true;
@@ -1316,7 +1349,8 @@
 
     function filterByField(fieldName: string, fieldValue: any) {
         let queryPart;
-        // console.log("filter", fieldName, fieldValue);
+        console.log("filter", fieldName, fieldValue);
+        $isTagCloudOpen = false;
         switch (fieldName) {
             case "genre":
                 queryPart = getQueryPart("CONTAINS_GENRE");
@@ -1330,13 +1364,17 @@
                 queryPart = getQueryPart("FROM_COUNTRY");
                 $smartQueryInitiator = "library-cell";
                 break;
+            case "tags":
+                queryPart = getQueryPart("CONTAINS_TAG");
+                $smartQueryInitiator = "library-cell";
+                break;
             default:
                 return;
         }
         if ($uiView.match(/^(smart-query|favourites)/) === null) {
             $smartQuery.reset();
         }
-        // console.log("built in query Part", queryPart);
+        console.log("built in query Part", queryPart);
         const userQueryPart = new UserQueryPart(queryPart);
         // console.log("built in user query Part", userQueryPart);
         userQueryPart.userInputs[fieldName].value = fieldValue;
@@ -1375,6 +1413,67 @@
         }
         return song[field.value];
     }
+
+    function getTagOffset(tags, idx) {
+        if (idx === 0) {
+            return 0;
+        }
+        let offset = 0;
+        for (let i = 0; i < idx; i++) {
+            offset += (context?.measureText(tags[i])?.width ?? 0) + 30;
+        }
+        return offset;
+    }
+
+    interface Tag {
+        name: string;
+        viewProps: {
+            x: number;
+        };
+    }
+
+    interface SongTags {
+        visible: Tag[];
+        hidden: string[];
+        hiddenLabelOffset: number;
+    }
+
+    async function getSongTags(
+        song: Song,
+        fieldWidth: number
+    ): Promise<SongTags> {
+        let offset = TAG_MARGIN;
+        let hiddenLabelWidth = 0;
+
+        return song.tags.reduce(
+            (acc, tag, idx) => {
+                const tagWidth = context?.measureText(tag)?.width + (1.5 * tag.length + 1) ?? 0;
+                // console.log("tagWidth", tagWidth);
+                const newOffset =
+                    offset + tagWidth + TAG_PADDING * 2 + TAG_MARGIN;
+                let newHiddenCount = acc.hidden.length + 1;
+                hiddenLabelWidth =
+                    context.measureText(`+${newHiddenCount}`)?.width +
+                        (TAG_PADDING * 2) +
+                        TAG_MARGIN ?? 0;
+
+                if (newOffset + hiddenLabelWidth > fieldWidth) {
+                    acc.hidden.push(tag);
+                } else {
+                    acc.visible.push({ name: tag, viewProps: { x: offset } });
+                    offset = newOffset;
+                    // console.log("offset", tag, offset);
+                    acc.hiddenLabelOffset = offset;
+                }
+                return acc;
+            },
+            {
+                visible: [],
+                hidden: [],
+                hiddenLabelOffset: 0
+            }
+        );
+    }
 </script>
 
 <!-- <svelte:window on:resize={debounce(onResize, 5)} /> -->
@@ -1396,7 +1495,7 @@
         <!-- <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
         </div> -->
-    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites)/) === null))}
+    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites)/) === null && $isTagCloudOpen === false))}
         <ImportPlaceholder />
     {:else}
         <div
@@ -1422,37 +1521,16 @@
                     <div class="dimmer" />
                 {/if}
 
-                {#if $uiView.match(/^(smart-query)/)}
-                    <div
-                        class="smart-query"
-                        transition:fly={{
-                            y: -10,
-                            duration: 200,
-                            easing: cubicInOut
-                        }}
-                    >
-                        {#if $isSmartQueryBuilderOpen}
-                            <div
-                                in:fade={{
-                                    duration: 150
-                                }}
-                                class="smart-query-builder"
-                            >
-                                <SmartQueryBuilder />
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
                 {#if shouldRender}
                     <Stage
                         config={{
                             width,
                             height: virtualViewportHeight,
-                            y: -sandwichTopHeight,
+                            y: -sandwichTopHeight
                         }}
                         bind:handle={stage}
                     >
-                        <Layer>
+                        <Layer bind:handle={layer}>
                             <Rect
                                 config={{
                                     x: 0,
@@ -1629,6 +1707,181 @@
                                                         }}
                                                     />
                                                 </Label>
+                                            {:else if f.value.match(/^(tags)/) !== null && !isInvalidValue(getValue(song, f))}
+                                                {#if song.tags}
+                                                    {#await getSongTags(song, f.viewProps.width) then tags}
+                                                        {#each tags.visible as tag, idx (tag)}
+                                                            <Label
+                                                                config={{
+                                                                    x:
+                                                                        f
+                                                                            .viewProps
+                                                                            .x +
+                                                                        tag
+                                                                            .viewProps
+                                                                            .x,
+                                                                    y:
+                                                                        sandwichTopHeight +
+                                                                        HEADER_HEIGHT +
+                                                                        ROW_HEIGHT *
+                                                                            songIdx +
+                                                                        -DUMMY_PADDING +
+                                                                        scrollOffset +
+                                                                        2.5,
+                                                                    height:
+                                                                        ROW_HEIGHT -
+                                                                        5
+                                                                }}
+                                                                on:mouseenter={() => {
+                                                                    hoveredField =
+                                                                        f.value;
+                                                                    hoveredTag =
+                                                                        tag;
+                                                                }}
+                                                                on:mouseleave={() => {
+                                                                    hoveredField =
+                                                                        null;
+                                                                    hoveredTag =
+                                                                        null;
+                                                                }}
+                                                                on:click={() => {
+                                                                    $isTagCloudOpen = true;
+                                                                    $isSmartQueryBuilderOpen = false;
+                                                                    $uiView = "library";
+                                                                    $selectedTags.add(
+                                                                        tag.name
+                                                                    );
+                                                                    $selectedTags =
+                                                                        $selectedTags;
+                                                                }}
+                                                            >
+                                                                <Tag
+                                                                    config={{
+                                                                        fill:
+                                                                            hoveredSongIdx ===
+                                                                                songIdx &&
+                                                                            hoveredField ===
+                                                                                f.value &&
+                                                                            hoveredTag ===
+                                                                                tag
+                                                                                ? CLICKABLE_CELL_BG_COLOR_HOVERED
+                                                                                : CLICKABLE_CELL_BG_COLOR,
+                                                                        cornerRadius: 10
+                                                                    }}
+                                                                />
+                                                                <Text
+                                                                    config={{
+                                                                        text: validatedValue(
+                                                                            tag.name
+                                                                        ),
+                                                                        listening: false,
+                                                                        y: 0,
+                                                                        x: 0,
+                                                                        padding:
+                                                                            TAG_PADDING,
+                                                                        height:
+                                                                            ROW_HEIGHT -
+                                                                            5,
+                                                                        align: "center",
+                                                                        fontSize: 13.5,
+                                                                        verticalAlign:
+                                                                            "middle",
+                                                                        fill:
+                                                                            $currentSong?.id ===
+                                                                            song.id
+                                                                                ? PLAYING_TEXT_COLOR
+                                                                                : TEXT_COLOR,
+                                                                        ellipsis:
+                                                                            f.value.match(
+                                                                                /^(title|artist|album|genre)/
+                                                                            ) !==
+                                                                            null
+                                                                    }}
+                                                                />
+                                                            </Label>
+                                                        {/each}
+                                                        {#if tags.hidden?.length}
+                                                            <Label
+                                                                config={{
+                                                                    x:
+                                                                        f
+                                                                            .viewProps
+                                                                            .x +
+                                                                        tags.hiddenLabelOffset,
+                                                                    y:
+                                                                        sandwichTopHeight +
+                                                                        HEADER_HEIGHT +
+                                                                        ROW_HEIGHT *
+                                                                            songIdx +
+                                                                        -DUMMY_PADDING +
+                                                                        scrollOffset +
+                                                                        2.5,
+                                                                    height:
+                                                                        ROW_HEIGHT -
+                                                                        5
+                                                                }}
+                                                                on:mouseenter={() => {
+                                                                    hoveredField =
+                                                                        f.value;
+                                                                    hoveredTag =
+                                                                        "+overflow";
+                                                                }}
+                                                                on:mouseleave={() => {
+                                                                    hoveredField =
+                                                                        null;
+                                                                    hoveredTag =
+                                                                        null;
+                                                                }}
+                                                                on:click={() => {
+                                                                    // TODO: Show overflowed tags in menu
+                                                                }}
+                                                            >
+                                                                <Tag
+                                                                    config={{
+                                                                        fill:
+                                                                            hoveredSongIdx ===
+                                                                                songIdx &&
+                                                                            hoveredField ===
+                                                                                f.value &&
+                                                                            hoveredTag ===
+                                                                                "+overflow"
+                                                                                ? CLICKABLE_CELL_BG_COLOR_HOVERED
+                                                                                : CLICKABLE_CELL_BG_COLOR,
+                                                                        cornerRadius: 10
+                                                                    }}
+                                                                />
+                                                                <Text
+                                                                    config={{
+                                                                        text: validatedValue(
+                                                                            `+${tags.hidden.length}`
+                                                                        ),
+                                                                        listening: false,
+                                                                        y: 0,
+                                                                        x: 0,
+                                                                        padding: 10,
+                                                                        height:
+                                                                            ROW_HEIGHT -
+                                                                            5,
+                                                                        align: "center",
+                                                                        fontSize: 13.5,
+                                                                        verticalAlign:
+                                                                            "middle",
+                                                                        fill:
+                                                                            $currentSong?.id ===
+                                                                            song.id
+                                                                                ? PLAYING_TEXT_COLOR
+                                                                                : TEXT_COLOR,
+                                                                        ellipsis:
+                                                                            f.value.match(
+                                                                                /^(title|artist|album|genre)/
+                                                                            ) !==
+                                                                            null
+                                                                    }}
+                                                                />
+                                                            </Label>
+                                                        {/if}
+                                                    {/await}
+                                                {/if}
                                             {:else}
                                                 <Text
                                                     config={{
@@ -1645,7 +1898,8 @@
                                                             ROW_HEIGHT *
                                                                 songIdx +
                                                             -DUMMY_PADDING +
-                                                            scrollOffset,
+                                                            scrollOffset +
+                                                            1,
                                                         text: validatedValue(
                                                             getValue(song, f)
                                                         ),
@@ -2249,6 +2503,9 @@
             grid-row-start: 1;
             grid-row-end: 2;
         }
+    }
+
+    .tag-cloud {
     }
 
     .bottom-bar {

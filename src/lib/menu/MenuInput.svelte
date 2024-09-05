@@ -15,6 +15,7 @@
     export let autoFocus = false;
     export let placeholder = "";
     export let autoCompleteValue = "";
+    export let small = false;
     import { createEventDispatcher } from "svelte";
     import Input from "../ui/Input.svelte";
     const dispatch = createEventDispatcher();
@@ -54,6 +55,7 @@
                 {autoFocus}
                 {placeholder}
                 {autoCompleteValue}
+                {small}
             />
             {#if description}
                 <small>
@@ -79,7 +81,7 @@
         box-sizing: border-box;
         border: 1px solid transparent;
         position: relative;
-        padding: 0px 10px;
+        padding: 0px 5px;
         cursor: default;
         font-size: 13.5px;
         display: flex;
@@ -126,6 +128,7 @@
             display: block;
             padding: 0.2em 0 0.3em 0;
             z-index: 1;
+            width: 100%;
 
             input {
                 padding: 0.2em 0;
@@ -136,8 +139,8 @@
                 white-space: nowrap;
                 margin: 0;
                 line-height: 20px;
-                max-width: 250px;
                 overflow: hidden;
+                width: 100%;
                 text-overflow: ellipsis;
             }
 

@@ -32,8 +32,8 @@
 </script>
 
 <h3 class="title">{playlist.title}</h3>
-<div class="line" />
-<div class="playlist-info">
+<div class="line" data-tauri-drag-region/>
+<div class="playlist-info"  >
     <p class="count">
         {#if playlist.tracks.length === 0}
             No tracks
@@ -56,6 +56,9 @@
         margin: 0;
         font-weight: 600;
         margin-left: -58px;
+    }
+    * {
+        user-select: none;
     }
     .title {
         font-size: 1.1em;

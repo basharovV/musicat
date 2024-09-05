@@ -112,6 +112,10 @@ type RootTranslation = {
 			 * D​u​r​a​t​i​o​n
 			 */
 			duration: string
+			/**
+			 * T​a​g​s
+			 */
+			tags: string
 		}
 	}
 	bottomBar: {
@@ -281,6 +285,16 @@ type RootTranslation = {
 					title: string
 					/**
 					 * e​g​.​ ​b​y​ ​C​h​a​r​l​e​s​ ​M​i​n​g​u​s
+					 */
+					example: string
+				}
+				containsTag: {
+					/**
+					 * c​o​n​t​a​i​n​s​ ​t​a​g
+					 */
+					title: string
+					/**
+					 * e​g​.​ ​c​o​n​t​a​i​n​s​ ​l​o​v​e
 					 */
 					example: string
 				}
@@ -467,7 +481,7 @@ type RootTranslation = {
 		/**
 		 * S​a​m​e​ ​a​s​ ​s​y​s​t​e​m​ ​d​e​v​i​c​e
 		 */
-		defaultDevice: string
+		followSystem: string
 		/**
 		 * I​n​t​e​r​f​a​c​e
 		 */
@@ -546,6 +560,12 @@ type RootTranslation = {
 		 * A​r​t​i​s​t​s
 		 */
 		artists: string
+	}
+	tagCloud: {
+		/**
+		 * C​l​o​s​e​ ​t​a​g​s
+		 */
+		close: string
 	}
 }
 
@@ -648,6 +668,10 @@ export type TranslationFunctions = {
 			 * Duration
 			 */
 			duration: () => LocalizedString
+			/**
+			 * Tags
+			 */
+			tags: () => LocalizedString
 		}
 	}
 	bottomBar: {
@@ -816,6 +840,16 @@ export type TranslationFunctions = {
 					title: () => LocalizedString
 					/**
 					 * eg. by Charles Mingus
+					 */
+					example: () => LocalizedString
+				}
+				containsTag: {
+					/**
+					 * contains tag
+					 */
+					title: () => LocalizedString
+					/**
+					 * eg. contains love
 					 */
 					example: () => LocalizedString
 				}
@@ -1002,7 +1036,7 @@ export type TranslationFunctions = {
 		/**
 		 * Same as system device
 		 */
-		defaultDevice: () => LocalizedString
+		followSystem: () => LocalizedString
 		/**
 		 * Interface
 		 */
@@ -1081,6 +1115,12 @@ export type TranslationFunctions = {
 		 * Artists
 		 */
 		artists: () => LocalizedString
+	}
+	tagCloud: {
+		/**
+		 * Close tags
+		 */
+		close: () => LocalizedString
 	}
 }
 

@@ -29,7 +29,8 @@ const en = {
             dateAdded: "Date Added",
             genre: "Genre",
             origin: "Origin",
-            duration: "Duration"
+            duration: "Duration",
+            tags: "Tags"
         }
     },
     bottomBar: {
@@ -95,6 +96,10 @@ const en = {
                 byComposer: {
                     title: "by composer",
                     example: "eg. by Charles Mingus"
+                },
+                containsTag: {
+                    title: "contains tag",
+                    example: "eg. contains love"
                 }
             }
         },
@@ -154,7 +159,7 @@ const en = {
         library: "Library",
         audio: "Audio",
         outputDevice: "Output device",
-        defaultDevice: "Same as system device",
+        followSystem: "Same as system device",
         interface: "Interface",
         features: "Features",
         subtitle: "Configure stuff",
@@ -176,6 +181,9 @@ const en = {
         albums: "Albums",
         songs: "Songs",
         artists: "Artists",
+    },
+    tagCloud: {
+        close: "Close tags",
     }
 } satisfies BaseTranslation;
 

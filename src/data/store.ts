@@ -23,13 +23,13 @@ import type {
     UserSettings,
     WaveformPlayerState
 } from "src/App";
-import { derived, writable, type Writable } from "svelte/store";
+import { derived, readable, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
-import {  path } from "@tauri-apps/api";
-import * as fs from "@tauri-apps/plugin-fs"
+import { path } from "@tauri-apps/api";
+import * as fs from "@tauri-apps/plugin-fs";
 
 export const L = derived(locale, (l) => {
     return i18nString(l);
@@ -76,6 +76,7 @@ lastPlayedInfo.subscribe((val) =>
 export const nextUpSong: Writable<Song> = writable(null);
 export const queriedSongs: Writable<Song[]> = writable([]);
 
+export const allSongs: Writable<Song[]> = writable([]);
 export const playlist: Writable<Song[]> = writable([]);
 export const shuffledPlaylist: Writable<Song[]> = writable([]);
 export const albumPlaylist: Writable<Song[]> = writable([]);
@@ -152,6 +153,11 @@ export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);
 export const smartQueryResults: Writable<Song[]> = writable([]);
 
+// Tag cloud 
+export const isTagCloudOpen = writable(false);
+export const selectedTags = writable(new Set());
+export const isTagOrCondition = writable(false);
+
 // Playlists
 export const selectedPlaylistId: Writable<number> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
@@ -172,7 +178,8 @@ const defaultSettings: UserSettings = {
     isArtistsToolkitEnabled: false,
     downloadLocation: null,
     theme: "dark",
-    outputDevice: null // default system device
+    outputDevice: null, // default system device,
+    followSystemOutput: true
 };
 
 /**
@@ -247,10 +254,10 @@ export const queueMode: Writable<QueueMode> = writable("library");
 // Wiki
 export const isWikiOpen = writable(false);
 
-// Sidebar 
+// Sidebar
 export const isSidebarOpen = writable(true);
 export const sidebarManuallyOpened = writable(false);
-export const sidebarTogglePos = writable({x: 0, y: 0});
+export const sidebarTogglePos = writable({ x: 0, y: 0 });
 export const isCmdOrCtrlPressed = writable(false);
 
 export const isWaveformOpen = writable(false);
@@ -306,7 +313,8 @@ let defaultColumnOrder = [
     "year",
     "genre",
     "originCountry",
-    "duration"
+    "duration",
+    "tags"
 ];
 
 export const columnOrder = writable(

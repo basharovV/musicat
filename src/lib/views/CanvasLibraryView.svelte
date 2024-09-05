@@ -9,6 +9,8 @@
         isLyricsHovered,
         isLyricsOpen,
         isSmartQueryBuilderOpen,
+        isTagCloudOpen,
+        isTagOrCondition,
         lastPlayedInfo,
         playlist,
         playlistDuration,
@@ -16,6 +18,7 @@
         query,
         selectedPlaylistId,
         selectedSmartQuery,
+        selectedTags,
         smartQuery,
         smartQueryResults,
         smartQueryUpdater,
@@ -134,10 +137,36 @@
                 resultsArray = await results.sortBy($query.orderBy);
             } else {
                 resultsArray = await results.toArray();
-                console.log("results", resultsArray);
+                // console.log("results", resultsArray);
             }
         } else {
             resultsArray = results;
+        }
+
+        // Filter by tags
+        if ($isTagCloudOpen && $selectedTags.size) {
+            resultsArray = resultsArray.filter((song) => {
+                let matches = [];
+                if ($selectedTags.size === 0) {
+                    return true;
+                } else if (song.tags?.length === 0) {
+                    return false;
+                }
+                $selectedTags.forEach((t) => {
+                    song.tags?.forEach((tag) => {
+                        if (tag === t) {
+                            matches.push(t);
+                        }
+                    });
+                });
+                // console.log("matches", matches);
+
+                return $isTagOrCondition
+                    ? matches.length > 0 &&
+                          matches.every((m) => $selectedTags.has(m))
+                    : matches.length === $selectedTags?.size &&
+                          matches.every((m) => $selectedTags.has(m));
+            });
         }
 
         $playlistDuration = resultsArray.reduce((total, song) => {

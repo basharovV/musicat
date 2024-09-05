@@ -53,6 +53,7 @@
         // Close the builder UI and set the current selected query to the one we just saved
         $isSmartQueryBuilderOpen = false;
         $selectedSmartQuery = `~usq:${id}`;
+        $selectedPlaylistId = null
         $smartQuery.reset();
     }
 </script>
@@ -126,6 +127,9 @@
         &.window-padding {
             padding-left: 70px;
         }
+    }
+    * {
+        user-select: none;
     }
     .label {
         font-size: 1em;

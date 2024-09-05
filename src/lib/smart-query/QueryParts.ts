@@ -9,7 +9,8 @@ export enum QUERY_PARTS {
     CONTAINS_GENRE = "contains-genre",
     RELEASED_IN = "released-in",
     FROM_COUNTRY = "from-country",
-    BY_COMPOSER = "by-composer"
+    BY_COMPOSER = "by-composer",
+    CONTAINS_TAG = "contains-tag",
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
@@ -173,6 +174,23 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         name: QUERY_PARTS.FROM_COUNTRY,
         inputRequired: {
             "originCountry": {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string"
+            }
+        }
+    },
+    {
+        dataType: "song",
+        fieldKey: "tags",
+        comparison: "contains",
+        description: "smartPlaylists.builder.parts.containsTag.title",
+        example: "smartPlaylists.builder.parts.containsTag.example",
+        prompt: "contains tag {tags}",
+        name: QUERY_PARTS.CONTAINS_TAG,
+        inputRequired: {
+            "tags": {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,

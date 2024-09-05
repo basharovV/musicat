@@ -34,3 +34,7 @@ export function moveArrayElement(array, fromIndex, toIndex) {
     newArray.splice(toIndex, 0, removedElement);
     return newArray;
 }
+
+export function dedupe(array: string[]) {
+    return [...new Set(array)];
+}

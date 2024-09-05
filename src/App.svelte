@@ -17,6 +17,8 @@
         isQueueOpen,
         isSettingsOpen,
         isSidebarOpen,
+        isSmartQueryBuilderOpen,
+        isTagCloudOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
         isWikiOpen,
@@ -66,6 +68,9 @@
     import TopBar from "./lib/views/TopBar.svelte";
     import { currentThemeObject } from "./theming/store";
     import audioPlayer from "./lib/player/AudioPlayer";
+    import TagCloud from "./lib/library/TagCloud.svelte";
+    import { cubicInOut } from "svelte/easing";
+    import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
     const appWindow = getCurrentWebviewWindow();
 
     console.log("locale", getLocaleFromNavigator());
@@ -353,18 +358,46 @@
         <div class="header">
             {#if $uiView === "playlists"}
                 <!-- <p class="label">playlist:</p> -->
-                <div class="content">
+                <div class="content" data-tauri-drag-region>
                     {#await selectedPlaylist then playlist}
                         <PlaylistHeader {playlist} />
                     {/await}
                 </div>
             {:else if $uiView === "smart-query"}
                 <!-- <p class="label">playlist:</p> -->
-                <div class="content">
+                <div class="content" data-tauri-drag-region>
                     {#await selectedQuery then query}
                         <SmartPlaylistHeader selectedQuery={query} />
                     {/await}
                 </div>
+            {/if}
+        </div>
+
+        <div class="subheader">
+            {#if $isTagCloudOpen}
+                <div
+                    class="content"
+                    transition:fly={{
+                        y: -10,
+                        duration: 200,
+                        easing: cubicInOut
+                    }}
+                >
+                    <TagCloud />
+                </div>
+            {:else if $uiView.match(/^(smart-query)/)}
+                {#if $isSmartQueryBuilderOpen}
+                    <div
+                        class="content"
+                        transition:fly={{
+                            y: -10,
+                            duration: 200,
+                            easing: cubicInOut
+                        }}
+                    >
+                        <SmartQueryBuilder />
+                    </div>
+                {/if}
             {/if}
         </div>
 
@@ -464,10 +497,14 @@
         -moz-osx-font-smoothing: grayscale;
     }
 
+    * {
+        user-select: none;
+    }
+
     main {
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
-        grid-template-rows: auto auto 1fr auto auto; // (padding), header, panel, waveform, topbar, bottombar
+        grid-template-rows: auto auto auto 1fr auto auto; // (padding), header, tags/smartplaylist builder, panel, waveform, topbar, bottombar
         width: 100vw;
         height: 100vh;
         opacity: 1;
@@ -489,7 +526,7 @@
 
         .sidebar {
             width: 100%;
-            grid-row: 1 / 4;
+            grid-row: 1 / 6;
             grid-column: 1;
             width: 5px;
             &.visible {
@@ -539,21 +576,30 @@
                 margin: 5px 5px 2px 0px;
             }
         }
+        .subheader {
+            grid-row: 3;
+            grid-column: 3;
+
+            .content {
+                width: 100%;
+                margin: 5px 0 2px 0px;
+            }
+        }
 
         .panel {
-            grid-row: 3;
+            grid-row: 4;
             grid-column: 3;
             display: grid;
             overflow: hidden;
         }
 
         .waveform {
-            grid-row: 4;
+            grid-row: 5;
             grid-column: 2 / 6;
         }
 
         .top-bar {
-            grid-row: 5;
+            grid-row: 6;
             grid-column: 2 / 6;
         }
 
@@ -561,7 +607,7 @@
             position: relative;
             width: 100%;
             z-index: 15;
-            grid-row: 5;
+            grid-row: 7;
             grid-column: 2 / 6;
             @media only screen and (max-width: 600px) {
                 .top {
@@ -579,7 +625,7 @@
         }
 
         .queue {
-            grid-row: 2/4;
+            grid-row: 2/6;
             grid-column: 2;
             overflow: hidden;
             height: 100%;
@@ -599,7 +645,7 @@
         }
 
         .wiki {
-            grid-row: 3/5;
+            grid-row: 3/6;
             grid-column: 5;
             overflow-y: hidden;
             height: 100%;
@@ -631,7 +677,7 @@
 
         resize-handle {
             grid-column: 4;
-            grid-row: 3 / 5;
+            grid-row: 3 / 6;
             display: block;
             position: relative;
             height: 100%;

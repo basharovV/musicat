@@ -73,6 +73,7 @@ interface Song {
     };
     markers: Marker[];
     dateAdded?: number; // unix timestamp
+    tags: string[];
 }
 
 interface Album {

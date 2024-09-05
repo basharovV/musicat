@@ -5,6 +5,7 @@
     import { db } from "../../data/db";
     import {
         isTrackInfoPopupOpen,
+        isWikiOpen,
         rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistId
@@ -14,7 +15,9 @@
     import MenuOption from "../menu/MenuOption.svelte";
     import { findCountryByArtist } from "../data/LibraryEnrichers";
     import { invoke } from "@tauri-apps/api/core";
-    import type { Album, ToImport } from "../../App";
+    import type { Album, Song, ToImport } from "../../App";
+    import MenuInput from "../menu/MenuInput.svelte";
+    import { dedupe } from "../../utils/ArrayUtils";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -33,6 +36,7 @@
                 explorerName = "File manager";
                 break;
         }
+        getAllTags();
     });
 
     let songId;
@@ -136,9 +140,8 @@
         open(`https://www.youtube.com/results?search_query=${query}`);
     }
     function searchArtistOnWikipedia() {
+        $isWikiOpen = !$isWikiOpen;
         closeMenu();
-        const query = encodeURIComponent($rightClickedTrack.artist);
-        open(`https://en.wikipedia.org/wiki/${query}`);
     }
     function openInFinder() {
         closeMenu();
@@ -220,7 +223,7 @@
                 is_async: false
             }
         });
-        console.log('response', response);
+        console.log("response", response);
         await db.transaction("rw", db.songs, db.albums, async () => {
             await db.songs.bulkPut(response.songs);
             for (const album of response.albums) {
@@ -228,6 +231,76 @@
             }
         });
         isReimporting = false;
+    }
+
+    let tagUserInput = "";
+
+    let allTags = []; // Used for autocomplete
+
+    async function getAllTags() {
+        allTags = await db.songs.orderBy("tags").uniqueKeys();
+    }
+
+    $: splitTags = dedupe(allTags?.flatMap((t) => t));
+
+    $: tagAutoCompleteValue =
+        tagUserInput.length &&
+        splitTags?.find((v) => v.startsWith(tagUserInput));
+
+    async function addTagToContextItem() {
+        if (tagAutoCompleteValue?.length) {
+            tagUserInput = tagAutoCompleteValue;
+        }
+        if ($rightClickedTracks.length > 1) {
+            await Promise.all(
+                $rightClickedTracks.map(async (t) => {
+                    t.tags = t.tags
+                        ? [...t.tags, tagUserInput.toLowerCase().trim()]
+                        : [tagUserInput.toLowerCase().trim()];
+                    await db.songs.put(t);
+                })
+            );
+            $rightClickedTracks = $rightClickedTracks;
+        } else {
+            await db.songs.update($rightClickedTrack.id, {
+                tags: $rightClickedTrack.tags
+                    ? [
+                          ...$rightClickedTrack.tags,
+                          tagUserInput.toLowerCase().trim()
+                      ]
+                    : [tagUserInput.toLowerCase().trim()]
+            });
+            $rightClickedTrack = await db.songs.get($rightClickedTrack.id);
+        }
+        tagUserInput = "";
+    }
+
+    async function deleteTag(tag) {
+        console.log("delete");
+        if ($rightClickedTracks.length > 1) {
+            await Promise.all(
+                $rightClickedTracks.map(async (t) => {
+                    t.tags = t.tags.filter((t) => t !== tag);
+                    await db.songs.put(t);
+                })
+            );
+            $rightClickedTracks = $rightClickedTracks;
+        } else {
+            $rightClickedTrack.tags.splice(
+                $rightClickedTrack.tags.findIndex((t) => t === tag),
+                1
+            );
+            $rightClickedTrack = $rightClickedTrack;
+            db.songs.update($rightClickedTrack.id, {
+                tags: $rightClickedTrack.tags
+            });
+            $rightClickedTrack = await db.songs.get($rightClickedTrack.id);
+        }
+    }
+
+    async function commonTagsBetweenTracks(tracks: Song[]) {
+        const tags = tracks.map((t) => t.tags).flat();
+        return dedupe(tags);
     }
 </script>
 
@@ -275,6 +348,24 @@
         {/if}
         {#if $rightClickedTrack}
             <MenuDivider />
+
+            <MenuOption isDisabled={true} text="Edit tags" />
+            {#if $rightClickedTrack.tags}
+                {#each $rightClickedTrack.tags as tag}
+                    <MenuOption text={tag} onDelete={() => deleteTag(tag)} />
+                {/each}
+            {/if}
+            <MenuInput
+                bind:value={tagUserInput}
+                autoCompleteValue={tagAutoCompleteValue}
+                onEnterPressed={addTagToContextItem}
+                autoFocus
+                placeholder="Add a tag"
+                onEscPressed={closeMenu}
+                small
+            />
+
+            <MenuDivider />
             <MenuOption text="Enrich" isDisabled />
             <MenuOption
                 onClick={enrichArtistCountry}
@@ -287,16 +378,8 @@
             />
             <MenuDivider />
             <MenuOption
-                onClick={searchSongOnYouTube}
-                text="Search for song on YouTube"
-            />
-            <MenuOption
-                onClick={searchArtistOnYouTube}
-                text="Search for artist on YouTube"
-            />
-            <MenuOption
                 onClick={searchArtistOnWikipedia}
-                text="Search for artist on Wikipedia"
+                text="Open wiki panel for {$rightClickedTrack.artist}"
             />
             <MenuDivider />
             <MenuOption onClick={lookUpChords} text="Look up chords" />
@@ -304,6 +387,24 @@
             <MenuDivider />
 
             <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
+        {:else if $rightClickedTracks.length}
+            <MenuDivider />
+
+            <MenuOption isDisabled={true} text="Edit tags" />
+            {#await commonTagsBetweenTracks($rightClickedTracks) then tags}
+                {#each tags as tag}
+                    <MenuOption text={tag} onDelete={() => deleteTag(tag)} />
+                {/each}
+            {/await}
+            <MenuInput
+                bind:value={tagUserInput}
+                autoCompleteValue={tagAutoCompleteValue}
+                onEnterPressed={addTagToContextItem}
+                autoFocus
+                placeholder="Add a tag"
+                onEscPressed={closeMenu}
+                small
+            />
         {/if}
 
         <MenuOption onClick={openInfo} text="Info & metadata" />
