@@ -1,5 +1,13 @@
 ### 📦 0.9.0
--   **Theme support**. You can switch themes 
+
+-   **Tag support**. Sometimes playlists just aren't the right tool for the job, so now you can also organize your library by tags. Right click a track (or multiple) to edit tags. Click on any tag in the library to open up the new tag cloud. Select between AND/OR as the filter condition.
+-   **Wiki view**. Click on the artist name in the sidebar to open up the new Wiki panel. The article view also shows connections to other artists/albums in your library.
+-   **Theme support**. Musicat now comes with some built-in themes! You can switch between them in settings. If you'd like to contribute a theme, please submit a PR with an updated [themes.ts](src/theming/themes.ts).
+-   **Collapsible sidebar / bottom bar mode**. You can now collapse the sidebar, which reveals the transport controls at the bottom in a new horizontal bar.
+-   **Switch audio device**. By default, Musicat follows the default system output device, but you can now select a different device to send the audio to. Note: This is still wonky on macOS.
+-   **Performance improvements**. Reduced RAM usage during import, and better scrolling response when jumping quickly to the start/end of the library.
+-   **Open audio file with Musicat (file association)**. You can now open any audio file on your system with Musicat, straight from your file explorer.
+-   **Tauri v2**. Migrated to Tauri v2.
 
 ### 📦 0.8.0
 
