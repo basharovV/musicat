@@ -492,7 +492,7 @@ class AudioPlayer {
     async play(isResume: boolean) {
         this.isStopped = false;
         if (isResume) {
-            invoke("decode_control", {
+            await invoke("decode_control", {
                 event: {
                     decoding_active: true
                 }
@@ -526,7 +526,7 @@ class AudioPlayer {
 
     async restoreLastPlayed(lastPlayed: LastPlayedInfo) {
         const song = await db.songs.get(lastPlayed.songId);
-        this.playSong(song, lastPlayed.position, false);
+        await this.playSong(song, lastPlayed.position, false);
     }
 }
 

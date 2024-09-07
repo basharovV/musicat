@@ -2,9 +2,13 @@
     import { onMount } from "svelte";
     import { db } from "../../data/db";
     import {
+        forceRefreshLibrary,
         isTagCloudOpen,
         isTagOrCondition,
-        selectedTags
+        selectedTags,
+
+        uiView
+
     } from "../../data/store";
     import { liveQuery } from "dexie";
     import Toggle from "../ui/Toggle.svelte";
@@ -52,6 +56,7 @@
             icon="material-symbols:close"
             onClick={() => {
                 $selectedTags = new Set();
+                $forceRefreshLibrary = true;
                 $isTagCloudOpen = false;
             }}
             text={$LL.tagCloud.close()}
@@ -94,7 +99,7 @@
         align-items: center;
         justify-content: stretch;
         border-left: 0.75px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
     }
 
     .options {
@@ -103,7 +108,7 @@
         align-items: center;
         padding: 0 1em;
         border-left: 0.75px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
     }
 
     .tag {

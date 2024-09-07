@@ -124,7 +124,7 @@
                     }
 
                     if (s.tags) {
-                        console.log("songs.tags", s.tags);
+                        // console.log("songs.tags", s.tags);
                     }
                     if (s?.album !== status.state.previousAlbum) {
                         if (status.state.firstSongInPreviousAlbum) {
@@ -796,9 +796,10 @@
         }
     }
 
-    function rememberScrollPos() {
+    const rememberScrollPos = debounce(async () => {
+        console.log("remembering scroll pos", scrollNormalized);
         $libraryScrollPos = scrollNormalized; // 0-1
-    }
+    }, 100);
 
     let lastScrollTime = 0;
     let lastScrollTop = 0;
@@ -830,8 +831,8 @@
         }
 
         // Only save/restore scroll pos in main library view, not on playlists
-        if ($uiView === "library") {
-            debounce(rememberScrollPos, 100)();
+        if ($uiView === "library" && !$isTagCloudOpen) {
+            rememberScrollPos();
         }
     }
 
@@ -1138,6 +1139,37 @@
                 $isTrackInfoPopupOpen = true;
             }
         } else if (
+            event.keyCode === 84 &&
+            !$isTrackInfoPopupOpen &&
+            $singleKeyShortcutsEnabled &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            // 't' for tags/right-click menu
+            event.preventDefault();
+            console.log("active element", document.activeElement.tagName);
+            // Check if there an input in focus currently
+            if (!showTrackMenu && songsHighlighted.length) {
+                console.log("opening info", songsHighlighted);
+                if (songsHighlighted.length > 1) {
+                    $rightClickedTracks = songsHighlighted;
+                } else {
+                    $rightClickedTrack = songsHighlighted[0];
+                }
+
+                const topTrack = songsHighlighted[0];
+                // Get the y position of the top track by calculating the offset using the index in the slice
+                const topTrackY = stage.findOne(
+                    `#${topTrack.viewModel?.viewId ?? topTrack.id}`
+                ).getAbsolutePosition().y + ROW_HEIGHT + HEADER_HEIGHT + 10;
+                console.log('top track y', topTrackY);
+                menuPos = { x: 250, y: topTrackY };
+                showTrackMenu = true;
+            }
+        } else if (
             event.keyCode === 13 &&
             !$isTrackInfoPopupOpen &&
             (document.activeElement.id === "search" ||
@@ -1157,6 +1189,22 @@
                 $playlistType =
                     $uiView === "playlists" ? "playlist" : "library";
                 AudioPlayer.playSong(songsHighlighted[0]);
+            }
+        } // escape 
+        else if (
+            event.keyCode === 27 &&
+            $singleKeyShortcutsEnabled &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            event.preventDefault();
+            if (showTrackMenu) {
+                showTrackMenu = false;
+            } else {
+                songsHighlighted = [];
             }
         }
     }
@@ -1447,14 +1495,16 @@
 
         return song.tags.reduce(
             (acc, tag, idx) => {
-                const tagWidth = context?.measureText(tag)?.width + (1.5 * tag.length + 1) ?? 0;
+                const tagWidth =
+                    context?.measureText(tag)?.width + (1.5 * tag.length + 1) ??
+                    0;
                 // console.log("tagWidth", tagWidth);
                 const newOffset =
                     offset + tagWidth + TAG_PADDING * 2 + TAG_MARGIN;
                 let newHiddenCount = acc.hidden.length + 1;
                 hiddenLabelWidth =
                     context.measureText(`+${newHiddenCount}`)?.width +
-                        (TAG_PADDING * 2) +
+                        TAG_PADDING * 2 +
                         TAG_MARGIN ?? 0;
 
                 if (newOffset + hiddenLabelWidth > fieldWidth) {
@@ -1602,6 +1652,9 @@
                                     >
                                         <Rect
                                             config={{
+                                                id:
+                                                    song.viewModel?.viewId ??
+                                                    song?.id,
                                                 x: 0,
                                                 y:
                                                     sandwichTopHeight +
@@ -1747,7 +1800,8 @@
                                                                 on:click={() => {
                                                                     $isTagCloudOpen = true;
                                                                     $isSmartQueryBuilderOpen = false;
-                                                                    $uiView = "library";
+                                                                    $uiView =
+                                                                        "library";
                                                                     $selectedTags.add(
                                                                         tag.name
                                                                     );

@@ -125,8 +125,8 @@ export class AudioVisualiser {
         this._canvasContext.clearRect(
             0,
             0,
-            this.canvas.clientWidth,
-            this.canvas.clientHeight
+            this.canvas.width,
+            this.canvas.height
         );
     }
 
