@@ -115,6 +115,10 @@
                             .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
+                            .includes($query.query.toLowerCase()) ||
+                        song.tags
+                            ?.map((t) => t.toLowerCase())
+                            .join(" ")
                             .includes($query.query.toLowerCase())
                 );
         } else {
@@ -212,7 +216,7 @@
                 await audioPlayer.handleOpenedUrls(window["openedUrls"]);
             } else if (lastPlayed.songId) {
                 audioPlayer.shouldRestoreLastPlayed = lastPlayed;
-                audioPlayer.currentSong = await db.songs.get(lastPlayed.songId);
+                // audioPlayer.currentSong = await db.songs.get(lastPlayed.songId);
                 playlist.set(resultsArray);
             }
             isInit.set(false);
