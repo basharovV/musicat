@@ -253,6 +253,7 @@ export const queueMode: Writable<QueueMode> = writable("library");
 
 // Wiki
 export const isWikiOpen = writable(false);
+export const wikiArtist: Writable<string> = writable(null);
 
 // Sidebar
 export const isSidebarOpen = writable(true);

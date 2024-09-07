@@ -13,11 +13,14 @@
         isWikiOpen,
         playlist,
         playlistType,
-        queriedSongs
+        queriedSongs,
+
+        wikiArtist
+
     } from "../../data/store";
     import { fade, fly } from "svelte/transition";
     import Icon from "../ui/Icon.svelte";
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import { db } from "../../data/db";
     import audioPlayer from "../player/AudioPlayer";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
@@ -78,8 +81,12 @@
 
     onMount(() => {
         isMounted = true;
-        $currentSong?.artist && getWiki($currentSong.artist);
+        $currentSong?.artist && getWiki($wikiArtist || $currentSong.artist);
         // $currentSong?.artist && getWikiWtf($currentSong.artist);
+    });
+
+    onDestroy(() => {
+        $wikiArtist = null;
     });
 
     $: if (
