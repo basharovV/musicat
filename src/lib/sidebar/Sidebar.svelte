@@ -7,7 +7,7 @@
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
-    import { onMount } from "svelte";
+    import { afterUpdate, onMount, tick } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
@@ -554,14 +554,22 @@
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
 
-    onMount(() => {
+    afterUpdate(() => {
+        sidebarWidth = sidebar?.getBoundingClientRect().width;
+
+        // console.log("sidebar clientWidth", sidebar?.clientWidth);
+        // console.log("sidebar width", sidebar?.width);
+        // console.log("sidebar offsetWidth", sidebar?.offsetWidth);
+        // console.log("sidebar width rect", sidebarWidth);
+
         height = window.innerHeight;
         window.onresize = throttle(() => {
             onResize();
         }, 200);
-        sidebarWidth = sidebar?.clientWidth;
         onResize(); // run once
+    });
 
+    onMount(async () => {
         shouldFocusFind.subscribe((event) => {
             console.log("event", event);
             if (event?.target === "search") {

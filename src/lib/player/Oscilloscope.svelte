@@ -10,10 +10,11 @@
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;
     export let width;
-    let height;
+    let height = 30;
     let analyser: AudioVisualiser | WebAudioVisualiser;
     export let show = true;
     let isMounted = false;
+
     $: if (analyser) {
         if (show) {
             analyser.shouldStopAnimation = false;
@@ -34,27 +35,6 @@
 
     onMount(() => {
         width = container.clientWidth;
-        height = container.clientHeight;
-        console.log(
-            "width",
-            container.clientWidth,
-            container.offsetWidth,
-            container.scrollWidth
-        );  
-
-        isFullScreenVisualiser.subscribe((isFullScreen) => {
-            console.log("w", width);
-            console.log("h", height);
-            if (isFullScreen) {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                analyser && analyser.setCanvas(canvas);
-            } else {
-                canvas.width = width;
-                canvas.height = height;
-                analyser && analyser.setCanvas(canvas);
-            }
-        });
         isMounted = true;
     });
 </script>
@@ -71,17 +51,6 @@
         {width}
         {height}
     />
-
-    {#if $isFullScreenVisualiser}
-        <div class="icon">
-            <Icon
-                icon="ph:wave-sine-duotone"
-                onClick={() =>
-                    ($isFullScreenVisualiser = !$isFullScreenVisualiser)}
-                color="#474747"
-            />
-        </div>
-    {/if}
 </div>
 
 <style lang="scss">
