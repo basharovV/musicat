@@ -126,7 +126,7 @@
 
         window["onFileOpen"] = (urls) => {
             console.log("onFileOpen: ", urls);
-            audioPlayer.handleOpenedUrls(window.openedUrls);
+            audioPlayer.handleOpenedUrls(urls);
         };
 
         unlistenFileDrop = await appWindow.onDragDropEvent((evt) => {
