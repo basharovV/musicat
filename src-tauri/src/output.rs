@@ -42,7 +42,8 @@ pub enum AudioOutputError {
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
 mod cpal {
-    use std::sync::mpsc::Receiver;
+    use std::ops::Deref;
+    use std::sync::mpsc::{Receiver, Sender};
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
@@ -92,6 +93,7 @@ mod cpal {
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             device_change_receiver: Arc<Mutex<Receiver<String>>>,
+            timestamp_sender: Arc<Mutex<Sender<f64>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             vol: Option<f64>,
             app_handle: AppHandle,
@@ -160,6 +162,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    timestamp_sender,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
@@ -181,6 +184,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    timestamp_sender,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as i16,
                     |data| {
@@ -203,6 +207,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    timestamp_sender,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as u16,
                     |data| {
@@ -225,6 +230,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    timestamp_sender,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
@@ -248,7 +254,7 @@ mod cpal {
         ring_buf: SpscRb<T>,
         ring_buf_producer: rb::Producer<T>,
         sample_buf: SampleBuffer<T>,
-        stream: cpal::Stream,
+        stream: Box<cpal::Stream>,
         resampler: Option<Resampler<T>>,
         sample_rate: u32,
         name: String,
@@ -264,6 +270,7 @@ mod cpal {
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             device_change_receiver: Arc<Mutex<Receiver<String>>>,
+            timestamp_sender: Arc<Mutex<Sender<f64>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             volume_change: fn(T, f64) -> T,
             get_viz_bytes: fn(Vec<T>) -> Bytes,
@@ -423,6 +430,12 @@ mod cpal {
                                 let _ =
                                     app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
 
+                                // Also emit back to the decoding thread
+                                let _ = timestamp_sender
+                                    .try_lock()
+                                    .unwrap()
+                                    .send(new_duration.as_secs_f64());
+
                                 let mut duration = elapsed_time_state.write().unwrap();
                                 *duration = new_duration.as_secs();
                             }
@@ -457,7 +470,7 @@ mod cpal {
                 return Err(AudioOutputError::OpenStreamError);
             }
 
-            let stream = stream_result.unwrap();
+            let stream = Box::new(stream_result.unwrap());
 
             // Start the output stream.
             if let Err(err) = stream.play() {
@@ -515,18 +528,23 @@ mod cpal {
                     None => return,
                 }
             } else {
-                // Resampling is not required. Interleave the sample for cpal using a sample buffer.
-                if ramp_up_samples > 0 {
-                    info!("Ramping up first {:?}", ramp_up_samples);
-                    self.ramp_up(decoded, ramp_up_samples as usize);
-                    self.sample_buf.samples()
-                } else if ramp_down_samples > 0 {
-                    info!("Ramping down last {:?}", ramp_down_samples);
-                    self.ramp_down(decoded, ramp_down_samples as usize);
-                    self.sample_buf.samples()
+                if self.sample_buf.capacity() >= decoded.spec().channels.count() * decoded.frames()
+                {
+                    // Resampling is not required. Interleave the sample for cpal using a sample buffer.
+                    if ramp_up_samples > 0 {
+                        info!("Ramping up first {:?}", ramp_up_samples);
+                        self.ramp_up(decoded, ramp_up_samples as usize);
+                        self.sample_buf.samples()
+                    } else if ramp_down_samples > 0 {
+                        info!("Ramping down last {:?}", ramp_down_samples);
+                        self.ramp_down(decoded, ramp_down_samples as usize);
+                        self.sample_buf.samples()
+                    } else {
+                        self.sample_buf.copy_interleaved_ref(decoded);
+                        self.sample_buf.samples()
+                    }
                 } else {
-                    self.sample_buf.copy_interleaved_ref(decoded);
-                    self.sample_buf.samples()
+                    return;
                 }
             };
 
@@ -635,6 +653,7 @@ pub fn try_open(
     playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     reset_control_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     device_change_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<String>>>,
+    timestamp_sender: Arc<tokio::sync::Mutex<std::sync::mpsc::Sender<f64>>>,
     data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
     vol: Option<f64>,
     app_handle: tauri::AppHandle,
@@ -647,6 +666,7 @@ pub fn try_open(
         playback_state_receiver,
         reset_control_receiver,
         device_change_receiver,
+        timestamp_sender,
         data_channel,
         vol,
         app_handle,

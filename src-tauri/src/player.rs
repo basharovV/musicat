@@ -377,7 +377,7 @@ fn decode_loop(
     let mut volume = None;
     let mut audio_device_name = None;
     let mut previous_audio_device_name: String = String::new();
-
+    let mut timestamp: f64 = 0.0;
     let mut previous_sample_rate = 44100;
     let mut previous_channels = 2;
 
@@ -386,7 +386,8 @@ fn decode_loop(
     let (device_change_sender, device_change_receiver) = std::sync::mpsc::channel();
     let (sender_sample_offset, receiver_sample_offset) = std::sync::mpsc::channel();
     let sample_offset_receiver = Arc::new(Mutex::new(receiver_sample_offset));
-
+    let (timestamp_sender, timestamp_receiver) = std::sync::mpsc::channel();
+    let timestamp_send = Arc::new(Mutex::new(timestamp_sender));
     let playback_state = Arc::new(Mutex::new(playback_state_receiver));
     let reset_control = Arc::new(Mutex::new(reset_control_receiver));
     let device_change = Arc::new(Mutex::new(device_change_receiver));
@@ -622,6 +623,7 @@ fn decode_loop(
                     playback_state.clone(),
                     reset_control.clone(),
                     device_change.clone(),
+                    timestamp_send.clone(),
                     data_channel.clone(),
                     volume.clone(),
                     app_handle.clone(),
@@ -675,6 +677,9 @@ fn decode_loop(
 
                         // Decode all packets, ignoring all decode errors.
                         let result = loop {
+                            if let Ok(ts) = timestamp_receiver.try_recv() {
+                                timestamp = ts;
+                            }
                             let event = receiver.try_recv();
                             // debug!("audio: waiting for event {:?}", event);
                             if let Ok(result) = event {
@@ -712,6 +717,7 @@ fn decode_loop(
                                         cancel_token.cancel();
                                         guard.flush();
                                         guard.pause();
+                                        seek.replace(timestamp); // Restore current seek position
                                         is_reset = true;
                                     }
                                 }
@@ -729,6 +735,13 @@ fn decode_loop(
 
                             // waits while the value is PAUSED (0)
                             atomic_wait::wait(&decoding_active, PAUSED);
+
+                            // By default we want to resume the output after un-pausing,
+                            // unless the audio device has changed, in which case this is just a 
+                            // temporary trip round the loop until the new device is set, and we pause again
+                            // to restore the previous state
+
+                            let mut should_resume = true;
 
                             if is_paused {
                                 let ctrl_event = receiver.try_recv();
@@ -767,8 +780,10 @@ fn decode_loop(
                                             cancel_token.cancel();
                                             guard.flush();
                                             guard.pause();
+                                            seek.replace(timestamp); // Restore current seek position
                                             is_reset = true;
                                             if is_paused {
+                                                should_resume = false;
                                                 // Restore pause state after device change
                                                 let _ = &decoding_active.store(
                                                     PAUSED,
@@ -779,15 +794,18 @@ fn decode_loop(
                                         }
                                     }
                                 }
-                                guard.resume();
+
+                                if should_resume {
+                                    guard.resume();
+                                }
                             }
 
-                            let _ = playback_state_sender.send(true);
-
-                            let _ = app_handle.emit("playing", {});
                             if cancel_token.is_cancelled() {
                                 break Ok(());
                             }
+
+                            let _ = playback_state_sender.send(true);
+                            let _ = app_handle.emit("playing", {});
 
                             let packet = match reader.next_packet() {
                                 Ok(packet) => packet,
@@ -1134,10 +1152,14 @@ pub fn get_devices(_app_handle: tauri::AppHandle) -> Option<AudioDevices> {
         .collect();
 
     let cpal_default = host.default_output_device();
-    
-    let default = if cpal_default.is_none() { None } else { Some(AudioDevice {
-        name: cpal_default.unwrap().name().unwrap(),
-    }) };
+
+    let default = if cpal_default.is_none() {
+        None
+    } else {
+        Some(AudioDevice {
+            name: cpal_default.unwrap().name().unwrap(),
+        })
+    };
 
     Some(AudioDevices {
         devices: cpal_devices,
