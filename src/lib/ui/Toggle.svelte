@@ -6,12 +6,14 @@
 </script>
 
 <div class="container">
-    <p>{textOff}</p>
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <p class:active={!checked} on:click={() => (checked = false)}>{textOff}</p>
     <label class="switch">
         <input type="checkbox" bind:checked />
         <span class="slider round"></span>
     </label>
-    <p>{textOn}</p>
+    <!-- svelte-ignore a11y-no-noninteractive-element-to-interactive-role -->
+    <p role="button" class:active={checked} on:click={() => (checked = true)}>{textOn}</p>
 </div>
 
 <style lang="scss">
@@ -26,6 +28,10 @@
             margin: 0;
             font-size: 12px;
             opacity: 0.6;
+            cursor: default;
+            &.active {
+                opacity: 1;
+            }
         }
     }
     .switch {
