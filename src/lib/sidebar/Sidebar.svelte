@@ -1488,7 +1488,14 @@
                         <p>{codec}</p>
                         <!-- {#if bitrate}<p>{bitrate} bit</p>{/if} -->
                         <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
-                        <p>{stereo ? "stereo" : "mono"}</p>
+                        <p class="with-icon">
+                            <span>
+                                <Icon
+                                    icon={stereo ? "fad:stereo" : "fad:mono"}
+                                    size={12}
+                                /></span
+                            >{stereo ? "stereo" : "mono"}
+                        </p>
                     </div>
                 {/if}
             </div>
@@ -1781,12 +1788,12 @@
             align-items: center;
             gap: 5px;
             text-transform: uppercase;
-            font-weight: bold;
             text-align: left;
             width: max-content;
-            padding: 0.3em 0.5em;
+            padding: 0.17em 0.5em;
             font-size: 12px;
-            letter-spacing: 0.2px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
             color: var(--text-inactive, initial);
             /* width: 100%; */
             border-radius: 3px;
@@ -1799,6 +1806,7 @@
                 .chevron {
                     visibility: visible;
                 }
+                font-weight: bold;
             }
 
             &:hover:not(.selected) {
@@ -2086,19 +2094,27 @@
         color: var(--text-secondary);
 
         p {
-            background-color: rgba(85, 85, 85, 0.162);
+            background-color: color-mix(in srgb, var(--inverse) 5%, transparent);
             padding: 0em 0.6em;
+            &.with-icon {
+                padding: 0em 0.6em 0em 0.3em;
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+            }
             margin: 0;
             border-radius: 2px;
-            font-size: 0.67em;
+            font-size: 0.62em;
             line-height: 1.5em;
+            max-height: 15px;
             font-weight: 600;
-            border-top: 1px solid
-                color-mix(in srgb, var(--background) 76%, black);
+            border: 1px solid
+            color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
 
             /* border-bottom: 1px dashed rgb(49, 49, 49); */
             font-family: monospace;
             text-transform: uppercase;
+            display: inline;
         }
     }
     .spectrum {
