@@ -5,7 +5,10 @@
     import {
         isDraggingExternalFiles,
         isScrapbookShown,
-        selectedArtistId
+        selectedArtistId,
+
+        userSettings
+
     } from "../../data/store";
 
     import { blur } from "svelte/transition";
@@ -14,6 +17,9 @@
     import Music from "../your-music/Music.svelte";
     import Scrapbook from "../your-music/Scrapbook.svelte";
     import YourArtists from "../your-music/YourArtists.svelte";
+    import type { UnlistenFn } from "@tauri-apps/api/event";
+    import { startWatchingScrapbookFolder } from "../../data/FolderWatcher";
+    import { onDestroy } from "svelte";
     let selectedSong: Song;
     let selectedSongProject: SongProject;
     let songProjectSelection;
@@ -56,6 +62,16 @@
             showCloseScrapbookPrompt = false;
         }
     }
+
+    let unlistenFolderWatch: UnlistenFn;
+    userSettings.subscribe(async (_) => {
+        unlistenFolderWatch && unlistenFolderWatch();
+        unlistenFolderWatch = await startWatchingScrapbookFolder();
+    });
+
+    onDestroy(() => {
+        unlistenFolderWatch();
+    });
 </script>
 
 <container
@@ -77,9 +93,6 @@
                 on:mousedown={startResizeListener}
                 class:resizing={isResizing}
             />
-            <div>
-                <h2>Scrapbook</h2>
-            </div>
             <div class="content">
                 {#if showCloseScrapbookPrompt}
                     <div

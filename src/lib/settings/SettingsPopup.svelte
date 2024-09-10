@@ -97,6 +97,24 @@
             $userSettings = $userSettings;
         }
     }
+    async function openScrapbookDirSelector() {
+        // Open a selection dialog for directories
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            defaultPath: await downloadDir()
+        });
+        if (Array.isArray(selected)) {
+            // user selected multiple directories
+        } else if (selected === null) {
+            // user cancelled the selection
+        } else {
+            console.log("selected", selected);
+            // user selected a single directory
+            $userSettings.scrapbookLocation = selected;
+            $userSettings = $userSettings;
+        }
+    }
 
     function removeFolder(folder) {
         $userSettings.foldersToWatch = commaSeparatedFolders
@@ -336,6 +354,21 @@
                                 bind:checked={$userSettings.isArtistsToolkitEnabled}
                             /></td
                         >
+                    </tr>
+
+                    <tr>
+                        <td>Scrapbook location</td>
+                        <td>
+                            <div class="download-location">
+                                <p>{$userSettings.scrapbookLocation ?? "Select a location"}</p>
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openScrapbookDirSelector();
+                                    }}
+                                />
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <td>AI Model (LLM)</td>

@@ -1,5 +1,7 @@
 <script lang="ts">
+    import md5 from "md5";
     import { open } from "@tauri-apps/plugin-dialog";
+    import { open as openShell } from "@tauri-apps/plugin-shell";
     import { audioDir } from "@tauri-apps/api/path";
     import { liveQuery } from "dexie";
     import type {
@@ -14,7 +16,9 @@
     import {
         droppedFiles,
         fileDropHandler,
-        hoveredFiles
+        hoveredFiles,
+        isSettingsOpen,
+        userSettings
     } from "../../data/store";
     import FileBlock from "./FileBlock.svelte";
     import LinkBlock from "./LinkBlock.svelte";
@@ -28,6 +32,14 @@
     import MenuInput from "../menu/MenuInput.svelte";
     import hotkeys from "hotkeys-js";
     import Icon from "../ui/Icon.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import { copyFile, readDir } from "@tauri-apps/plugin-fs";
+    import {
+        addScrapbookFile,
+        scanScrapbook
+    } from "../../data/ArtistsToolkitData";
+    import LL from "../../i18n/i18n-svelte";
+    import tippy from "tippy.js";
 
     let contentTypes = [
         {
@@ -81,22 +93,6 @@
             return matchesTags && matchesContentType;
         }) ?? [];
 
-    function addFile(filePath) {
-        console.log("adding item", filePath);
-        const contentFileType = getContentFileType(filePath);
-        console.log("type", contentFileType);
-        const filename = filePath.split("/")?.pop() ?? "";
-        const toAdd: ArtistFileItem = {
-            name: filename,
-            tags: [],
-            type: "file",
-            fileType: contentFileType,
-            path: filePath
-        };
-
-        db.scrapbook.add(toAdd);
-    }
-
     async function addLink(url) {
         const item = await getLinkItemWithData(url);
         db.scrapbook.add(item);
@@ -120,7 +116,7 @@
         } else {
             console.log("selected", selected);
             // user selected a single directory
-            addFile(selected);
+            addScrapbookFile(selected.path);
         }
     }
 
@@ -136,7 +132,11 @@
     async function handleFileDrop(files: string[]) {
         console.log("drop:", files);
         for (const droppedFile of files) {
-            addFile(droppedFile);
+            const filename = droppedFile.split("/")?.pop() ?? "";
+            copyFile(
+                droppedFile,
+                `${$userSettings.scrapbookLocation}/${filename}`
+            );
         }
         $droppedFiles = [];
         $hoveredFiles = [];
@@ -209,7 +209,26 @@
         }
     }
 
-    onMount(() => {
+    let scrapbookDirNotFound = false;
+    let isMounted = false;
+
+    $: if (isMounted && $userSettings.scrapbookLocation) {
+        loadScrapbookDir();
+    }
+
+    async function loadScrapbookDir() {
+        try {
+            await scanScrapbook();
+            scrapbookDirNotFound = false;
+        } catch (err) {
+            if (err.message === "Scrapbook location not found") {
+                scrapbookDirNotFound = true;
+            }
+        }
+    }
+
+    onMount(async () => {
+        isMounted = true;
         containerRect = container.getBoundingClientRect();
     });
 
@@ -313,6 +332,7 @@
     });
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <container
     bind:this={container}
     on:mouseenter={onMouseEnter}
@@ -321,61 +341,106 @@
     on:paste|preventDefault={onPaste}
     class:file-drop={$hoveredFiles.length}
 >
-    <div class="legend">
-        {#each contentTypes as contentType}
-            <div
-                class:selected={selectedContentTypes.includes(contentType.name)}
-                class={contentType.name}
-                on:click={() => toggleContentType(contentType.name)}
-            >
-                <Icon icon={contentType.icon} />
-                <p>{contentType.name}</p>
-            </div>
-        {/each}
+    <div class="scrapbook-header">
+        <h2>Scrapbook</h2>
+        <div
+            use:tippy={{
+                content: $userSettings.scrapbookLocation,
+                placement: "top"
+            }}
+        >
+            <Icon
+                icon="material-symbols:folder"
+                onClick={() => {
+                    openShell($userSettings.scrapbookLocation);
+                }}
+            ></Icon>
+        </div>
     </div>
-    <TagCloud {tags} bind:selectedTags />
-    <div class="scrapbook">
-        {#if filteredContentItems}
-            <div>
-                {#each filteredContentItems as item (item.id)}
-                    <div
-                        animate:flip={{ duration: 180, easing: quadInOut }}
-                        class="item"
-                        on:contextmenu|preventDefault={(e) => {
-                            onRightClick(e, item);
-                        }}
-                    >
-                        {#if item.type === "file"}
-                            <FileBlock {item} />
-                        {:else if item.type === "link"}
-                            <LinkBlock {item} />
-                        {/if}
+    {#if $userSettings.scrapbookLocation === null}
+        <p>{$LL.artistsToolkit.scrapbook.setupHint()}</p>
+        <ButtonWithIcon
+            onClick={() => ($isSettingsOpen = true)}
+            text={$LL.artistsToolkit.scrapbook.openSettings()}
+        />
+    {:else if scrapbookDirNotFound}
+        <div class="callout-error">
+            <Icon icon="ant-design:warning-outlined" />
+            <p>{$LL.artistsToolkit.scrapbook.notFoundError()}</p>
+            <ButtonWithIcon
+                onClick={() => ($isSettingsOpen = true)}
+                text={$LL.artistsToolkit.scrapbook.openSettings()}
+            />
+        </div>
+    {:else}
+        <div class="legend">
+            {#each contentTypes as contentType}
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                    class:selected={selectedContentTypes.includes(
+                        contentType.name
+                    )}
+                    class={contentType.name}
+                    on:click={() => toggleContentType(contentType.name)}
+                >
+                    <Icon icon={contentType.icon} />
+                    <p>{contentType.name}</p>
+                </div>
+            {/each}
+        </div>
+        <div class="tag-cloud">
+            <TagCloud {tags} bind:selectedTags />
+        </div>
+        <div class="scrapbook">
+            {#if filteredContentItems}
+                <div>
+                    {#each filteredContentItems as item (item.id)}
+                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                        <div
+                            animate:flip={{
+                                duration: 180,
+                                easing: quadInOut
+                            }}
+                            class="item"
+                            on:contextmenu|preventDefault={(e) => {
+                                onRightClick(e, item);
+                            }}
+                        >
+                            {#if item.type === "file"}
+                                <FileBlock {item} />
+                            {:else if item.type === "link"}
+                                <LinkBlock {item} />
+                            {/if}
 
-                        <div class="tags">
-                            {#each item.tags as tag}
-                                <p class:selected={selectedTags.includes(tag)}>
-                                    {tag}
-                                </p>
-                            {/each}
-                            <div
-                                class="add-tag"
-                                on:click={(e) => showTagEditor(e, item)}
-                            >
-                                <p>edit tags</p>
+                            <div class="tags">
+                                {#each item.tags as tag}
+                                    <p
+                                        class:selected={selectedTags.includes(
+                                            tag
+                                        )}
+                                    >
+                                        {tag}
+                                    </p>
+                                {/each}
+                                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                                <div
+                                    class="add-tag"
+                                    on:click={(e) => showTagEditor(e, item)}
+                                >
+                                    <p>edit tags</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {/each}
-                {#if $hoveredFiles.length}
-                    <div class="item placeholder">
-                        <p>Drop some media in here!</p>
-                    </div>
-                {/if}
-            </div>
-        {/if}
-        <button on:click={importContentItem}>Import something</button>
-        <p>Audio / video / image / lyrics .txt file</p>
-    </div>
+                    {/each}
+                    {#if $hoveredFiles.length}
+                        <div class="item placeholder">
+                            <p>Drop some media in here!</p>
+                        </div>
+                    {/if}
+                </div>
+            {/if}
+        </div>
+    {/if}
 </container>
 
 {#if contextItem && !tagEditorVisible}
@@ -430,12 +495,40 @@
             }
         }
     }
+
+    .scrapbook-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.2em 0;
+    }
+
+    h2 {
+        margin: 0;
+        font-family: "Snake";
+        font-size: 3em;
+        color: #bbb9b9;
+    }
+
+    .callout-error {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        p {
+            margin: 0;
+            flex: 1;
+            white-space: nowrap;
+        }
+    }
     .legend {
         display: inline-flex;
         gap: 10px;
+        width: 100%;
         margin-bottom: 1em;
         top: 0;
         position: sticky;
+        justify-content: space-between;
         > div {
             display: flex;
             flex-direction: row;
@@ -477,6 +570,10 @@
                 color: rgb(70, 227, 227);
             }
         }
+    }
+
+    .tag-cloud {
+        margin-bottom: 2em;
     }
     .scrapbook {
         display: flex;

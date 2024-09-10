@@ -28,7 +28,7 @@ export class MySubClassedDexie extends Dexie {
             smartQueries: "++id, name",
             artistProjects: "name",
             songProjects: "++id, title, artist, album",
-            scrapbook: "++id, name",
+            scrapbook: "id, name",
             playlists: "++id, title"
         });
         this.version(17)

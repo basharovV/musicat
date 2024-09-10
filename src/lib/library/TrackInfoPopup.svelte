@@ -19,9 +19,7 @@
     import tippy from "svelte-tippy";
     import { fade, fly } from "svelte/transition";
     import { getMapForTagType } from "../../data/LabelMap";
-    import {
-        readMappedMetadataFromSong
-    } from "../../data/LibraryImporter";
+    import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
         isTrackInfoPopupOpen,
@@ -437,12 +435,12 @@
 
     // Shortcuts
     let modifier = $os === "macos" ? "cmd" : "ctrl";
-    hotkeys(`${modifier}+enter`, function (event, handler) {
+    hotkeys(`${modifier}+enter`, "track-info", function (event, handler) {
         if (hasChanges) {
             writeMetadata();
         }
     });
-    hotkeys("esc", () => {
+    hotkeys("esc", "track-info", () => {
         onClose();
     });
 
@@ -450,9 +448,10 @@
         if (unlisten) {
             unlisten();
         }
+        hotkeys.unbind(`${modifier}+enter`, "track-info");
+        hotkeys.unbind("esc", "track-info");
+        hotkeys.deleteScope("track-info");
         $isTrackInfoPopupOpen = false;
-        hotkeys.unbind(`${modifier}+enter`);
-        hotkeys.unbind("esc");
     });
 
     $: {
@@ -707,6 +706,7 @@
     }
 
     onMount(async () => {
+        hotkeys.setScope("track-info");
         document.addEventListener("paste", async (event: ClipboardEvent) => {
             // event.stopPropagation();
             // event.preventDefault();

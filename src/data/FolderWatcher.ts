@@ -9,9 +9,10 @@ import {
     isFolderWatchUpdate,
     userSettings
 } from "./store";
+import { addScrapbookFile } from "./ArtistsToolkitData";
 
 // can also watch an array of paths
-export async function startWatching() {
+export async function startWatchingLibraryFolders() {
     const settings = get(userSettings);
     const paths = settings.foldersToWatch;
 
@@ -86,7 +87,9 @@ export async function startWatching() {
                                     ""
                                 );
 
-                                let id = md5(`${albumPath} - ${song.album}`.toLowerCase());
+                                let id = md5(
+                                    `${albumPath} - ${song.album}`.toLowerCase()
+                                );
                                 await db.albums.delete(id);
                             }
                         } else {
@@ -100,6 +103,58 @@ export async function startWatching() {
                 }
             }
             isFolderWatchUpdate.set(false);
+        },
+        { recursive: true }
+    );
+
+    return startWatching;
+}
+
+export async function startWatchingScrapbookFolder() {
+    const settings = get(userSettings);
+    const scrapbookLocation = settings.scrapbookLocation;
+
+    const startWatching = await watchImmediate(
+        scrapbookLocation,
+        async (event) => {
+            console.log(event);
+            if (typeof event.type === "object") {
+                // In this case we want to delete and re-add the track(s),
+                // since the ID is based on the filepath
+                for (const path of event.paths) {
+                    const result = isFileOrDirectory(path);
+                    console.log("result", result);
+
+                    if (result === "file") {
+                        const file = path.split("/").pop();
+                        let fileExists = false;
+                        try {
+                            fileExists = await exists(path);
+                        } catch (err) {
+                            console.error("err in fileexists");
+                        }
+                        const filehash = md5(path);
+                        const song = await db.scrapbook.get(filehash);
+
+                        // New file
+                        if (fileExists && !song) {
+                            bottomBarNotification.set({
+                                text: "Folder watcher: File added - updating library...",
+                                timeout: 2000
+                            });
+                            await addScrapbookFile(path);
+                        }
+                        // Deletion
+                        else if (!fileExists && song) {
+                            bottomBarNotification.set({
+                                text: "Folder watcher: File deleted - updating library...",
+                                timeout: 2000
+                            });
+                            await db.scrapbook.delete(filehash);
+                        }
+                    }
+                }
+            }
         },
         { recursive: true }
     );

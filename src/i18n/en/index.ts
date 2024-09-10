@@ -184,6 +184,15 @@ const en = {
     },
     tagCloud: {
         close: "Close tags",
+    },
+    artistsToolkit: {
+        scrapbook: {
+            title: "Scrapbook",
+            setupHint: "Please set up your scrapbook location in settings",
+            notFoundError: "Scrapbook location not found",
+            openSettings: "Open settings",
+            openInFinder: "Open in Finder",
+        }
     }
 } satisfies BaseTranslation;
 

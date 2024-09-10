@@ -2,10 +2,8 @@
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { open } from "@tauri-apps/plugin-shell";
     import type { ArtistFileItem, Song } from "src/App";
-    import {
-        getMetadataFromFile
-    } from "../../data/LibraryImporter";
-    import { draggedScrapbookItems } from "../../data/store";
+    import { getMetadataFromFile } from "../../data/LibraryImporter";
+    import { draggedScrapbookItems, playlist } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
 
@@ -27,7 +25,8 @@
                     includeFolderArtwork: false
                 }
             });
-            audioPlayer.playSong(song);
+            audioPlayer.shouldPlay = true;
+            $playlist = [song];
         } else {
             // Play in default system app
             open(item.path);

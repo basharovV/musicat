@@ -3,15 +3,15 @@
   Would be nice if Tauri supported dropping onto specific elements
   https://github.com/probablykasper/svelte-tauri-filedrop/issues/2
   */
-
-    
+    import md5 from "md5";
     import { invoke } from "@tauri-apps/api/core";
     import type { Event, UnlistenFn } from "@tauri-apps/api/event";
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import type { ArtistFileItem, Song, SongProject } from "src/App";
     import { db } from "../../data/db";
-    import { isDraggingExternalFiles } from "../../data/store";
+    import { isDraggingExternalFiles, userSettings } from "../../data/store";
     import { getContentFileType } from "../../utils/FileUtils";
+    import { copyFile } from "@tauri-apps/plugin-fs";
     const appWindow = getCurrentWebviewWindow();
 
     export let songProject: SongProject;
@@ -28,13 +28,15 @@
             const file = entry.split("/").pop();
             const fileType = getContentFileType(file);
             const contentItem: ArtistFileItem = {
+                id: md5(entry),
                 name: file,
                 tags: [],
                 type: "file",
                 fileType
             };
             if (highlightedOption === "add-to-scrapbook") {
-                await db.scrapbook.add(contentItem);
+                // await db.scrapbook.add(contentItem);
+                copyFile(entry, `${$userSettings.scrapbookLocation}/${file}`);
             } else if (
                 highlightedOption === "add-to-song-project" &&
                 songProject

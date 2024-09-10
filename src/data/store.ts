@@ -176,6 +176,7 @@ const defaultSettings: UserSettings = {
     aiFeaturesEnabled: false,
     geniusApiKey: null,
     isArtistsToolkitEnabled: false,
+    scrapbookLocation: null,
     downloadLocation: null,
     theme: "dark",
     outputDevice: null, // default system device,

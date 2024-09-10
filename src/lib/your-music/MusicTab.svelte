@@ -71,7 +71,7 @@
                     <div class="delete">
                         <Icon
                             icon="ant-design:delete-outlined"
-                            onClick|preventDefault|stopPropagation={() => {
+                            onClick={() => {
                                 deleteRecording(idx);
                             }}
                         />

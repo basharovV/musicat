@@ -36,7 +36,7 @@
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
     import { blur, fade, fly } from "svelte/transition";
     import { db } from "./data/db";
-    import { startWatching } from "./data/FolderWatcher";
+    import { startWatchingLibraryFolders } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryImporter";
     import { findQuery } from "./data/SmartQueries";
     import { setLocale } from "./i18n/i18n-svelte";
@@ -168,7 +168,7 @@
 
         foldersToWatch.subscribe(async (_) => {
             unlistenFolderWatch && unlistenFolderWatch();
-            unlistenFolderWatch = await startWatching();
+            unlistenFolderWatch = await startWatchingLibraryFolders();
         });
     });
 
@@ -682,7 +682,7 @@
             position: relative;
             height: 100%;
             width: 4px;
-            left: -2px;
+            left: -2.5px;
             z-index: 100;
 
             &::after {

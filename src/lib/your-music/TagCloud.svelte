@@ -29,7 +29,6 @@
 
 <style lang="scss">
     .tag-cloud {
-        margin: 1em 0;
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;

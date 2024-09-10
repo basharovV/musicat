@@ -1461,10 +1461,15 @@
                         </div>
                     {/if}
                     {#if artist}
+                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                         <p
                             class="artist"
                             on:click={() => {
                                 $isWikiOpen = !$isWikiOpen;
+                            }}
+                            use:tippy={{
+                                content: `Open Wiki panel for ${artist}`,
+                                placement: "right"
                             }}
                         >
                             {artist}
@@ -2028,6 +2033,7 @@
                     var(--inverse) 80%,
                     transparent
                 );
+                border-radius: 5px;
             }
             &:active {
                 background-color: color-mix(

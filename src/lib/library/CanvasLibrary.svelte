@@ -1070,8 +1070,19 @@
     // Shortcuts
 
     hotkeys("esc", function (event, handler) {
-        if ($isSmartQueryBuilderOpen) {
-            $isSmartQueryBuilderOpen = false;
+        if (!$isTrackInfoPopupOpen &&
+            $singleKeyShortcutsEnabled &&
+            (document.activeElement.id === "search" ||
+                (document.activeElement.id !== "search" &&
+                    document.activeElement.tagName.toLowerCase() !==
+                        "input")) &&
+            document.activeElement.tagName.toLowerCase() !== "textarea"
+        ) {
+            if (showTrackMenu) {
+                showTrackMenu = false;
+            } else {
+                songsHighlighted = [];
+            }
         }
     });
 
@@ -1162,10 +1173,16 @@
 
                 const topTrack = songsHighlighted[0];
                 // Get the y position of the top track by calculating the offset using the index in the slice
-                const topTrackY = stage.findOne(
-                    `#${topTrack.viewModel?.viewId ?? topTrack.id}`
-                ).getAbsolutePosition().y + ROW_HEIGHT + HEADER_HEIGHT + 10;
-                console.log('top track y', topTrackY);
+                const topTrackY =
+                    stage
+                        .findOne(
+                            `#${topTrack.viewModel?.viewId ?? topTrack.id}`
+                        )
+                        .getAbsolutePosition().y +
+                    ROW_HEIGHT +
+                    HEADER_HEIGHT +
+                    10;
+                console.log("top track y", topTrackY);
                 menuPos = { x: 250, y: topTrackY };
                 showTrackMenu = true;
             }
@@ -1189,22 +1206,6 @@
                 $playlistType =
                     $uiView === "playlists" ? "playlist" : "library";
                 AudioPlayer.playSong(songsHighlighted[0]);
-            }
-        } // escape 
-        else if (
-            event.keyCode === 27 &&
-            $singleKeyShortcutsEnabled &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
-        ) {
-            event.preventDefault();
-            if (showTrackMenu) {
-                showTrackMenu = false;
-            } else {
-                songsHighlighted = [];
             }
         }
     }

@@ -567,6 +567,30 @@ type RootTranslation = {
 		 */
 		close: string
 	}
+	artistsToolkit: {
+		scrapbook: {
+			/**
+			 * S​c​r​a​p​b​o​o​k
+			 */
+			title: string
+			/**
+			 * P​l​e​a​s​e​ ​s​e​t​ ​u​p​ ​y​o​u​r​ ​s​c​r​a​p​b​o​o​k​ ​l​o​c​a​t​i​o​n​ ​i​n​ ​s​e​t​t​i​n​g​s
+			 */
+			setupHint: string
+			/**
+			 * S​c​r​a​p​b​o​o​k​ ​l​o​c​a​t​i​o​n​ ​n​o​t​ ​f​o​u​n​d
+			 */
+			notFoundError: string
+			/**
+			 * O​p​e​n​ ​s​e​t​t​i​n​g​s
+			 */
+			openSettings: string
+			/**
+			 * O​p​e​n​ ​i​n​ ​F​i​n​d​e​r
+			 */
+			openInFinder: string
+		}
+	}
 }
 
 export type TranslationFunctions = {
@@ -1121,6 +1145,30 @@ export type TranslationFunctions = {
 		 * Close tags
 		 */
 		close: () => LocalizedString
+	}
+	artistsToolkit: {
+		scrapbook: {
+			/**
+			 * Scrapbook
+			 */
+			title: () => LocalizedString
+			/**
+			 * Please set up your scrapbook location in settings
+			 */
+			setupHint: () => LocalizedString
+			/**
+			 * Scrapbook location not found
+			 */
+			notFoundError: () => LocalizedString
+			/**
+			 * Open settings
+			 */
+			openSettings: () => LocalizedString
+			/**
+			 * Open in Finder
+			 */
+			openInFinder: () => LocalizedString
+		}
 	}
 }
 
