@@ -24,6 +24,7 @@ pub trait AudioOutput {
     fn get_sample_rate(&self) -> u32;
     fn pause(&self);
     fn resume(&self);
+    fn stop_stream(&mut self);
     fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool;
     fn has_remaining_samples(&self) -> bool;
     fn ramp_down(&mut self, buffer: AudioBufferRef, num_samples: usize);
@@ -254,7 +255,7 @@ mod cpal {
         ring_buf: SpscRb<T>,
         ring_buf_producer: rb::Producer<T>,
         sample_buf: SampleBuffer<T>,
-        stream: Box<cpal::Stream>,
+        stream: Option<cpal::Stream>,
         resampler: Option<Resampler<T>>,
         sample_rate: u32,
         name: String,
@@ -429,7 +430,7 @@ mod cpal {
 
                                 let _ =
                                     app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
-
+                                
                                 // Also emit back to the decoding thread
                                 let _ = timestamp_sender
                                     .try_lock()
@@ -470,10 +471,10 @@ mod cpal {
                 return Err(AudioOutputError::OpenStreamError);
             }
 
-            let stream = Box::new(stream_result.unwrap());
+            let stream = Some(stream_result.unwrap());
 
             // Start the output stream.
-            if let Err(err) = stream.play() {
+            if let Err(err) = stream.as_ref().unwrap().play() {
                 error!("audio output stream play error: {}", err);
 
                 return Err(AudioOutputError::PlayStreamError);
@@ -496,6 +497,7 @@ mod cpal {
     impl<T: AudioOutputSample + Send + Sync> Drop for CpalAudioOutputImpl<T> {
         fn drop(&mut self) {
             info!("Audio output dropped: {}", self.name);
+            self.stop_stream();
         }
     }
 
@@ -583,13 +585,22 @@ mod cpal {
         }
 
         fn pause(&self) {
-            let pause_result = self.stream.pause();
+            let pause_result = self.stream.as_ref().unwrap().pause();
             info!("cpal: Stream pause result: {:?}", pause_result);
         }
 
         fn resume(&self) {
-            let resume_result = self.stream.play();
+            let resume_result = self.stream.as_ref().unwrap().play();
             info!("cpal: Stream resume result: {:?}", resume_result);
+        }
+
+        // Explicitly drop the stream
+        fn stop_stream(&mut self) {
+            if let Some(stream) = self.stream.take() {
+                // Dropping the stream explicitly
+                std::mem::drop(stream);
+            }
+            info!("Audio output stopped: {}", self.name);
         }
 
         fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool {

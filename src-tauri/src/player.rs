@@ -615,6 +615,18 @@ fn decode_loop(
                 info!("player: Resetting audio device");
                 // Try to open the audio output.
 
+                if (should_reset_audio) {
+                    info!("Stopping audio output");
+                    if let Some(output) = audio_output {
+                        if let Ok(mut out) = output {
+                            if let Ok(mut guard) = out.try_lock() {
+                                guard.flush();
+                                guard.pause();
+                                guard.stop_stream();
+                            }
+                        }
+                    }
+                }
                 audio_output = Some(output::try_open(
                     &previous_audio_device_name,
                     spec,
