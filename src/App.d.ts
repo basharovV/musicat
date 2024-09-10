@@ -54,9 +54,6 @@ interface Song {
     duration: string;
     metadata: MetadataEntry[];
     fileInfo: FileInfo;
-    originCountry?: string;
-    songProjectId?: number; // Link to project id
-    isFavourite: boolean;
     viewModel?: {
         isFirstArtist?: boolean;
         isFirstAlbum?: boolean;
@@ -64,13 +61,17 @@ interface Song {
         viewId?: string; // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
         timeSinceAdded?: string; // eg 5m ago
     };
-    playCount: number;
     // Returned from lofty but only written to db for albums for better grid loading performance
     artwork?: {
         data: number[];
         format: string;
         src?: string;
     };
+    // User-specific
+    playCount: number;
+    originCountry?: string;
+    songProjectId?: number; // Link to project id
+    isFavourite: boolean;
     markers: Marker[];
     dateAdded?: number; // unix timestamp
     tags: string[];
@@ -157,10 +158,11 @@ interface UserSettings {
     openAIApiKey?: string;
     geniusApiKey?: string;
     isArtistsToolkitEnabled: boolean;
+    scrapbookLocation?: string;
     downloadLocation: string;
     theme: string;
     outputDevice?: string;
-    followSystemOutput: boolean
+    followSystemOutput: boolean;
 }
 
 type MiniPlayerLocation =
@@ -197,7 +199,7 @@ interface ContentFileType {
 }
 
 interface ContentItem {
-    id?: number;
+    id: string; // Hash of filepath
     type: "file" | "link";
     name: string; // Grab from filename
     tags: string[];

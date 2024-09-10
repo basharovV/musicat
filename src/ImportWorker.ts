@@ -2,14 +2,15 @@ import { db } from "./data/db";
 // import { bottomBarNotification } from "./data/store";
 self.window = self;
 
-import type {
-    Album,
-    ToImport
-} from "./App";
+import type { Album, ToImport } from "./App";
 
 export async function handleImport(toImport: ToImport) {
     await db
         .transaction("rw", db.songs, async () => {
+            // Restore user-generated data after re-import
+            const songsToRestore = await db.songs.bulkGet(
+                toImport.songs.map((s) => s.id)
+            );
             await db.songs
                 .bulkPut(
                     toImport.songs.map((s) => {
@@ -30,8 +31,24 @@ export async function handleImport(toImport: ToImport) {
                             " raindrops was added successfully"
                     );
                 });
-
-            // TODO: Remove
+            await db.songs.bulkUpdate(
+                songsToRestore
+                    .filter((s) => s !== undefined)
+                    .map((s) => {
+                        return {
+                            key: s.id,
+                            changes: {
+                                playCount: s.playCount,
+                                originCountry: s.originCountry,
+                                songProjectId: s.songProjectId,
+                                isFavourite: s.isFavourite,
+                                markers: s.markers,
+                                dateAdded: s.dateAdded,
+                                tags: s.tags
+                            }
+                        };
+                    })
+            );
             // const albumsToPut: { [key: string]: Album } = toImport.songs.reduce(
             //     (albums: { [key: string]: Album }, song) => {
             //         const albumPath = song.path.replace(`/${song.file}`, "");
