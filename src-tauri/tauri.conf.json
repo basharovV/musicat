@@ -55,7 +55,7 @@
     "plugins": {},
     "app": {
         "macOSPrivateApi": true,
-        "withGlobalTauri": false,
+        "withGlobalTauri": true,
         "windows": [],
         "security": {
             "capabilities": ["main-capability"],

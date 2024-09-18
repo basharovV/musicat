@@ -4,6 +4,8 @@
     import Icon from "./Icon.svelte";
 
     export let selected;
+    export let onSelect = null;
+    export let size = null;
 
     // Only show songs with selected compression type
     export let options = [];
@@ -11,7 +13,7 @@
     let showSelector = false;
 </script>
 
-<div class="compression-selector">
+<div class="compression-selector" style="{size ? `font-size: ${size}px;` : ''}">
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
@@ -34,6 +36,7 @@
                         onClick={() => {
                             selected = option;
                             showSelector = false;
+                            onSelect && onSelect(option.value);
                         }}
                         singleSelection
                         text={option.label}

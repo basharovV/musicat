@@ -523,6 +523,14 @@ type RootTranslation = {
 		 */
 		enableArtistsToolkit: string
 		/**
+		 * S​o​n​g​b​o​o​k​ ​l​o​c​a​t​i​o​n
+		 */
+		songbookLocation: string
+		/**
+		 * S​c​r​a​p​b​o​o​k​ ​l​o​c​a​t​i​o​n
+		 */
+		scrapbookLocation: string
+		/**
 		 * E​n​a​b​l​e​ ​A​I​ ​f​e​a​t​u​r​e​s
 		 */
 		enableAIFeatures: string
@@ -568,6 +576,17 @@ type RootTranslation = {
 		close: string
 	}
 	artistsToolkit: {
+		header: {
+			/**
+			 * Y​o​u​r​ ​s​o​n​g​b​o​o​k​ ​l​o​c​a​t​i​o​n​ ​m​a​n​a​g​e​d​ ​b​y​ ​M​u​s​i​c​a​t​.​ ​C​u​r​r​e​n​t​l​y​ ​s​e​t​ ​t​o​ ​{​p​a​t​h​}
+			 * @param {unknown} path
+			 */
+			songbookLocationHint: RequiredParams<'path'>
+			/**
+			 * P​l​e​a​s​e​ ​s​e​t​ ​y​o​u​r​ ​s​o​n​g​b​o​o​k​ ​l​o​c​a​t​i​o​n​ ​t​o​ ​b​e​ ​m​a​n​a​g​e​d​ ​b​y​ ​M​u​s​i​c​a​t​.
+			 */
+			songbookLocationHintEmpty: string
+		}
 		scrapbook: {
 			/**
 			 * S​c​r​a​p​b​o​o​k
@@ -589,6 +608,22 @@ type RootTranslation = {
 			 * O​p​e​n​ ​i​n​ ​F​i​n​d​e​r
 			 */
 			openInFinder: string
+		}
+		songDetails: {
+			tabs: {
+				/**
+				 * L​y​r​i​c​s​ ​&​ ​C​h​o​r​d​s
+				 */
+				lyrics: string
+				/**
+				 * F​i​l​e​s
+				 */
+				files: string
+				/**
+				 * O​t​h​e​r
+				 */
+				other: string
+			}
 		}
 	}
 }
@@ -1102,6 +1137,14 @@ export type TranslationFunctions = {
 		 */
 		enableArtistsToolkit: () => LocalizedString
 		/**
+		 * Songbook location
+		 */
+		songbookLocation: () => LocalizedString
+		/**
+		 * Scrapbook location
+		 */
+		scrapbookLocation: () => LocalizedString
+		/**
 		 * Enable AI features
 		 */
 		enableAIFeatures: () => LocalizedString
@@ -1147,6 +1190,16 @@ export type TranslationFunctions = {
 		close: () => LocalizedString
 	}
 	artistsToolkit: {
+		header: {
+			/**
+			 * Your songbook location managed by Musicat. Currently set to {path}
+			 */
+			songbookLocationHint: (arg: { path: unknown }) => LocalizedString
+			/**
+			 * Please set your songbook location to be managed by Musicat.
+			 */
+			songbookLocationHintEmpty: () => LocalizedString
+		}
 		scrapbook: {
 			/**
 			 * Scrapbook
@@ -1168,6 +1221,22 @@ export type TranslationFunctions = {
 			 * Open in Finder
 			 */
 			openInFinder: () => LocalizedString
+		}
+		songDetails: {
+			tabs: {
+				/**
+				 * Lyrics & Chords
+				 */
+				lyrics: () => LocalizedString
+				/**
+				 * Files
+				 */
+				files: () => LocalizedString
+				/**
+				 * Other
+				 */
+				other: () => LocalizedString
+			}
 		}
 	}
 }

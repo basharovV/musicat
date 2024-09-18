@@ -115,6 +115,24 @@
             $userSettings = $userSettings;
         }
     }
+    async function openSongbookDirSelector() {
+        // Open a selection dialog for directories
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            defaultPath: await downloadDir()
+        });
+        if (Array.isArray(selected)) {
+            // user selected multiple directories
+        } else if (selected === null) {
+            // user cancelled the selection
+        } else {
+            console.log("selected", selected);
+            // user selected a single directory
+            $userSettings.songbookLocation = selected;
+            $userSettings = $userSettings;
+        }
+    }
 
     function removeFolder(folder) {
         $userSettings.foldersToWatch = commaSeparatedFolders
@@ -357,10 +375,30 @@
                     </tr>
 
                     <tr>
+                        <td>{$LL.settings.songbookLocation()}</td>
+                        <td>
+                            <div class="songbook-location">
+                                <p>
+                                    {$userSettings.songbookLocation ??
+                                        "Select a location"}
+                                </p>
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openSongbookDirSelector();
+                                    }}
+                                />
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Scrapbook location</td>
                         <td>
                             <div class="download-location">
-                                <p>{$userSettings.scrapbookLocation ?? "Select a location"}</p>
+                                <p>
+                                    {$userSettings.scrapbookLocation ??
+                                        "Select a location"}
+                                </p>
                                 <Icon
                                     icon="material-symbols:folder"
                                     onClick={() => {
@@ -541,6 +579,11 @@
                         color: var(--text);
                     }
 
+                    div {
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                    }
                     &.folders {
                         vertical-align: top;
                     }

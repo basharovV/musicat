@@ -12,7 +12,7 @@
     async function onCreateSongProject() {
         const createdProjectId = await db.songProjects.add({
             title: newSongProjectTitle,
-            artist: artistId.name,
+            artist: artistId.id,
             album: "",
             musicComposedBy: [artistId.name], // Multiple people
             lyricsWrittenBy: [], // Multiple people,

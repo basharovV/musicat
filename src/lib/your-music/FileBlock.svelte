@@ -8,7 +8,7 @@
     import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistFileItem;
-    export let style: "dashed" | "outline" = "dashed";
+    export let style: "dashed" | "outline" = "outline";
 
     async function openFile() {
         if (item.fileType.type === "audio") {
@@ -104,8 +104,8 @@
             overflow: hidden;
             border-radius: 4px;
             border-width: 1px;
-            border-color: rgb(97, 97, 97);
-            background-color: rgba(138, 138, 138, 0.067);
+            border-color: color-mix(in srgb, var(--type-bw-inverse) 11%, transparent);
+            background-color: color-mix(in srgb, var(--type-bw-inverse) 4%, transparent);
             padding: 0.7em 1em;
             display: flex;
             align-items: flex-end;

@@ -102,7 +102,7 @@ interface Playlist {
 interface SongProject {
     id?: number; // incremental id
     title: string; // Needs to have at least this, everything else is optional
-    artist: string;
+    artist: number;
     album: string;
     key?: string;
     bpm?: number;
@@ -116,6 +116,7 @@ interface SongProject {
 }
 
 interface ArtistProject {
+    id?: number;
     name: string;
     members: string[];
     profilePhoto?: string;
@@ -159,6 +160,7 @@ interface UserSettings {
     geniusApiKey?: string;
     isArtistsToolkitEnabled: boolean;
     scrapbookLocation?: string;
+    songbookLocation?: string;
     downloadLocation: string;
     theme: string;
     outputDevice?: string;

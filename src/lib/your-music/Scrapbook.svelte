@@ -373,28 +373,30 @@
             />
         </div>
     {:else}
-        <div class="legend">
-            {#each contentTypes as contentType}
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <div
-                    class:selected={selectedContentTypes.includes(
-                        contentType.name
-                    )}
-                    class={contentType.name}
-                    on:click={() => toggleContentType(contentType.name)}
-                >
-                    <Icon icon={contentType.icon} />
-                    <p>{contentType.name}</p>
-                </div>
-            {/each}
-        </div>
-        <div class="tag-cloud">
-            <TagCloud {tags} bind:selectedTags />
+        <div class="subheader">
+            <div class="legend">
+                {#each contentTypes as contentType}
+                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                    <div
+                        class:selected={selectedContentTypes.includes(
+                            contentType.name
+                        )}
+                        class={contentType.name}
+                        on:click={() => toggleContentType(contentType.name)}
+                    >
+                        <Icon icon={contentType.icon} />
+                        <p>{contentType.name}</p>
+                    </div>
+                {/each}
+            </div>
+            <div class="tag-cloud">
+                <TagCloud {tags} bind:selectedTags />
+            </div>
         </div>
         <div class="scrapbook">
             {#if filteredContentItems}
                 <div>
-                    {#each filteredContentItems as item (item.id)}
+                    {#each filteredContentItems as item (item?.id)}
                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                         <div
                             animate:flip={{
@@ -500,7 +502,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1.2em 0;
+        padding: 1.2em 2em 0;
     }
 
     h2 {
@@ -508,6 +510,7 @@
         font-family: "Snake";
         font-size: 3em;
         color: #bbb9b9;
+        line-height: initial;
     }
 
     .callout-error {
@@ -520,6 +523,20 @@
             flex: 1;
             white-space: nowrap;
         }
+    }
+
+    .subheader {
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        width: 100%;
+        /* background-color: color-mix(in srgb, var(--background) 90%, transparent); */
+        backdrop-filter: blur(10px);
+        z-index: 9;
+        padding: 1em 2em;
+        border-bottom: 0.7px solid
+            color-mix(in srgb, var(--inverse) 50%, transparent);
     }
     .legend {
         display: inline-flex;
@@ -573,11 +590,12 @@
     }
 
     .tag-cloud {
-        margin-bottom: 2em;
     }
     .scrapbook {
         display: flex;
         flex-direction: column;
+        overflow: auto;
+        padding: 1em 2em;
         > div {
             display: flex;
             flex-direction: row;

@@ -1070,7 +1070,8 @@
     // Shortcuts
 
     hotkeys("esc", function (event, handler) {
-        if (!$isTrackInfoPopupOpen &&
+        if (
+            !$isTrackInfoPopupOpen &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1887,8 +1888,17 @@
                                                                     hoveredTag =
                                                                         null;
                                                                 }}
-                                                                on:click={() => {
+                                                                on:click={(
+                                                                    e
+                                                                ) => {
                                                                     // TODO: Show overflowed tags in menu
+                                                                    menuPos = {
+                                                                        x: e.detail.evt.clientX,
+                                                                        y: e.detail.evt.clientY
+                                                                    };
+                                                                    $rightClickedTrack =
+                                                                        song;
+                                                                    showTrackMenu = true;
                                                                 }}
                                                             >
                                                                 <Tag

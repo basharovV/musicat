@@ -4,14 +4,16 @@
     import { onMount } from "svelte";
     import { db } from "../../data/db";
     import {
+        isSmartQueryBuilderOpen,
+        isTagCloudOpen,
         isTrackInfoPopupOpen,
         isWikiOpen,
         rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistId,
-
+        selectedTags,
+        uiView,
         wikiArtist
-
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
@@ -21,6 +23,7 @@
     import type { Album, Song, ToImport } from "../../App";
     import MenuInput from "../menu/MenuInput.svelte";
     import { dedupe } from "../../utils/ArrayUtils";
+    import Icon from "../ui/Icon.svelte";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -355,15 +358,34 @@
 
             <MenuOption isDisabled={true} text="Edit tags" />
             {#if $rightClickedTrack.tags}
-                {#each $rightClickedTrack.tags as tag}
-                    <MenuOption text={tag} onDelete={() => deleteTag(tag)} />
-                {/each}
+                <div class="tags">
+                    {#each $rightClickedTrack.tags as tag}
+                        <!-- svelte-ignore a11y-no-static-element-interactions -->
+                        <div
+                            class="tag"
+                            on:click={() => {
+                                $isTagCloudOpen = true;
+                                $isSmartQueryBuilderOpen = false;
+                                $uiView = "library";
+                                $selectedTags.add(tag);
+                                $selectedTags = $selectedTags;
+                                closeMenu();
+                            }}
+                        >
+                            <p>{tag}</p>
+                            <Icon
+                                icon="mingcute:close-circle-fill"
+                                size={13}
+                                onClick={() => deleteTag(tag)}
+                            />
+                        </div>
+                    {/each}
+                </div>
             {/if}
             <MenuInput
                 bind:value={tagUserInput}
                 autoCompleteValue={tagAutoCompleteValue}
                 onEnterPressed={addTagToContextItem}
-                autoFocus
                 placeholder="Add a tag"
                 onEscPressed={closeMenu}
                 small
@@ -396,9 +418,31 @@
 
             <MenuOption isDisabled={true} text="Edit tags" />
             {#await commonTagsBetweenTracks($rightClickedTracks) then tags}
-                {#each tags as tag}
-                    <MenuOption text={tag} onDelete={() => deleteTag(tag)} />
-                {/each}
+                {#if tags}
+                    <div class="tags">
+                        {#each tags as tag}
+                            <!-- svelte-ignore a11y-no-static-element-interactions -->
+                            <div
+                                class="tag"
+                                on:click={() => {
+                                    $isTagCloudOpen = true;
+                                    $isSmartQueryBuilderOpen = false;
+                                    $uiView = "library";
+                                    $selectedTags.add(tag);
+                                    $selectedTags = $selectedTags;
+                                    closeMenu();
+                                }}
+                            >
+                                <p>{tag}</p>
+                                <Icon
+                                    icon="mingcute:close-circle-fill"
+                                    size={13}
+                                    onClick={() => deleteTag(tag)}
+                                />
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
             {/await}
             <MenuInput
                 bind:value={tagUserInput}
@@ -414,3 +458,32 @@
         <MenuOption onClick={openInfo} text="Info & metadata" />
     </Menu>
 {/if}
+
+<style lang="scss">
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 5px;
+        .tag {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 0.4em 0 0.7em;
+            border-radius: 20px;
+            background-color: var(--library-clickable-cell-bg);
+            color: var(--library-clickable-cell-text);
+
+            p {
+                margin: 0;
+                position: relative;
+                bottom: 1px;
+                font-size: 13px;
+                &:hover {
+                    opacity: 0.6;
+                    cursor: default;
+                }
+            }
+        }
+    }
+</style>

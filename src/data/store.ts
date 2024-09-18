@@ -124,12 +124,12 @@ export const emptyDropEvent: Writable<{ x: number; y: number } | null> =
 export const fileDropHandler: Writable<string> = writable(null);
 
 // Artist's toolkit details
-export const selectedArtistId: Writable<string> = writable(
-    localStorage.getItem("selectedArtistId") || null
+export const selectedArtistId: Writable<number> = writable(
+    Number(localStorage.getItem("selectedArtistId")) || null
 );
 selectedArtistId.subscribe((val) => {
-    if (val) {
-        localStorage.setItem("selectedArtistId", val);
+    if (val !== null) {
+        localStorage.setItem("selectedArtistId", String(val));
     } else {
         localStorage.removeItem("selectedArtistId");
     }
@@ -137,7 +137,7 @@ selectedArtistId.subscribe((val) => {
 
 export const songDetailsUpdater = writable(0);
 export const isScrapbookShown = writable(true);
-
+export const isFullScreenLyrics = writable(false);
 // Library menu
 export const isFindFocused = writable(false);
 export const shouldFocusFind: Writable<ActionEvent | null> = writable(null);
@@ -177,6 +177,7 @@ const defaultSettings: UserSettings = {
     geniusApiKey: null,
     isArtistsToolkitEnabled: false,
     scrapbookLocation: null,
+    songbookLocation: null,
     downloadLocation: null,
     theme: "dark",
     outputDevice: null, // default system device,

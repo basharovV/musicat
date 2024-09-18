@@ -4,11 +4,10 @@
     import { db } from "../../data/db";
     import {
         isDraggingExternalFiles,
+        isFullScreenLyrics,
         isScrapbookShown,
         selectedArtistId,
-
         userSettings
-
     } from "../../data/store";
 
     import { blur } from "svelte/transition";
@@ -40,8 +39,6 @@
         e.stopPropagation();
         e.preventDefault();
         const containerWidth = window.innerWidth;
-        console.log("container width", containerWidth);
-        console.log("clientX", e.pageX);
         if (containerWidth - e.clientX > SCRAPBOOK_MIN_SIZE) {
             showCloseScrapbookPrompt = false;
             scrapbookSize = containerWidth - e.clientX;
@@ -56,7 +53,7 @@
     }
     function stopResizeListener() {
         isResizing = false;
-        container.removeEventListener("mousemove", onResize);
+        container?.removeEventListener("mousemove", onResize);
         if (showCloseScrapbookPrompt) {
             $isScrapbookShown = false;
             showCloseScrapbookPrompt = false;
@@ -71,28 +68,36 @@
 
     onDestroy(() => {
         unlistenFolderWatch();
+        container?.removeEventListener("mousemove", onResize);
+        document?.removeEventListener("mouseup", stopResizeListener);
     });
+    
 </script>
 
 <container
     bind:this={container}
     class:scrapbook-open={$isScrapbookShown}
     style={$isScrapbookShown
-        ? `grid-template-columns: 1fr ${scrapbookSize}px;`
-        : "grid-template-columns: 1fr;"}
+        ? `grid-template-columns: 1fr auto ${scrapbookSize}px;`
+        : "grid-template-columns: 1fr auto;"}
 >
     {#if $isDraggingExternalFiles}
         <ContentDropzone songProject={selectedSongProject} />
     {/if}
     <header>
-        <YourArtists bind:selectedTab selectedArtist={$selectedArtist} />
+        <YourArtists selectedArtist={$selectedArtist} />
     </header>
+    <section class="content" class:full-screen={$isFullScreenLyrics}>
+        <Music {selectedArtist} />
+    </section>
+
+    <resize-handle
+        on:mousedown={startResizeListener}
+        class:resizing={isResizing}
+    />
+
     {#if $isScrapbookShown}
         <section class="scrapbook">
-            <resize-handle
-                on:mousedown={startResizeListener}
-                class:resizing={isResizing}
-            />
             <div class="content">
                 {#if showCloseScrapbookPrompt}
                     <div
@@ -106,13 +111,6 @@
             </div>
         </section>
     {/if}
-    <section class="content">
-        {#if selectedTab === "Music"}
-            <Music {selectedArtist} />
-        {:else if selectedTab === "Info"}
-            <ArtistInfo artist={$selectedArtist} />
-        {/if}
-    </section>
     <img class="bulb" src="images/bulby_bulb.png" alt="" />
 </container>
 
@@ -143,80 +141,36 @@
     container {
         text-align: left;
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr auto auto;
+        gap: 5px;
         grid-template-rows: auto 1fr;
-        overflow: hidden;
-
-        border: 0.7px solid #ffffff2a;
         margin: 5px 5px 5px 0;
         border-radius: 5px;
         overflow: hidden;
-        background-color: #0d0c0c2a;
 
         &.scrapbook-open {
             /* grid-template-columns: 1fr 350px; */ // INLINE STYLED
             grid-template-rows: auto 1fr;
-        }
-
-        .title {
-            grid-row: 1;
-            grid-column: 1;
-            padding: 2em;
-        }
-
-        .subtitle {
-            display: block;
-            margin-top: 1em;
-            opacity: 0.5;
+            grid-template-columns: 1fr auto auto;
         }
 
         header {
             grid-row: 1;
-            grid-column: 1 / 2;
-            display: flex;
-            flex-direction: row;
-            gap: 2em;
-            align-items: center;
-            padding: 0 0.7em 0 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.093);
-            /* border-left: 1px solid rgba(255, 255, 255, 0.093); */
-            background-color: rgba(0, 0, 0, 0.259);
-
-            .bg {
-                position: absolute;
-                left: 0;
-                bottom: 0;
-                right: 0;
-                top: 0;
-                width: 100%;
-                object-fit: cover;
-                object-position: -0px -320px;
-                z-index: -1;
-            }
-            h2 {
-                margin: 0.2em 0;
-            }
-        }
-
-        .artist-info {
-            grid-row: 2;
-            grid-column: 1 / 3;
-            padding: 0.7em 2em;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.093);
-
-            p {
-                margin: 0;
-            }
+            grid-column: 1;
+            z-index: 2;
         }
 
         .scrapbook {
             background-color: transparent;
             grid-row: 1 / 3;
-            grid-column: 2;
+            grid-column: 3;
             height: 100%;
-            border-left: 1px solid rgba(255, 255, 255, 0.093);
-            overflow: visible;
+            overflow: auto;
             position: relative;
+            background-color: var(--panel-background);
+            border-radius: 5px;
+            border: 0.7px solid
+                color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
 
             .close-scrapbook-prompt {
                 position: absolute;
@@ -232,33 +186,57 @@
                 backdrop-filter: blur(5px);
                 z-index: 10;
             }
-            resize-handle {
-                display: block;
-                position: absolute;
-                left: -2px;
-                top: 0;
-                bottom: 0;
-                width: 4px;
-                &:hover,
-                &.resizing {
-                    background-color: #5123dd;
-                }
-
-                cursor: ew-resize;
-            }
-            div {
-                padding: 2em;
-            }
             .content {
                 padding-top: 0;
             }
+        }
+
+        resize-handle {
+            grid-column: 3;
+            grid-row: 1 / 3;
+            display: block;
+            display: block;
+            position: relative;
+            height: 100%;
+            width: 4px;
+            left: -6px;
+            z-index: 19;
+
+            &::after {
+                content: "";
+                display: block;
+                position: absolute;
+                margin: auto;
+                top: 0;
+                bottom: 0;
+                left: -2px;
+                right: 0;
+                width: 4px;
+                box-sizing: border-box;
+                background: url("/images/resize-handle.svg") no-repeat center;
+                opacity: 0.3;
+                /* border: 2px dotted color-mix(in srgb, var(--inverse) 90%, transparent); */
+                z-index: 10;
+            }
+            &:hover,
+            &.resizing {
+                background-color: var(--accent-secondary);
+            }
+
+            cursor: ew-resize;
         }
     }
 
     .content {
         width: 100%;
-        grid-column: 1 / 2;
-        grid-row: 2 / 4;
+        grid-column: 1;
+        grid-row: 2;
+        z-index: 1;
+        overflow: hidden;
+        &.full-screen {
+            z-index: 22;
+            overflow: visible;
+        }
     }
     hr {
         border-top: 1px solid rgba(255, 255, 255, 0.093);

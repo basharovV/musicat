@@ -31,6 +31,7 @@
         isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
+        isTagCloudOpen,
         isTrackInfoPopupOpen,
         isWaveformOpen,
         isWikiOpen,
@@ -1256,6 +1257,7 @@
                                 class:selected={$uiView === "your-music"}
                                 on:click={() => {
                                     $uiView = "your-music";
+                                    $isTagCloudOpen = false;
                                     $selectedPlaylistId = null;
                                     $selectedSmartQuery = null;
                                 }}

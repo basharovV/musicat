@@ -1,29 +1,39 @@
 <script lang="ts">
     import { open } from "@tauri-apps/plugin-dialog";
+    import { open as openShell } from "@tauri-apps/plugin-shell";
     import { pictureDir } from "@tauri-apps/api/path";
     import { liveQuery } from "dexie";
     import tippy from "tippy.js";
     import type { ArtistProject } from "../../App";
     import { db } from "../../data/db";
-    import { isScrapbookShown, selectedArtistId } from "../../data/store";
+    import {
+        isScrapbookShown,
+        isSettingsOpen,
+        selectedArtistId,
+        userSettings
+    } from "../../data/store";
 
     import { autoWidth } from "../../utils/AutoWidth";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
+    import Dropdown from "../ui/Dropdown.svelte";
+    import { convertFileSrc } from "@tauri-apps/api/core";
+    import { currentThemeObject } from "../../theming/store";
+    import Input from "../ui/Input.svelte";
+    import Divider from "../ui/Divider.svelte";
+    import LL from "../../i18n/i18n-svelte";
 
-    // const tabs = ["Music", "Media", "Gigs", "Info", "Analytics"]; EVENTUALLY
-    const tabs = ["Music", "Info"];
-
-    export let selectedTab = tabs[0];
     export let selectedArtist: ArtistProject;
 
     $: artists = liveQuery(async () => {
         let results = await db.artistProjects.toArray();
-        if ($selectedArtistId === null && results.length > 0) {
-            $selectedArtistId = results[0].name;
+        if ($selectedArtistId === null && results?.length > 0) {
+            $selectedArtistId = results[0]?.id;
+        } else if (results.length === 0) {
+            $selectedArtistId = null;
         }
-        return results;
+        return results || [];
     });
 
     let newArtist = "";
@@ -34,7 +44,8 @@
             name: newArtist,
             members: []
         });
-        $selectedArtistId = await (await db.artistProjects.get(id)).name;
+        console.log("id created", id);
+        $selectedArtistId = await (await db.artistProjects.get(id)).id;
         newArtist = "";
         showArtistAddUi = false;
     }
@@ -57,16 +68,24 @@
         } else {
             await db.artistProjects.delete($selectedArtistId);
             $selectedArtistId = null;
+            editedArtistName = null;
             isConfirmingArtistDelete = false;
             showMenu = false;
             const filteredArtists = $artists.filter(
-                (a) => a.name !== $selectedArtistId
+                (a) => a.id !== $selectedArtistId
             );
             console.log("filteredArtists", filteredArtists);
             if (filteredArtists?.length) {
-                $selectedArtistId = filteredArtists[0].name;
+                $selectedArtistId = filteredArtists[0]?.id;
             }
+            isEditingArtist = false;
         }
+    }
+
+    async function updateArtistName(name) {
+        await db.artistProjects.update($selectedArtistId, { name });
+        editedArtistName = null;
+        isEditingArtist = false;
     }
 
     let matchingArtists: string[] = [];
@@ -86,26 +105,6 @@
 
     function onLostFocus() {
         matchingArtists = [];
-    }
-
-    async function onInput() {
-        let matched = [];
-        if (newArtist.trim().length > 0) {
-            updateQueryPartsAutocompletePos();
-            matchingArtists = [];
-            if (distinctArtists === undefined) {
-                distinctArtists = await db.songs.orderBy("artist").uniqueKeys();
-            }
-            distinctArtists.forEach((a) => {
-                if (a.toLowerCase().includes(newArtist.toLowerCase())) {
-                    matched.push(a);
-                }
-            });
-
-            matchingArtists = matched;
-        } else {
-            matchingArtists = [];
-        }
     }
 
     function onSelectArtist(artist) {
@@ -140,69 +139,131 @@
         } else {
             console.log("selected", selected);
             // user selected a single file, update artist info
-            if (typeof selected === "string") {
-                selectedArtist.profilePhoto = "asset://localhost/" + selected;
+            if (typeof selected?.path === "string") {
+                selectedArtist.profilePhoto = selected.path;
             }
-            db.artistProjects.update(selectedArtist.name, selectedArtist);
+            await db.artistProjects.put(selectedArtist);
+            selectedArtist = await db.artistProjects.get($selectedArtistId);
             // addFolder(selected);
         }
     }
+
+    let isEditingArtist = null;
+    let editedArtistName = null;
 </script>
 
-<!-- <h3>Your artists and projects</h3> -->
 <div class="header">
-    {#if $artists?.length && $selectedArtistId}
-        <div
-            class="profile-pic"
-            use:tippy={{
-                theme: "slim",
-                content: "Add a profile pic",
-                placement: "bottom"
-            }}
-            on:click={showProfilePicPicker}
-        >
-            {#if selectedArtist?.profilePhoto}
-                <img src={selectedArtist.profilePhoto} />
+    {#if $artists?.length && selectedArtist && !showArtistAddUi}
+        <div class="selected-artist">
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div
+                class="profile-pic"
+                use:tippy={{
+                    theme: "slim",
+                    content: "Add a profile pic",
+                    placement: "bottom"
+                }}
+                on:click={showProfilePicPicker}
+            >
+                {#if selectedArtist?.profilePhoto}
+                    <!-- svelte-ignore a11y-missing-attribute -->
+                    <img src={convertFileSrc(selectedArtist.profilePhoto)} />
+                {:else}
+                    <Icon icon="fa-solid:cat" />
+                {/if}
+            </div>
+            {#if isEditingArtist}
+                <Input
+                    bind:value={editedArtistName}
+                    small
+                    onEnterPressed={() => {
+                        updateArtistName(editedArtistName);
+                    }}
+                />
+                <Icon
+                    icon="material-symbols:close"
+                    onClick={() => (isEditingArtist = false)}
+                    color={$currentThemeObject["icon-secondary"]}
+                    size={16}
+                    boxed
+                />
+                <Icon
+                    icon="charm:menu-kebab"
+                    color="#898989"
+                    onClick={(e) => onMenuClick(e)}
+                    size={16}
+                    boxed
+                />
+                <Divider />
             {:else}
-                <Icon icon="fa-solid:cat" />
-            {/if}
-        </div>
-        <div class="artist-info">
-            {#if $artists?.length && $selectedArtistId}
-                <select bind:value={$selectedArtistId}>
-                    {#each $artists as artist (artist.name)}
-                        <option
-                            value={artist.name}
-                            class="artist"
-                            on:click={() => {
-                                $selectedArtistId = artist.name;
+                <div class="artist-info">
+                    {#if $artists?.length && selectedArtist}
+                        <Dropdown
+                            size={18}
+                            selected={{
+                                value: selectedArtist.id,
+                                label: selectedArtist.name
+                            }}
+                            options={$artists.map((a) => {
+                                return {
+                                    value: a.id,
+                                    label: a.name
+                                };
+                            })}
+                            onSelect={(artist) => {
+                                $selectedArtistId = artist;
                             }}
                         >
-                            <p>{artist.name}</p>
-                        </option>
-                    {/each}
-                </select>
-            {/if}
-
-            {#if $artists?.length && $selectedArtistId}
-                <div class="tabs">
-                    {#each tabs as tab}
-                        <p
-                            class:active={tab === selectedTab}
-                            on:click={() => {
-                                selectedTab = tab;
-                            }}
-                        >
-                            {tab}
-                        </p>
-                    {/each}
+                            {#each $artists as artist (artist.name)}
+                                <option
+                                    value={artist.name}
+                                    class="artist"
+                                    on:click={() => {
+                                        $selectedArtistId = artist.id;
+                                    }}
+                                >
+                                    <p>{artist.name}</p>
+                                </option>
+                            {/each}
+                        </Dropdown>
+                    {/if}
+                    <Icon
+                        icon="ic:baseline-edit"
+                        size={14}
+                        onClick={() => {
+                            isEditingArtist = true;
+                            editedArtistName = selectedArtist.name;
+                        }}
+                        boxed
+                        color={$currentThemeObject["icon-secondary"]}
+                    />
+                    <Icon
+                        icon="ph:plus-fill"
+                        size={14}
+                        onClick={() => {
+                            showArtistAddUi = true;
+                        }}
+                        boxed
+                        color={$currentThemeObject["icon-secondary"]}
+                    />
                 </div>
             {/if}
         </div>
-    {:else}
-        <h3>Welcome to your Artist's Toolkit</h3>
-        <p class="arrow">→</p>
+    {:else if $artists?.length === 0 || showArtistAddUi}
+        <form on:submit|preventDefault={onCreateArtist}>
+            <Input bind:value={newArtist} placeholder="Add an artist" small />
+        </form>
+        {#if $artists?.length > 0}
+            <Icon
+                icon="material-symbols:close"
+                onClick={() => (showArtistAddUi = false)}
+                color={$currentThemeObject["icon-secondary"]}
+                size={16}
+                boxed
+            />
+        {/if}
     {/if}
+
     {#if showMenu}
         <Menu
             x={menuPos.x}
@@ -223,35 +284,23 @@
     {/if}
 
     <div class="artist-options" class:onboarding={$artists?.length === 0}>
-        <Icon
-            icon="charm:menu-kebab"
-            color="#898989"
-            onClick={(e) => onMenuClick(e)}
-        />
-        {#if $artists?.length === 0 || showArtistAddUi}
-            <form on:submit|preventDefault={onCreateArtist}>
-                <input
-                    use:autoWidth
-                    bind:this={artistInput}
-                    bind:value={newArtist}
-                    on:input={onInput}
-                    on:focus={onFocus}
-                    on:blur={onLostFocus}
-                    type="text"
-                    class="artist add{$artists?.length ? ' alt' : ''}"
-                    placeholder="Add an artist"
-                />
-            </form>
-        {/if}
-        {#if !showArtistAddUi && $artists?.length > 0}
+        <div
+            use:tippy={{
+                content: $userSettings.songbookLocation
+                    ? $LL.artistsToolkit.header.songbookLocationHint({
+                          path: $userSettings.songbookLocation
+                      })
+                    : $LL.artistsToolkit.header.songbookLocationHintEmpty(),
+                placement: "top"
+            }}
+        >
             <Icon
-                icon="material-symbols:add"
-                color="#898989"
-                onClick={(e) => {
-                    showArtistAddUi = true;
+                icon="material-symbols:folder"
+                onClick={() => {
+                    $isSettingsOpen = true;
                 }}
-            />
-        {/if}
+            ></Icon>
+        </div>
         <Icon
             icon="ant-design:bulb-outlined"
             onClick={() => {
@@ -277,6 +326,20 @@
 </div>
 
 <style lang="scss">
+    .header {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        height: 44px;
+        padding: 4px;
+        background-color: var(--panel-background);
+        border-radius: 5px;
+        border: 0.7px solid
+            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
+    }
     h3 {
         /* color: rgb(137, 130, 130); */
         font-family: Snake;
@@ -286,13 +349,13 @@
     }
 
     .profile-pic {
-        width: 80px;
-        height: 80px;
-        padding: 4px;
+        height: 32px;
+        object-fit: cover;
+        width: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px solid rgba(255, 255, 255, 0.093);
+        border: 1px solid rgba(255, 255, 255, 0.093);
         border-radius: 8px;
         margin-right: 0.6em;
 
@@ -301,7 +364,8 @@
             height: 100%;
             object-fit: cover;
             border-radius: 4px;
-            box-shadow: 2px 2px 50px 40px rgba(72, 16, 128, 0.181);
+            box-shadow: 2px 2px 50px 40px
+                color-mix(in srgb, var(--accent-secondary) 8%, transparent);
         }
         &:hover {
             background-color: #5150523a;
@@ -351,33 +415,27 @@
     .arrow {
         margin: 0 1em;
     }
-    .header {
+
+    .selected-artist {
         display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px;
-        padding: 8px;
-        width: 100%;
-        min-height: 80px;
+        flex-grow: 1;
     }
 
     .artist-info {
         flex-grow: 2;
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
     }
 
     .artist-options {
         // In onboarding mode, the artist info isn't shown, so this should take up the whole space
-        &.onboarding {
-            flex-grow: 2;
-        }
+
+        flex: 1;
         display: flex;
         flex-direction: row;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: flex-end;
 
         form {
             flex-grow: 1;

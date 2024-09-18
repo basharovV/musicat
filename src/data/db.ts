@@ -31,18 +31,18 @@ export class MySubClassedDexie extends Dexie {
             scrapbook: "id, name",
             playlists: "++id, title"
         });
-        this.version(17)
+        this.version(19)
             .stores({
                 songs: "id, title, artist, composer, album, genre, year, path, duration, isFavourite, originCountry, dateAdded, [artist+year+album+trackNumber], [artist+album+trackNumber], [album+trackNumber], [artist+album], tags", // Primary key and indexed props
                 albums: "id, title, displayTitle, artist, year",
                 smartQueries: "++id, name",
-                artistProjects: "name",
+                artistProjects: "++id, name",
                 songProjects: "++id, title, artist, album",
                 scrapbook: "++id, name",
                 playlists: "++id, title"
             })
-            .upgrade((trans) => {
-                return trans
+            .upgrade(async (trans) => {
+                await trans
                     .table("albums")
                     .toCollection()
                     .modify((album: Album) => {

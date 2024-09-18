@@ -12,6 +12,7 @@
     export let autoFocus = false;
     export let placeholder = "";
     export let minimal = false;
+    export let padding = true;
     export let small = false;
     export let alt = false;
 
@@ -63,6 +64,7 @@
         class:minimal
         class:small
         class:alt
+        class:padding
         on:keydown={onKeyDown}
         spellcheck="false"
         autocomplete="off"
@@ -79,7 +81,7 @@
     }
     input {
         line-height: inherit;
-        padding: 0.3em;
+        padding: 0;
         background-color: var(--input-bg);
         border: 1px solid
             color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
@@ -93,6 +95,10 @@
                 vvar(--input-bg) 60%,
                 var(--inverse)
             );
+        }
+
+        &.padding {
+            padding: 0.3em;
         }
 
         &.alt {

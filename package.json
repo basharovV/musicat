@@ -29,6 +29,8 @@
         "audiomotion-analyzer": "^3.6.0",
         "autoprefixer": "^10.4.8",
         "better-cue-parser": "^0.3.1",
+        "chord-mark": "^0.17.0",
+        "chord-mark-themes": "^0.17.0",
         "dexie": "^4.0.4",
         "hotkeys-js": "^3.9.5",
         "konva": "^9.3.14",
@@ -64,6 +66,7 @@
         "wtf_wikipedia": "^10.3.2"
     },
     "dependencies": {
+        "chord-symbol": "^4.0.0",
         "is-dark-color": "^1.2.0",
         "mousetrap": "^1.6.5",
         "music-metadata-browser": "^2.5.8",

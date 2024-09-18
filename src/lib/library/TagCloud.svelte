@@ -145,6 +145,9 @@
             vertical-align: middle;
             cursor: default;
             color: var(--text-inverse);
+            font-size: 13px;
+            position: relative;
+            bottom: 1px;
         }
     }
 </style>

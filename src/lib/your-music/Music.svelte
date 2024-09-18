@@ -11,9 +11,6 @@
     let selectedSongProject: SongProject;
     let songProjectSelection;
 
-    // selectedArtistId.subscribe(async (artistId) => {
-    //     selectedArtist = await db.artistProjects.get(artistId);
-    // });
     export let selectedArtist;
 
     $: songs = liveQuery<Song[]>(async () => {
@@ -21,7 +18,7 @@
         if ($selectedArtistId) {
             const results = await db.songs
                 .where("artist")
-                .equalsIgnoreCase($selectedArtistId);
+                .equals($selectedArtistId);
             resultsArray = await results.toArray();
         }
         isLoading = false;
@@ -35,11 +32,16 @@
         if ($selectedArtistId) {
             const results = await db.songProjects
                 .where("artist")
-                .equalsIgnoreCase($selectedArtistId);
+                .equals($selectedArtistId);
             resultsArray = await results.toArray();
         }
         return resultsArray;
     });
+
+    $: if ($selectedArtist && $songProjects?.length) {
+        // Set the first song project
+        selectedSongProject = $songProjects[0];
+    }
 
     let librarySongsHighlighted = [];
 
@@ -163,14 +165,20 @@
     .container {
         height: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: auto 1fr;
         grid-template-rows: 1fr 1fr;
+        gap: 5px;
     }
 
     .songs {
         grid-row: 1 / 3;
         grid-column: 1;
-        border-right: 1px dashed rgba(255, 255, 255, 0.093);
+        border-right: 1px solid
+            color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
+        background-color: var(--panel-background);
+        border-radius: 5px;
+        border: 0.7px solid
+            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
         div {
             padding: 2em;
         }
@@ -203,7 +211,6 @@
     }
 
     section {
-        background-color: #242026b3;
         p {
             opacity: 0.5;
         }
@@ -212,6 +219,10 @@
         grid-row: 1 / 3;
         grid-column: 2;
         height: 100%;
+        background-color: var(--panel-background);
+        border-radius: 5px;
+        border: 0.7px solid
+            color-mix(in srgb, var(--type-bw-inverse) 45%, transparent);
         div {
             padding: 2em;
         }

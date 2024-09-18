@@ -15,9 +15,7 @@ use std::error::Error;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
-use tauri::menu::{
-    MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
-};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
 use tempfile::Builder;

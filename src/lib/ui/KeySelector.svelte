@@ -125,6 +125,7 @@
     }
 
     function onSelectItem(item: MenuItem) {
+        console.log("onSelectItem", item);
         value = item.text;
         onKeyUpdated(value);
         matches = [];
@@ -152,7 +153,6 @@
     maxlength="3"
     on:input={onInput}
     on:focus={onFocus}
-    on:blur={onLostFocus}
     type="text"
     class="artist add{options?.length ? ' alt' : ''}"
     placeholder="key"

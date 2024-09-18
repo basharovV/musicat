@@ -170,6 +170,8 @@ const en = {
         folder: "{{1 folder | ?? folders}}",
         importing: "Importing..",
         enableArtistsToolkit: "Enable Artist's Toolkit",
+        songbookLocation: "Songbook location",
+        scrapbookLocation: "Scrapbook location",
         enableAIFeatures: "Enable AI features",
         aiModel: "AI Model (LLM)",
         openApiKey: "OpenAI API Key",
@@ -186,12 +188,23 @@ const en = {
         close: "Close tags",
     },
     artistsToolkit: {
+        header: {
+            songbookLocationHint: "Your songbook location managed by Musicat. Currently set to {path}",
+            songbookLocationHintEmpty: "Please set your songbook location to be managed by Musicat.",
+        },
         scrapbook: {
             title: "Scrapbook",
             setupHint: "Please set up your scrapbook location in settings",
             notFoundError: "Scrapbook location not found",
             openSettings: "Open settings",
             openInFinder: "Open in Finder",
+        },
+        songDetails: {
+            tabs: {
+                lyrics: "Lyrics & Chords",
+                files: "Files",
+                other: "Other",
+            }
         }
     }
 } satisfies BaseTranslation;

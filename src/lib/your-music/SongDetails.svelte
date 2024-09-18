@@ -36,6 +36,7 @@
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
     import KeySelector from "../ui/KeySelector.svelte";
+    import LL from "../../i18n/i18n-svelte";
 
     export let songProject: SongProject;
     export let song: Song; // We might need to create a project based on this song
@@ -85,31 +86,6 @@
 
     // Automatically save to database on any changes
 
-    // $: {
-    //     // Will only have ID once it's a song project
-    //     // So normal Songs won't be saved automatically,
-    //     // needs to be converted into a project first
-
-    //     if (
-    //         songProject?.id !== undefined &&
-    //         songProject.id !== songProjectClone?.id
-    //     ) {
-    //         reset();
-    //     } else if (
-    //         (songProject?.id !== undefined &&
-    //             songProject.id === songProjectClone?.id &&
-    //             !isEqual(songProject, songProjectClone)) ||
-    //         $songDetailsUpdater
-    //     ) {
-    //         console.log("putting clone: ;", songProjectClone);
-    //         if (songProjectClone) {
-    //             db.songProjects.put(songProjectClone);
-    //         }
-    //     } else {
-    //         reset();
-    //     }
-    // }
-
     // Instead of the above just have listeners for things that have changed
     // and then we don't need to worry about which direction the changes are in.
     // i.e we know a user has initiated the action
@@ -134,7 +110,6 @@
         const title = songProject.title;
         onDeleteSongProject(songProject);
         showMenu = false;
-        fullScreenLyrics = false;
 
         toast.success(`Deleted ${title}`);
     }
@@ -321,63 +296,26 @@
         saveSongProject();
     }
 
-    const tabs: Array<"music" | "lyrics" | "other"> = [
-        "music",
-        "lyrics",
-        "other"
+    interface Tab {
+        name: string;
+        value: string;
+    }
+
+    const tabs: Array<Tab> = [
+        { name: $LL.artistsToolkit.songDetails.tabs.lyrics(), value: "lyrics" },
+        { name: $LL.artistsToolkit.songDetails.tabs.files(), value: "files" },
+        { name: $LL.artistsToolkit.songDetails.tabs.other(), value: "other" }
     ];
-    let selectedTab: "music" | "lyrics" | "other" = tabs[0];
+
+    let selectedTab: Tab = tabs[0];
 
     export let onDeleteSongProject;
-
-    const fontSizes = [
-        "font-12",
-        "font-14",
-        "font-20",
-        "font-24",
-        "font-32",
-        "font-48"
-    ];
-
-    let currentFontSizeIdx = 3;
-    $: currentFontSize = fontSizes[currentFontSizeIdx];
-
-    function increaseFontSize() {
-        currentFontSizeIdx =
-            currentFontSizeIdx <= fontSizes.length - 2
-                ? currentFontSizeIdx + 1
-                : fontSizes.length - 1;
-    }
-    function decreaseFontSize() {
-        currentFontSizeIdx =
-            currentFontSizeIdx > 0 ? currentFontSizeIdx - 1 : 0;
-    }
-    let fullScreenLyrics = false;
-    function toggleFullScreenLyrics() {
-        fullScreenLyrics = !fullScreenLyrics;
-    }
-
-    // Shortcuts
-
-    let modifier = $os === "macos" ? "cmd" : "ctrl";
-    hotkeys(`${modifier}+=`, function (event, handler) {
-        increaseFontSize();
-    });
-    hotkeys(`${modifier}+-`, function (event, handler) {
-        decreaseFontSize();
-    });
 
     // Lifecycle
 
     onMount(() => {
         containerRect = container.getBoundingClientRect();
     });
-
-    onDestroy(() => {
-        hotkeys.unbind(`${modifier}+=`);
-        hotkeys.unbind(`${modifier}+-`);
-    });
-
     async function addOther(filePath: string, type: ContentFileType) {
         // Check if already exists, if so show a message
         const filename = filePath.split("/").pop();
@@ -426,14 +364,14 @@
             const fileType = getContentFileType(droppedFile);
             switch (fileType.type) {
                 case "audio":
-                    if (selectedTab === "music") {
+                    if (selectedTab.value === "files") {
                         addRecording(droppedFile);
-                    } else if (selectedTab === "other") {
+                    } else if (selectedTab.value === "other") {
                         addOther(droppedFile, fileType);
                     }
                     break;
                 case "txt":
-                    if (selectedTab === "lyrics") {
+                    if (selectedTab.value === "lyrics") {
                         const readText = await readTextFile(droppedFile);
                         if (readText) {
                             // TODO confirm if want to append or replace?
@@ -521,28 +459,6 @@
         handle a drop, grabbing the dragged item from the store. 
         */
         console.log("drop", evt);
-
-        // If we have support for
-        // const items = evt.dataTransfer.items;
-        // for (let i = 0; i < items.length; i++) {
-        //     try {
-        //         const content = await getDropDataAsString(items[i]);
-        //         const parsed = JSON.parse(content);
-        //         if (parsed && parsed.type) {
-        //             const item = parsed as ArtistContentItem;
-
-        //             switch (item.type) {
-        //                 case "file":
-        //                     if (item.fileType.type === "audio") {
-        //                         // Add as recording
-        //                         await addRecording(item.path);
-        //                     }
-        //             }
-        //         }
-        //     } catch (err) {
-        //         console.error("error doing drop: ", err);
-        //     }
-        // }
     }
 
     $: {
@@ -588,11 +504,13 @@
             }
         }
     }
+
+    let isAddingLyricist = false;
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <container
     bind:this={container}
-    class:full-screen={fullScreenLyrics}
     class:dragging={isDragging}
     on:mouseenter={onMouseEnter}
     on:mouseleave={onMouseLeave}
@@ -600,8 +518,8 @@
     on:dragleave={onDragLeave}
     dropzone="copy"
 >
-    <header>
-        {#if songProjectClone}
+    {#if songProjectClone}
+        <header>
             <div class="info">
                 <span>
                     <p>"</p>
@@ -622,15 +540,17 @@
                     }}
                 />
             {/if}
-        {:else}
-            <div class="no-song-selected">
-                <h2>- organise your music and lyrics ideas</h2>
-                <h2>- track progress of songs</h2>
-                <h2>- for multiple artists and projects</h2>
-                <img src="/icon.png" />
-            </div>
-        {/if}
-    </header>
+        </header>
+    {:else}
+        <div class="no-song-selected">
+            <h1>Welcome to your Songbook!</h1>
+            <h2>- organise your music and lyrics ideas</h2>
+            <h2>- track progress of songs</h2>
+            <h2>- for multiple artists and projects</h2>
+            <!-- svelte-ignore a11y-missing-attribute -->
+            <img src="/icon.png" />
+        </div>
+    {/if}
     {#if showMenu}
         <Menu
             x={menuPos.x}
@@ -650,116 +570,112 @@
         </Menu>
     {/if}
     {#if songProjectClone}
-        <div class="details">
-            <div>
-                <p>in album:</p>
-                <input
-                    value={songProjectClone.album}
-                    on:input={onAlbumUpdated}
-                    placeholder="add an album"
-                />
-            </div>
-            <div>
-                <p>music written by:</p>
-                <div class="members">
-                    {#each songProjectClone.musicComposedBy as composer}
-                        <div class="member">
-                            <p>{composer}</p>
-                        </div>
-                        ,
-                    {/each}
+        <div class="credits-details">
+            <div class="credits">
+                <div>
+                    <p class="label">music by:</p>
+                    <div class="members">
+                        {#each songProjectClone.musicComposedBy as composer}
+                            <div class="member">
+                                <p>{composer}</p>
+                            </div>
+                            ,
+                        {/each}
+                    </div>
+                    <Input
+                        value={composerInput}
+                        onChange={onComposerUpdated}
+                        autoCompleteValue={composerAutocomplete}
+                        onEnterPressed={onAddComposer}
+                        onBackspacePressed={removeLastComposer}
+                        minimal
+                        tabBehavesAsEnter
+                        placeholder="add a composer"
+                    />
                 </div>
-                <Input
-                    value={composerInput}
-                    onChange={onComposerUpdated}
-                    autoCompleteValue={composerAutocomplete}
-                    onEnterPressed={onAddComposer}
-                    onBackspacePressed={removeLastComposer}
-                    minimal
-                    tabBehavesAsEnter
-                    placeholder="add a composer"
-                />
-            </div>
-            <div>
-                <p>lyrics written by:</p>
-                <div class="members">
-                    {#each songProjectClone.lyricsWrittenBy as lyricist}
-                        <div class="member">
-                            <p>{lyricist}</p>
+                <div>
+                    <p class="label">lyrics by:</p>
+                    <div class="members">
+                        {#each songProjectClone.lyricsWrittenBy as lyricist}
+                            <div class="member">
+                                <p>{lyricist}</p>
+                            </div>
+                            ,
+                        {/each}
+                    </div>
+                    {#if songProjectClone.lyricsWrittenBy.length === 0 || isAddingLyricist}
+                        <Input
+                            value={lyricistInput}
+                            onChange={onLyricistUpdated}
+                            autoCompleteValue={lyricistAutocomplete}
+                            onEnterPressed={onAddLyricist}
+                            onBackspacePressed={removeLastLyricist}
+                            minimal
+                            tabBehavesAsEnter
+                            placeholder="add a lyricist"
+                        />
+                    {:else if songProjectClone.lyricsWrittenBy.length > 0}
+                        <div
+                            class="add-tag"
+                            on:click={(e) => (isAddingLyricist = true)}
+                        >
+                            <Icon icon="ic:baseline-plus" size={20} />
                         </div>
-                        ,
-                    {/each}
+                    {/if}
                 </div>
-                <Input
-                    value={lyricistInput}
-                    onChange={onLyricistUpdated}
-                    autoCompleteValue={lyricistAutocomplete}
-                    onEnterPressed={onAddLyricist}
-                    onBackspacePressed={removeLastLyricist}
-                    minimal
-                    tabBehavesAsEnter
-                    placeholder="add a lyricist"
-                />
+            </div>
+            <div class="details">
+                <div>
+                    <p class="label">in album:</p>
+                    <Input
+                        value={songProjectClone.album}
+                        onChange={onAlbumUpdated}
+                        placeholder="add an album"
+                        minimal
+                    />
+                </div>
+                <div class="music-info">
+                    <div>
+                        <p class:bpm={bpmTicker % 2 === 0}>BPM:</p>
+                        <input
+                            value={songProjectClone.bpm ?? null}
+                            on:input={debounce(onBpmUpdated, 300)}
+                            on:focus={onBpmFocus}
+                            on:blur={stopBpmTicker}
+                            placeholder="bpm"
+                            max="300"
+                            min="20"
+                            autocomplete="off"
+                            spellcheck="false"
+                        />
+                    </div>
+                    <div>
+                        <p>key:</p>
+                        <KeySelector
+                            value={songProjectClone.key ?? null}
+                            {onKeyUpdated}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="music-info">
-            <div>
-                <p class:bpm={bpmTicker % 2 === 0}>BPM:</p>
-                <input
-                    value={songProjectClone.bpm ?? null}
-                    on:input={debounce(onBpmUpdated, 300)}
-                    on:focus={onBpmFocus}
-                    on:blur={stopBpmTicker}
-                    placeholder="bpm"
-                    max="300"
-                    min="20"
-                    autocomplete="off"
-                    spellcheck="false"
-                />
-            </div>
-            <div>
-                <p>key:</p>
-                <KeySelector
-                    value={songProjectClone.key ?? null}
-                    {onKeyUpdated}
-                />
-            </div>
+        <div class="content-tabs">
+            {#each tabs as tab}
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                    class="tab"
+                    class:selected={selectedTab === tab}
+                    on:click={() => {
+                        selectedTab = tab;
+                    }}
+                >
+                    <p>{tab.name}</p>
+                </div>
+            {/each}
         </div>
         <div class="content-container">
-            <div class="content-tabs">
-                {#each tabs as tab}
-                    <div
-                        class="tab"
-                        class:selected={selectedTab === tab}
-                        on:click={() => {
-                            selectedTab = tab;
-                        }}
-                    >
-                        <p>{tab}</p>
-                    </div>
-                {/each}
-            </div>
-            <div class="lyrics-options">
-                <Icon
-                    icon="mdi:format-font-size-decrease"
-                    onClick={decreaseFontSize}
-                />
-                <Icon
-                    icon="mdi:format-font-size-increase"
-                    onClick={increaseFontSize}
-                />
-                <Icon
-                    icon="icon-park-outline:full-screen-one"
-                    on:click={toggleFullScreenLyrics}
-                />
-            </div>
-
-            {#if selectedTab !== "other"}
-                <div class="bg-gradient" />
-            {/if}
-            <content class={selectedTab}>
-                {#if selectedTab === "music"}
+            <content class={selectedTab.value}>
+                {#if selectedTab.value === "files"}
                     <MusicTab
                         recordings={songProjectClone?.recordings}
                         {addRecording}
@@ -769,15 +685,13 @@
                         {onSelectSong}
                         showDropPlaceholder={isDragging}
                     />
-                {:else if selectedTab === "lyrics"}
+                {:else if selectedTab.value === "lyrics"}
                     <LyricsTab
-                        fontSize={currentFontSize}
-                        isFullScreen={fullScreenLyrics}
                         lyrics={songProjectClone?.lyrics}
                         {onLyricsUpdated}
                         enabled={songProjectClone?.id !== undefined}
                     />
-                {:else if selectedTab === "other"}
+                {:else if selectedTab.value === "other"}
                     <OtherTab
                         items={songProjectClone.otherContentItems}
                         enabled={songProjectClone?.id !== undefined}
@@ -802,59 +716,11 @@
             }
         }
 
-        &.full-screen {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            right: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 20;
-            background-color: #252126;
-
-            grid-template-rows: 1fr;
-            .details,
-            .music-info {
-                display: none;
-            }
-            header {
-                padding: 2em;
-                position: absolute;
-                z-index: 5;
-            }
-
-            .lyrics-options {
-                position: absolute;
-                top: 5px;
-                right: 0;
-                z-index: 5;
-            }
-            .delete-icon {
-                display: none;
-            }
-            .content-tabs {
-                margin-top: 6em;
-                z-index: 5;
-            }
-            content {
-                top: 8.5em;
-                &.lyrics {
-                    top: 0;
-                    margin: auto;
-                    z-index: 4;
-                }
-            }
-            .bg-gradient {
-                display: none;
-            }
-        }
-
         header {
             display: grid;
             grid-template-columns: 1fr auto;
             align-items: center;
-            padding: 2em;
+            padding: 2em 2em 1em 2em;
             gap: 1em;
 
             h2 {
@@ -883,17 +749,29 @@
             }
         }
 
+        .credits-details {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            border-bottom: 1px solid
+                color-mix(in srgb, var(--type-bw-inverse) 8%, transparent);
+        }
+        .credits,
         .details {
             padding: 0 2em 1em 2em;
             > div {
                 display: flex;
                 flex-direction: row;
                 align-items: center;
-                width: 100%;
+                width: fit-content;
                 p {
-                    opacity: 0.7;
                     margin: 0;
                     white-space: nowrap;
+                    font-weight: 500;
+                    &.label {
+                        opacity: 0.7;
+                        font-weight: normal;
+                    }
                 }
             }
         }
@@ -908,18 +786,16 @@
             .member {
                 p {
                     padding: 0.3em;
+                    color: var(--text);
                     margin: 0;
                 }
             }
         }
 
         .music-info {
-            padding: 0 2em 0 2em;
             display: flex;
             flex-direction: row;
             justify-content: flex-start;
-            border-top: 1px solid rgba(255, 255, 255, 0.093);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.093);
 
             > div {
                 padding: 0.3em 0;
@@ -949,10 +825,10 @@
             position: relative;
             height: 100%;
             overflow: hidden;
+            display: grid;
+            grid-template-rows: 1fr;
 
             .content-header {
-                position: sticky;
-                top: 0;
                 width: 100%;
                 display: flex;
                 align-items: center;
@@ -960,42 +836,24 @@
                 z-index: 3;
                 pointer-events: visiblePainted;
             }
-
-            .bg-gradient {
-                height: 80px;
-                width: 100%;
-                top: 0;
-                width: 100%;
-                position: absolute;
-                z-index: 4;
-                background: linear-gradient(
-                    to bottom,
-                    #252126 0%,
-                    #242126c4 60%,
-                    transparent 100%
-                );
-            }
         }
 
         content {
-            position: absolute;
-            top: 2.5em;
-            left: 0;
-            right: 0;
-            bottom: 0;
             z-index: 0;
+            position: relative;
+            height: 100%;
+            overflow: hidden;
         }
 
         .content-tabs {
-            position: sticky;
-            top: 0;
-            left: 0;
             width: fit-content;
             display: flex;
-            justify-content: center;
+            width: 100%;
+            justify-content: flex-start;
             gap: 1em;
-            z-index: 5;
             padding: 0.3em 2em;
+            border-bottom: 1px solid
+                color-mix(in srgb, var(--type-bw-inverse) 8%, transparent);
             > .tab {
                 padding: 0.5em 0;
                 cursor: default;
@@ -1018,19 +876,6 @@
                 }
             }
         }
-
-        .lyrics-options {
-            position: absolute;
-            top: 8px;
-            right: 0px;
-            z-index: 5;
-            width: fit-content;
-            display: flex;
-            flex-direction: row;
-            gap: 3px;
-            align-items: center;
-            margin-right: 20px;
-        }
     }
     p {
         cursor: default;
@@ -1051,19 +896,31 @@
     }
 
     .no-song-selected {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding-top: 2em;
+        font-family: "Snake";
+        h1 {
+            color: var(--text);
+            margin-bottom: 0.5em;
+        }
         p,
         h1,
         h2,
         h3 {
-            opacity: 0.5;
             text-align: center;
         }
         h2 {
+            font-size: 3em;
             margin: 0.3em;
+            color: var(--text-secondary);
         }
         img {
-            width: 60%;
-            margin: 0 auto;
+            width: 30%;
+            margin: 1em auto;
             display: flex;
             opacity: 0.7;
         }

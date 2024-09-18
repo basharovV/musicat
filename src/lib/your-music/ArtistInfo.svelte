@@ -19,7 +19,7 @@
 
         members.push(newMember);
 
-        db.artistProjects.update(artist.name, {
+        db.artistProjects.update(artist.id, {
             members: [...members]
         });
         newMember = "";
@@ -30,7 +30,7 @@
             members.findIndex((m) => m === memberName),
             1
         );
-        db.artistProjects.update(artist.name, {
+        db.artistProjects.update(artist.id, {
             members
         });
     }
