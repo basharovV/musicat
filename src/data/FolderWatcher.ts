@@ -6,6 +6,7 @@ import { importPaths } from "./LibraryImporter";
 import { db } from "./db";
 import {
     bottomBarNotification,
+    currentSongProjects,
     isFolderWatchUpdate,
     userSettings
 } from "./store";
@@ -151,6 +152,72 @@ export async function startWatchingScrapbookFolder() {
                                 timeout: 2000
                             });
                             await db.scrapbook.delete(filehash);
+                        }
+                    }
+                }
+            }
+        },
+        { recursive: true }
+    );
+
+    return startWatching;
+}
+
+export async function startWatchingSongbookArtistsFolder(artistName: string) {
+    const settings = get(userSettings);
+    const songbookLocation = settings.songbookLocation;
+    const artistPath = songbookLocation + "/" + artistName;
+
+    const startWatching = await watchImmediate(
+        artistPath,
+        async (event) => {
+            console.log(event);
+            if (typeof event.type === "object") {
+                // Handle folders only
+                for (const path of event.paths) {
+                    const result = isFileOrDirectory(path);
+                    console.log("result", result);
+                    if (result === "file") {
+                        //
+                    } else if (result === "directory") {
+                        let pathExists = false;
+                        let folderName = path.split("/").pop();
+                        try {
+                            pathExists = await exists(path);
+                        } catch (err) {
+                            console.error("err in fileexists");
+                        }
+                        let songProjectExists = false;
+
+                        // Check if song is in current list
+                        get(currentSongProjects).forEach((song) => {
+                            if (song === folderName) {
+                                songProjectExists = true;
+                            }
+                        });
+
+                        // New/updated folder
+                        if (pathExists && !songProjectExists) {
+                            bottomBarNotification.set({
+                                text: "Folder watcher: Song added - updating songbook...",
+                                timeout: 2000
+                            });
+                            await currentSongProjects.update((p) => {
+                                p.push(folderName);
+                                return p;
+                            });
+                        }
+                        // Deletion
+                        else if (!pathExists && songProjectExists) {
+                            bottomBarNotification.set({
+                                text: "Folder watcher: Song deleted - updating songbook...",
+                                timeout: 2000
+                            });
+                            // Remove from list
+                            await currentSongProjects.update((p) => {
+                                p.splice(p.indexOf(folderName), 1);
+                                return p;
+                            });
                         }
                     }
                 }

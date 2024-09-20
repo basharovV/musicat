@@ -1,112 +1,61 @@
 <script lang="ts">
-    import { liveQuery } from "dexie";
-    import type { ArtistProject, Song, SongProject } from "src/App";
-    import { db } from "../../data/db";
-    import { selectedArtistId } from "../../data/store";
+    import type { ArtistProject, SongProject } from "src/App";
+    import { songbookSelectedArtist } from "../../data/store";
 
-    import CanvasLibrary from "../library/CanvasLibrary.svelte";
+    import {
+        deleteSongProject,
+        loadSongProject,
+        loadSongProjectsForArtist
+    } from "../../data/ArtistsToolkitData";
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
-    let selectedSong: Song;
     let selectedSongProject: SongProject;
-    let songProjectSelection;
 
-    export let selectedArtist;
-
-    $: songs = liveQuery<Song[]>(async () => {
-        let resultsArray = [];
-        if ($selectedArtistId) {
-            const results = await db.songs
-                .where("artist")
-                .equals($selectedArtistId);
-            resultsArray = await results.toArray();
-        }
-        isLoading = false;
-        return resultsArray;
-    });
+    let songProjectSelection: string;
 
     let isLoading = true;
 
-    $: songProjects = liveQuery<SongProject[]>(async () => {
-        let resultsArray = [];
-        if ($selectedArtistId) {
-            const results = await db.songProjects
-                .where("artist")
-                .equals($selectedArtistId);
-            resultsArray = await results.toArray();
-        }
-        return resultsArray;
-    });
+    let songs: string[] = [];
 
-    $: if ($selectedArtist && $songProjects?.length) {
+    async function loadSongbook() {
+        isLoading = true;
+        songs = await loadSongProjectsForArtist($songbookSelectedArtist.name);
+        // Sort the songs alphabetically
+        songs.sort();
+        console.log("songbook: songs", songs);
+        if (!selectedSongProject) {
+            songs?.length && onSelectSong(songs[0]);
+        }
+        isLoading = false;
+    }
+
+    $: if ($songbookSelectedArtist) {
         // Set the first song project
-        selectedSongProject = $songProjects[0];
+        loadSongbook();
     }
 
     let librarySongsHighlighted = [];
 
-    function onSelectSong(song: Song) {
-        selectedSong = song;
-        const existingSongProject = $songProjects.find(
-            (s) => s.id === song?.songProjectId
+    async function onSelectSong(song: string) {
+        selectedSongProject = await loadSongProject(
+            $songbookSelectedArtist.name,
+            song
         );
-        if (existingSongProject) {
-            selectedSongProject = existingSongProject;
-            songProjectSelection = selectedSongProject;
-        } else {
-            selectedSongProject = {
-                title: song?.title ?? "",
-                artist: song?.artist ?? "",
-                album: song?.album ?? "",
-                musicComposedBy: [],
-                lyricsWrittenBy: [],
-                lyrics: "",
-                recordings: [
-                    {
-                        recordingType: "master",
-                        song: song
-                    }
-                ],
-                otherContentItems: []
-            };
-            songProjectSelection = null;
-            console.log("library songs", song);
-        }
     }
 
-    function onSelectSongProject(songProject: SongProject) {
-        selectedSongProject = songProject;
-        selectedSong = null;
-        if (selectedSongProject?.recordings) {
-            // Also highlighted the corresponding song if any
-            const foundSong = $songs?.find(
-                (s) => s?.songProjectId === selectedSongProject?.id
-            );
-            if (foundSong) {
-                librarySongsHighlighted = [foundSong];
-            } else {
-                librarySongsHighlighted = [];
-            }
+    async function onSelectSongProject(songProject: SongProject | string) {
+        if (typeof songProject === "string") {
+            await onSelectSong(songProject);
         } else {
-            librarySongsHighlighted = [];
+            selectedSongProject = songProject;
         }
+        loadSongbook();
     }
 
     async function onDeleteSongProject(songProject: SongProject) {
-        console.log("deieting ", songProject);
-
-        const currentIndex = $songProjects?.findIndex(
-            (s) => s.id === songProject.id
-        );
-        await db.songProjects.delete(songProject.id);
-        if (currentIndex > 0 && currentIndex < $songProjects.length - 1) {
-            selectedSongProject = $songProjects[currentIndex - 1];
-        } else if (currentIndex === 1) {
-            selectedSongProject = $songProjects[0];
-        } else if (currentIndex === $songProjects.length - 1) {
-            selectedSongProject = $songProjects[$songProjects.length - 2];
-        }
-        songProjectSelection = selectedSongProject;
+        // TODO
+        await deleteSongProject(songProject.artist, songProject.title);
+        loadSongbook();
     }
 
     function onSongsHighlighted(songsHighlighted) {
@@ -114,7 +63,7 @@
     }
 
     $: {
-        if ($selectedArtistId !== selectedSongProject?.artist) {
+        if ($songbookSelectedArtist?.name !== selectedSongProject?.artist) {
             selectedSongProject = null;
         }
     }
@@ -122,42 +71,29 @@
 
 <div class="container">
     <section class="songs">
-        {#if $selectedArtist}
+        {#if $songbookSelectedArtist}
             <div>
                 <h2>my songs</h2>
             </div>
-            <SongProjects
-                songProjects={$songProjects}
-                artistId={$selectedArtist}
-                {onSelectSongProject}
-                bind:selectedSongProject={songProjectSelection}
-            />
-            <hr />
-            {#if $songs && $songs?.length}
-                <library>
-                    <div>
-                        <h2>in library</h2>
-                    </div>
-                    <CanvasLibrary
-                        theme="outline"
-                        bind:songsHighlighted={librarySongsHighlighted}
-                        allSongs={songs}
-                        {isLoading}
-                        isSmartQueryEnabled={false}
-                        {onSongsHighlighted}
-                    />
-                </library>
+            {#if $songbookSelectedArtist}
+                <SongProjects
+                    songProjects={songs}
+                    artist={$songbookSelectedArtist}
+                    {onSelectSongProject}
+                    bind:selectedSongProject={songProjectSelection}
+                />
             {/if}
         {/if}
     </section>
     <section class="song-details">
-        <SongDetails
-            songProject={selectedSongProject}
-            artist={$selectedArtist}
-            {onDeleteSongProject}
-            song={selectedSong}
-            {onSelectSong}
-        />
+        {#if selectedSongProject}
+            <SongDetails
+                songProject={selectedSongProject}
+                artist={$songbookSelectedArtist}
+                {onDeleteSongProject}
+                {onSelectSong}
+            />
+        {/if}
     </section>
 </div>
 
@@ -173,12 +109,10 @@
     .songs {
         grid-row: 1 / 3;
         grid-column: 1;
-        border-right: 1px solid
-            color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
         background-color: var(--panel-background);
         border-radius: 5px;
         border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
+            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
         div {
             padding: 2em;
         }
@@ -188,7 +122,7 @@
         margin: 0;
         font-family: "Snake";
         font-size: 3em;
-        color: #bbb9b9;
+        color: var(--text);
     }
 
     .title {
@@ -222,7 +156,7 @@
         background-color: var(--panel-background);
         border-radius: 5px;
         border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 45%, transparent);
+            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
         div {
             padding: 2em;
         }

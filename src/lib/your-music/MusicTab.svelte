@@ -41,22 +41,12 @@
     function playSong(recording) {
         AudioPlayer.playSong(recording.song);
     }
-
-    async function createProject() {
-        const songProjectId = (await db.songProjects.add(
-            songProject
-        )) as number;
-        if (song) {
-            song.songProjectId = songProjectId;
-            await db.songs.put(song);
-            onSelectSong && onSelectSong(song);
-        }
-    }
 </script>
 
 <container>
     {#if recordings}
         {#each recordings as recording, idx (idx)}
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
                 in:fly={{ duration: 150, easing: quadOut }}
                 class:playing={$currentSong?.file === recording.song.file}
@@ -91,15 +81,7 @@
         <button on:click={openImportDialog}>Add recordings</button>
         <p class="prompt">
             Or drop a file here.<br /> You can also drag files in here from the Scrapbook.
-        </p>
-    {:else}
-        <p>
-            This song is in your library but doesn't have a project. To attach
-            more music files, lyrics and other media, create a project:
-        </p>
-
-        <button on:click={createProject}>Create a project</button>
-    {/if}
+        </p>{/if}
 </container>
 
 <style lang="scss">

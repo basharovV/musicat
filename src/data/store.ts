@@ -6,6 +6,7 @@ import type {
     Album,
     ArrowFocus,
     ArtistContentItem,
+    ArtistProject,
     ArtworkSrc,
     BottomBarNotification,
     Compression,
@@ -19,6 +20,7 @@ import type {
     QueueMode,
     SidebarItem,
     Song,
+    SongProject,
     StreamInfo,
     UserSettings,
     WaveformPlayerState
@@ -124,20 +126,22 @@ export const emptyDropEvent: Writable<{ x: number; y: number } | null> =
 export const fileDropHandler: Writable<string> = writable(null);
 
 // Artist's toolkit details
-export const selectedArtistId: Writable<number> = writable(
-    Number(localStorage.getItem("selectedArtistId")) || null
+export const songbookSelectedArtist: Writable<ArtistProject> = writable(
+    JSON.parse(localStorage.getItem("selectedArtist")) || null
 );
-selectedArtistId.subscribe((val) => {
+songbookSelectedArtist.subscribe((val) => {
     if (val !== null) {
-        localStorage.setItem("selectedArtistId", String(val));
+        localStorage.setItem("selectedArtist", JSON.stringify(val));
     } else {
-        localStorage.removeItem("selectedArtistId");
+        localStorage.removeItem("selectedArtist");
     }
 });
-
+export const currentSongProjects: Writable<string[]> = writable([]);
 export const songDetailsUpdater = writable(0);
 export const isScrapbookShown = writable(true);
+export const songbookFileSavedTime = writable(0); // timestamp of last save
 export const isFullScreenLyrics = writable(false);
+
 // Library menu
 export const isFindFocused = writable(false);
 export const shouldFocusFind: Writable<ActionEvent | null> = writable(null);
@@ -153,7 +157,7 @@ export const isSmartQueryValid = writable(false);
 export const smartQueryUpdater = writable(0);
 export const smartQueryResults: Writable<Song[]> = writable([]);
 
-// Tag cloud 
+// Tag cloud
 export const isTagCloudOpen = writable(false);
 export const selectedTags = writable(new Set());
 export const isTagOrCondition = writable(false);

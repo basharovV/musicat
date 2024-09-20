@@ -6,7 +6,7 @@
         isDraggingExternalFiles,
         isFullScreenLyrics,
         isScrapbookShown,
-        selectedArtistId,
+        songbookSelectedArtist,
         userSettings
     } from "../../data/store";
 
@@ -26,10 +26,6 @@
     let scrapbookSize = 350;
     const SCRAPBOOK_MIN_SIZE = 300;
 
-    $: selectedArtist = liveQuery<ArtistProject>(async () => {
-        const selectedArtist = await db.artistProjects.get($selectedArtistId);
-        return selectedArtist;
-    });
     let selectedTab;
 
     let container: HTMLElement;
@@ -71,7 +67,6 @@
         container?.removeEventListener("mousemove", onResize);
         document?.removeEventListener("mouseup", stopResizeListener);
     });
-    
 </script>
 
 <container
@@ -85,10 +80,10 @@
         <ContentDropzone songProject={selectedSongProject} />
     {/if}
     <header>
-        <YourArtists selectedArtist={$selectedArtist} />
+        <YourArtists />
     </header>
     <section class="content" class:full-screen={$isFullScreenLyrics}>
-        <Music {selectedArtist} />
+        <Music />
     </section>
 
     <resize-handle
@@ -170,7 +165,7 @@
             background-color: var(--panel-background);
             border-radius: 5px;
             border: 0.7px solid
-                color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
+                color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
 
             .close-scrapbook-prompt {
                 position: absolute;

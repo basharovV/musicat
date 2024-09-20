@@ -3,6 +3,7 @@
     import Menu from "../menu/Menu.svelte";
     import isDarkColor from "is-dark-color";
     import type { MenuItem, MenuSection } from "../../App";
+    import { currentThemeObject } from "../../theming/store";
 
     let matches: { name: string; color: string }[] = [];
     let selectedItem: MenuItem = null;
@@ -14,8 +15,8 @@
 
     $: correctedTextInputColor =
         textInputColor !== null && isDarkColor(textInputColor)
-            ? "white"
-            : textInputColor ?? "#FFFFFF";
+            ? $currentThemeObject.text
+            : textInputColor ?? $currentThemeObject.text;
     let options: { name: string; color: string }[] = [
         // Major#
         { name: "C", color: "#FFFFFF" },

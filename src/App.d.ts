@@ -100,10 +100,10 @@ interface Playlist {
  * Represents a song/track that's in progress.
  */
 interface SongProject {
-    id?: number; // incremental id
+    songFilepath?: string; // path to the song file containing lyrics and metadata (used for populating this object)
     title: string; // Needs to have at least this, everything else is optional
-    artist: number;
-    album: string;
+    artist: string;
+    album?: string;
     key?: string;
     bpm?: number;
     musicComposedBy: string[]; // Multiple people

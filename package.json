@@ -32,6 +32,7 @@
         "chord-mark": "^0.17.0",
         "chord-mark-themes": "^0.17.0",
         "dexie": "^4.0.4",
+        "front-matter": "^4.0.2",
         "hotkeys-js": "^3.9.5",
         "konva": "^9.3.14",
         "lodash-es": "^4.17.21",

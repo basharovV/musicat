@@ -15,7 +15,8 @@
     import {
         draggedScrapbookItems,
         emptyDropEvent,
-        os
+        os,
+        songbookFileSavedTime
     } from "../../data/store";
     import { autoWidth } from "../../utils/AutoWidth";
     import LyricsTab from "./LyricsTab.svelte";
@@ -37,13 +38,17 @@
     import Input from "../ui/Input.svelte";
     import KeySelector from "../ui/KeySelector.svelte";
     import LL from "../../i18n/i18n-svelte";
+    import {
+        renameSongProject,
+        saveFrontmatterToSongProject,
+        writeChordMarkToSongProject
+    } from "../../data/ArtistsToolkitData";
 
     export let songProject: SongProject;
-    export let song: Song; // We might need to create a project based on this song
     export let onSelectSong;
 
     let songProjectClone: SongProject = cloneDeep(songProject);
-    $: isProject = songProject?.id;
+    $: isProject = songProject?.songFilepath;
 
     // TODO move the music stuff into MusicTab?
     let bpmTicker = 1;
@@ -114,14 +119,19 @@
         toast.success(`Deleted ${title}`);
     }
 
-    function onTitleUpdated(evt) {
+    async function onTitleUpdated(evt) {
+        // Update folder name
+        await renameSongProject(
+            songProject.artist,
+            songProjectClone.title,
+            evt.target.value
+        );
         songProjectClone.title = evt.target.value;
-        saveSongProject();
     }
 
-    function onAlbumUpdated(evt) {
-        songProjectClone.album = evt.target.value;
-        saveSongProject();
+    async function onAlbumUpdated(album) {
+        songProjectClone.album = album;
+        await saveFrontmatterToSongProject(songProjectClone);
     }
 
     let composerInput;
@@ -138,7 +148,8 @@
             songProjectClone.musicComposedBy.push(composerInput);
         }
         songProjectClone.musicComposedBy = songProjectClone.musicComposedBy;
-        saveSongProject();
+
+        saveFrontmatterToSongProject(songProjectClone);
         composerInput = "";
         composerAutocomplete = "";
     }
@@ -150,7 +161,8 @@
             songProjectClone.lyricsWrittenBy.push(lyricistInput);
         }
         songProjectClone.lyricsWrittenBy = songProjectClone.lyricsWrittenBy;
-        saveSongProject();
+
+        saveFrontmatterToSongProject(songProjectClone);
         lyricistInput = "";
         lyricistAutocomplete = "";
     }
@@ -179,7 +191,7 @@
             );
             songProjectClone.musicComposedBy = songProjectClone.musicComposedBy;
 
-            saveSongProject();
+            saveFrontmatterToSongProject(songProjectClone);
         }
     }
     function removeLastLyricist() {
@@ -190,7 +202,7 @@
             );
             songProjectClone.lyricsWrittenBy = songProjectClone.lyricsWrittenBy;
 
-            saveSongProject();
+            saveFrontmatterToSongProject(songProjectClone);
         }
     }
 
@@ -207,14 +219,16 @@
             songProjectClone.bpm = null;
             stopBpmTicker();
         }
-        saveSongProject();
+
+        saveFrontmatterToSongProject(songProjectClone);
     }
 
     function onKeyUpdated(key) {
         console.log("key updated", key);
 
         songProjectClone.key = key;
-        saveSongProject();
+
+        saveFrontmatterToSongProject(songProjectClone);
     }
 
     /**
@@ -262,9 +276,16 @@
         saveSongProject();
     }
 
-    function onLyricsUpdated(lyrics: string) {
+    async function onLyricsUpdated(lyrics: string) {
         songProjectClone.lyrics = lyrics;
-        saveSongProject();
+        // Write to file
+        try {
+            await writeChordMarkToSongProject(songProjectClone, lyrics);
+            $songbookFileSavedTime = Date.now();
+        } catch (e) {
+            console.error(e);
+        }
+        // saveSongProject();
     }
 
     function addContentItem(item: ArtistContentItem) {
@@ -506,6 +527,16 @@
     }
 
     let isAddingLyricist = false;
+
+    $: if ($songbookFileSavedTime !== null) {
+        // Set to null after 2 seconds
+        // setTimeout(() => ($songbookFileSavedTime = null), 2000);
+    }
+
+    // hh:mm from unix timestamp
+    $: lastSavedTime = $songbookFileSavedTime
+        ? `${new Date($songbookFileSavedTime).toLocaleTimeString()}`
+        : null;
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -672,6 +703,13 @@
                     <p>{tab.name}</p>
                 </div>
             {/each}
+
+            {#if lastSavedTime}
+                <div class="last-saved">
+                    <Icon icon="charm:tick" size={16} />
+                    <p>Last saved: {lastSavedTime}</p>
+                </div>
+            {/if}
         </div>
         <div class="content-container">
             <content class={selectedTab.value}>
@@ -681,7 +719,6 @@
                         {addRecording}
                         {deleteRecording}
                         {songProject}
-                        {song}
                         {onSelectSong}
                         showDropPlaceholder={isDragging}
                     />
@@ -689,12 +726,12 @@
                     <LyricsTab
                         lyrics={songProjectClone?.lyrics}
                         {onLyricsUpdated}
-                        enabled={songProjectClone?.id !== undefined}
+                        enabled={songProjectClone?.songFilepath !== undefined}
                     />
                 {:else if selectedTab.value === "other"}
                     <OtherTab
                         items={songProjectClone.otherContentItems}
-                        enabled={songProjectClone?.id !== undefined}
+                        enabled={songProjectClone?.songFilepath !== undefined}
                         showDropPlaceholder={isDragging}
                         addContentItem={handleFileDrop}
                         {deleteContentItem}
@@ -875,6 +912,19 @@
                     border-bottom: 2px solid white;
                 }
             }
+            .last-saved {
+                display: flex;
+                gap: 5px;
+                margin: 0;
+                align-self: center;
+                justify-content: flex-end;
+                flex: 1;
+                color: var(--text-secondary);
+                p {
+                    margin: 0;
+                    opacity: 0.6;
+                }
+            }
         }
     }
     p {
@@ -889,6 +939,7 @@
         outline: none;
         background: none;
         border: none;
+        color: var(--text);
 
         &::placeholder {
             color: rgb(105, 105, 105);

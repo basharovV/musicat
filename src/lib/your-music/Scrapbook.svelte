@@ -277,6 +277,7 @@
     }
 
     function onPaste(evt: ClipboardEvent) {
+        console.log("paste", evt);
         const data = evt.clipboardData.getData("text");
         if (data && data.startsWith("https://")) {
             addLink(data);
@@ -509,7 +510,7 @@
         margin: 0;
         font-family: "Snake";
         font-size: 3em;
-        color: #bbb9b9;
+        color: var(--text);
         line-height: initial;
     }
 
@@ -533,7 +534,7 @@
         width: 100%;
         /* background-color: color-mix(in srgb, var(--background) 90%, transparent); */
         backdrop-filter: blur(10px);
-        z-index: 9;
+        z-index: 0;
         padding: 1em 2em;
         border-bottom: 0.7px solid
             color-mix(in srgb, var(--inverse) 50%, transparent);
@@ -553,13 +554,13 @@
             gap: 5px;
             &:hover {
                 p {
-                    color: rgb(217, 214, 214);
+                    color: var(--text);
                     border-bottom: 1px solid rgb(154, 149, 149);
                 }
             }
             &.selected {
                 p {
-                    color: white;
+                    color: var(--text);
                     border-bottom: 1px solid white;
                 }
             }
@@ -569,7 +570,7 @@
                 border-bottom: 1px solid transparent;
                 font-size: 13px;
                 margin: 0;
-                color: rgb(171, 171, 171);
+                color: var(--text);
                 cursor: default;
                 user-select: none;
                 text-transform: capitalize;

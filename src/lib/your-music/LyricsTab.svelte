@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { debounce } from "lodash-es";
+
     import { parseSong, renderSong } from "chord-mark/lib/chord-mark.js";
     import "../../../node_modules/chord-mark-themes/scss/themes/dark1.scss";
 
@@ -6,9 +8,14 @@
     import { onDestroy } from "svelte";
     import { clickOutside } from "../../utils/ClickOutside";
     import Icon from "../ui/Icon.svelte";
-    import { isFullScreenLyrics, os } from "../../data/store";
+    import {
+        isFullScreenLyrics,
+        os,
+        songbookFileSavedTime
+    } from "../../data/store";
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
+    import { writeChordMarkToSongProject } from "../../data/ArtistsToolkitData";
 
     export let lyrics;
     export let onLyricsUpdated;
@@ -74,7 +81,7 @@
         let parsed;
         try {
             parsed = parseSong(lyrics);
-
+            console.log("parsed", parsed);
             parsingError = null;
         } catch (error) {
             console.error(error);
@@ -311,7 +318,7 @@
             <textarea
                 placeholder="Start typing..."
                 bind:this={editor}
-                on:input={onLyricsChanged}
+                on:input={debounce(onLyricsChanged, 300)}
                 on:keydown={onKeyDown}
                 bind:value={lyrics}
                 use:clickOutside={() => (isEditing = false)}
@@ -451,6 +458,7 @@
         padding: 0.5em;
         border: 1px solid
             color-mix(in srgb, var(--type-bw-inverse) 11%, transparent);
+
         .view-selector {
             display: flex;
             gap: 0.5em;
@@ -505,6 +513,7 @@
         font-family: monospace;
         line-height: 1.8em;
         resize: none;
+        color: var(--text);
     }
 
     .lyrics-viewer {

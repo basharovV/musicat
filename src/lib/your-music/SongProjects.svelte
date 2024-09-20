@@ -1,46 +1,60 @@
 <script lang="ts">
-    import type { ArtistProject, Song, SongProject } from "src/App";
-    import { db } from "../../data/db";
-    import { autoWidth } from "../../utils/AutoWidth";
+    import type { UnlistenFn } from "@tauri-apps/api/event";
+    import type { ArtistProject } from "src/App";
+    import { onDestroy, onMount } from "svelte";
+    import {
+        createSongProject,
+        loadSongProject
+    } from "../../data/ArtistsToolkitData";
+    import { startWatchingSongbookArtistsFolder } from "../../data/FolderWatcher";
+    import { userSettings } from "../../data/store";
 
-    export let songProjects: SongProject[];
+    export let songProjects: string[];
     export let selectedSongProject;
     export let onSelectSongProject: Function;
-    export let artistId: ArtistProject;
+    export let artist: ArtistProject;
     let newSongProjectTitle = "";
 
     async function onCreateSongProject() {
-        const createdProjectId = await db.songProjects.add({
-            title: newSongProjectTitle,
-            artist: artistId.id,
-            album: "",
-            musicComposedBy: [artistId.name], // Multiple people
-            lyricsWrittenBy: [], // Multiple people,
-            lyrics: "",
-            recordings: [],
-            otherContentItems: []
-        });
-        const createdProject = await db.songProjects.get(createdProjectId);
+        await createSongProject(artist.name, newSongProjectTitle);
+        const createdProject = await loadSongProject(
+            artist.name,
+            newSongProjectTitle
+        );
         selectedSongProject = createdProject;
         onSelectSongProject(createdProject);
-
         newSongProjectTitle = "";
     }
+
+    let unlistenFolderWatch: UnlistenFn;
+    onMount(async () => {
+        userSettings.subscribe(async (_) => {
+            unlistenFolderWatch && unlistenFolderWatch();
+            unlistenFolderWatch = await startWatchingSongbookArtistsFolder(
+                artist.name
+            );
+        });
+    });
+
+    onDestroy(() => {
+        unlistenFolderWatch && unlistenFolderWatch();
+    });
 </script>
 
 <container>
     {#if songProjects}
         <ul>
-            {#each songProjects as song (song.id)}
+            {#each songProjects as song (song)}
+                <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                 <li
                     class="song"
-                    class:selected={selectedSongProject?.id === song.id}
+                    class:selected={selectedSongProject === song}
                     on:click={() => {
                         selectedSongProject = song;
                         onSelectSongProject(song);
                     }}
                 >
-                    <p>{song.title}</p>
+                    <p>{song}</p>
                 </li>
             {/each}
         </ul>
@@ -88,7 +102,7 @@
                 p {
                     margin: 0;
                     line-height: 2em;
-                    color:#bbb9b9;
+                    color: var(--text);
                 }
 
                 &:before {
@@ -117,10 +131,10 @@
                 outline: none;
                 background: none;
                 border: none;
-                color: #c8aafb;
+                color: var(--text);
 
                 &::placeholder {
-                    color: rgb(105, 105, 105);
+                    color: var(--text-inactive);
                 }
             }
         }
