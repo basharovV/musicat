@@ -1,16 +1,12 @@
 <script lang="ts">
-    import type { UnlistenFn } from "@tauri-apps/api/event";
-    import type { ArtistProject } from "src/App";
-    import { onDestroy, onMount } from "svelte";
+    import type { ArtistProject, SongProject } from "src/App";
     import {
         createSongProject,
         loadSongProject
     } from "../../data/ArtistsToolkitData";
-    import { startWatchingSongbookArtistsFolder } from "../../data/FolderWatcher";
-    import { userSettings } from "../../data/store";
 
     export let songProjects: string[];
-    export let selectedSongProject;
+    export let selectedSongProject: SongProject;
     export let onSelectSongProject: Function;
     export let artist: ArtistProject;
     let newSongProjectTitle = "";
@@ -26,19 +22,6 @@
         newSongProjectTitle = "";
     }
 
-    let unlistenFolderWatch: UnlistenFn;
-    onMount(async () => {
-        userSettings.subscribe(async (_) => {
-            unlistenFolderWatch && unlistenFolderWatch();
-            unlistenFolderWatch = await startWatchingSongbookArtistsFolder(
-                artist.name
-            );
-        });
-    });
-
-    onDestroy(() => {
-        unlistenFolderWatch && unlistenFolderWatch();
-    });
 </script>
 
 <container>
@@ -48,9 +31,8 @@
                 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                 <li
                     class="song"
-                    class:selected={selectedSongProject === song}
+                    class:selected={selectedSongProject?.title === song}
                     on:click={() => {
-                        selectedSongProject = song;
                         onSelectSongProject(song);
                     }}
                 >

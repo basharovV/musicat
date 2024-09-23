@@ -3,10 +3,11 @@
     import { open } from "@tauri-apps/plugin-dialog";
     import { open as openShell } from "@tauri-apps/plugin-shell";
     import tippy from "tippy.js";
-    import type { ArtistProject } from "../../App";
+    import type { ArtistProject, LookForArtResult } from "../../App";
     import {
         isScrapbookShown,
         isSettingsOpen,
+        songbookArtists,
         songbookSelectedArtist,
         userSettings
     } from "../../data/store";
@@ -22,25 +23,59 @@
     import Dropdown from "../ui/Dropdown.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
+    import {
+        copyFile,
+        readDir,
+        remove,
+        rename,
+        mkdir
+    } from "@tauri-apps/plugin-fs";
+    import { getArtistProfileImage } from "../../data/LibraryImporter";
 
-    let artists: ArtistProject[] = [];
+    let currentArtistProfilePic: LookForArtResult;
 
     onMount(async () => {
-        artists = await loadArtistsFromSongbook();
-        $songbookSelectedArtist = artists[0];
+        $songbookArtists = await loadArtistsFromSongbook();
     });
+
+    $: if ($songbookArtists) {
+        if (
+            !$songbookSelectedArtist ||
+            !$songbookArtists.find((a) => a === $songbookSelectedArtist)
+        ) {
+            $songbookSelectedArtist = $songbookArtists[0];
+        }
+    }
+
+    $: if ($songbookSelectedArtist) {
+        loadCurrentArtist();
+    }
+
+    async function loadCurrentArtist() {
+        if ($songbookSelectedArtist) {
+            const artistPath = `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`;
+            // Set profile pic
+            currentArtistProfilePic = await getArtistProfileImage(artistPath);
+        }
+    }
+
+    async function selectArtist(artistName: string) {
+        console.log("selecting artist", artistName);
+        $songbookSelectedArtist = $songbookArtists?.find(
+            (a) => a.name === artistName
+        );
+        await loadCurrentArtist();
+    }
 
     let newArtist = "";
     let showArtistAddUi = false;
 
     async function onCreateArtist() {
-        // TODO: Create new folder
-        // const id = await db.artistProjects.put({
-        //     name: newArtist,
-        //     members: []
-        // });
-        // console.log("id created", id);
-        // $songbookSelectedArtist = await (await db.artistProjects.get(id)).id;
+        await mkdir(`${$userSettings.songbookLocation}/${newArtist}`);
+        $songbookArtists = await loadArtistsFromSongbook();
+        $songbookSelectedArtist = $songbookArtists.find(
+            (a) => a.name === newArtist
+        );
         newArtist = "";
         showArtistAddUi = false;
     }
@@ -61,8 +96,15 @@
             isConfirmingArtistDelete = true;
             return;
         } else {
-            // await db.artistProjects.delete($songbookSelectedArtist);
-            $songbookSelectedArtist = null;
+            await remove(
+                `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`,
+                {
+                    recursive: true
+                }
+            );
+            $songbookArtists = await loadArtistsFromSongbook();
+            $songbookSelectedArtist =
+                $songbookArtists?.length > 0 ? $songbookArtists[0] : null;
             editedArtistName = null;
             isConfirmingArtistDelete = false;
             showMenu = false;
@@ -71,8 +113,12 @@
     }
 
     async function updateArtistName(name) {
-        // TODO: Update folder name
-        // await db.artistProjects.update($songbookSelectedArtist, { name });
+        await rename(
+            `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`,
+            `${$userSettings.songbookLocation}/${name}`
+        );
+        $songbookSelectedArtist.name = name;
+        $songbookArtists = await loadArtistsFromSongbook();
         editedArtistName = null;
         isEditingArtist = false;
     }
@@ -129,12 +175,21 @@
             console.log("selected", selected);
             // user selected a single file, update artist info
             if (typeof selected?.path === "string") {
-                // selectedArtist.profilePhoto = selected.path;
-                // TODO: Write image to folder (thumbnail)
+                // Delete any existing images called profile.xxx in the artist folder
+                const artistPath = `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`;
+                const files = await readDir(artistPath);
+                for (const file of files) {
+                    if (file.name.startsWith("profile.")) {
+                        await remove(`${artistPath}/${file.name}`);
+                    }
+                }
+
+                // Copy the file
+                const extension = selected.path.split(".").pop();
+                const dest = `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}/profile.${extension}`;
+                await copyFile(selected.path, dest);
+                await loadCurrentArtist();
             }
-            // await db.artistProjects.put(selectedArtist);
-            // selectedArtist = await db.artistProjects.get($songbookSelectedArtist);
-            // addFolder(selected);
         }
     }
 
@@ -143,7 +198,7 @@
 </script>
 
 <div class="header">
-    {#if artists?.length && $songbookSelectedArtist && !showArtistAddUi}
+    {#if $songbookArtists?.length && $songbookSelectedArtist && !showArtistAddUi}
         <div class="selected-artist">
             <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
@@ -155,9 +210,9 @@
                 }}
                 on:click={showProfilePicPicker}
             >
-                {#if false}
+                {#if currentArtistProfilePic}
                     <!-- svelte-ignore a11y-missing-attribute -->
-                    <img src={convertFileSrc("")} />
+                    <img src={currentArtistProfilePic.artworkSrc} />
                 {:else}
                     <Icon icon="fa-solid:cat" />
                 {/if}
@@ -187,24 +242,24 @@
                 <Divider />
             {:else}
                 <div class="artist-info">
-                    {#if artists?.length && $songbookSelectedArtist}
+                    {#if $songbookArtists?.length && $songbookSelectedArtist}
                         <Dropdown
                             size={18}
                             selected={{
                                 value: $songbookSelectedArtist.name,
                                 label: $songbookSelectedArtist.name
                             }}
-                            options={artists.map((a) => {
+                            options={$songbookArtists.map((a) => {
                                 return {
-                                    value: a.id,
+                                    value: a.name,
                                     label: a.name
                                 };
                             })}
                             onSelect={(artist) => {
-                                $songbookSelectedArtist = artist.name;
+                                selectArtist(artist);
                             }}
                         >
-                            {#each artists as artist (artist.name)}
+                            {#each $songbookArtists as artist (artist.name)}
                                 <option
                                     value={artist.name}
                                     class="artist"
@@ -222,7 +277,7 @@
                         size={14}
                         onClick={() => {
                             isEditingArtist = true;
-                            editedArtistName = $songbookSelectedArtist;
+                            editedArtistName = $songbookSelectedArtist.name;
                         }}
                         boxed
                         color={$currentThemeObject["icon-secondary"]}
@@ -239,11 +294,11 @@
                 </div>
             {/if}
         </div>
-    {:else if artists?.length === 0 || showArtistAddUi}
+    {:else if $songbookArtists?.length === 0 || showArtistAddUi}
         <form on:submit|preventDefault={onCreateArtist}>
             <Input bind:value={newArtist} placeholder="Add an artist" small />
         </form>
-        {#if artists?.length > 0}
+        {#if $songbookArtists?.length > 0}
             <Icon
                 icon="material-symbols:close"
                 onClick={() => (showArtistAddUi = false)}
@@ -273,7 +328,10 @@
         </Menu>
     {/if}
 
-    <div class="artist-options" class:onboarding={artists?.length === 0}>
+    <div
+        class="artist-options"
+        class:onboarding={$songbookArtists?.length === 0}
+    >
         <div
             use:tippy={{
                 content: $userSettings.songbookLocation

@@ -17,7 +17,10 @@
     import Scrapbook from "../your-music/Scrapbook.svelte";
     import YourArtists from "../your-music/YourArtists.svelte";
     import type { UnlistenFn } from "@tauri-apps/api/event";
-    import { startWatchingScrapbookFolder } from "../../data/FolderWatcher";
+    import {
+        startWatchingScrapbookFolder,
+        startWatchingSongbookFolder
+    } from "../../data/FolderWatcher";
     import { onDestroy } from "svelte";
     let selectedSong: Song;
     let selectedSongProject: SongProject;
@@ -57,13 +60,25 @@
     }
 
     let unlistenFolderWatch: UnlistenFn;
-    userSettings.subscribe(async (_) => {
+    let unlistenSongbookWatch: UnlistenFn;
+
+    $: if ($userSettings) {
+        watchScrapbook();
+        watchSongbook();
+    }
+
+    async function watchScrapbook() {
         unlistenFolderWatch && unlistenFolderWatch();
         unlistenFolderWatch = await startWatchingScrapbookFolder();
-    });
+    }
+    async function watchSongbook() {
+        unlistenSongbookWatch && unlistenSongbookWatch();
+        unlistenSongbookWatch = await startWatchingSongbookFolder();
+    }
 
     onDestroy(() => {
-        unlistenFolderWatch();
+        unlistenFolderWatch && unlistenFolderWatch();
+        unlistenSongbookWatch && unlistenSongbookWatch();
         container?.removeEventListener("mousemove", onResize);
         document?.removeEventListener("mouseup", stopResizeListener);
     });

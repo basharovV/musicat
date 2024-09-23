@@ -341,3 +341,32 @@ export async function runScan() {
         await importPaths([folder], true);
     }
 }
+
+export async function getArtistProfileImage(
+    folder: string
+): Promise<LookForArtResult> {
+    let foundResult: LookForArtResult = null;
+    try {
+        const files = await readDir(folder);
+        for (const filename of files) {
+            const extension = filename.name.split(".").pop();
+            let format = getImageFormat(extension);
+            if (
+                isImageFile(filename.name) &&
+                format &&
+                filename.name.includes("profile")
+            ) {
+                foundResult = {
+                    artworkSrc: convertFileSrc(folder + "/" + filename.name),
+                    artworkFormat: format,
+                    artworkFilenameMatch: filename.name
+                };
+            }
+        }
+
+        return foundResult;
+    } catch (err) {
+        console.error("Couldn't find artwork " + err);
+        return null;
+    }
+}

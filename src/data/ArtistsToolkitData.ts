@@ -138,7 +138,7 @@ export async function loadSongProjectsForArtist(artistName: string) {
         const dirContents = await readDir(songbookLocation + "/" + artistName);
         const songFolders = dirContents.filter((item) => item.isDirectory);
         const songs: string[] = songFolders.map((folder) => folder.name);
-
+        songs.sort();
         return songs;
     } catch (error) {
         console.error("Error loading songs from songbook location:", error);
@@ -249,9 +249,10 @@ export async function loadSongProject(artistName: string, songName: string) {
         console.log("frontmatter", frontmatter);
         if (frontmatter?.attributes) {
             songProject.album = frontmatter.attributes.album;
-            songProject.musicComposedBy = [frontmatter.attributes.composer];
-            songProject.lyricsWrittenBy = [frontmatter.attributes.lyricist];
-            songProject.album = frontmatter.attributes.album;
+            songProject.musicComposedBy = frontmatter.attributes.composer ? [frontmatter.attributes.composer] : [];
+            songProject.lyricsWrittenBy = frontmatter.attributes.lyricist ? [frontmatter.attributes.lyricist] : [];
+            songProject.key = frontmatter.attributes.key;
+            songProject.bpm = frontmatter.attributes.bpm;
         }
 
         if (chordmark?.length) {
@@ -310,8 +311,8 @@ export async function renameSongProject(
 export async function saveFrontmatterToSongProject(songProject: SongProject) {
     const songFileContents = await readSongbookFile(songProject.songFilepath);
     const attributes = {
-        composer: songProject.musicComposedBy ? songProject.musicComposedBy[0] : null,
-        lyricist: songProject.lyricsWrittenBy ? songProject.lyricsWrittenBy[0] : null,
+        composer: songProject.musicComposedBy?.length ? songProject.musicComposedBy[0] : null,
+        lyricist: songProject.lyricsWrittenBy?.length ? songProject.lyricsWrittenBy[0] : null,
         album: songProject.album,
         bpm: songProject.bpm,
         key: songProject.key

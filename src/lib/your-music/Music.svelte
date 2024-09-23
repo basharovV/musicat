@@ -1,6 +1,9 @@
 <script lang="ts">
     import type { ArtistProject, SongProject } from "src/App";
-    import { songbookSelectedArtist } from "../../data/store";
+    import {
+        currentSongProjects,
+        songbookSelectedArtist
+    } from "../../data/store";
 
     import {
         deleteSongProject,
@@ -15,16 +18,16 @@
 
     let isLoading = true;
 
-    let songs: string[] = [];
-
     async function loadSongbook() {
         isLoading = true;
-        songs = await loadSongProjectsForArtist($songbookSelectedArtist.name);
-        // Sort the songs alphabetically
-        songs.sort();
-        console.log("songbook: songs", songs);
+        $currentSongProjects = await loadSongProjectsForArtist(
+            $songbookSelectedArtist.name
+        );
+        // Sort the $currentSongProjects alphabetically
+        console.log("songbook: $currentSongProjects", $currentSongProjects);
         if (!selectedSongProject) {
-            songs?.length && onSelectSong(songs[0]);
+            $currentSongProjects?.length &&
+                onSelectSong($currentSongProjects[0]);
         }
         isLoading = false;
     }
@@ -58,8 +61,9 @@
         loadSongbook();
     }
 
-    function onSongsHighlighted(songsHighlighted) {
-        songsHighlighted.length > 0 && onSelectSong(librarySongsHighlighted[0]);
+    function onSongsHighlighted($currentSongProjectsHighlighted) {
+        $currentSongProjectsHighlighted.length > 0 &&
+            onSelectSong(librarySongsHighlighted[0]);
     }
 
     $: {
@@ -77,10 +81,10 @@
             </div>
             {#if $songbookSelectedArtist}
                 <SongProjects
-                    songProjects={songs}
+                    songProjects={$currentSongProjects}
                     artist={$songbookSelectedArtist}
                     {onSelectSongProject}
-                    bind:selectedSongProject={songProjectSelection}
+                    bind:selectedSongProject
                 />
             {/if}
         {/if}

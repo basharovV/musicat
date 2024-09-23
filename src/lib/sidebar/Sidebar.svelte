@@ -1797,7 +1797,7 @@
             text-transform: uppercase;
             text-align: left;
             width: max-content;
-            padding: 0.17em 0.5em;
+            padding: 0.17em 0.5em 0.17em 0;
             font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.4px;

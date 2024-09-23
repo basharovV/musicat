@@ -127,15 +127,18 @@ export const fileDropHandler: Writable<string> = writable(null);
 
 // Artist's toolkit details
 export const songbookSelectedArtist: Writable<ArtistProject> = writable(
-    JSON.parse(localStorage.getItem("selectedArtist")) || null
+    localStorage.getItem("selectedArtist")
+        ? JSON.parse(localStorage.getItem("selectedArtist"))
+        : null || null
 );
 songbookSelectedArtist.subscribe((val) => {
-    if (val !== null) {
+    if (val !== null && val !== undefined) {
         localStorage.setItem("selectedArtist", JSON.stringify(val));
     } else {
         localStorage.removeItem("selectedArtist");
     }
 });
+export const songbookArtists = writable<ArtistProject[]>([]);
 export const currentSongProjects: Writable<string[]> = writable([]);
 export const songDetailsUpdater = writable(0);
 export const isScrapbookShown = writable(true);

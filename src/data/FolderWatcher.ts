@@ -8,9 +8,15 @@ import {
     bottomBarNotification,
     currentSongProjects,
     isFolderWatchUpdate,
+    songbookArtists,
+    songbookSelectedArtist,
     userSettings
 } from "./store";
-import { addScrapbookFile } from "./ArtistsToolkitData";
+import {
+    addScrapbookFile,
+    loadArtistsFromSongbook,
+    loadSongProjectsForArtist
+} from "./ArtistsToolkitData";
 
 // can also watch an array of paths
 export async function startWatchingLibraryFolders() {
@@ -163,61 +169,63 @@ export async function startWatchingScrapbookFolder() {
     return startWatching;
 }
 
-export async function startWatchingSongbookArtistsFolder(artistName: string) {
+export async function startWatchingSongbookFolder() {
     const settings = get(userSettings);
     const songbookLocation = settings.songbookLocation;
-    const artistPath = songbookLocation + "/" + artistName;
 
     const startWatching = await watchImmediate(
-        artistPath,
+        songbookLocation,
         async (event) => {
-            console.log(event);
+            console.log("[watcher] songbook: ", event);
             if (typeof event.type === "object") {
                 // Handle folders only
                 for (const path of event.paths) {
                     const result = isFileOrDirectory(path);
-                    console.log("result", result);
-                    if (result === "file") {
-                        //
-                    } else if (result === "directory") {
-                        let pathExists = false;
-                        let folderName = path.split("/").pop();
-                        try {
-                            pathExists = await exists(path);
-                        } catch (err) {
-                            console.error("err in fileexists");
-                        }
-                        let songProjectExists = false;
+                    const parent = path.split("/").slice(0, -1).join("/");
+                    console.log('[watcher] parent: ', parent);
+                    // artist folder : songbookLocation/artistName
+                    // artist profile pic: songbookLocation/artistName/profile.jpg
 
-                        // Check if song is in current list
-                        get(currentSongProjects).forEach((song) => {
-                            if (song === folderName) {
-                                songProjectExists = true;
+                    // song folder: songbookLocation/artistName/songName
+                    // song file: songbookLocation/artistName/songName/songName.txt
+
+                    // Check for folder type
+                    if (result === "directory") {
+                        // Based on how many levels deep the folder is (relative to songbookLocation)
+                        const depth = path
+                            .substring(songbookLocation.length - 1, path.length)
+                            .split("/").length;
+                        console.log("[watcher] folderDepth: ", depth);
+
+                        // Get the artist name from the folder name on the first level
+
+                        // Get depth difference between songbookLocation and path
+
+                        const isArtist = depth === 2;
+                        const isSong = depth === 3;
+
+                        let artistName;
+                        if (depth === 2) {
+                            artistName = path.split("/").pop();
+                        } else if (depth === 3) {
+                            artistName = parent.split("/").pop();
+                        }
+                        console.log("[watcher] artistName: ", artistName);
+
+                        if (depth === 2) {
+                            // Check if artist folder exists
+                            songbookArtists.set(
+                                await loadArtistsFromSongbook()
+                            );
+                        } else if (depth === 3) {
+                            // Only update if matches currently selected artist
+                            if (
+                                artistName === get(songbookSelectedArtist).name
+                            ) {
+                                currentSongProjects.set(
+                                    await loadSongProjectsForArtist(artistName)
+                                );
                             }
-                        });
-
-                        // New/updated folder
-                        if (pathExists && !songProjectExists) {
-                            bottomBarNotification.set({
-                                text: "Folder watcher: Song added - updating songbook...",
-                                timeout: 2000
-                            });
-                            await currentSongProjects.update((p) => {
-                                p.push(folderName);
-                                return p;
-                            });
-                        }
-                        // Deletion
-                        else if (!pathExists && songProjectExists) {
-                            bottomBarNotification.set({
-                                text: "Folder watcher: Song deleted - updating songbook...",
-                                timeout: 2000
-                            });
-                            // Remove from list
-                            await currentSongProjects.update((p) => {
-                                p.splice(p.indexOf(folderName), 1);
-                                return p;
-                            });
                         }
                     }
                 }
