@@ -313,8 +313,8 @@
     </div>
 
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="lyrics-container {fontSize}">
-        {#if parsingError || !hasLyrics || (hasLyrics && isEditing)}
+    <div class="lyrics-container {fontSize}" on:click={() => (isEditing = true)}>
+        {#if parsingError || isEditing || !hasLyrics}
             <textarea
                 placeholder="Start typing..."
                 bind:this={editor}
