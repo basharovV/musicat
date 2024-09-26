@@ -215,7 +215,7 @@ async function insertLyricsToSong(songFileContents: string, lyrics: string) {
     // Try to match the frontmatter
     const match = songFileContents.match(frontmatterRegex);
     let frontmatter;
-    console.log("match", match);
+    // console.log("match", match);
     if (match) {
         // Extract frontmatter and the remaining chordmark content
         frontmatter = fm(match[1]);

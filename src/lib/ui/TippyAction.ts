@@ -27,9 +27,17 @@ export type Tippy = (element: HTMLElement, props?: TippyProps) => TippyReturn;
  */
 export const optionalTippy: Tippy = (element, props) => {
     let tippy: Instance;
-    if (props["show"]) {
-        delete props['show'];
-        tippy = runTippy(element, props);
+    if (props) {
+        if (props["show"] !== undefined) {
+            if (props["show"]) {
+                delete props["show"];
+                tippy = runTippy(element, props);
+            } else {
+                // Do nothing
+            }
+        } else {
+            tippy = runTippy(element, props);
+        }
     }
     return {
         destroy() {
@@ -38,11 +46,11 @@ export const optionalTippy: Tippy = (element, props) => {
             }
         },
         update(newProps) {
-            if (newProps["show"]) {
-                delete newProps['show'];
+            if (newProps && newProps["show"]) {
+                delete newProps["show"];
                 tippy = runTippy(element, newProps);
                 tippy.setProps(newProps);
-            } else if (!newProps['show'] && tippy) {
+            } else if (!newProps || (!newProps["show"] && tippy)) {
                 tippy.destroy();
             }
         }
@@ -68,5 +76,6 @@ export type CreateTippy = (defaultProps: TippyProps) => Tippy;
  * @param defaultProps The default properties to pass to tippy.js see [tippy.js props](https://atomiks.github.io/tippyjs/v6/all-props/)
  * @returns A svelte action for rendering the tippy.js tooltip
  */
-export const createTippy: CreateTippy = (defaultProps) => (element, props) =>
-    tippy(element, { ...props, ...defaultProps });
+export const createTippy: Tippy = (defaultProps) => {
+    return optionalTippy(element, defaultProps);
+};

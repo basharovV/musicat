@@ -31,6 +31,7 @@
         mkdir
     } from "@tauri-apps/plugin-fs";
     import { getArtistProfileImage } from "../../data/LibraryImporter";
+    import { createTippy, optionalTippy } from "../ui/TippyAction";
 
     let currentArtistProfilePic: LookForArtResult;
 
@@ -204,7 +205,6 @@
             <div
                 class="profile-pic"
                 use:tippy={{
-                    theme: "slim",
                     content: "Add a profile pic",
                     placement: "bottom"
                 }}
@@ -281,6 +281,10 @@
                         }}
                         boxed
                         color={$currentThemeObject["icon-secondary"]}
+                        tooltip={{
+                            content: "Edit artist",
+                            placement: "bottom"
+                        }}
                     />
                     <Icon
                         icon="ph:plus-fill"
@@ -290,12 +294,16 @@
                         }}
                         boxed
                         color={$currentThemeObject["icon-secondary"]}
+                        tooltip={{
+                            content: "Add new artist",
+                            placement: "bottom"
+                        }}
                     />
                 </div>
             {/if}
         </div>
     {:else if $songbookArtists?.length === 0 || showArtistAddUi}
-        <form on:submit|preventDefault={onCreateArtist}>
+        <form class="add-artist" on:submit|preventDefault={onCreateArtist}>
             <Input bind:value={newArtist} placeholder="Add an artist" small />
         </form>
         {#if $songbookArtists?.length > 0}
@@ -498,33 +506,7 @@
         font-size: 40px;
         padding: 0.2em 1em 0.3em 1em;
     }
-
-    .add {
-        align-items: center;
-        cursor: default;
-        padding: 0.2em 0.5em;
-        border: 1px solid transparent;
-        transition: border 0.1s ease-in-out;
-        /* border-radius: 4px; */
-        border-left: 1px solid rgba(255, 255, 255, 0.146);
-        min-width: 180px;
-        background: none;
-        font-size: 16px;
-        height: 28px;
-        font-weight: normal;
-        color: rgb(105, 105, 105);
-        outline: none;
-
-        &:focus {
-            border-left: 1px solid rgba(255, 255, 255, 0.546);
-        }
-        &::placeholder {
-            color: rgb(76, 76, 76);
-        }
-
-        &.alt {
-            border-top-left-radius: 0;
-            border-bottom-left-radius: 0;
-        }
+    .add-artist {
+        padding: 0 0.2em;
     }
 </style>

@@ -22,9 +22,10 @@
     export let enabled = false;
     let isEditing = false;
 
-    $: {
-        console.log("lyrics", lyrics);
-    }
+    // $: {
+    //     console.log("lyrics", lyrics);
+    // }
+    
     $: hasLyrics = enabled && typeof lyrics === "string" && lyrics.length > 0;
 
     let editor;
@@ -81,7 +82,7 @@
         let parsed;
         try {
             parsed = parseSong(lyrics);
-            console.log("parsed", parsed);
+            // console.log("parsed", parsed);
             parsingError = null;
         } catch (error) {
             console.error(error);
@@ -99,10 +100,10 @@
                 allRenderedLines,
                 { alignChordsWithLyrics, alignBars }
             ) => {
-                console.log("allLines", allLines);
-                console.log("allRenderedLines", allRenderedLines);
-                console.log("alignChordsWithLyrics", alignChordsWithLyrics);
-                console.log("alignBars", alignBars);
+                // console.log("allLines", allLines);
+                // console.log("allRenderedLines", allRenderedLines);
+                // console.log("alignChordsWithLyrics", alignChordsWithLyrics);
+                // console.log("alignBars", alignBars);
 
                 let sections = [];
                 let section = {
@@ -126,7 +127,7 @@
 
                 for (let i = 0; i < allLines.length; i++) {
                     let line = allLines[i];
-                    console.log("line", line);
+                    // console.log("line", line);
                     if (line.type.match(/(timeSignature)/)) {
                         console.log("skipping line", line);
                         continue;
@@ -202,12 +203,12 @@
                     }
                 }
 
-                console.log("sections", sections);
+                // console.log("sections", sections);
                 parsedLyrics = sections;
                 return "";
             }
         });
-        console.log("rendered", rendered);
+        // console.log("rendered", rendered);
         return rendered;
     }
 
@@ -313,7 +314,10 @@
     </div>
 
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="lyrics-container {fontSize}" on:click={() => (isEditing = true)}>
+    <div
+        class="lyrics-container {fontSize}"
+        on:click={() => (isEditing = true)}
+    >
         {#if parsingError || isEditing || !hasLyrics}
             <textarea
                 placeholder="Start typing..."
