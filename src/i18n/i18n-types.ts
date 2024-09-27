@@ -586,6 +586,14 @@ type RootTranslation = {
 			 * P​l​e​a​s​e​ ​s​e​t​ ​y​o​u​r​ ​s​o​n​g​b​o​o​k​ ​l​o​c​a​t​i​o​n​ ​t​o​ ​b​e​ ​m​a​n​a​g​e​d​ ​b​y​ ​M​u​s​i​c​a​t​.
 			 */
 			songbookLocationHintEmpty: string
+			/**
+			 * S​h​o​w​ ​s​c​r​a​p​b​o​o​k
+			 */
+			showScrapbook: string
+			/**
+			 * H​i​d​e​ ​s​c​r​a​p​b​o​o​k
+			 */
+			hideScrapbook: string
 		}
 		scrapbook: {
 			/**
@@ -624,7 +632,21 @@ type RootTranslation = {
 				 */
 				other: string
 			}
+			lyricsEditor: {
+				options: {
+					/**
+					 * A​l​i​g​n​ ​1​s​t​ ​c​h​o​r​d
+					 */
+					alignFirstChord: string
+				}
+			}
 		}
+	}
+	button: {
+		/**
+		 * C​l​i​c​k​ ​a​g​a​i​n​ ​t​o​ ​c​o​n​f​i​r​m
+		 */
+		areYouSure: string
 	}
 }
 
@@ -1199,6 +1221,14 @@ export type TranslationFunctions = {
 			 * Please set your songbook location to be managed by Musicat.
 			 */
 			songbookLocationHintEmpty: () => LocalizedString
+			/**
+			 * Show scrapbook
+			 */
+			showScrapbook: () => LocalizedString
+			/**
+			 * Hide scrapbook
+			 */
+			hideScrapbook: () => LocalizedString
 		}
 		scrapbook: {
 			/**
@@ -1237,7 +1267,21 @@ export type TranslationFunctions = {
 				 */
 				other: () => LocalizedString
 			}
+			lyricsEditor: {
+				options: {
+					/**
+					 * Align 1st chord
+					 */
+					alignFirstChord: () => LocalizedString
+				}
+			}
 		}
+	}
+	button: {
+		/**
+		 * Click again to confirm
+		 */
+		areYouSure: () => LocalizedString
 	}
 }
 

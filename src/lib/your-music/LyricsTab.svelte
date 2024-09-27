@@ -16,6 +16,7 @@
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
     import { writeChordMarkToSongProject } from "../../data/ArtistsToolkitData";
+    import LL from "../../i18n/i18n-svelte";
 
     export let lyrics;
     export let onLyricsUpdated;
@@ -25,7 +26,7 @@
     // $: {
     //     console.log("lyrics", lyrics);
     // }
-    
+
     $: hasLyrics = enabled && typeof lyrics === "string" && lyrics.length > 0;
 
     let editor;
@@ -294,10 +295,20 @@
     } else {
         isCollapsedStructure = false;
     }
+
+    // Other options
+    let isFirstChordAlignEnabled = true;
+
+    function showChordMarkHelp() {}
 </script>
 
 <div class="container" class:full-screen={$isFullScreenLyrics}>
     <div class="lyrics-options">
+        <label>
+            {$LL.artistsToolkit.songDetails.lyricsEditor.options.alignFirstChord()}
+            <input type="checkbox" bind:checked={isFirstChordAlignEnabled} />
+        </label>
+        <Divider />
         <div class="view-selector">
             <Dropdown options={viewOptions} bind:selected={view} />
         </div>
@@ -310,6 +321,17 @@
         <Icon
             icon="icon-park-outline:full-screen-one"
             onClick={toggleFullScreenLyrics}
+        />
+    </div>
+    <div class="lyrics-help">
+        <Icon
+            icon="material-symbols:help"
+            onClick={showChordMarkHelp}
+            tooltip={{
+                content: `The lyrics editor uses the ChordMark format. To learn more, visit <a target="_blank" href="https://chordmark.netlify.app/">https://chordmark.netlify.app/</a>.`,
+                interactive: true,
+                allowHTML: true
+            }}
         />
     </div>
 
@@ -356,7 +378,7 @@
                                 {:else if line.type === "chord"}
                                     {@const chordLineOffset = Math.max(
                                         line.model.offset | 0,
-                                        maxOffset
+                                        isFirstChordAlignEnabled ? maxOffset : 0
                                     )}
                                     {@const remainingSpaces = Math.max(
                                         0,
@@ -396,7 +418,7 @@
                                 {:else if line.type === "lyric"}
                                     <span class="lyric-line">
                                         <span class="offset">
-                                            {#each [...Array(Math.max(0, maxOffset - (line.model.chordPositions?.at(0) | 0))).keys()] as space}
+                                            {#each [...Array(Math.max(0, isFirstChordAlignEnabled ? maxOffset - (line.model.chordPositions?.at(0) | 0) : 0)).keys()] as space}
                                                 &nbsp;
                                             {/each}
                                         </span>
@@ -428,6 +450,7 @@
         height: 100%;
         position: relative;
         overflow: hidden;
+        background-color: color-mix(in srgb, var(--type-bw) 10%, transparent);
         &.full-screen {
             position: fixed;
             top: 0;
@@ -468,6 +491,32 @@
             gap: 0.5em;
             align-items: center;
         }
+        label {
+            color: var(--text-secondary);
+        }
+    }
+
+    .lyrics-help {
+        position: absolute;
+        bottom: 0.5em;
+        right: 2em;
+        margin: 0;
+        height: auto;
+        width: auto;
+        display: flex;
+        justify-content: flex-end;
+        z-index: 23;
+        gap: 0.5em;
+        background: color-mix(
+            in srgb,
+            var(--panel-background) 90%,
+            transparent
+        );
+        backdrop-filter: blur(8px);
+        border-radius: 4px;
+        padding: 0.5em;
+        border: 1px solid
+            color-mix(in srgb, var(--type-bw-inverse) 11%, transparent);
     }
 
     .lyrics-container {

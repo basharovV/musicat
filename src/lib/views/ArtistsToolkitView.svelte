@@ -100,11 +100,12 @@
     <section class="content" class:full-screen={$isFullScreenLyrics}>
         <Music />
     </section>
-
-    <resize-handle
-        on:mousedown={startResizeListener}
-        class:resizing={isResizing}
-    />
+    {#if $isScrapbookShown}
+        <resize-handle
+            on:mousedown={startResizeListener}
+            class:resizing={isResizing}
+        />
+    {/if}
 
     {#if $isScrapbookShown}
         <section class="scrapbook">

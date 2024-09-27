@@ -1,4 +1,5 @@
 <script lang="ts">
+    import LL from "../../i18n/i18n-svelte";
     import Icon from "./Icon.svelte";
 
     export let icon = null;
@@ -8,10 +9,21 @@
     export let size: "small" | "medium" = "medium";
     export let isLoading = false;
     export let disabled = false;
+    export let confirmText = null;
+    export let isDestructive = false;
+
+    let isConfirmingAction = false;
 </script>
 
 <div
-    on:click={onClick}
+    on:click={() => {
+        if (isDestructive && !isConfirmingAction) {
+            isConfirmingAction = true;
+        } else {
+            onClick();
+            isConfirmingAction = false;
+        }
+    }}
     class="theme-{theme} {size}"
     class:disabled
     role="button"
@@ -20,7 +32,11 @@
     {#if icon}
         <Icon icon={isLoading ? "line-md:loading-loop" : icon} />
     {/if}
-    <p>{text}</p>
+    {#if isDestructive && isConfirmingAction}
+        <p>{confirmText || $LL.button.areYouSure()}</p>
+    {:else}
+        <p>{text}</p>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -70,7 +86,11 @@
             white-space: nowrap;
             &:hover {
                 border-color: var(--accent);
-                background-color: color-mix(in srgb, var(--button-bg) 80%, transparent);
+                background-color: color-mix(
+                    in srgb,
+                    var(--button-bg) 80%,
+                    transparent
+                );
             }
         }
 

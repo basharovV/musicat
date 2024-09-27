@@ -32,6 +32,7 @@
     } from "@tauri-apps/plugin-fs";
     import { getArtistProfileImage } from "../../data/LibraryImporter";
     import { createTippy, optionalTippy } from "../ui/TippyAction";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     let currentArtistProfilePic: LookForArtResult;
 
@@ -218,28 +219,53 @@
                 {/if}
             </div>
             {#if isEditingArtist}
-                <Input
-                    bind:value={editedArtistName}
-                    small
-                    onEnterPressed={() => {
-                        updateArtistName(editedArtistName);
-                    }}
-                />
-                <Icon
-                    icon="material-symbols:close"
-                    onClick={() => (isEditingArtist = false)}
-                    color={$currentThemeObject["icon-secondary"]}
-                    size={16}
-                    boxed
-                />
-                <Icon
-                    icon="charm:menu-kebab"
-                    color="#898989"
-                    onClick={(e) => onMenuClick(e)}
-                    size={16}
-                    boxed
-                />
-                <Divider />
+                <div class="edit-options">
+                    <Input
+                        bind:value={editedArtistName}
+                        small
+                        onEnterPressed={() => {
+                            updateArtistName(editedArtistName);
+                        }}
+                    />
+                    <ButtonWithIcon
+                        icon="charm:tick"
+                        disabled={editedArtistName ===
+                            $songbookSelectedArtist.name}
+                        onClick={() => {
+                            updateArtistName(editedArtistName);
+                        }}
+                        text="Save"
+                        size="small"
+                    />
+                    <Icon
+                        icon="material-symbols:close"
+                        onClick={() => (isEditingArtist = false)}
+                        color={$currentThemeObject["icon-secondary"]}
+                        size={16}
+                        boxed
+                    />
+                    <Divider />
+
+                    <Icon
+                        icon="charm:menu-kebab"
+                        color="#898989"
+                        onClick={(e) => onMenuClick(e)}
+                        size={16}
+                        boxed
+                    />
+                    <!--                     
+                    <ButtonWithIcon
+                        icon="ant-design:delete-outlined"
+                        disabled={editedArtistName === $songbookSelectedArtist.name}
+                        onClick={() => {
+                            deleteArtist();
+                        }}
+                        text="Delete artist"
+                        size="small"
+                        isDestructive
+                    />
+                    <Divider /> -->
+                </div>
             {:else}
                 <div class="artist-info">
                     {#if $songbookArtists?.length && $songbookSelectedArtist}
@@ -274,7 +300,7 @@
                     {/if}
                     <Icon
                         icon="ic:baseline-edit"
-                        size={14}
+                        size={16}
                         onClick={() => {
                             isEditingArtist = true;
                             editedArtistName = $songbookSelectedArtist.name;
@@ -288,7 +314,7 @@
                     />
                     <Icon
                         icon="ph:plus-fill"
-                        size={14}
+                        size={16}
                         onClick={() => {
                             showArtistAddUi = true;
                         }}
@@ -361,8 +387,15 @@
                 }}
             ></Icon>
         </div>
+        <Divider />
         <Icon
             icon="ant-design:bulb-outlined"
+            tooltip={{
+                content: $isScrapbookShown
+                    ? $LL.artistsToolkit.header.hideScrapbook()
+                    : $LL.artistsToolkit.header.showScrapbook(),
+                placement: "bottom"
+            }}
             onClick={() => {
                 $isScrapbookShown = !$isScrapbookShown;
             }}
@@ -479,6 +512,15 @@
     .selected-artist {
         display: flex;
         flex-grow: 1;
+        height: 100%;
+    }
+
+    .edit-options {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        height: 100%;
+        gap: 5px;
     }
 
     .artist-info {
@@ -496,6 +538,9 @@
         flex-direction: row;
         align-items: center;
         justify-content: flex-end;
+        padding: 0 1em;
+        gap: 10px;
+        height: 100%;
 
         form {
             flex-grow: 1;

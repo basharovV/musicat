@@ -21,7 +21,6 @@
         onSelectSongProject(createdProject);
         newSongProjectTitle = "";
     }
-
 </script>
 
 <container>
@@ -72,13 +71,22 @@
                 margin-left: 0;
                 position: relative;
                 padding: 0 2em;
+                cursor: default;
 
                 &:hover {
-                    background-color: #1f1f1f;
+                    background-color: color-mix(
+                        in srgb,
+                        var(--inverse) 10%,
+                        transparent
+                    );
                 }
 
                 &.selected {
-                    background-color: #4b61dd45;
+                    background-color: color-mix(
+                        in srgb,
+                        var(--accent-secondary) 40%,
+                        transparent
+                    );
                 }
                 /* border-top: 1px solid rgba(255, 255, 255, 0.093); */
                 p {
@@ -107,7 +115,7 @@
             input {
                 width: 100%;
                 align-items: center;
-                cursor: default;
+                cursor: text;
                 padding: 0.2em 0.5em;
                 font-size: 14px;
                 outline: none;

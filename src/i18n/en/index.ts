@@ -191,6 +191,8 @@ const en = {
         header: {
             songbookLocationHint: "Your songbook location managed by Musicat. Currently set to {path}",
             songbookLocationHintEmpty: "Please set your songbook location to be managed by Musicat.",
+            showScrapbook: "Show scrapbook",
+            hideScrapbook: "Hide scrapbook",
         },
         scrapbook: {
             title: "Scrapbook",
@@ -204,8 +206,16 @@ const en = {
                 lyrics: "Lyrics & Chords",
                 files: "Files",
                 other: "Other",
+            },
+            lyricsEditor: {
+                options: {
+                    alignFirstChord: "Align 1st chord",
+                }
             }
         }
+    },
+    button: {
+        areYouSure: "Click again to confirm",
     }
 } satisfies BaseTranslation;
 
