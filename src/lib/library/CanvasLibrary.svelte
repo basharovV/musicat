@@ -400,7 +400,7 @@
     let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
     let DRAGGING_SOURCE_COLOR: string;
 
-    const SCROLLING_PIXEL_RATIO = 1.2;
+    const SCROLLING_PIXEL_RATIO = 1.3;
     const IDLE_PIXEL_RATIO = 1.8;
 
     onMount(() => {
