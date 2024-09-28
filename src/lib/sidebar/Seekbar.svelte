@@ -244,7 +244,7 @@
         svg {
             height: 10px;
             width: 10px;
-            fill: var(--accent-secondary);
+            fill: rgb(0, 197, 108);
             position: absolute;
             overflow: visible;
             pointer-events: none;
