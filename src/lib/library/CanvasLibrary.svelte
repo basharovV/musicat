@@ -400,6 +400,9 @@
     let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
     let DRAGGING_SOURCE_COLOR: string;
 
+    const SCROLLING_PIXEL_RATIO = 1.2;
+    const IDLE_PIXEL_RATIO = 1.8;
+
     onMount(() => {
         init();
 
@@ -409,7 +412,7 @@
 
         if (matchMedia(query).matches) {
             // Slightly reduce the ratio for better performance
-            Konva.pixelRatio = 1.8;
+            Konva.pixelRatio = IDLE_PIXEL_RATIO;
         }
 
         const resizeObserver = new ResizeObserver((entries) => {
@@ -491,6 +494,8 @@
         DRAGGING_SOURCE_COLOR = "#8a69683e";
     }
 
+    let isRestoringScrollPos = false;
+
     // Restore scroll position if any
     $: if (
         $uiView === "library" &&
@@ -504,6 +509,7 @@
         //     $libraryScrollPos,
         //     (songs?.length * ROW_HEIGHT - viewportHeight) * $libraryScrollPos
         // );
+        isRestoringScrollPos = true;
         setTimeout(() => {
             if ($scrollToSong) {
                 focusSong($scrollToSong);
@@ -797,13 +803,36 @@
     }
 
     const rememberScrollPos = debounce(async () => {
-        console.log("remembering scroll pos", scrollNormalized);
+        // console.log("remembering scroll pos", scrollNormalized);
         $libraryScrollPos = scrollNormalized; // 0-1
     }, 100);
 
     let lastScrollTime = 0;
     let lastScrollTop = 0;
     let timeout;
+    let isScrolling = false;
+    let scrollingTimeout;
+
+    // Change pixel ratio on scroll
+    $: if (isScrolling) {
+        // console.log("scrolling");
+        Konva.pixelRatio = SCROLLING_PIXEL_RATIO;
+        if (stage) {
+            stage.getLayers().forEach((l) => {
+                l.canvas.setPixelRatio(SCROLLING_PIXEL_RATIO);
+            });
+        }
+    } else {
+        // console.log("idle");
+        Konva.pixelRatio = IDLE_PIXEL_RATIO;
+        if (stage) {
+            stage.getLayers().forEach((l) => {
+                l.canvas.setPixelRatio(IDLE_PIXEL_RATIO);
+                l.draw();
+            });
+        }
+    }
+
     function onScroll() {
         if (
             Date.now() - lastScrollTime < 20 &&
@@ -833,6 +862,20 @@
         // Only save/restore scroll pos in main library view, not on playlists
         if ($uiView === "library" && !$isTagCloudOpen) {
             rememberScrollPos();
+        }
+
+        // Set isScrolling to true on scroll, then set it to false after 500ms
+        if (!isRestoringScrollPos) {
+            if (!isScrolling) {
+                isScrolling = true;
+            } else {
+                scrollingTimeout && clearTimeout(scrollingTimeout);
+            }
+            scrollingTimeout = setTimeout(() => {
+                isScrolling = false;
+            }, 140);
+        } else {
+            isRestoringScrollPos = false;
         }
     }
 
@@ -1893,8 +1936,14 @@
                                                                 ) => {
                                                                     // TODO: Show overflowed tags in menu
                                                                     menuPos = {
-                                                                        x: e.detail.evt.clientX,
-                                                                        y: e.detail.evt.clientY
+                                                                        x: e
+                                                                            .detail
+                                                                            .evt
+                                                                            .clientX,
+                                                                        y: e
+                                                                            .detail
+                                                                            .evt
+                                                                            .clientY
                                                                     };
                                                                     $rightClickedTrack =
                                                                         song;
