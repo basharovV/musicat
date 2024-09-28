@@ -202,7 +202,7 @@
             top: 0;
             left: 0;
             bottom: 0;
-            background-color: color-mix(in srgb, var(--background) 76%, black);
+            background-color: color-mix(in srgb, var(--type-bw-inverse) 36%, black);
             z-index: 1;
             transition: all 0.2s ease-in-out;
         }
@@ -244,7 +244,7 @@
         svg {
             height: 10px;
             width: 10px;
-            fill: rgb(0, 197, 108);
+            fill: var(--accent-secondary);
             position: absolute;
             overflow: visible;
             pointer-events: none;

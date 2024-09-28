@@ -409,14 +409,14 @@
                     &::-webkit-slider-thumb {
                         -webkit-appearance: none;
                         appearance: none;
-                        width: 22px;
-                        height: 22px;
+                        width: 20px;
+                        height: 20px;
                         background: url("/images/volume-up.svg");
                     }
 
                     &::-moz-range-thumb {
-                        width: 22px;
-                        height: 22px;
+                        width: 20px;
+                        height: 20px;
                         background: #04aa6d;
                     }
                 }
