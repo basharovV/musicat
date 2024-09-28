@@ -246,5 +246,23 @@ export const allThemes: { [key: string]: Theme } = {
         ...DEFAULT_THEME,
         "text": "#f1f1f1",
         "background": "#562931"
+    },
+    winamp: {
+        ...DEFAULT_THEME,
+        type: "dark",
+        background: "#25253e",
+        "panel-background": "black",
+        "library-text-color": "#05A101",
+        "library-playing-bg": "transparent",
+        "library-playing-text": "white",
+        "library-header-bg": 'black',
+        "library-header-text": "#acb4ac",
+        accent: "#F0D895",
+        "accent-secondary": "#F0D895",
+        "text-active": "#F0D895",
+        "text-inactive": "#aeafa8",
+        "icon-primary": "#E5F6F7",
+        "icon-secondary": "#E5F6F7",
+        oscilloscope: "#07ea03",
     }
 };
