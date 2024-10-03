@@ -10,7 +10,7 @@
 use std::result;
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
-use ::cpal::{default_host, Device};
+use ::cpal::{default_host, Device, SupportedStreamConfig};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
@@ -89,6 +89,7 @@ mod cpal {
         pub fn try_open(
             device_name: &String,
             spec: SignalSpec,
+            sample_buf_size: u64,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
             playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
@@ -145,12 +146,9 @@ mod cpal {
                 },
             );
 
-            let duration = match config.buffer_size() {
-                SupportedBufferSize::Range { min: _, max } => {
-                    (*max * device_spec.channels.count() as u32) as u64
-                }
-                SupportedBufferSize::Unknown => 4096 as u64,
-            };
+            // Prepare the sample buffer size based on the maximum number of frames per packet
+            let duration = sample_buf_size;
+            info!("sample buffer size: {:?}", duration);
 
             // Select proper playback routine based on sample format.
             match config.sample_format() {
@@ -430,7 +428,7 @@ mod cpal {
 
                                 let _ =
                                     app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
-                                
+
                                 // Also emit back to the decoding thread
                                 let _ = timestamp_sender
                                     .try_lock()
@@ -515,12 +513,12 @@ mod cpal {
             }
 
             // Print buffer size
-            {
-                // info!("decoded samples: {}", decoded.frames());
-                // // Current Buffer size
-                // info!("buffer samples: {}", self.sample_buf.samples().len());
-                // info!("ring buffer size: {}", self.ring_buf.count());
-            }
+            // {
+            //     info!("decoded samples: {}", decoded.frames());
+            //     // Current Buffer size
+            //     info!("buffer samples: {}", self.sample_buf.samples().len());
+            //     info!("ring buffer size: {}", self.ring_buf.count());
+            // }
 
             let mut samples = if let Some(resampler) = &mut self.resampler {
                 // Resampling is required. The resampler will return interleaved samples in the
@@ -530,6 +528,11 @@ mod cpal {
                     None => return,
                 }
             } else {
+                // info!(
+                //     "sample_buf capacity {:?} | decoded size {:?}",
+                //     self.sample_buf.capacity(),
+                //     decoded.spec().channels.count() * decoded.frames()
+                // );
                 if self.sample_buf.capacity() >= decoded.spec().channels.count() * decoded.frames()
                 {
                     // Resampling is not required. Interleave the sample for cpal using a sample buffer.
@@ -546,6 +549,8 @@ mod cpal {
                         self.sample_buf.samples()
                     }
                 } else {
+                    // The sample buffer is not big enough to process all the samples.
+                    // TODO Error? 
                     return;
                 }
             };
@@ -655,6 +660,7 @@ mod cpal {
 pub fn try_open(
     device_name: &String,
     spec: SignalSpec,
+    sample_buf_size: u64,
     volume_control_receiver: Arc<
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::VolumeControlEvent>>,
     >,
@@ -672,6 +678,7 @@ pub fn try_open(
     cpal::CpalAudioOutput::try_open(
         device_name,
         spec,
+        sample_buf_size,
         volume_control_receiver,
         sample_offset_receiver,
         playback_state_receiver,
@@ -693,7 +700,16 @@ pub fn get_device_by_name(name: Option<String>) -> Option<Device> {
     return host
         .devices()
         .unwrap()
-        .find(|device| device.name().unwrap() == name)
+        .find(|device| {
+            device.name().unwrap() == name
+                && device.supported_output_configs().is_ok_and(|configs| {
+                    let mut has = false;
+                    for _config in configs {
+                        has = true;
+                    }
+                    has
+                })
+        })
         .or(host.default_output_device());
 }
 

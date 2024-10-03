@@ -538,12 +538,16 @@ fn decode_loop(
             };
 
             let mut should_reset_audio = false;
-            let mut new_duration = 1152;
+            let mut new_max_frames = 1152;
+            let mut max_frames_changed = false;
 
             let max_frames = decoder.codec_params().max_frames_per_packet;
-            // info!("max frames: {:?}", max_frames);
+            info!("max frames: {:?}", max_frames);
             if let Some(dur) = max_frames {
-                new_duration = dur;
+                if (dur != new_max_frames) {
+                    max_frames_changed = true;
+                }
+                new_max_frames = dur;
             }
 
             // Check if audio device changed
@@ -604,7 +608,8 @@ fn decode_loop(
                 // (if this sample rate isn't supported, it will be resampled)
                 should_reset_audio = previous_audio_device_name != device.name().unwrap()
                     || supports_sample_rate && spec.rate != previous_sample_rate
-                    || spec.channels.count() != previous_channels;
+                    || spec.channels.count() != previous_channels
+                    || max_frames_changed;
             }
 
             previous_sample_rate = spec.rate;
@@ -630,6 +635,7 @@ fn decode_loop(
                 audio_output = Some(output::try_open(
                     &previous_audio_device_name,
                     spec,
+                    new_max_frames,
                     volume_control_receiver.clone(),
                     sample_offset_receiver.clone(),
                     playback_state.clone(),
@@ -675,7 +681,7 @@ fn decode_loop(
 
                         // Resampling stuff
                         guard.resume();
-                        guard.update_resampler(spec, new_duration);
+                        guard.update_resampler(spec, new_max_frames);
 
                         // Until all samples have been flushed - don't start decoding
                         // Keep checking until all samples have been played (buffer is empty)
@@ -749,7 +755,7 @@ fn decode_loop(
                             atomic_wait::wait(&decoding_active, PAUSED);
 
                             // By default we want to resume the output after un-pausing,
-                            // unless the audio device has changed, in which case this is just a 
+                            // unless the audio device has changed, in which case this is just a
                             // temporary trip round the loop until the new device is set, and we pause again
                             // to restore the previous state
 
