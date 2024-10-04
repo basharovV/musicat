@@ -551,15 +551,8 @@
     }
     let sidebar;
     let sidebarWidth = 210;
-    let isInit = true;
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
-
-    afterUpdate(() => {
-        if (isInit && sidebar) {
-            isInit = false;
-        }
-    });
 
     onMount(async () => {
         shouldFocusFind.subscribe((event) => {

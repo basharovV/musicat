@@ -232,6 +232,7 @@
             &:hover,
             &.resizing {
                 background-color: var(--accent-secondary);
+                border-radius: 4px;
             }
 
             cursor: ew-resize;
@@ -239,7 +240,7 @@
     }
 
     .content {
-        width: 100%;
+        width: 100%;    
         grid-column: 1;
         grid-row: 2;
         z-index: 1;

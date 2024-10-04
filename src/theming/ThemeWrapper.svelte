@@ -6,7 +6,7 @@
         currentFont,
         currentMode,
         currentThemeName,
-        currentThemeObject,
+        currentThemeObject
     } from "./store";
     import { allThemes } from "./themes";
 
@@ -85,11 +85,6 @@
         // loading order: saved, prefers, fallback
         const saved = key ? localStorage && localStorage.getItem(key) : null;
 
-        return () =>
-            key && localStorage && localStorage.setItem(key, $currentThemeName);
-    });
-
-    afterUpdate(() => {
         if (document) {
             document.documentElement.setAttribute(
                 "data-theme",
@@ -97,6 +92,9 @@
             );
         }
         if (key && localStorage) localStorage.setItem(key, $currentThemeName);
+
+        return () =>
+            key && localStorage && localStorage.setItem(key, $currentThemeName);
     });
 </script>
 
