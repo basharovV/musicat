@@ -54,7 +54,7 @@ pub struct ScanPathsEvent {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
-    duration: Option<f64>, //s
+    pub duration: Option<f64>, //s
     overall_bitrate: Option<u32>,
     audio_bitrate: Option<u32>,
     sample_rate: Option<u32>,
@@ -67,8 +67,8 @@ pub struct FileInfo {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Artwork {
-    data: Vec<u8>,
-    src: Option<String>,
+    pub data: Vec<u8>,
+    pub src: Option<String>,
     format: String,
 }
 
@@ -84,16 +84,16 @@ pub struct Song {
     id: String,
     path: String,
     file: String,
-    title: String,
-    artist: String,
-    album: String,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
     year: i32,
     genre: Vec<String>,
     composer: Vec<String>,
     track_number: i32,
     duration: String,
-    file_info: FileInfo,
-    artwork: Option<Artwork>,
+    pub file_info: FileInfo,
+    pub artwork: Option<Artwork>,
     origin_country: Option<String>,
     date_added: Option<u128>,
 }

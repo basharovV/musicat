@@ -23,6 +23,7 @@ use tokio_util::sync::CancellationToken;
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 mod dsp;
+mod mediakeys;
 mod metadata;
 mod output;
 mod player;
@@ -468,6 +469,10 @@ async fn main() {
                         .await;
                 });
             });
+
+            // Prepare to set Now Playing info on Mac
+            #[cfg(target_os = "macos")]
+            mediakeys::setup_remote_command_center();
 
             Ok(())
         })

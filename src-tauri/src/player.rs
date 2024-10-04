@@ -43,6 +43,7 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
+use crate::mediakeys;
 use crate::output::{self, get_device_by_name, AudioOutput};
 use crate::store::load_settings;
 use crate::{
@@ -693,6 +694,18 @@ fn decode_loop(
                             info!("Buffer is now empty. Continuing decoding...");
                         }
 
+                        // Set media keys / now playing
+                        let song = crate::metadata::extract_metadata(
+                            &Path::new(&p.clone().as_str()),
+                            false,
+                            false,
+                            &app_handle,
+                        );
+                        if let Some(s) = &song {
+                            #[cfg(target_os = "macos")]
+                            mediakeys::set_now_playing_info(s);
+                        }
+
                         // Decode all packets, ignoring all decode errors.
                         let result = loop {
                             if let Ok(ts) = timestamp_receiver.try_recv() {
@@ -749,6 +762,7 @@ fn decode_loop(
                                 guard.pause();
                                 let _ = playback_state_sender.send(false);
                                 let _ = app_handle.emit("paused", {});
+                                mediakeys::set_paused();
                             }
 
                             // waits while the value is PAUSED (0)
@@ -824,6 +838,7 @@ fn decode_loop(
 
                             let _ = playback_state_sender.send(true);
                             let _ = app_handle.emit("playing", {});
+                            mediakeys::set_playing();
 
                             let packet = match reader.next_packet() {
                                 Ok(packet) => packet,
@@ -884,13 +899,8 @@ fn decode_loop(
                                                     });
                                             }
 
-                                            if let Some(song) = crate::metadata::extract_metadata(
-                                                &Path::new(&p.clone().as_str()),
-                                                false,
-                                                false,
-                                                &app_handle,
-                                            ) {
-                                                let _ = app_handle.emit("song_change", Some(song));
+                                            if let Some(s) = &song {
+                                                let _ = app_handle.emit("song_change", Some(s));
 
                                                 let _ = reset_control_sender.send(true);
                                                 let _ =
