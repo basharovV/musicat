@@ -550,24 +550,15 @@
         $currentSong = $currentSong;
     }
     let sidebar;
-    let sidebarWidth = 0;
-
+    let sidebarWidth = 210;
+    let isInit = true;
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
 
     afterUpdate(() => {
-        sidebarWidth = sidebar?.getBoundingClientRect().width;
-
-        // console.log("sidebar clientWidth", sidebar?.clientWidth);
-        // console.log("sidebar width", sidebar?.width);
-        // console.log("sidebar offsetWidth", sidebar?.offsetWidth);
-        // console.log("sidebar width rect", sidebarWidth);
-
-        height = window.innerHeight;
-        window.onresize = throttle(() => {
-            onResize();
-        }, 200);
-        onResize(); // run once
+        if (isInit && sidebar) {
+            isInit = false;
+        }
     });
 
     onMount(async () => {
@@ -598,6 +589,13 @@
 
         // Detect size changes in scroll container for the menu
         const resizeObserver = new ResizeObserver(onMenuResize).observe(menu);
+
+        height = window.innerHeight;
+        window.onresize = throttle(() => {
+            onResize();
+        }, 200);
+
+        onResize(); // run once
     });
 
     let canvas: HTMLCanvasElement;
@@ -2102,7 +2100,11 @@
         color: var(--text-secondary);
 
         p {
-            background-color: color-mix(in srgb, var(--inverse) 5%, transparent);
+            background-color: color-mix(
+                in srgb,
+                var(--inverse) 5%,
+                transparent
+            );
             padding: 0em 0.6em;
             &.with-icon {
                 padding: 0em 0.6em 0em 0.3em;
@@ -2117,7 +2119,7 @@
             max-height: 15px;
             font-weight: 600;
             border: 1px solid
-            color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
+                color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
 
             /* border-bottom: 1px dashed rgb(49, 49, 49); */
             font-family: monospace;
