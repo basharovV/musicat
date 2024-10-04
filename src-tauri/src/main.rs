@@ -5,6 +5,7 @@
 
 use futures_util::StreamExt;
 use log::info;
+use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
 use player::AudioStreamer;
 use reqwest;
@@ -356,6 +357,7 @@ async fn main() {
             state.init(app_.clone());
             let strm1 = state.inner().to_owned();
             let strm2 = strm1.clone();
+            let strm3 = strm1.clone();
 
             #[cfg(any(windows, target_os = "linux"))]
             {
@@ -386,7 +388,6 @@ async fn main() {
             };
 
             info!("Initial opened urls: {:?}", opened_urls);
-
             let mut window_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", Default::default())
                     .initialization_script(&format!("window.openedUrls = `{opened_urls}`"))
@@ -432,16 +433,6 @@ async fn main() {
             // Listen for metadata write event
             // listen to the `event-name` (emitted on any window)
 
-            let window_clone = Box::new(window.clone());
-
-            let _id2 = app.listen_any("show-toolbar", move |_| {
-                window.set_decorations(true).unwrap();
-            });
-
-            let _id2 = app.listen_any("hide-toolbar", move |_| {
-                window_clone.set_decorations(false).unwrap();
-            });
-
             let _id3 = app.listen_any("webrtc-signal", move |event| {
                 info!("webrtc-signal {:?}", event);
                 let event_clone = event.clone();
@@ -470,9 +461,31 @@ async fn main() {
                 });
             });
 
+            let command_clone = strm3.clone();
             // Prepare to set Now Playing info on Mac
             #[cfg(target_os = "macos")]
-            mediakeys::setup_remote_command_center();
+            {
+                let mut command_center = RemoteCommandCenter::new();
+
+                // Define play and pause handlers
+                let play_handler = move || {
+                    println!("Play command received - custom handling logic here");
+                    // Add your custom play logic
+                    strm3.resume();
+                };
+
+                let pause_handler = move || {
+                    println!("Pause command received - custom handling logic here");
+                    // Add your custom pause logic
+                    command_clone.pause();
+                };
+
+                // Set the handlers
+                command_center.set_handlers(play_handler, pause_handler);
+
+                // Setup the remote command center
+                command_center.setup_remote_command_center();
+            }
 
             Ok(())
         })

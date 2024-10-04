@@ -3,6 +3,7 @@ use log::{error, info, warn};
 use objc2::runtime::AnyObject;
 use std::ffi::c_void;
 use std::ptr;
+use std::rc::Rc;
 
 use objc2::rc::{Id, Retained};
 use objc2::{class, msg_send, msg_send_id, sel, Encode, Encoding, RefEncode};
@@ -80,36 +81,64 @@ pub fn set_paused() {
     }
 }
 
-/// Sets up the MPRemoteCommandCenter and configures play/pause handlers using `block2` for block support.
-pub fn setup_remote_command_center() {
-    println!("MPRemoteCommandCenter:");
-    unsafe {
-        // Obtain the shared MPRemoteCommandCenter instance.
-        let command_center: *mut NSObject =
-            msg_send![class!(MPRemoteCommandCenter), sharedCommandCenter];
-        println!("MPRemoteCommandCenter: {:?}", command_center);
+pub struct RemoteCommandCenter {
+    play_handler: Option<Rc<dyn Fn()>>,
+    pause_handler: Option<Rc<dyn Fn()>>,
+}
 
-        // Create an RcBlock for handling the play command.
-        let play_handler_block = RcBlock::new(|_command: *mut NSObject| -> *const NSNumber {
-            println!("Play command received");
-            // Return NSNumber indicating success
-            Id::as_ptr(&NSNumber::new_i32(0))
-        });
+impl RemoteCommandCenter {
+    pub fn new() -> Self {
+        RemoteCommandCenter {
+            play_handler: None,
+            pause_handler: None,
+        }
+    }
 
-        // Register the play command with the block.
-        let play_command: *mut NSObject = msg_send![command_center, playCommand];
-        let _: *mut NSObject = msg_send![play_command, addTargetWithHandler: &*play_handler_block];
+    // Set handlers as closures
+    pub fn set_handlers<F, G>(&mut self, play: F, pause: G)
+    where
+        F: Fn() + 'static,
+        G: Fn() + 'static,
+    {
+        self.play_handler = Some(Rc::new(play));
+        self.pause_handler = Some(Rc::new(pause));
+    }
 
-        let pause_handler_block = RcBlock::new(|_command: *mut NSObject| -> *const NSNumber {
-            println!("Pause command received");
-            // Return NSNumber indicating success
-            Id::as_ptr(&NSNumber::new_i32(0))
-        });
+    pub fn setup_remote_command_center(&self) {
+        println!("MPRemoteCommandCenter:");
+        unsafe {
+            let command_center: *mut NSObject =
+                msg_send![class!(MPRemoteCommandCenter), sharedCommandCenter];
+            println!("MPRemoteCommandCenter: {:?}", command_center);
 
-        // Register the pause command with the block.
-        let pause_command: *mut NSObject = msg_send![command_center, pauseCommand];
-        let _: *mut NSObject =
-            msg_send![pause_command, addTargetWithHandler: &*pause_handler_block];
+            // Create the play handler block using the closure
+            let play_handler_clone = self.play_handler.clone();
+            let play_handler_block = RcBlock::new(move |_command: *mut NSObject| {
+                if let Some(handler) = &play_handler_clone {
+                    handler(); // Call the play handler closure
+                }
+                Id::as_ptr(&NSNumber::new_i32(0)) // Return NSNumber indicating success
+            });
+
+            // Register the play command with the block.
+            let play_command: *mut NSObject = msg_send![command_center, playCommand];
+            let _: *mut NSObject =
+                msg_send![play_command, addTargetWithHandler: &*play_handler_block];
+
+            // Create the pause handler block using the closure
+            let pause_handler_clone = self.pause_handler.clone();
+            let pause_handler_block = RcBlock::new(move |_command: *mut NSObject| {
+                if let Some(handler) = &pause_handler_clone {
+                    handler(); // Call the pause handler closure
+                }
+                Id::as_ptr(&NSNumber::new_i32(0)) // Return NSNumber indicating success
+            });
+
+            // Register the pause command with the block.
+            let pause_command: *mut NSObject = msg_send![command_center, pauseCommand];
+            let _: *mut NSObject =
+                msg_send![pause_command, addTargetWithHandler: &*pause_handler_block];
+        }
     }
 }
 
@@ -151,14 +180,14 @@ unsafe fn set_artwork(artwork: &Option<Artwork>) -> *mut NSObject {
     let media_artwork_class_alloc: *mut NSObject = msg_send![media_artwork_class, alloc];
 
     // Create the request handler block. This block receives a CGSize and returns the NSImage.
-    let handler_block = RcBlock::new(move |size: *const c_void| -> *mut NSObject {
+    let handler_block = RcBlock::new(move |size: *const CGSize| -> *const NSObject {
         info!("Size: {:?}", size);
         ns_image
     });
     let size = CGSize::new(200f64, 200f64);
 
     return ptr::null_mut();
-    // TODO: This is not working yet. Maybe worth trying in objc1 instead.  
+    // TODO: This is not working yet. Maybe worth trying in objc1 instead.
     let artwork: *mut NSObject = msg_send![media_artwork_class_alloc, initWithBoundsSize: size requestHandler: &*handler_block];
     return artwork;
 }
