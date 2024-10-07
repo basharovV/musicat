@@ -203,7 +203,6 @@ dependencies = [
  "serde",
  "serde_json",
  "symphonia",
- "tao 0.30.3 (git+https://github.com/basharovV/tao.git?branch=dev)",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -5589,45 +5588,6 @@ dependencies = [
 [[package]]
 name = "tao"
 version = "0.30.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0dbbebe82d02044dfa481adca1550d6dd7bd16e086bc34fa0fbecceb5a63751"
-dependencies = [
- "bitflags 2.6.0",
- "cocoa",
- "core-foundation 0.10.0",
- "core-graphics",
- "crossbeam-channel",
- "dispatch",
- "dlopen2",
- "dpi",
- "gdkwayland-sys",
- "gdkx11-sys",
- "gtk",
- "instant",
- "jni",
- "lazy_static",
- "libc",
- "log",
- "ndk 0.9.0",
- "ndk-context",
- "ndk-sys 0.6.0+11769913",
- "objc",
- "once_cell",
- "parking_lot",
- "raw-window-handle",
- "scopeguard",
- "tao-macros 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "unicode-segmentation",
- "url",
- "windows 0.58.0",
- "windows-core 0.58.0",
- "windows-version",
- "x11-dl",
-]
-
-[[package]]
-name = "tao"
-version = "0.30.3"
 source = "git+https://github.com/basharovV/tao.git?branch=dev#f26f47de9e5e91007d74b747799ce8a0190366dd"
 dependencies = [
  "bitflags 2.6.0",
@@ -5988,7 +5948,7 @@ dependencies = [
  "percent-encoding",
  "raw-window-handle",
  "softbuffer",
- "tao 0.30.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tao",
  "tauri-runtime",
  "tauri-utils",
  "url",
