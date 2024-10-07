@@ -1,10 +1,10 @@
 [package]
-name = "app"
-version = "0.1.0"
-description = "A Tauri App"
+name = "Musicat"
+version = "0.9.0"
+description = "Musicat music player"
 authors = ["you"]
-license = ""
-repository = ""
+license = "GPL-3.0-or-later"
+repository = "https://github.com/basharovV/musicat"
 default-run = "app"
 edition = "2021"
 rust-version = "1.70"
@@ -64,11 +64,13 @@ urlencoding = "2.1.3"
 objc2 = "0.5.2"
 block2 = "0.5.1"
 objc2-foundation = { version = "0.2.2", features = ["all"] }
+tao = { git = "https://github.com/basharovV/tao.git", branch = "dev"}
 
 [patch.crates-io]
 webrtc = { git = "https://github.com/basharovV/webrtc.git" }
 webrtc-ice = { git = "https://github.com/basharovV/webrtc.git" }
 webrtc-sctp = { git = "https://github.com/basharovV/webrtc.git" }
+# tao = { path = "../../tao"}
 
 [features]
 # by default Tauri runs in production mode

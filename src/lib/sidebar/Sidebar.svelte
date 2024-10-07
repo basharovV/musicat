@@ -64,6 +64,7 @@
     import Input from "../ui/Input.svelte";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import { optionalTippy } from "../ui/TippyAction";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -201,11 +202,11 @@
         if (!$isMiniPlayer && height <= 220 && width <= 210) {
             $isMiniPlayer = true;
             console.log("setting to false");
-            await appWindow.setDecorations(false);
+            // await appWindow.setDecorations(false);
         } else if ($isMiniPlayer && (height > 220 || width > 210)) {
             $isMiniPlayer = false;
             console.log("setting to true");
-            await appWindow.setDecorations(true);
+            // await appWindow.setDecorations(true);
         }
 
         // Get bottom coordinates of top container
@@ -1398,26 +1399,29 @@
         <div class="track-info-content">
             <!-- svelte-ignore a11y-mouse-events-have-key-events -->
 
-            <div
-                class="sidebar-toggle"
-                class:visible={$isSidebarOpen}
-                use:tippy={{
-                    content: "Toggle the sidebar.",
-                    placement: "right"
-                }}
-            >
-                <Icon
-                    icon="tabler:layout-sidebar-left-collapse"
-                    size={22}
-                    color={$currentThemeObject["icon-secondary"]}
-                    onClick={(e) => {
-                        $isSidebarOpen = false;
-                        $sidebarManuallyOpened = false;
-                        $sidebarTogglePos = { x: e.clientX, y: e.clientY };
+            {#if !$isMiniPlayer}
+                <div
+                    class="sidebar-toggle"
+                    class:visible={$isSidebarOpen}
+                    use:tippy={{
+                        content: "Toggle the sidebar.",
+                        placement: "right"
                     }}
-                />
-            </div>
+                >
+                    <Icon
+                        icon="tabler:layout-sidebar-left-collapse"
+                        size={22}
+                        color={$currentThemeObject["icon-secondary"]}
+                        onClick={(e) => {
+                            $isSidebarOpen = false;
+                            $sidebarManuallyOpened = false;
+                            $sidebarTogglePos = { x: e.clientX, y: e.clientY };
+                        }}
+                    />
+                </div>
+            {/if}
 
+            <!-- svelte-ignore a11y-mouse-events-have-key-events -->
             <div
                 bind:this={miniToggleBtn}
                 class="mini-toggle"
@@ -1460,7 +1464,8 @@
                             on:click={() => {
                                 $isWikiOpen = !$isWikiOpen;
                             }}
-                            use:tippy={{
+                            use:optionalTippy={{
+                                show: !$isMiniPlayer,
                                 content: `Open Wiki panel for ${artist}`,
                                 placement: "right"
                             }}
@@ -2020,20 +2025,22 @@
             text-overflow: ellipsis;
             overflow: hidden;
             pointer-events: all;
-            &:hover {
-                background-color: color-mix(
-                    in srgb,
-                    var(--inverse) 80%,
-                    transparent
-                );
-                border-radius: 5px;
-            }
-            &:active {
-                background-color: color-mix(
-                    in srgb,
-                    var(--inverse) 90%,
-                    transparent
-                );
+            @media screen and (min-width: 211px) and (min-height: 211px) {
+                &:hover {
+                    background-color: color-mix(
+                        in srgb,
+                        var(--inverse) 80%,
+                        transparent
+                    );
+                    border-radius: 5px;
+                }
+                &:active {
+                    background-color: color-mix(
+                        in srgb,
+                        var(--inverse) 90%,
+                        transparent
+                    );
+                }
             }
         }
         .title {
@@ -2515,8 +2522,13 @@
             .mini-toggle {
                 opacity: 0 !important;
             }
+            .mini-toggle {
+                top: 0px;
+                right: 0px;
+            }
             .track-info-content {
-                margin-top: 1.5em;
+                margin-top: 1.9em;
+                margin-bottom: 1em;
             }
 
             .other-controls {
@@ -2524,7 +2536,8 @@
             }
 
             .seekbar {
-                padding: 0.5em 0;
+                padding: 0.5em 1em;
+                margin-bottom: -0.5em;
             }
 
             .artwork-container {

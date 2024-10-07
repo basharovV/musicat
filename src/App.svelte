@@ -121,6 +121,7 @@
      * - Artist's toolkit view: Add to scrapbook or song project
      */
     onMount(async () => {
+        appWindow.emit("opened");
         // File associations: check for opened urls on the window
         console.log("window opened urls: ", window.openedUrls);
 
@@ -684,6 +685,9 @@
             width: 4px;
             left: -2.5px;
             z-index: 100;
+            @media screen and (max-width: 210px) {
+                display: none;
+            }
 
             &::after {
                 content: "";

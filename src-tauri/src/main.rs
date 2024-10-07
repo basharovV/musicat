@@ -314,6 +314,18 @@ struct Payload {
     cwd: String,
 }
 
+fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<u32>) {
+    let width_scaled = (size.width as f64 / window.scale_factor().unwrap()).round() as u32;
+    let height_scaled = (size.height as f64 / window.scale_factor().unwrap()).round() as u32;
+    let is_decorated = window.is_decorated().unwrap();
+    // Decorations off when width and height are 210px
+    if width_scaled == 210 && height_scaled == 210 && is_decorated {
+        window.set_decorations(false).unwrap();
+    } else if width_scaled != 210 && height_scaled != 210 && !is_decorated {
+        window.set_decorations(true).unwrap();
+    }
+}
+
 #[tokio::main]
 async fn main() {
     info!("Starting Musicat");
@@ -422,13 +434,28 @@ async fn main() {
 
             let window = window_builder.build().unwrap();
 
+            let window2 = window.clone();
+            #[cfg(target_os = "macos")]
+            {
+                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
+                    .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            }
+
+            window.clone().on_window_event(move |event| match event {
+                tauri::WindowEvent::Resized(size) => {
+                    handle_decorations(&window, size);
+                }
+                _ => (),
+            });
+
             app.on_menu_event(move |app, event| {
                 app.emit("menu", event.id.0).unwrap();
             });
 
-            #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
-                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            app.listen_any("opened", move |event| {
+                let inner_size = window2.inner_size().unwrap();
+                handle_decorations(&window2, &inner_size);
+            });
 
             // Listen for metadata write event
             // listen to the `event-name` (emitted on any window)
