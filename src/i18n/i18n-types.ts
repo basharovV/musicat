@@ -69,6 +69,23 @@ type RootTranslation = {
 		 * S​t​a​t​s
 		 */
 		stats: string
+		/**
+		 * O​p​e​n​ ​W​i​k​i​ ​p​a​n​e​l​ ​f​o​r​ ​{​a​r​t​i​s​t​}
+		 * @param {unknown} artist
+		 */
+		openWikiTooltip: RequiredParams<'artist'>
+		/**
+		 * A​d​d​ ​m​e​t​a​d​a​t​a
+		 */
+		addMetadataHint: string
+		/**
+		 * T​a​k​e​ ​c​o​n​t​r​o​l​ ​o​f​ ​y​o​u​r​ ​l​i​b​r​a​r​y
+		 */
+		takeControl: string
+		/**
+		 * M​a​i​n​ ​p​l​a​y​e​r​ ​o​f​f​ ​i​n​ ​I​n​t​e​r​n​e​t​ ​A​r​c​h​i​v​e​ ​m​o​d​e​<​b​r​ ​/​>​<​b​r​ ​/​>​S​t​o​p​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​r​e​-​e​n​a​b​l​e
+		 */
+		iaMode: string
 	}
 	library: {
 		fields: {
@@ -460,6 +477,10 @@ type RootTranslation = {
 			 */
 			hint: string
 		}
+		/**
+		 * C​l​i​c​k​ ​t​o​ ​s​e​t​ ​t​i​t​l​e​ ​f​r​o​m​ ​f​i​l​e​n​a​m​e
+		 */
+		setTitleFromFileNameHint: string
 	}
 	settings: {
 		/**
@@ -648,6 +669,42 @@ type RootTranslation = {
 		 */
 		areYouSure: string
 	}
+	input: {
+		/**
+		 * P​r​e​s​s​ ​E​N​T​E​R​ ​t​o​ ​a​u​t​o​c​o​m​p​l​e​t​e
+		 */
+		enterHintTooltip: string
+	}
+	albums: {
+		options: {
+			/**
+			 * o​r​d​e​r​ ​b​y
+			 */
+			orderBy: string
+			/**
+			 * s​h​o​w​ ​s​i​n​g​l​e​s
+			 */
+			showSingles: string
+			/**
+			 * s​h​o​w​ ​i​n​f​o
+			 */
+			showInfo: string
+			/**
+			 * g​r​i​d​ ​s​i​z​e
+			 */
+			gridSize: string
+		}
+		/**
+		 * S​c​r​o​l​l​ ​t​o​ ​N​o​w​ ​p​l​a​y​i​n​g
+		 */
+		scrollToNowPlaying: string
+		item: {
+			/**
+			 * t​r​a​c​k​s
+			 */
+			tracksLabel: string
+		}
+	}
 }
 
 export type TranslationFunctions = {
@@ -706,6 +763,22 @@ export type TranslationFunctions = {
 		 * Stats
 		 */
 		stats: () => LocalizedString
+		/**
+		 * Open Wiki panel for {artist}
+		 */
+		openWikiTooltip: (arg: { artist: unknown }) => LocalizedString
+		/**
+		 * Add metadata
+		 */
+		addMetadataHint: () => LocalizedString
+		/**
+		 * Take control of your library
+		 */
+		takeControl: () => LocalizedString
+		/**
+		 * Main player off in Internet Archive mode<br /><br />Stop playback to re-enable
+		 */
+		iaMode: () => LocalizedString
 	}
 	library: {
 		fields: {
@@ -1096,6 +1169,10 @@ export type TranslationFunctions = {
 			 */
 			hint: () => LocalizedString
 		}
+		/**
+		 * Click to set title from filename
+		 */
+		setTitleFromFileNameHint: () => LocalizedString
 	}
 	settings: {
 		/**
@@ -1282,6 +1359,42 @@ export type TranslationFunctions = {
 		 * Click again to confirm
 		 */
 		areYouSure: () => LocalizedString
+	}
+	input: {
+		/**
+		 * Press ENTER to autocomplete
+		 */
+		enterHintTooltip: () => LocalizedString
+	}
+	albums: {
+		options: {
+			/**
+			 * order by
+			 */
+			orderBy: () => LocalizedString
+			/**
+			 * show singles
+			 */
+			showSingles: () => LocalizedString
+			/**
+			 * show info
+			 */
+			showInfo: () => LocalizedString
+			/**
+			 * grid size
+			 */
+			gridSize: () => LocalizedString
+		}
+		/**
+		 * Scroll to Now playing
+		 */
+		scrollToNowPlaying: () => LocalizedString
+		item: {
+			/**
+			 * tracks
+			 */
+			tracksLabel: () => LocalizedString
+		}
 	}
 }
 

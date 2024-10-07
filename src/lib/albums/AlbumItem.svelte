@@ -14,6 +14,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import { currentThemeObject } from "../../theming/store";
+    import LL from "../../i18n/i18n-svelte";
 
     export let album: Album; // to display album data
     export let highlighted = false;
@@ -146,7 +147,7 @@
         <div class="info">
             <small>{album?.year}</small>
             <small>•</small>
-            <small>{album?.tracksIds.length} tracks</small>
+            <small>{album?.tracksIds.length} {$LL.albums.item.tracksLabel()}</small>
         </div>
     {/if}
 </div>

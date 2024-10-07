@@ -1388,8 +1388,7 @@
     {#if $currentIAFile && $isIAPlaying}
         <div class="ia-mode" transition:fade={{ duration: 200 }}>
             <p>
-                Main player off in Internet Archive mode<br /><br />Stop
-                playback to re-enable
+                {@html $LL.sidebar.iaMode()}
             </p>
         </div>
     {/if}
@@ -1466,7 +1465,9 @@
                             }}
                             use:optionalTippy={{
                                 show: !$isMiniPlayer,
-                                content: `Open Wiki panel for ${artist}`,
+                                content: $LL.sidebar.openWikiTooltip({
+                                    artist
+                                }),
                                 placement: "right"
                             }}
                         >
@@ -1476,14 +1477,14 @@
                     {#if !title && !album && !artist}
                         <button
                             class="add-metadata-btn"
-                            on:click={openTrackInfo}>Add metadata</button
+                            on:click={openTrackInfo}>{$LL.sidebar.addMetadataHint()}</button
                         >
                     {/if}
                     {#if album}
                         <small>{album}</small>
                     {/if}
                 {:else}
-                    <p class="is-placeholder">Take control of your library</p>
+                    <p class="is-placeholder">{$LL.sidebar.takeControl()}</p>
                 {/if}
 
                 {#if codec}

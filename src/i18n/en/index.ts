@@ -16,7 +16,11 @@ const en = {
         artistsToolkit: "Artist's Toolkit",
         map: "Map",
         internetArchive: "Internet Archive",
-        stats: "Stats"
+        stats: "Stats",
+        openWikiTooltip: "Open Wiki panel for {artist}",
+        addMetadataHint: "Add metadata",
+        takeControl: "Take control of your library",
+        iaMode: "Main player off in Internet Archive mode<br /><br />Stop playback to re-enable"
     },
     library: {
         fields: {
@@ -152,7 +156,8 @@ const en = {
             title: "Fix legacy encodings",
             body: "If you have ID3 tags encoded with legacy encodings, you should update them to the universal UTF-8 so they display properly. Select an encoding and click Fix.",
             hint: "Select encoding..."
-        }
+        },
+        setTitleFromFileNameHint: "Click to set title from filename"
     },
     settings: {
         title: "Settings",
@@ -182,40 +187,57 @@ const en = {
         clickHint: "Click to scroll to mention",
         albums: "Albums",
         songs: "Songs",
-        artists: "Artists",
+        artists: "Artists"
     },
     tagCloud: {
-        close: "Close tags",
+        close: "Close tags"
     },
     artistsToolkit: {
         header: {
-            songbookLocationHint: "Your songbook location managed by Musicat. Currently set to {path}",
-            songbookLocationHintEmpty: "Please set your songbook location to be managed by Musicat.",
+            songbookLocationHint:
+                "Your songbook location managed by Musicat. Currently set to {path}",
+            songbookLocationHintEmpty:
+                "Please set your songbook location to be managed by Musicat.",
             showScrapbook: "Show scrapbook",
-            hideScrapbook: "Hide scrapbook",
+            hideScrapbook: "Hide scrapbook"
         },
         scrapbook: {
             title: "Scrapbook",
             setupHint: "Please set up your scrapbook location in settings",
             notFoundError: "Scrapbook location not found",
             openSettings: "Open settings",
-            openInFinder: "Open in Finder",
+            openInFinder: "Open in Finder"
         },
         songDetails: {
             tabs: {
                 lyrics: "Lyrics & Chords",
                 files: "Files",
-                other: "Other",
+                other: "Other"
             },
             lyricsEditor: {
                 options: {
-                    alignFirstChord: "Align 1st chord",
+                    alignFirstChord: "Align 1st chord"
                 }
             }
         }
     },
     button: {
-        areYouSure: "Click again to confirm",
+        areYouSure: "Click again to confirm"
+    },
+    input: {
+        enterHintTooltip: "Press ENTER to autocomplete"
+    },
+    albums: {
+        options: {
+            orderBy: "order by",
+            showSingles: "show singles",
+            showInfo: "show info",
+            gridSize: "grid size"
+        },
+        scrollToNowPlaying: "Scroll to Now playing",
+        item: {
+            tracksLabel: "tracks"
+        }
     }
 } satisfies BaseTranslation;
 

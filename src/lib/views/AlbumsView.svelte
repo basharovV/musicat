@@ -20,6 +20,7 @@
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import LL from "../../i18n/i18n-svelte";
 
     let isLoading = true;
     let isVisible = false;
@@ -195,19 +196,19 @@
             <!-- {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if} -->
             <div class="options">
                 <div class="order-by">
-                    <p>order by</p>
+                    <p>{$LL.albums.options.orderBy()}</p>
                     <Dropdown options={fields} bind:selected={orderBy} />
                 </div>
                 <label
-                    >show singles
+                    >{$LL.albums.options.showSingles()}
                     <input type="checkbox" bind:checked={showSingles} /></label
                 >
                 <label
-                    >show info
+                    >{$LL.albums.options.showInfo()}
                     <input type="checkbox" bind:checked={showInfo} /></label
                 >
                 <label
-                    >grid size
+                    >{$LL.albums.options.gridSize()}
                     <input
                         type="range"
                         min={100}
@@ -278,6 +279,7 @@
         <!-- svelte-ignore a11y-no-static-element-interactions -->
     </div>
     {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
             in:fly={{ duration: 150, y: 30 }}
             out:fly={{ duration: 150, y: 30 }}
@@ -289,7 +291,7 @@
                 <span class="eq2" />
                 <span class="eq3" />
             </div>
-            <p>Scroll to Now playing</p>
+            <p>{$LL.albums.scrollToNowPlaying()}</p>
         </div>
     {/if}
 

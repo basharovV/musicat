@@ -786,7 +786,7 @@
                     ? `${$rightClickedTracks.length} tracks selected`
                     : "Track info"}
             </h2>
-            <small class="subtitle">Use UP and DOWN keys to change tracks</small
+            <small class="subtitle">{$LL.trackInfo.subtitle()}</small
             >
         </div>
     </header>
@@ -1023,7 +1023,7 @@
                                         class="artist-input"
                                         use:optionalTippy={{
                                             content:
-                                                "Press ENTER to autocomplete",
+                                                $LL.input.enterHintTooltip(),
                                             placement: "bottom",
                                             show:
                                                 firstMatch !== null &&
@@ -1070,13 +1070,16 @@
                                         ? 'validation-error'
                                         : ''}"
                                 >
+                                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                                     <p
                                         class="label"
+                                        class:unmapped={tag.genericId ===
+                                            undefined}
                                         data-tag-id={tag.genericId || tag.id}
                                         on:click={() => onTagLabelClick(tag)}
                                         use:optionalTippy={{
                                             content:
-                                                "Click to set title from filename",
+                                                $LL.trackInfo.setTitleFromFileNameHint(),
                                             show: tag.genericId === "title",
                                             placement: "bottom"
                                         }}
@@ -1710,6 +1713,10 @@
                 white-space: nowrap;
                 text-transform: uppercase;
                 border: 1px solid transparent;
+
+                &.unmapped {
+                    opacity: 0.5;
+                }
                 &[data-tag-id="title"] {
                     &:hover {
                         border: 1px solid
