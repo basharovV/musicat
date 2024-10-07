@@ -167,6 +167,14 @@ interface UserSettings {
     followSystemOutput: boolean;
 }
 
+interface UIPreferences {
+    albumsViewShowSingles: boolean;
+    albumsViewShowInfo: boolean;
+    albumsViewSortBy: AlbumsSortBy;
+}
+
+type AlbumsSortBy = "title" | "artist" | "year";
+
 type MiniPlayerLocation =
     | "bottom-left"
     | "bottom-right"

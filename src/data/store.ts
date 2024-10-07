@@ -22,6 +22,7 @@ import type {
     Song,
     SongProject,
     StreamInfo,
+    UIPreferences,
     UserSettings,
     WaveformPlayerState
 } from "src/App";
@@ -211,6 +212,23 @@ async function setSettings(settings: UserSettings) {
 }
 
 export const userSettings: Writable<UserSettings> = writable(defaultSettings);
+
+const defaultUIPreferences: UIPreferences = {
+    albumsViewShowSingles: false,
+    albumsViewShowInfo: true,
+    albumsViewSortBy: 'title'
+};
+
+// UI preferences
+export const uiPreferences: Writable<UIPreferences> = writable({
+    ...defaultUIPreferences,
+    ...JSON.parse(localStorage.getItem("uiPreferences") || "{}")
+});
+
+uiPreferences.subscribe((val) => {
+    console.log("uiPreferences", val);
+    localStorage.setItem("uiPreferences", JSON.stringify(val));
+});
 
 export const foldersToWatch = derived(
     userSettings,

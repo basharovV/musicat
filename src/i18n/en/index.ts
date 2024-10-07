@@ -230,6 +230,11 @@ const en = {
     albums: {
         options: {
             orderBy: "order by",
+            orderByFields: {
+                title: "Title",
+                artist: "Artist",
+                year: "Year"
+            },
             showSingles: "show singles",
             showInfo: "show info",
             gridSize: "grid size"

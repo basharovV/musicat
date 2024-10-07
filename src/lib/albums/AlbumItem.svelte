@@ -20,7 +20,7 @@
     export let highlighted = false;
     export let showInfo = true;
 
-    console.log("highlight", highlighted);
+    // console.log("highlight", highlighted);
     let isHovered = false;
     async function playPauseToggle() {
         if (

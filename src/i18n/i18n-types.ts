@@ -681,6 +681,20 @@ type RootTranslation = {
 			 * o​r​d​e​r​ ​b​y
 			 */
 			orderBy: string
+			orderByFields: {
+				/**
+				 * T​i​t​l​e
+				 */
+				title: string
+				/**
+				 * A​r​t​i​s​t
+				 */
+				artist: string
+				/**
+				 * Y​e​a​r
+				 */
+				year: string
+			}
 			/**
 			 * s​h​o​w​ ​s​i​n​g​l​e​s
 			 */
@@ -1372,6 +1386,20 @@ export type TranslationFunctions = {
 			 * order by
 			 */
 			orderBy: () => LocalizedString
+			orderByFields: {
+				/**
+				 * Title
+				 */
+				title: () => LocalizedString
+				/**
+				 * Artist
+				 */
+				artist: () => LocalizedString
+				/**
+				 * Year
+				 */
+				year: () => LocalizedString
+			}
 			/**
 			 * show singles
 			 */

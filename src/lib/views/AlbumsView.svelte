@@ -14,6 +14,7 @@
         rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
+        uiPreferences,
         uiView
     } from "../../data/store";
     import AlbumItem from "../albums/AlbumItem.svelte";
@@ -103,8 +104,8 @@
         isInit = false;
     }
 
-    let showSingles = false;
-    let showInfo = true;
+    $: showSingles = $uiPreferences.albumsViewShowSingles;
+    $: showInfo = $uiPreferences.albumsViewShowInfo;
 
     async function loadData() {
         // await getAlbumTrack($albums);
@@ -162,19 +163,21 @@
     const fields = [
         {
             value: "title",
-            label: "Title"
+            label: $LL.albums.options.orderByFields.title()
         },
         {
             value: "artist",
-            label: "Artist"
+            label: $LL.albums.options.orderByFields.artist()
         },
         {
             value: "year",
-            label: "Year"
+            label: $LL.albums.options.orderByFields.year()
         }
     ];
 
-    let orderBy = fields[0];
+    $: orderBy = fields.find(
+        (f) => f.value === $uiPreferences.albumsViewSortBy
+    );
 
     onMount(() => {
         isInit = false;
@@ -197,15 +200,35 @@
             <div class="options">
                 <div class="order-by">
                     <p>{$LL.albums.options.orderBy()}</p>
-                    <Dropdown options={fields} bind:selected={orderBy} />
+                    <Dropdown
+                        options={fields}
+                        selected={orderBy}
+                        onSelect={(v) => {
+                            $uiPreferences.albumsViewSortBy = v;
+                        }}
+                    />
                 </div>
                 <label
                     >{$LL.albums.options.showSingles()}
-                    <input type="checkbox" bind:checked={showSingles} /></label
+                    <input
+                        type="checkbox"
+                        checked={$uiPreferences.albumsViewShowSingles}
+                        on:change={(ev) => {
+                            $uiPreferences.albumsViewShowSingles =
+                                ev.target.checked;
+                        }}
+                    /></label
                 >
                 <label
                     >{$LL.albums.options.showInfo()}
-                    <input type="checkbox" bind:checked={showInfo} /></label
+                    <input
+                        type="checkbox"
+                        checked={showInfo}
+                        on:change={(ev) => {
+                            $uiPreferences.albumsViewShowInfo =
+                                ev.target.checked;
+                        }}
+                    /></label
                 >
                 <label
                     >{$LL.albums.options.gridSize()}
