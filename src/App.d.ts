@@ -171,6 +171,7 @@ interface UIPreferences {
     albumsViewShowSingles: boolean;
     albumsViewShowInfo: boolean;
     albumsViewSortBy: AlbumsSortBy;
+    albumsViewGridSize: number;
 }
 
 type AlbumsSortBy = "title" | "artist" | "year";

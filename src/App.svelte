@@ -71,6 +71,7 @@
     import TagCloud from "./lib/library/TagCloud.svelte";
     import { cubicInOut } from "svelte/easing";
     import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
+    import AlbumsHeader from "./lib/albums/AlbumsHeader.svelte";
     const appWindow = getCurrentWebviewWindow();
 
     console.log("locale", getLocaleFromNavigator());
@@ -370,6 +371,10 @@
                     {#await selectedQuery then query}
                         <SmartPlaylistHeader selectedQuery={query} />
                     {/await}
+                </div>
+            {:else if $uiView === "albums"}
+                <div class="content" data-tauri-drag-region>
+                    <AlbumsHeader />
                 </div>
             {/if}
         </div>

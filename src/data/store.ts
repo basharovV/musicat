@@ -216,7 +216,8 @@ export const userSettings: Writable<UserSettings> = writable(defaultSettings);
 const defaultUIPreferences: UIPreferences = {
     albumsViewShowSingles: false,
     albumsViewShowInfo: true,
-    albumsViewSortBy: 'title'
+    albumsViewSortBy: 'title',
+    albumsViewGridSize: 197
 };
 
 // UI preferences

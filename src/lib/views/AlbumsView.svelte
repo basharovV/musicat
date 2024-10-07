@@ -3,7 +3,7 @@
     import md5 from "md5";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
-    import type { Album, Song } from "../../App";
+    import type { Album } from "../../App";
     import { db } from "../../data/db";
     import {
         compressionSelected,
@@ -17,11 +17,10 @@
         uiPreferences,
         uiView
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
-    import Dropdown from "../ui/Dropdown.svelte";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
-    import LL from "../../i18n/i18n-svelte";
 
     let isLoading = true;
     let isVisible = false;
@@ -31,7 +30,9 @@
 
     $: albums = liveQuery(async () => {
         let resultsArray: Album[] = [];
-        resultsArray = await db.albums.orderBy(orderBy.value).toArray();
+        resultsArray = await db.albums
+            .orderBy($uiPreferences.albumsViewSortBy)
+            .toArray();
 
         isLoading = false;
         cachedAlbums = resultsArray;
@@ -57,12 +58,6 @@
                       a.title.includes($query.query.toLowerCase())
               )
             : [];
-
-    $: {
-        if ($albums && $albums?.length) {
-            loadData();
-        }
-    }
 
     let isCurrentAlbumInView = false;
     let currentAlbum: Album;
@@ -104,27 +99,9 @@
         isInit = false;
     }
 
+    $: minWidth = $uiPreferences.albumsViewGridSize;
     $: showSingles = $uiPreferences.albumsViewShowSingles;
     $: showInfo = $uiPreferences.albumsViewShowInfo;
-
-    async function loadData() {
-        // await getAlbumTrack($albums);
-    }
-
-    let albumsData: {
-        [key: string]: {
-            album: Album;
-            tracks: Song[];
-            artworkFormat: string;
-            artworkSrc: string;
-        };
-    } = null;
-
-    let minWidth = 197;
-
-    $: count = $query.query?.length ? queriedAlbums?.length : $albums?.length;
-
-    $: displayTracks = minWidth > 300;
 
     let showAlbumMenu = false;
     let pos;
@@ -159,26 +136,6 @@
             behavior: "smooth"
         });
     }
-
-    const fields = [
-        {
-            value: "title",
-            label: $LL.albums.options.orderByFields.title()
-        },
-        {
-            value: "artist",
-            label: $LL.albums.options.orderByFields.artist()
-        },
-        {
-            value: "year",
-            label: $LL.albums.options.orderByFields.year()
-        }
-    ];
-
-    $: orderBy = fields.find(
-        (f) => f.value === $uiPreferences.albumsViewSortBy
-    );
-
     onMount(() => {
         isInit = false;
     });
@@ -194,54 +151,6 @@
 
 <div class="albums-container">
     <div class="grid-container" on:scroll={onScroll} bind:this={container}>
-        <div class="header">
-            <h1>Albums</h1>
-            <!-- {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if} -->
-            <div class="options">
-                <div class="order-by">
-                    <p>{$LL.albums.options.orderBy()}</p>
-                    <Dropdown
-                        options={fields}
-                        selected={orderBy}
-                        onSelect={(v) => {
-                            $uiPreferences.albumsViewSortBy = v;
-                        }}
-                    />
-                </div>
-                <label
-                    >{$LL.albums.options.showSingles()}
-                    <input
-                        type="checkbox"
-                        checked={$uiPreferences.albumsViewShowSingles}
-                        on:change={(ev) => {
-                            $uiPreferences.albumsViewShowSingles =
-                                ev.target.checked;
-                        }}
-                    /></label
-                >
-                <label
-                    >{$LL.albums.options.showInfo()}
-                    <input
-                        type="checkbox"
-                        checked={showInfo}
-                        on:change={(ev) => {
-                            $uiPreferences.albumsViewShowInfo =
-                                ev.target.checked;
-                        }}
-                    /></label
-                >
-                <label
-                    >{$LL.albums.options.gridSize()}
-                    <input
-                        type="range"
-                        min={100}
-                        max={400}
-                        bind:value={minWidth}
-                    /></label
-                >
-            </div>
-        </div>
-
         {#if isLoading}
             <!-- <div
                 class="loading"
@@ -318,7 +227,7 @@
         </div>
     {/if}
 
-    <!-- <ShadowGradient type="top" /> -->
+    <ShadowGradient type="top" />
     <ShadowGradient type="bottom" />
 </div>
 
@@ -353,39 +262,6 @@
         background-color: var(--panel-background);
     }
 
-    .header {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding: 1em;
-        gap: 20px;
-        grid-column: 1 /3;
-        grid-row: 1;
-
-        h1 {
-            margin: 0;
-            font-family: "Snake";
-            flex-grow: 1;
-            text-align: left;
-            margin-left: 10px;
-            padding-left: 5px;
-            font-size: 4em;
-            opacity: 0.3;
-        }
-
-        .options {
-            display: flex;
-            margin-right: 5px;
-            gap: 20px;
-
-            .order-by {
-                display: flex;
-                gap: 3px;
-                color: var(--text-secondary);
-            }
-        }
-    }
     .grid {
         grid-column: 1;
         grid-row: 2;
@@ -415,46 +291,6 @@
         }
     }
 
-    label {
-        display: flex;
-        flex-direction: row-reverse;
-        gap: 4px;
-        align-items: center;
-        color: var(--text-secondary);
-    }
-    input[type="checkbox"] {
-        padding: 0;
-        margin: 0;
-    }
-    input[type="range"] {
-        appearance: none;
-        outline: none;
-        border: none;
-        box-shadow: none;
-        max-width: 100px;
-        &::-webkit-slider-thumb {
-            appearance: none;
-            background-color: rgb(132, 175, 166);
-            border-radius: 2px;
-            color: red;
-            width: 10px;
-            height: 10px;
-            top: -2.5px;
-            left: 0;
-            position: relative;
-        }
-        &::-webkit-slider-runnable-track {
-            background-color: var(--icon-secondary);
-            appearance: none;
-            border-radius: 10px;
-            outline: none;
-            height: 4px;
-        }
-        ::-moz-range-track {
-            background: #ade8ff;
-            height: 4px;
-        }
-    }
 
     .loading {
         top: 0;
