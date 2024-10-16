@@ -10,6 +10,7 @@ import { db } from "./db";
 import { userSettings } from "./store";
 import { get } from "svelte/store";
 import {
+    type DirEntry,
     exists,
     mkdir,
     readDir,
@@ -47,13 +48,15 @@ export async function scanScrapbook() {
     const dbItems = await db.scrapbook.toArray();
     if (settings.scrapbookLocation) {
         try {
-            let entries;
+            let entries: DirEntry[];
             try {
                 entries = await readDir(settings.scrapbookLocation);
             } catch (err) {
                 throw new Error("Scrapbook location not found");
             }
-            for (const entry of entries) {
+            for (const entry of entries.filter(
+                (f) => !f.name.startsWith(".")
+            )) {
                 const filePath = settings.scrapbookLocation + "/" + entry.name;
                 console.log("adding item", filePath);
                 const contentFileType = getContentFileType(filePath);
@@ -249,8 +252,12 @@ export async function loadSongProject(artistName: string, songName: string) {
         console.log("frontmatter", frontmatter);
         if (frontmatter?.attributes) {
             songProject.album = frontmatter.attributes.album;
-            songProject.musicComposedBy = frontmatter.attributes.composer ? [frontmatter.attributes.composer] : [];
-            songProject.lyricsWrittenBy = frontmatter.attributes.lyricist ? [frontmatter.attributes.lyricist] : [];
+            songProject.musicComposedBy = frontmatter.attributes.composer
+                ? [frontmatter.attributes.composer]
+                : [];
+            songProject.lyricsWrittenBy = frontmatter.attributes.lyricist
+                ? [frontmatter.attributes.lyricist]
+                : [];
             songProject.key = frontmatter.attributes.key;
             songProject.bpm = frontmatter.attributes.bpm;
         }
@@ -311,8 +318,12 @@ export async function renameSongProject(
 export async function saveFrontmatterToSongProject(songProject: SongProject) {
     const songFileContents = await readSongbookFile(songProject.songFilepath);
     const attributes = {
-        composer: songProject.musicComposedBy?.length ? songProject.musicComposedBy[0] : null,
-        lyricist: songProject.lyricsWrittenBy?.length ? songProject.lyricsWrittenBy[0] : null,
+        composer: songProject.musicComposedBy?.length
+            ? songProject.musicComposedBy[0]
+            : null,
+        lyricist: songProject.lyricsWrittenBy?.length
+            ? songProject.lyricsWrittenBy[0]
+            : null,
         album: songProject.album,
         bpm: songProject.bpm,
         key: songProject.key
