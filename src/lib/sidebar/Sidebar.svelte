@@ -320,7 +320,6 @@
             }
 
             await appWindow.show();
-            await appWindow.setAlwaysOnTop(true);
             isMiniPlayerHovered = false; // By default we want to show the pretty artwork
         } else {
             await appWindow.hide();
@@ -334,7 +333,6 @@
 
             await appWindow.center();
             await appWindow.show();
-            await appWindow.setAlwaysOnTop(false);
         }
 
         isMiniToggleHovered = false;

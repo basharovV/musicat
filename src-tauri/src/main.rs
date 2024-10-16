@@ -17,7 +17,7 @@ use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Emitter, Listener};
+use tauri::{Emitter, Listener, WindowEvent};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
@@ -322,8 +322,11 @@ fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<
     // Decorations off when width and height are 210px
     if width_scaled == 210 && height_scaled == 210 && is_decorated {
         window.set_decorations(false).unwrap();
+        let _ = window.set_visible_on_all_workspaces(true);
+        let _ = window.set_always_on_top(true);
     } else if width_scaled != 210 && height_scaled != 210 && !is_decorated {
-        window.set_decorations(true).unwrap();
+        let _ = window.set_decorations(true).unwrap();
+        let _ = window.set_visible_on_all_workspaces(false);
     }
 }
 
@@ -562,7 +565,7 @@ async fn main() {
                         .accelerator("Option+Q")
                         .build(app)?,
                     &MenuItemBuilder::with_id("lyrics", "Lyrics")
-                        .accelerator("Option+L")
+                        .accelerator("CommandOrControl+L")
                         .build(app)?,
                 ])
                 .build()?;
@@ -624,21 +627,24 @@ async fn main() {
         .unwrap()
         .run(|app, event| {
             #[cfg(target_os = "macos")]
-            if let tauri::RunEvent::Opened { urls } = event {
-                info!("Opened urls: {:?}", urls);
-                if let Some(w) = app.get_webview_window("main") {
-                    let urls = urls
-                        .iter()
-                        .map(|u| urlencoding::decode(u.as_str()).unwrap())
-                        .collect::<Vec<_>>()
-                        .join(",");
-                    let _ = w.eval(&format!("window.onFileOpen(`{urls}`)"));
-                }
+            match event {
+                tauri::RunEvent::Opened { urls, .. } => {
+                    info!("Opened urls: {:?}", urls);
+                    if let Some(w) = app.get_webview_window("main") {
+                        let urls = urls
+                            .iter()
+                            .map(|u| urlencoding::decode(u.as_str()).unwrap())
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        let _ = w.eval(&format!("window.onFileOpen(`{urls}`)"));
+                    }
 
-                let opened_urls = app.try_state::<OpenedUrls>();
-                if let Some(u) = opened_urls {
-                    u.0.lock().unwrap().replace(urls);
+                    let opened_urls = app.try_state::<OpenedUrls>();
+                    if let Some(u) = opened_urls {
+                        u.0.lock().unwrap().replace(urls);
+                    }
                 }
+                _ => (),
             }
         });
 }
