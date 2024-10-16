@@ -200,6 +200,7 @@
         z-index: 22;
         max-width: 300px;
         min-width: 65px;
+        scale: 0.97;
         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
         &.fixed {
             position: fixed;

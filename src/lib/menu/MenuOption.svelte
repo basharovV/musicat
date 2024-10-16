@@ -45,11 +45,9 @@
     }}
 >
     <div class="bg" style={color ? `background-color: ${color}` : ""} />
-    {#if isConfirming}
-        <span><p>{confirmText}</p></span>
-    {:else if text}
+    {#if text}
         <span>
-            <p>{text}</p>
+            <p>{isConfirming ? confirmText : text}</p>
             {#if description}
                 <small>
                     {description}

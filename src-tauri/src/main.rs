@@ -24,6 +24,7 @@ use tokio_util::sync::CancellationToken;
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 mod dsp;
+mod files;
 mod mediakeys;
 mod metadata;
 mod output;
@@ -605,7 +606,8 @@ async fn main() {
             player::loop_region,
             player::change_audio_device,
             download_file,
-            scrape::get_wikipedia
+            scrape::get_wikipedia,
+            files::delete_files
         ])
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);

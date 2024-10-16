@@ -24,6 +24,7 @@
     import MenuInput from "../menu/MenuInput.svelte";
     import { dedupe } from "../../utils/ArrayUtils";
     import Icon from "../ui/Icon.svelte";
+    import LL from "../../i18n/i18n-svelte";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -46,7 +47,8 @@
     });
 
     let songId;
-    let isConfirmingDelete = false;
+    let isDestructiveConfirmType: "remove" | "remove_from_playlist" | "delete" =
+        null;
     let isConfirmingRemoveFromPlaylist = false;
 
     $: {
@@ -54,31 +56,31 @@
             $rightClickedTracks?.map((s) => s.id).includes(songId) ||
             songId !== $rightClickedTrack?.id
         ) {
-            isConfirmingDelete = false;
+            isDestructiveConfirmType = null;
             isConfirmingRemoveFromPlaylist = false;
         }
     }
 
     function closeMenu() {
         showMenu = false;
-        isConfirmingDelete = false;
+        isDestructiveConfirmType = null;
         isConfirmingRemoveFromPlaylist = false;
     }
 
-    async function deleteTrack(selectedPlaylistId = null) {
+    async function removeTrackFromLibrary() {
         let playlist;
 
         console.log("delete");
-        if (!isConfirmingDelete) {
+        if (isDestructiveConfirmType !== "remove") {
             songId = $rightClickedTrack?.id;
-            isConfirmingDelete = true;
+            isDestructiveConfirmType = "remove";
             return;
         }
 
         if ($rightClickedTracks.length) {
             closeMenu();
-            if (selectedPlaylistId) {
-                playlist = await db.playlists.get(selectedPlaylistId);
+            if ($selectedPlaylistId) {
+                playlist = await db.playlists.get($selectedPlaylistId);
 
                 $rightClickedTracks.forEach((t) => {
                     const trackIdx = playlist.tracks.findIndex(
@@ -91,11 +93,11 @@
                 db.songs.delete(t.id);
             });
             $rightClickedTracks = [];
-            isConfirmingDelete = false;
+            isDestructiveConfirmType = null;
         } else if ($rightClickedTrack) {
             closeMenu();
-            if (selectedPlaylistId) {
-                playlist = await db.playlists.get(selectedPlaylistId);
+            if ($selectedPlaylistId) {
+                playlist = await db.playlists.get($selectedPlaylistId);
 
                 const trackIdx = playlist.tracks.findIndex(
                     (pt) => pt === $rightClickedTrack.id
@@ -104,12 +106,12 @@
             }
             db.songs.delete($rightClickedTrack.id);
             $rightClickedTrack = null;
-            isConfirmingDelete = false;
+            isDestructiveConfirmType = null;
         }
     }
 
     async function removeFromPlaylist() {
-        if (!isConfirmingRemoveFromPlaylist) {
+        if (isDestructiveConfirmType !== "remove_from_playlist") {
             songId = $rightClickedTrack?.id;
             isConfirmingRemoveFromPlaylist = true;
             return;
@@ -122,7 +124,7 @@
                 playlist.tracks.splice(trackIdx, 1);
             });
             $rightClickedTracks = [];
-            isConfirmingDelete = false;
+            isDestructiveConfirmType = null;
         } else if ($rightClickedTrack) {
             closeMenu();
             const trackIdx = playlist.tracks.findIndex(
@@ -130,9 +132,65 @@
             );
             playlist.tracks.splice(trackIdx, 1);
             $rightClickedTrack = null;
-            isConfirmingDelete = false;
+            isDestructiveConfirmType = null;
         }
         await db.playlists.put(playlist);
+    }
+
+    /**
+     * Moves the files(s) to the system trash / Recycle bin
+     */
+    async function deleteFile() {
+        let playlist;
+
+        console.log("delete");
+        if (isDestructiveConfirmType !== "delete") {
+            songId = $rightClickedTrack?.id;
+            isDestructiveConfirmType = "delete";
+            return;
+        }
+
+        if ($rightClickedTracks.length) {
+            closeMenu();
+            await invoke("delete_files", {
+                event: {
+                    files: $rightClickedTracks.map((t) => t.path)
+                }
+            });
+            if ($selectedPlaylistId) {
+                playlist = await db.playlists.get($selectedPlaylistId);
+
+                $rightClickedTracks.forEach((t) => {
+                    const trackIdx = playlist.tracks.findIndex(
+                        (pt) => pt === t.id
+                    );
+                    playlist.tracks.splice(trackIdx, 1);
+                });
+            }
+            $rightClickedTracks.forEach((t) => {
+                db.songs.delete(t.id);
+            });
+            $rightClickedTracks = [];
+            isDestructiveConfirmType = null;
+        } else if ($rightClickedTrack) {
+            closeMenu();
+            await invoke("delete_files", {
+                event: {
+                    files: [$rightClickedTrack.path]
+                }
+            });
+            if ($selectedPlaylistId) {
+                playlist = await db.playlists.get($selectedPlaylistId);
+
+                const trackIdx = playlist.tracks.findIndex(
+                    (pt) => pt === $rightClickedTrack.id
+                );
+                playlist.tracks.splice(trackIdx, 1);
+            }
+            db.songs.delete($rightClickedTrack.id);
+            $rightClickedTrack = null;
+            isDestructiveConfirmType = null;
+        }
     }
 
     function searchArtistOnYouTube() {
@@ -307,7 +365,7 @@
 
     async function commonTagsBetweenTracks(tracks: Song[]) {
         const tags = tracks.map((t) => t.tags).flat();
-        return dedupe(tags);
+        return dedupe(tags).filter(Boolean);
     }
 </script>
 
@@ -320,21 +378,6 @@
                 : $rightClickedTracks.length + " tracks"}
         />
         <MenuOption
-            isDestructive={true}
-            isConfirming={isConfirmingDelete}
-            onClick={() => {
-                if (!$selectedPlaylistId) {
-                    deleteTrack();
-                } else {
-                    deleteTrack($selectedPlaylistId);
-                }
-            }}
-            text={$rightClickedTrack
-                ? "Remove track from library"
-                : "Remove tracks from library"}
-            confirmText="Click again to confirm"
-        />
-        <MenuOption
             onClick={reImportTracks}
             description="Will also re-import albums"
             text={$rightClickedTrack
@@ -345,7 +388,8 @@
         {#if $selectedPlaylistId}
             <MenuOption
                 isDestructive={true}
-                isConfirming={isConfirmingRemoveFromPlaylist}
+                isConfirming={isDestructiveConfirmType ===
+                    "remove_from_playlist"}
                 onClick={removeFromPlaylist}
                 text={$rightClickedTrack
                     ? "Remove from playlist"
@@ -408,9 +452,8 @@
                 text="Open wiki panel for {$rightClickedTrack.artist}"
             />
             <MenuDivider />
-            <MenuOption onClick={lookUpChords} text="Look up chords" />
-            <MenuOption onClick={lookUpLyrics} text="Look up lyrics" />
-            <MenuDivider />
+            <!-- <MenuOption onClick={lookUpChords} text="Look up chords" />
+            <MenuOption onClick={lookUpLyrics} text="Look up lyrics" /> -->
 
             <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
         {:else if $rightClickedTracks.length}
@@ -454,6 +497,32 @@
                 small
             />
         {/if}
+        <MenuDivider />
+
+        <MenuOption
+            isDestructive={true}
+            isConfirming={isDestructiveConfirmType === "remove"}
+            onClick={() => {
+                removeTrackFromLibrary();
+            }}
+            text={$LL.trackMenu.removeFromLibrary(
+                $rightClickedTracks.length ? $rightClickedTracks.length : 1
+            )}
+            confirmText="Click again to confirm"
+        />
+        <MenuOption
+            isDestructive={true}
+            isConfirming={isDestructiveConfirmType === "delete"}
+            onClick={() => {
+                deleteFile();
+            }}
+            description={$LL.trackMenu.deleteFileHint()}
+            text={$LL.trackMenu.deleteFile(
+                $rightClickedTracks.length ? $rightClickedTracks.length : 1
+            )}
+            confirmText="Click again to confirm"
+        />
+        <MenuDivider />
 
         <MenuOption onClick={openInfo} text="Info & metadata" />
     </Menu>

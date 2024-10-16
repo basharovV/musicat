@@ -719,6 +719,20 @@ type RootTranslation = {
 			tracksLabel: string
 		}
 	}
+	trackMenu: {
+		/**
+		 * R​e​m​o​v​e​ ​{​{​t​r​a​c​k​|​?​?​ ​t​r​a​c​k​s​}​}​ ​f​r​o​m​ ​l​i​b​r​a​r​y
+		 */
+		removeFromLibrary: string
+		/**
+		 * D​e​l​e​t​e​ ​{​{​f​i​l​e​|​?​?​ ​f​i​l​e​s​}​}
+		 */
+		deleteFile: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​s​y​s​t​e​m​ ​T​r​a​s​h​ ​/​ ​R​e​c​y​c​l​e​ ​b​i​n
+		 */
+		deleteFileHint: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -1423,6 +1437,20 @@ export type TranslationFunctions = {
 			 */
 			tracksLabel: () => LocalizedString
 		}
+	}
+	trackMenu: {
+		/**
+		 * Remove {{track|?? tracks}} from library
+		 */
+		removeFromLibrary: (arg0: number | string | boolean) => LocalizedString
+		/**
+		 * Delete {{file|?? files}}
+		 */
+		deleteFile: (arg0: number | string | boolean) => LocalizedString
+		/**
+		 * Move to system Trash / Recycle bin
+		 */
+		deleteFileHint: () => LocalizedString
 	}
 }
 

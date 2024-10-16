@@ -244,7 +244,7 @@
         backdrop-filter: blur(8px);
 
         &.extra-space {
-            bottom: 9.5em;
+            bottom: 8em;
         }
 
         .credits {

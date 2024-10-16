@@ -243,6 +243,11 @@ const en = {
         item: {
             tracksLabel: "tracks"
         }
+    },
+    trackMenu: {
+        removeFromLibrary: "Remove {{track | ?? tracks}} from library",
+        deleteFile: "Delete {{file | ?? files}}",
+        deleteFileHint: "Move to system Trash / Recycle bin"
     }
 } satisfies BaseTranslation;
 
