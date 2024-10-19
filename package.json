@@ -17,7 +17,7 @@
         "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
         "@sveltejs/vite-plugin-svelte": "^2.4.1",
         "@tauri-apps/api": "^2.0.0-rc.0",
-        "@tauri-apps/cli": "^2.0.0-rc.6",
+        "@tauri-apps/cli": "^2.0.3",
         "@tauri-apps/plugin-clipboard-manager": "^2.0.0-rc.0",
         "@tauri-apps/plugin-dialog": "^2.0.0-rc.0",
         "@tauri-apps/plugin-fs": "^2.0.0-rc.1",
