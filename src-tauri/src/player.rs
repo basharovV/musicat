@@ -43,6 +43,7 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
+#[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::output::{self, get_device_by_name, AudioOutput};
 use crate::store::load_settings;
@@ -762,6 +763,7 @@ fn decode_loop(
                                 guard.pause();
                                 let _ = playback_state_sender.send(false);
                                 let _ = app_handle.emit("paused", {});
+                                #[cfg(target_os = "macos")]
                                 mediakeys::set_paused();
                             }
 
@@ -838,6 +840,7 @@ fn decode_loop(
 
                             let _ = playback_state_sender.send(true);
                             let _ = app_handle.emit("playing", {});
+                            #[cfg(target_os = "macos")]
                             mediakeys::set_playing();
 
                             let packet = match reader.next_packet() {
