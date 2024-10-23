@@ -31,7 +31,11 @@ export function swapArrayElements(array, indexA, indexB) {
 export function moveArrayElement(array, fromIndex, toIndex) {
     const newArray = [...array];
     const [removedElement] = newArray.splice(fromIndex, 1);
-    newArray.splice(toIndex, 0, removedElement);
+    newArray.splice(
+        toIndex > fromIndex ? toIndex - 1 : toIndex,
+        0,
+        removedElement
+    );
     return newArray;
 }
 

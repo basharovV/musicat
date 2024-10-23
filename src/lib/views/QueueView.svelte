@@ -128,6 +128,7 @@
     let columnToInsertIdx = null;
     let columnToInsertXPos = 0;
     let hoveredField = null;
+    let isDraggingOver = false;
 
     $: isOrderChanged =
         JSON.stringify($columnOrder) !==
@@ -1049,7 +1050,11 @@
     {isOrderChanged}
 />
 
-<div class="library-container" bind:this={libraryContainer}>
+<div
+    class="library-container"
+    class:dragover={isDraggingOver}
+    bind:this={libraryContainer}
+>
     {#if isLoading}
         <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
@@ -1063,6 +1068,12 @@
             on:scroll={onScroll}
             bind:this={scrollContainer}
             on:mouseup={() => onMouseUpContainer()}
+            on:mouseenter={() => {
+                isDraggingOver = $draggedSongs?.length > 0;
+            }}
+            on:mouseleave={() => {
+                isDraggingOver = false;
+            }}
         >
             <div
                 id="large-container"
@@ -1516,6 +1527,9 @@
         border-right: 0.7px solid #ffffff2a;
         overflow: hidden;
         margin: 4px 0 0 0;
+        &.dragover {
+            border: 1.5px solid var(--accent-secondary);    
+        }
     }
     .container {
         width: 100%;
