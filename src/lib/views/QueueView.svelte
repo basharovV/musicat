@@ -1129,7 +1129,9 @@
                                                     top: ROW_HEIGHT
                                                 });
                                             } else if (
-                                                draggingSongIdx !== null &&
+                                                (draggingSongIdx !== null ||
+                                                    (draggingSongIdx === null &&
+                                                        $draggedSongs?.length)) &&
                                                 songIdx < 10
                                             ) {
                                                 scrollContainer?.scrollBy({
