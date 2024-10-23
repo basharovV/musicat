@@ -1,3 +1,15 @@
+### 📦 0.10.0
+
+-   **Artist's toolkit v2 (WIP)**. The songbook and scrapbook are now linked to user folders (configurable in settings). The Lyrics editor now includes chord support via the ChordMark format. Click on the lyrics view to toggle edit mode. Read more [here](https://slavbasharov.com/blog/musicat-progress-update).
+-   **macOS Now Playing (WIP)**. Playback info now shows up in the macOS now playing info center (only play/pause and track info works for now)
+-   **Mini-player updates (macOS)**. The mini-player is now shown on all workspaces (macOS). Also fixed issue where window controls on macOS were floating above the window after toggling miniplayer off.
+-   **Delete files from library**. You can now delete (move to trash/recycle bin) the original files on disk from the right-click track menu.
+-   **Album view options are now persisted**
+-   **Fixed playback when using a device with a smaller max buffer size than sample buffer**
+-   **Fixed compatibility with audio devices that have the same name but one is for input and another for output**
+-   **Fixed Wikipedia article mistmatch**. When opening the Wiki panel, you're less likely to see the wrong article now.
+-   **Fixed Memory leak**. There was an issue with rapidly climbing memory usage. Sorry about that!
+
 ### 📦 0.9.0
 
 -   **Tag support**. Sometimes playlists just aren't the right tool for the job, so now you can also organize and search your library by tags. Right click a track (or multiple) to edit tags. Click on any tag in the library to open up the new tag cloud. Select between AND/OR as the filter condition.
@@ -5,7 +17,7 @@
 -   **Theme support**. Musicat now comes with some built-in themes! You can switch between them in settings. If you'd like to contribute a theme, please submit a PR with an updated [themes.ts](src/theming/themes.ts).
 -   **Collapsible sidebar / bottom bar mode**. You can now collapse the sidebar, which reveals the transport controls at the bottom in a new horizontal bar.
 -   **Switch audio device**. By default, Musicat follows the default system output device, but you can now select a different device to send the audio to. Note: This is still wonky on macOS.
--   **Performance improvements**. Reduced RAM usage during import, and better scrolling response when jumping quickly in the library view. 
+-   **Performance improvements**. Reduced RAM usage during import, and better scrolling response when jumping quickly in the library view.
 -   **Open audio file with Musicat (file association)**. You can now open any audio file on your system with Musicat, straight from your file explorer.
 -   **Tauri v2**. Migrated to Tauri v2.
 
