@@ -1,10 +1,10 @@
-use block2::{Block, ConcreteBlock, RcBlock, StackBlock};
 use log::{error, info, warn};
-use objc2::runtime::AnyObject;
 use std::ffi::c_void;
 use std::ptr;
 use std::rc::Rc;
 
+use block2::{Block, ConcreteBlock, RcBlock, StackBlock};
+use objc2::runtime::AnyObject;
 use objc2::rc::{Id, Retained};
 use objc2::{class, msg_send, msg_send_id, sel, Encode, Encoding, RefEncode};
 use objc2_foundation::{

@@ -5,6 +5,7 @@
 
 use futures_util::StreamExt;
 use log::info;
+#[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
 use player::AudioStreamer;
@@ -21,10 +22,12 @@ use tauri::{Emitter, Listener, WindowEvent};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
+#[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 mod dsp;
 mod files;
+#[cfg(target_os = "macos")]
 mod mediakeys;
 mod metadata;
 mod output;
