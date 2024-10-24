@@ -516,7 +516,6 @@
         opacity: 1;
         position: relative;
         background-color: var(--background, initial);
-
         /* &.transparent {
             background-color: color-mix(in srgb, var(--background, initial) 86%, transparent);
         } */

@@ -2355,6 +2355,14 @@
         }
     }
 
+    @media only screen and (max-height: 385px) {
+        .top {
+            padding-top: 0em;
+            border-bottom: none;
+            visibility: hidden;
+        }
+    }
+    
     sidebar.hovered {
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,
