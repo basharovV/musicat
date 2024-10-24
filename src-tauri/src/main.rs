@@ -329,6 +329,7 @@ fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<
         let _ = window.set_always_on_top(true);
     } else if width_scaled != 210 && height_scaled != 210 && !is_decorated {
         let _ = window.set_decorations(true).unwrap();
+        let _ = window.set_always_on_top(false);
         let _ = window.set_visible_on_all_workspaces(false);
     }
 }
