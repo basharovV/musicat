@@ -9,5 +9,7 @@ pub struct DeleteFilesEvent {
 
 #[tauri::command]
 pub fn delete_files(event: DeleteFilesEvent) {
+    // TODO: Add fallback for android/ios
+    #[cfg(not(target_os = "android"))]
     trash::delete_all(&event.files).unwrap();
 }
