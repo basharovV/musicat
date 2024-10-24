@@ -1342,7 +1342,7 @@
             offsetX < dragZoneWidth
         ) {
             // User is dragging over the sides (5% of width) of the element
-            columnToInsertIdx = index;
+            columnToInsertIdx = index > $draggedColumnIdx ? index - 1 : index;
             columnToInsertXPos = column.viewProps.x;
             // Add your logic here
         } else if (
@@ -1351,7 +1351,7 @@
             index < displayFields.length - 1 &&
             offsetX > elementWidth - dragZoneWidth
         ) {
-            columnToInsertIdx = index + 1;
+            columnToInsertIdx = index > $draggedColumnIdx ? index : index + 1;
             columnToInsertXPos = column.viewProps.x + column.viewProps.width;
         } else {
             columnToInsertIdx = null;
@@ -2076,8 +2076,10 @@
                                                     <Path
                                                         config={{
                                                             x:
+                                                                f.viewProps.x +
                                                                 f.viewProps
-                                                                    .width - 40,
+                                                                    .width -
+                                                                40,
                                                             y:
                                                                 sandwichTopHeight +
                                                                 HEADER_HEIGHT +
@@ -2352,7 +2354,12 @@
                                             fontFamily:
                                                 "-apple-system, Avenir, Helvetica, Arial, sans-serif",
                                             fill: HEADER_TEXT_COLOR,
-                                            listening: false
+                                            listening: false,
+                                            visible:
+                                                !(!$isSidebarOpen &&
+                                                !$isQueueOpen &&
+                                                $os === "macos" &&
+                                                idx === 0)
                                         }}
                                     />
                                 </Group>

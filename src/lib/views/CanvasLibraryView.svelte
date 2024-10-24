@@ -43,7 +43,7 @@
             results = results.map((s, idx) => ({
                 ...s,
                 viewModel: {
-                    viewId: idx
+                    viewId: idx.toString()
                 }
             }));
             isIndexed = false;

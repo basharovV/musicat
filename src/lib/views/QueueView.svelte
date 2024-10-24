@@ -1213,7 +1213,7 @@
                                                         ) !== null
                                                             ? f.viewProps.x + 10
                                                             : f.viewProps.x,
-                                                    y: 0,
+                                                    y: 1,
                                                     text: validatedValue(
                                                         song[f.value]
                                                     ),

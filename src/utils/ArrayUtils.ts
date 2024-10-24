@@ -29,10 +29,11 @@ export function swapArrayElements(array, indexA, indexB) {
 }
 
 export function moveArrayElement(array, fromIndex, toIndex) {
+    console.log("moving element", fromIndex, toIndex);
     const newArray = [...array];
     const [removedElement] = newArray.splice(fromIndex, 1);
     newArray.splice(
-        toIndex > fromIndex ? toIndex - 1 : toIndex,
+        toIndex,
         0,
         removedElement
     );
