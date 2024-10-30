@@ -353,18 +353,6 @@
 
                 <tbody>
                     <tr>
-                        <th colspan="2">{$LL.settings.features()}</th>
-                    </tr>
-                    <tr>
-                        <td>Enable AI features</td>
-                        <td
-                            ><input
-                                type="checkbox"
-                                bind:checked={$userSettings.aiFeaturesEnabled}
-                            /></td
-                        >
-                    </tr>
-                    <tr>
                         <td>Enable Artist's Toolkit</td>
                         <td
                             ><input
@@ -407,26 +395,6 @@
                                 />
                             </div>
                         </td>
-                    </tr>
-                    <tr>
-                        <td>AI Model (LLM)</td>
-                        <td>
-                            <select bind:value={$userSettings.llm}>
-                                {#each llms as llm}
-                                    <option value={llm}>{llm}</option>
-                                {/each}
-                            </select></td
-                        >
-                    </tr>
-                    <tr>
-                        <td>OpenAI API Key</td>
-                        <td
-                            ><Input
-                                bind:value={$userSettings.openAIApiKey}
-                                fullWidth
-                                small
-                            /></td
-                        >
                     </tr>
                     <tr>
                         <td>Genius API Key</td>

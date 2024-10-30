@@ -154,10 +154,6 @@ interface UserSettings {
     foldersToWatch: string[];
     albumArtworkFilenames: string[];
     miniPlayerLocation: MiniPlayerLocation;
-    aiFeaturesEnabled: boolean;
-    llm: LLM;
-    openAIApiKey?: string;
-    geniusApiKey?: string;
     isArtistsToolkitEnabled: boolean;
     scrapbookLocation?: string;
     songbookLocation?: string;
