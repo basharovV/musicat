@@ -215,7 +215,7 @@ export const allThemes: { [key: string]: Theme } = {
         "text-active": "#ffffff",
         "text-inactive": "#a3ccc5",
         accent: "#45fffcf3",
-        "accent-secondary": "#45fffcf3",
+        "accent-secondary": "#35c4c2f3",
         "overlay-bg": "#02564fc6",
         "panel-background": "#027167",
         "button-bg": "#282b2c",

@@ -12,7 +12,7 @@
         playlist,
         queriedSongs,
         query,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
         smartQueryResults,
@@ -33,8 +33,8 @@
         let isSmartQueryResults = false;
         let isIndexed = true;
 
-        if ($selectedPlaylistId !== null) {
-            const playlist = await db.playlists.get($selectedPlaylistId);
+        if ($selectedPlaylistFile !== null) {
+            const playlist = await db.playlists.get($selectedPlaylistFile);
             console.log("playlist to get", playlist);
             results = await db.songs.bulkGet(playlist.tracks);
             isIndexed = false;

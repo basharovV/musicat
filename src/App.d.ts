@@ -91,9 +91,15 @@ interface Album {
 }
 
 interface Playlist {
-    id?: number; // increments automatically
+    id?: string; // increments automatically
     title: string;
+    path: string;
     tracks: string[];
+}
+
+interface PlaylistFile {
+    path: string;
+    title: string; // the filename
 }
 
 /**
@@ -158,6 +164,7 @@ interface UserSettings {
     scrapbookLocation?: string;
     songbookLocation?: string;
     downloadLocation: string;
+    playlistsLocation: string;
     theme: string;
     outputDevice?: string;
     followSystemOutput: boolean;
@@ -187,7 +194,7 @@ type Comparison =
     | "is-between"
     | "contains";
 
-type SidebarItem =
+type UiView =
     | "library"
     | "favourites"
     | "smart-query"
@@ -196,7 +203,9 @@ type SidebarItem =
     | "playlists"
     | "map"
     | "analytics"
-    | "internet-archive";
+    | "internet-archive"
+    | "prune" 
+    | "to-delete"
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 
@@ -416,5 +425,7 @@ interface AudioDevice {
 
 interface AudioDevices {
     devices: AudioDevice[];
-    default: AudioDevice
+    default: AudioDevice;
 }
+
+type PopupType = "info" | "track-info" | "settings";

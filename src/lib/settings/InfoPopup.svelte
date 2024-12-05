@@ -1,10 +1,9 @@
 <script lang="ts">
     import { getVersion } from "@tauri-apps/api/app";
 
-    import { isInfoPopupOpen } from "../../data/store";
     import { clickOutside } from "../../utils/ClickOutside";
-    import ReleaseNotes from "./ReleaseNotes.svelte";
     import Icon from "../ui/Icon.svelte";
+    import ReleaseNotes from "./ReleaseNotes.svelte";
 
     import { _ } from "svelte-i18n";
     import LL from "../../i18n/i18n-svelte";

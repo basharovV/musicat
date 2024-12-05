@@ -444,7 +444,15 @@ fn decode_loop(
 
             // Create a hint to help the format registry guess what format reader is appropriate.
             let mut hint = Hint::new();
-            let source = Box::new(File::open(path).unwrap());
+            let fl = File::open(path);
+
+            if fl.is_err() {
+                path_str = None;
+                error!("Error opening file: {}", fl.err().unwrap());
+                continue;
+            }
+
+            let source = Box::new(fl.unwrap());
             info!("source {:?}", source);
 
             // Provide the file extension as a hint.
@@ -479,6 +487,7 @@ fn decode_loop(
             info!("probe format {:?}", probe_result.is_ok());
 
             if probe_result.is_err() {
+                error!("Error probing file: {}", probe_result.err().unwrap());
                 path_str = None;
                 continue;
             }

@@ -17,7 +17,7 @@
         droppedFiles,
         fileDropHandler,
         hoveredFiles,
-        isSettingsOpen,
+        popupOpen,
         userSettings
     } from "../../data/store";
     import FileBlock from "./FileBlock.svelte";
@@ -361,7 +361,7 @@
     {#if $userSettings.scrapbookLocation === null}
         <p>{$LL.artistsToolkit.scrapbook.setupHint()}</p>
         <ButtonWithIcon
-            onClick={() => ($isSettingsOpen = true)}
+            onClick={() => ($popupOpen = 'settings')}
             text={$LL.artistsToolkit.scrapbook.openSettings()}
         />
     {:else if scrapbookDirNotFound}
@@ -369,7 +369,7 @@
             <Icon icon="ant-design:warning-outlined" />
             <p>{$LL.artistsToolkit.scrapbook.notFoundError()}</p>
             <ButtonWithIcon
-                onClick={() => ($isSettingsOpen = true)}
+                onClick={() => ($popupOpen = 'settings')}
                 text={$LL.artistsToolkit.scrapbook.openSettings()}
             />
         </div>

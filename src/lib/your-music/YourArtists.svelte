@@ -6,7 +6,7 @@
     import type { ArtistProject, LookForArtResult } from "../../App";
     import {
         isScrapbookShown,
-        isSettingsOpen,
+        popupOpen,
         songbookArtists,
         songbookSelectedArtist,
         userSettings
@@ -382,7 +382,7 @@
                     if ($userSettings.songbookLocation) {
                         openShell($userSettings.songbookLocation);
                     } else {
-                        $isSettingsOpen = true;
+                        $popupOpen = 'settings';
                     }
                 }}
             ></Icon>

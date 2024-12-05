@@ -17,6 +17,7 @@ import {
     loadArtistsFromSongbook,
     loadSongProjectsForArtist
 } from "./ArtistsToolkitData";
+import { scanPlaylists } from "./M3UUtils";
 
 // can also watch an array of paths
 export async function startWatchingLibraryFolders() {
@@ -182,7 +183,7 @@ export async function startWatchingSongbookFolder() {
                 for (const path of event.paths) {
                     const result = isFileOrDirectory(path);
                     const parent = path.split("/").slice(0, -1).join("/");
-                    console.log('[watcher] parent: ', parent);
+                    console.log("[watcher] parent: ", parent);
                     // artist folder : songbookLocation/artistName
                     // artist profile pic: songbookLocation/artistName/profile.jpg
 
@@ -227,6 +228,43 @@ export async function startWatchingSongbookFolder() {
                                 );
                             }
                         }
+                    }
+                }
+            }
+        },
+        { recursive: true }
+    );
+
+    return startWatching;
+}
+
+export async function startWatchingPlaylistsFolder() {
+    const settings = get(userSettings);
+    const playlistsLocation = settings.playlistsLocation;
+
+    const startWatching = await watchImmediate(
+        playlistsLocation,
+        async (event) => {
+            console.log("[watcher] songbook: ", event);
+            if (typeof event.type === "object") {
+                // Handle files only
+                for (const path of event.paths) {
+                    const result = isFileOrDirectory(path);
+                    const parent = path.split("/").slice(0, -1).join("/");
+                    console.log("[watcher] parent: ", parent);
+                    // expected structure: playlistsLocation/playlistName.m3u
+
+                    // Check for file
+                    if (result === "file") {
+                        const playlistFileName = path.split("/").pop();
+                        console.log(
+                            "[watcher] playlistName: ",
+                            playlistFileName
+                        );
+
+                        // We can't quite rely on the WatchEventKind to distinguish access/modify/remove,
+                        // so let's just re-scan the folder
+                        await scanPlaylists();
                     }
                 }
             }

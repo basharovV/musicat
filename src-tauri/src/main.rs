@@ -574,11 +574,18 @@ async fn main() {
                 ])
                 .build()?;
 
+            let library_submenu = SubmenuBuilder::new(app, "Library")
+                .items(&[&MenuItemBuilder::with_id("prune", "Prune")
+                    .accelerator("CommandOrControl+P")
+                    .build(app)?])
+                .build()?;
+
             let mut builder = MenuBuilder::new(app)
                 .item(&app_submenu)
                 .item(&file_submenu)
                 .item(&edit_submenu)
-                .item(&view_submenu);
+                .item(&view_submenu)
+                .item(&library_submenu);
 
             if cfg!(dev) {
                 let devtools_submenu = SubmenuBuilder::new(app, "DevTools")

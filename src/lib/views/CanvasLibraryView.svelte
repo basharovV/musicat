@@ -16,17 +16,19 @@
         playlistDuration,
         queriedSongs,
         query,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedSmartQuery,
         selectedTags,
         smartQuery,
         smartQueryResults,
         smartQueryUpdater,
+        toDeletePlaylist,
         uiView
     } from "../../data/store";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
+    import { parsePlaylist } from "../../data/M3UUtils";
 
     let isLoading = true;
 
@@ -35,10 +37,25 @@
         let isSmartQueryResults = false;
         let isIndexed = true;
 
-        if ($selectedPlaylistId !== null) {
-            const playlist = await db.playlists.get($selectedPlaylistId);
-            console.log("playlist to get", playlist);
-            results = await db.songs.bulkGet(playlist.tracks);
+        if ($uiView === "to-delete") {
+            if ($toDeletePlaylist === null || $toDeletePlaylist.tracks.length === 0) {
+                results = [];
+            } else {
+                results = await db.songs.bulkGet($toDeletePlaylist.tracks);
+            }
+            // Add display ID
+            results = results.map((s, idx) => ({
+                ...s,
+                viewModel: {
+                    viewId: idx.toString()
+                }
+            }));
+            console.log("to delete songs", results);
+            isIndexed = false;
+        } else if ($selectedPlaylistFile !== null) {
+            results = await parsePlaylist($selectedPlaylistFile);
+            console.log("m3uresults", results);
+
             // Add display ID
             results = results.map((s, idx) => ({
                 ...s,
@@ -116,6 +133,9 @@
                         song.album
                             .toLowerCase()
                             .includes($query.query.toLowerCase()) ||
+                        song.genre.some((g) =>
+                            g.toLowerCase().includes($query.query.toLowerCase())
+                        ) ||
                         song.tags
                             ?.map((t) => t.toLowerCase())
                             .join(" ")
@@ -180,6 +200,7 @@
         // Do sorting for non-indexed results
         if (!isIndexed) {
             resultsArray = resultsArray.sort((a, b) => {
+                let result = 0;
                 switch ($query.orderBy) {
                     case "title":
                     case "album":
@@ -187,14 +208,20 @@
                     case "year":
                     case "duration":
                     case "genre":
-                        return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
+                        result = String(a[$query.orderBy]).localeCompare(
+                            String(b[$query.orderBy])
                         );
+                        break;
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie
                         // i.e Artist -> Album -> Track N.
-                        return a.artist.localeCompare(b.artist);
+                        result = a.artist.localeCompare(b.artist);
+                        break;
                 }
+                if ($query.reverse) {
+                    result *= -1;
+                }
+                return result;
             });
         }
 

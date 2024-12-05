@@ -198,7 +198,7 @@ const appWindow = getCurrentWebviewWindow()
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
-            // console.log("waveform", event);
+            console.log("waveform", event);
             await wavesurfer.load(
                 null,
                 event.payload.data,

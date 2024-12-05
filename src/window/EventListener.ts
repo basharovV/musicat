@@ -5,11 +5,9 @@ import { get } from "svelte/store";
 import {
     importStatus,
     isFindFocused,
-    isInfoPopupOpen,
+    popupOpen,
     isLyricsOpen,
     isQueueOpen,
-    isSettingsOpen,
-    isTrackInfoPopupOpen,
     shouldFocusFind,
     uiView
 } from "../data/store";
@@ -27,15 +25,11 @@ export function startMenuListener() {
         switch (payload) {
             case "about":
                 console.log("about");
-                isInfoPopupOpen.set(true);
-                isSettingsOpen.set(false);
-                isTrackInfoPopupOpen.set(false);
+                popupOpen.set('info');
                 break;
             case "settings":
                 console.log("settings");
-                isSettingsOpen.set(true);
-                isInfoPopupOpen.set(false);
-                isTrackInfoPopupOpen.set(false);
+                popupOpen.set('settings');
                 break;
             case "find":
                 console.log("find");
@@ -58,6 +52,9 @@ export function startMenuListener() {
                 break;
             case "lyrics":
                 isLyricsOpen.set(!get(isLyricsOpen));
+                break;
+            case "prune":
+                uiView.set("prune");
                 break;
             // DevTools
             case "clear-db":

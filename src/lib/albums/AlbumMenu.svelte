@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import { db } from "../../data/db";
     import {
-        isTrackInfoPopupOpen,
+        popupOpen,
         rightClickedAlbum,
         rightClickedTracks
     } from "../../data/store";
@@ -92,7 +92,7 @@
     }
     function openInfo() {
         closeMenu();
-        $isTrackInfoPopupOpen = true;
+        $popupOpen = 'track-info';
     }
 
     // Enrichers

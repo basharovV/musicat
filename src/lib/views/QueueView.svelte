@@ -45,7 +45,7 @@
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
-        isTrackInfoPopupOpen,
+        popupOpen,
         libraryScrollPos,
         os,
         playlist,
@@ -55,7 +55,7 @@
         query,
         rightClickedTrack,
         rightClickedTracks,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         shouldFocusFind,
         shuffledPlaylist,
         singleKeyShortcutsEnabled,
@@ -658,7 +658,7 @@
     }
 
     $: {
-        if (songs?.length && $query.query?.length && !$isTrackInfoPopupOpen) {
+        if (songs?.length && $query.query?.length && $popupOpen !== 'track-info') {
             highlightSong(songs[0], 0, false, true);
         }
     }
@@ -757,7 +757,7 @@
             shouldProcessDrag = true;
 
             // Extra - if the Info overlay is shown, use the arrows to replace the track shown in the overlay
-            if ($isTrackInfoPopupOpen && isKeyboardArrows) {
+            if ($popupOpen === 'track-info' && isKeyboardArrows) {
                 $rightClickedTrack = song;
             }
         }
@@ -890,7 +890,7 @@
             }
         } else if (
             event.keyCode === 73 &&
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -902,18 +902,18 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if (!$isTrackInfoPopupOpen && songsHighlighted.length) {
+            if ($popupOpen !== 'track-info' && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
                 }
-                $isTrackInfoPopupOpen = true;
+                $popupOpen = 'track-info';
             }
         } else if (
             event.keyCode === 13 &&
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
                     document.activeElement.tagName.toLowerCase() !==
@@ -922,7 +922,7 @@
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
-            if (!$isTrackInfoPopupOpen) {
+            if ($popupOpen !== 'track-info') {
                 AudioPlayer.shouldPlay = false;
                 $playlist = $queriedSongs;
                 $playlistType =

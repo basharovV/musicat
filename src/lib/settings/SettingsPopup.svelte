@@ -16,7 +16,7 @@
     import { importPaths } from "../../data/LibraryImporter";
     import {
         importStatus,
-        isSettingsOpen,
+        popupOpen,
         userSettings
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
@@ -54,7 +54,7 @@
     }
 
     function onClose() {
-        $isSettingsOpen = false;
+        $popupOpen = null;
     }
 
     async function openFolderSelector() {
@@ -94,6 +94,24 @@
             console.log("selected", selected);
             // user selected a single directory
             $userSettings.downloadLocation = selected;
+            $userSettings = $userSettings;
+        }
+    }
+    async function openDefaultPlaylistsDirSelector() {
+        // Open a selection dialog for directories
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            defaultPath: await audioDir()
+        });
+        if (Array.isArray(selected)) {
+            // user selected multiple directories
+        } else if (selected === null) {
+            // user cancelled the selection
+        } else {
+            console.log("selected", selected);
+            // user selected a single directory
+            $userSettings.playlistsLocation = selected;
             $userSettings = $userSettings;
         }
     }
@@ -281,6 +299,20 @@
                                     icon="material-symbols:folder"
                                     onClick={() => {
                                         openDefaultDownloadDirSelector();
+                                    }}
+                                />
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Playlists location</td>
+                        <td>
+                            <div class="download-location">
+                                <p>{$userSettings.playlistsLocation}</p>
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openDefaultPlaylistsDirSelector();
                                     }}
                                 />
                             </div>

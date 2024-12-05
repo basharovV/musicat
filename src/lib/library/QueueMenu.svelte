@@ -5,11 +5,11 @@
     import { db } from "../../data/db";
     import {
         isShuffleEnabled,
-        isTrackInfoPopupOpen,
+        popupOpen,
         playlist,
         rightClickedTrack,
         rightClickedTracks,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         shuffledPlaylist
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
@@ -151,7 +151,7 @@
     }
     function openInfo() {
         closeMenu();
-        $isTrackInfoPopupOpen = true;
+        $popupOpen = 'track-info';
     }
     // Enrichers
 

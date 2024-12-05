@@ -46,7 +46,7 @@
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
-        isTrackInfoPopupOpen,
+        popupOpen,
         libraryScrollPos,
         os,
         playlist,
@@ -58,7 +58,7 @@
         rightClickedTrack,
         rightClickedTracks,
         scrollToSong,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedTags,
         shouldFocusFind,
         shuffledPlaylist,
@@ -92,6 +92,8 @@
     import { Context } from "konva/lib/Context";
     import { StageConfig } from "konva/lib/Stage";
     import TagCloud from "./TagCloud.svelte";
+    import { reorderSongsInPlaylist } from "../../data/M3UUtils";
+    import toast from "svelte-french-toast";
 
     export let allSongs = null;
     export let dim = false;
@@ -385,10 +387,12 @@
     // COLORS
     let BG_COLOR: string;
     let HEADER_BG_COLOR: string;
+    let HEADER_BG_COLOR_ACCENT: string;
     let HEADER_TEXT_COLOR: string;
     let OFFSCREEN_BG_COLOR: string;
     let HEADER_BG_COLOR_HOVERED: string;
     let TEXT_COLOR: string;
+    let TEXT_COLOR_SECONDARY: string;
     let HIGHLIGHT_BG_COLOR: string;
     let ROW_BG_COLOR: string;
     let ROW_BG_COLOR_HOVERED: string;
@@ -475,11 +479,13 @@
         // COLORS
         BG_COLOR = $currentThemeObject["panel-background"];
         HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
+        HEADER_BG_COLOR_ACCENT = $currentThemeObject["accent-secondary"];
         HEADER_TEXT_COLOR = $currentThemeObject["library-header-text"];
         OFFSCREEN_BG_COLOR = "#71658e3b";
         HEADER_BG_COLOR_HOVERED =
             $currentThemeObject["library-header-active-bg"];
         TEXT_COLOR = $currentThemeObject["library-text-color"];
+        TEXT_COLOR_SECONDARY = $currentThemeObject["text-secondary"];
         HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
         ROW_BG_COLOR = "transparent";
         ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
@@ -524,7 +530,7 @@
         }, 50);
         isInit = false;
         $forceRefreshLibrary = false;
-    } else if ($uiView === "playlists") {
+    } else if ($uiView.match(/^(playlists|to-delete)/)) {
         scrollContainer?.scrollTo({
             top: 0
         });
@@ -586,6 +592,22 @@
         const sortedFields = $columnOrder.map((c) =>
             fields.find((f) => f.value === c)
         );
+
+        /* Playlists show an additional file order column */
+        if ($uiView === "playlists") {
+            sortedFields.unshift({
+                name: "none",
+                value: "none",
+                displayValue: "viewModel.index",
+                operation: "+1",
+                show: true,
+                viewProps: {
+                    width: 50,
+                    x: 0,
+                    autoWidth: false
+                }
+            });
+        }
 
         // Fields visible depending on window width
         const visibleFields = sortedFields.filter((f) => {
@@ -983,7 +1005,7 @@
     }
 
     $: {
-        if (songs?.length && $query.query?.length && !$isTrackInfoPopupOpen) {
+        if (songs?.length && $query.query?.length && $popupOpen !== 'track-info') {
             highlightSong(songs[0], 0, false, true);
         }
     }
@@ -1046,11 +1068,11 @@
             $rightClickedTrack = null;
         } else if (
             isDefault &&
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             $rightClickedTracks?.length
         ) {
             songsHighlighted = $rightClickedTracks;
-        } else if (isDefault && !$isTrackInfoPopupOpen && $rightClickedTrack) {
+        } else if (isDefault && $popupOpen !== 'track-info' && $rightClickedTrack) {
             songsHighlighted = [$rightClickedTrack];
         } else {
             // Highlight single song, via a good old click
@@ -1064,7 +1086,7 @@
             rangeStartSongIdx = idx;
 
             // Extra - if the Info overlay is shown, use the arrows to replace the track shown in the overlay
-            if ($isTrackInfoPopupOpen && isKeyboardArrows) {
+            if ($popupOpen === 'track-info' && isKeyboardArrows) {
                 $rightClickedTrack = song;
             }
         }
@@ -1097,15 +1119,23 @@
     }
 
     async function onReorderSong(song: Song, idx: number) {
-        if (draggingSongIdx !== null) {
+        if (draggingSongIdx !== null && $selectedPlaylistFile) {
             console.log("reorder song", idx);
-            let playlist = await db.playlists.get($selectedPlaylistId);
-            playlist.tracks = moveArrayElement(
-                playlist.tracks,
+            if (idx === draggingSongIdx) {
+                draggingSongIdx = null;
+                return;
+            };
+
+            if ($query.orderBy !== "none") {
+                toast.error($LL.library.orderDisabledHint());
+            }
+
+            await reorderSongsInPlaylist(
+                $selectedPlaylistFile,
                 draggingSongIdx,
                 idx
             );
-            await db.playlists.put(playlist);
+            $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
             draggingSongIdx = null;
         }
     }
@@ -1114,7 +1144,7 @@
 
     hotkeys("esc", function (event, handler) {
         if (
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1172,7 +1202,7 @@
             }
         } else if (
             event.keyCode === 73 &&
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1184,18 +1214,18 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if (!$isTrackInfoPopupOpen && songsHighlighted.length) {
+            if ($popupOpen !== 'track-info' && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
                 }
-                $isTrackInfoPopupOpen = true;
+                $popupOpen = 'track-info';
             }
         } else if (
             event.keyCode === 84 &&
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1232,7 +1262,7 @@
             }
         } else if (
             event.keyCode === 13 &&
-            !$isTrackInfoPopupOpen &&
+            $popupOpen !== 'track-info' &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
                     document.activeElement.tagName.toLowerCase() !==
@@ -1241,7 +1271,7 @@
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
-            if (!$isTrackInfoPopupOpen) {
+            if ($popupOpen !== 'track-info') {
                 AudioPlayer.shouldPlay = false;
                 if ($queueMode === "library") {
                     $currentSongIdx = highlightedSongIdx;
@@ -1500,9 +1530,13 @@
      */
     function getValue(song, field) {
         if (field.displayValue) {
-            return field.displayValue
+            let value = field.displayValue
                 .split(".")
                 .reduce((acc, key) => acc && acc[key], song);
+            if (field.operation) {
+                eval(`value = value ${field.operation}`);
+            }
+            return value;
         }
         return song[field.value];
     }
@@ -1590,7 +1624,7 @@
         <!-- <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
         </div> -->
-    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites)/) === null && $isTagCloudOpen === false))}
+    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
         <ImportPlaceholder />
     {:else}
         <div
@@ -2061,7 +2095,10 @@
                                                             $currentSong?.id ===
                                                             song.id
                                                                 ? PLAYING_TEXT_COLOR
-                                                                : TEXT_COLOR,
+                                                                : f.name ===
+                                                                    "none"
+                                                                  ? TEXT_COLOR_SECONDARY
+                                                                  : TEXT_COLOR,
                                                         ellipsis:
                                                             f.value.match(
                                                                 /^(title|artist|album|genre)/
@@ -2108,8 +2145,10 @@
                                                             )}
                                                         config={{
                                                             x:
+                                                                f.viewProps.x +
                                                                 f.viewProps
-                                                                    .width - 20,
+                                                                    .width -
+                                                                20,
                                                             y:
                                                                 sandwichTopHeight +
                                                                 HEADER_HEIGHT +
@@ -2138,8 +2177,10 @@
                                                             favouriteSong(song)}
                                                         config={{
                                                             x:
+                                                                f.viewProps.x +
                                                                 f.viewProps
-                                                                    .width - 20,
+                                                                    .width -
+                                                                20,
                                                             y:
                                                                 sandwichTopHeight +
                                                                 HEADER_HEIGHT +
@@ -2277,19 +2318,23 @@
                                                 dropColumnIdx !==
                                                     $draggedColumnIdx
                                                     ? DROP_HIGHLIGHT_BG_COLOR
-                                                    : hoveredColumnIdx ===
-                                                            idx ||
+                                                    : f.name === "none" &&
                                                         $query.orderBy ===
-                                                            f.value
-                                                      ? HEADER_BG_COLOR_HOVERED
-                                                      : HEADER_BG_COLOR
+                                                            "none"
+                                                      ? HEADER_BG_COLOR_ACCENT
+                                                      : hoveredColumnIdx ===
+                                                              idx ||
+                                                          $query.orderBy ===
+                                                              f.value
+                                                        ? HEADER_BG_COLOR_HOVERED
+                                                        : HEADER_BG_COLOR
                                         }}
                                     />
                                     {#if hoveredColumnIdx === idx}
                                         <Path
                                             config={{
                                                 x: -2,
-                                                y: 6,
+                                                y: 4,
                                                 listening: false,
                                                 scaleX: 0.9,
                                                 scaleY: 0.9,
@@ -2297,13 +2342,39 @@
                                                 fill: "rgba(255, 255, 255, 0.5)"
                                             }}
                                         />
+
+                                        <!-- File order tooltip -->
+                                        {#if f.name === "none"}
+                                            <Rect
+                                                config={{
+                                                    x: 0,
+                                                    y: 25,
+                                                    width: 120,
+                                                    height: 20,
+                                                    listening: false,
+                                                    fill: "#212121d5",
+                                                    cornerRadius: 4
+                                                }}
+                                            />
+                                            <Text
+                                                config={{
+                                                    x: 5,
+                                                    y: 27,
+                                                    text: $LL.library.resetToFileOrder(),
+                                                    fontSize: 14,
+                                                    fill: "rgba(255, 255, 255)"
+                                                }}
+                                            />
+                                        {/if}
                                     {/if}
-                                    {#if $query.orderBy === f.value}
+
+                                    <!-- Sort arrow icons -->
+                                    {#if $query.orderBy === f.value || ($query.orderBy === "none" && f.name === "none")}
                                         {#if $query.reverse}
                                             <Path
                                                 config={{
                                                     x: f.viewProps.width - 16,
-                                                    y: 6,
+                                                    y: 4,
                                                     listening: false,
                                                     scaleX: 0.6,
                                                     scaleY: 0.6,
@@ -2315,7 +2386,7 @@
                                             <Path
                                                 config={{
                                                     x: f.viewProps.width - 16,
-                                                    y: 6,
+                                                    y: 4,
                                                     listening: false,
                                                     scaleX: 0.6,
                                                     scaleY: 0.6,
@@ -2324,6 +2395,21 @@
                                                 }}
                                             />
                                         {/if}
+                                    {/if}
+
+                                    <!-- File icon -->
+                                    {#if f.name === "none"}
+                                        <Path
+                                            config={{
+                                                x: f.viewProps.x + 19,
+                                                y: 6,
+                                                listening: false,
+                                                scaleX: 0.6,
+                                                scaleY: 0.6,
+                                                data: "M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z",
+                                                fill: "rgba(255, 255, 255, 0.8)"
+                                            }}
+                                        />
                                     {/if}
                                     <Text
                                         config={{
@@ -2334,7 +2420,8 @@
                                                 idx === 0
                                                     ? WINDOW_CONTROLS_WIDTH
                                                     : null,
-                                            text: f.name,
+                                            text:
+                                                f.name === "none" ? "" : f.name,
                                             align: "left",
                                             padding:
                                                 f.value.match(
@@ -2355,11 +2442,12 @@
                                                 "-apple-system, Avenir, Helvetica, Arial, sans-serif",
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
-                                            visible:
-                                                !(!$isSidebarOpen &&
+                                            visible: !(
+                                                !$isSidebarOpen &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
-                                                idx === 0)
+                                                idx === 0
+                                            )
                                         }}
                                     />
                                 </Group>

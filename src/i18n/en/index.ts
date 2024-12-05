@@ -11,6 +11,7 @@ const en = {
         library: "Library",
         albums: "Albums",
         favorites: "Favourites",
+        toDelete: "To Delete",
         playlists: "Playlists",
         smartPlaylists: "Smart Playlists",
         artistsToolkit: "Artist's Toolkit",
@@ -35,7 +36,11 @@ const en = {
             origin: "Origin",
             duration: "Duration",
             tags: "Tags"
-        }
+        },
+        resetToFileOrder: "Reset to file order",
+        orderHint: "Showing file order",
+        orderHintTemp: "Showing temporary order",
+        orderDisabledHint: "Switch to file order to re-order tracks"
     },
     bottomBar: {
         queue: "Queue",
@@ -248,6 +253,16 @@ const en = {
         removeFromLibrary: "Remove {{track | ?? tracks}} from library",
         deleteFile: "Delete {{file | ?? files}}",
         deleteFileHint: "Move to system Trash / Recycle bin"
+    },
+    toDelete: {
+        title: "To Delete",
+        description: "Tracks to delete from Prune Mode",
+        keepAllBtn: "Keep all",
+        deleteAllBtn: "Move all to trash",
+        notification: {
+            deleting: "Deleting {{track | ?? tracks}}",
+            deleted: "Deleted {{track | ?? tracks}}"
+        }
     }
 } satisfies BaseTranslation;
 

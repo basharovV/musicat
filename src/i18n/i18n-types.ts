@@ -46,6 +46,10 @@ type RootTranslation = {
 		 */
 		favorites: string
 		/**
+		 * T​o​ ​D​e​l​e​t​e
+		 */
+		toDelete: string
+		/**
 		 * P​l​a​y​l​i​s​t​s
 		 */
 		playlists: string
@@ -134,6 +138,22 @@ type RootTranslation = {
 			 */
 			tags: string
 		}
+		/**
+		 * R​e​s​e​t​ ​t​o​ ​f​i​l​e​ ​o​r​d​e​r
+		 */
+		resetToFileOrder: string
+		/**
+		 * S​h​o​w​i​n​g​ ​f​i​l​e​ ​o​r​d​e​r
+		 */
+		orderHint: string
+		/**
+		 * S​h​o​w​i​n​g​ ​t​e​m​p​o​r​a​r​y​ ​o​r​d​e​r
+		 */
+		orderHintTemp: string
+		/**
+		 * S​w​i​t​c​h​ ​t​o​ ​f​i​l​e​ ​o​r​d​e​r​ ​t​o​ ​r​e​-​o​r​d​e​r​ ​t​r​a​c​k​s
+		 */
+		orderDisabledHint: string
 	}
 	bottomBar: {
 		/**
@@ -733,6 +753,34 @@ type RootTranslation = {
 		 */
 		deleteFileHint: string
 	}
+	toDelete: {
+		/**
+		 * T​o​ ​D​e​l​e​t​e
+		 */
+		title: string
+		/**
+		 * T​r​a​c​k​s​ ​t​o​ ​d​e​l​e​t​e​ ​f​r​o​m​ ​P​r​u​n​e​ ​M​o​d​e
+		 */
+		description: string
+		/**
+		 * K​e​e​p​ ​a​l​l
+		 */
+		keepAllBtn: string
+		/**
+		 * M​o​v​e​ ​a​l​l​ ​t​o​ ​t​r​a​s​h
+		 */
+		deleteAllBtn: string
+		notification: {
+			/**
+			 * D​e​l​e​t​i​n​g​ ​{​{​t​r​a​c​k​|​?​?​ ​t​r​a​c​k​s​}​}
+			 */
+			deleting: string
+			/**
+			 * D​e​l​e​t​e​d​ ​{​{​t​r​a​c​k​|​?​?​ ​t​r​a​c​k​s​}​}
+			 */
+			deleted: string
+		}
+	}
 }
 
 export type TranslationFunctions = {
@@ -767,6 +815,10 @@ export type TranslationFunctions = {
 		 * Favourites
 		 */
 		favorites: () => LocalizedString
+		/**
+		 * To Delete
+		 */
+		toDelete: () => LocalizedString
 		/**
 		 * Playlists
 		 */
@@ -855,6 +907,22 @@ export type TranslationFunctions = {
 			 */
 			tags: () => LocalizedString
 		}
+		/**
+		 * Reset to file order
+		 */
+		resetToFileOrder: () => LocalizedString
+		/**
+		 * Showing file order
+		 */
+		orderHint: () => LocalizedString
+		/**
+		 * Showing temporary order
+		 */
+		orderHintTemp: () => LocalizedString
+		/**
+		 * Switch to file order to re-order tracks
+		 */
+		orderDisabledHint: () => LocalizedString
 	}
 	bottomBar: {
 		/**
@@ -1451,6 +1519,34 @@ export type TranslationFunctions = {
 		 * Move to system Trash / Recycle bin
 		 */
 		deleteFileHint: () => LocalizedString
+	}
+	toDelete: {
+		/**
+		 * To Delete
+		 */
+		title: () => LocalizedString
+		/**
+		 * Tracks to delete from Prune Mode
+		 */
+		description: () => LocalizedString
+		/**
+		 * Keep all
+		 */
+		keepAllBtn: () => LocalizedString
+		/**
+		 * Move all to trash
+		 */
+		deleteAllBtn: () => LocalizedString
+		notification: {
+			/**
+			 * Deleting {{track|?? tracks}}
+			 */
+			deleting: (arg0: number | string | boolean) => LocalizedString
+			/**
+			 * Deleted {{track|?? tracks}}
+			 */
+			deleted: (arg0: number | string | boolean) => LocalizedString
+		}
 	}
 }
 

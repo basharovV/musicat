@@ -10,7 +10,7 @@
         isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
-        isTrackInfoPopupOpen,
+        popupOpen,
         isWaveformOpen,
         playerTime,
         playlist,
@@ -166,7 +166,7 @@
                     onClick={() => {
                         $rightClickedTrack = $currentSong;
                         $rightClickedTracks = [];
-                        $isTrackInfoPopupOpen = true;
+                        $popupOpen = 'track-info';
                     }}
                     color={$currentThemeObject["icon-secondary"]}
                 />

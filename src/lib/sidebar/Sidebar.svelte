@@ -7,13 +7,21 @@
     import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
-    import { afterUpdate, onMount, tick } from "svelte";
+    import { onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
     import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
-    import type { Playlist, Song } from "../../App";
+    import type { PlaylistFile, Song } from "../../App";
+    import {
+        addSongsToPlaylists,
+        createNewPlaylistFile,
+        deletePlaylistFile,
+        renamePlaylist,
+        scanPlaylists,
+        writePlaylist
+    } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -25,14 +33,13 @@
         draggedSongs,
         isDraggingFromQueue,
         isFindFocused,
-        isInfoPopupOpen,
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
-        isTrackInfoPopupOpen,
+        popupOpen,
         isWaveformOpen,
         isWikiOpen,
         os,
@@ -42,7 +49,7 @@
         query,
         rightClickedTrack,
         seekTime,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedSmartQuery,
         shouldFocusFind,
         sidebarManuallyOpened,
@@ -50,7 +57,9 @@
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         uiView,
-        userSettings
+        userPlaylists,
+        userSettings,
+        toDeletePlaylist
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -62,9 +71,9 @@
     import "../tippy.css";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
+    import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
-    import { optionalTippy } from "../ui/TippyAction";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -123,6 +132,12 @@
                     includeFolderArtwork: true
                 }
             });
+            if (!songWithArtwork) {
+                title = "❗️File read error❗️";
+                artist = "Check permissions";
+                album = "in use by another program?"
+                return;
+            };
             console.log("sidebar::currentSong listener", songWithArtwork);
             title = songWithArtwork.title;
             fileName = song.file;
@@ -174,7 +189,7 @@
     function openTrackInfo() {
         if ($currentSong) {
             $rightClickedTrack = $currentSong;
-            $isTrackInfoPopupOpen = true;
+            $popupOpen = "track-info";
         }
     }
 
@@ -183,10 +198,10 @@
         //   url: "path/to/page.html",
         // });
         console.log("clicked");
-        $isInfoPopupOpen = true;
+        $popupOpen = "info";
     }
     $: {
-        console.log("info popup:", $isInfoPopupOpen);
+        console.log("info popup:", $popupOpen === "info");
     }
     let height = 0;
     let width = 0;
@@ -406,12 +421,6 @@
             menuInnerScrollArea.scrollHeight > menuInnerScrollArea.clientHeight;
     }
 
-    // Playlists
-
-    $: playlists = liveQuery(async () => {
-        return db.playlists.toArray();
-    });
-
     let newPlaylistTitle = "";
     let updatedPlaylistName = ""; // also for renaming existing playlists
     let isPlaylistsExpanded = false;
@@ -419,24 +428,21 @@
     let menuX = 0;
     let menuY = 0;
     let isConfirmingPlaylistDelete = false;
-    let playlistToEdit: Playlist = null;
-    let draggingOverPlaylist: Playlist = null;
-    let hoveringOverPlaylistId: number = null;
+    let playlistToEdit: PlaylistFile = null;
+    let draggingOverPlaylist: PlaylistFile = null;
+    let hoveringOverPlaylistId: string = null;
     let isRenamingPlaylist = false;
 
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
     let isConfirmingSmartPlaylistDelete = false;
-    let smartPlaylistToEdit: number = null;
+    let smartPlaylistToEdit: SavedSmartQuery = null;
     let updatedSmartPlaylistName = "";
     let isRenamingSmartPlaylist = false;
     let hoveringOverSmartPlaylistId: number | string = null;
 
-    function onCreatePlaylist() {
-        db.playlists.add({
-            title: newPlaylistTitle,
-            tracks: []
-        });
+    async function onCreatePlaylist() {
+        createNewPlaylistFile(newPlaylistTitle);
         newPlaylistTitle = "";
     }
 
@@ -445,25 +451,28 @@
             isConfirmingPlaylistDelete = true;
             return;
         }
-        await db.playlists.delete(playlistToEdit.id);
+        await deletePlaylistFile(playlistToEdit);
+        $selectedPlaylistFile = $userPlaylists[0];
         showPlaylistMenu = false;
         isConfirmingPlaylistDelete = false;
     }
 
-    async function onRenamePlaylist(playlist: Playlist) {
-        playlist.title = updatedPlaylistName;
-        await db.playlists.put(playlist);
+    async function onRenamePlaylist(playlist: PlaylistFile) {
+        await renamePlaylist(playlist, updatedPlaylistName);
         updatedPlaylistName = "";
 
         isRenamingPlaylist = false;
     }
 
-    function onMouseOverPlaylist(playlist: Playlist) {
-        if ($draggedSongs.length && draggingOverPlaylist?.id !== playlist?.id) {
+    function onMouseOverPlaylist(playlist: PlaylistFile) {
+        if (
+            $draggedSongs.length &&
+            draggingOverPlaylist?.title !== playlist?.title
+        ) {
             draggingOverPlaylist = playlist;
             hoveringOverPlaylistId = null;
         } else {
-            hoveringOverPlaylistId = playlist?.id;
+            hoveringOverPlaylistId = playlist?.title;
         }
     }
 
@@ -494,7 +503,7 @@
             isConfirmingSmartPlaylistDelete = true;
             return;
         }
-        await db.smartQueries.delete(smartPlaylistToEdit);
+        await db.smartQueries.delete(smartPlaylistToEdit.id);
         showSmartPlaylistMenu = false;
         isConfirmingSmartPlaylistDelete = false;
 
@@ -516,22 +525,16 @@
         hoveringOverSmartPlaylistId = null;
     }
 
-    async function onDropSongsToPlaylist(playlistId: number) {
+    async function onDropSongsToPlaylist(playlist: PlaylistFile) {
         if ($draggedSongs.length) {
-            const playlist = await db.playlists.get(playlistId);
-            const songsToAdd = $draggedSongs.map((s) => s.id);
-            console.log("dragged songs", $draggedSongs);
-            console.log("playlist", songsToAdd);
-            playlist.tracks = [...playlist.tracks, ...songsToAdd];
-
-            console.log("playlist", playlist);
-            await db.playlists.put(playlist);
+            console.log("[Sidebar] Adding to playlist: ", playlist);
+            await addSongsToPlaylists(playlist, $draggedSongs);
             toast.success(
                 `${
                     $draggedSongs.length > 1
                         ? $draggedSongs.length + " songs"
                         : $draggedSongs[0].title
-                } added to ${playlist.title}`,
+                } added to ${playlist.path}`,
                 {
                     position: "bottom-center"
                 }
@@ -938,10 +941,10 @@
                     <items>
                         <item
                             class:selected={$uiView === "library" &&
-                                !$selectedPlaylistId}
+                                !$selectedPlaylistFile}
                             on:click={() => {
                                 $isSmartQueryBuilderOpen = false;
-                                $selectedPlaylistId = null;
+                                $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
@@ -951,7 +954,7 @@
                                 icon="fluent:library-20-filled"
                                 size={15}
                                 color={$uiView === "library" &&
-                                !$selectedPlaylistId
+                                !$selectedPlaylistFile
                                     ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.library()}</item
@@ -960,7 +963,7 @@
                             class:selected={$uiView === "albums"}
                             on:click={() => {
                                 $uiView = "albums";
-                                $selectedPlaylistId = null;
+                                $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                             }}
                         >
@@ -977,7 +980,7 @@
                             class:selected={$uiView === "favourites"}
                             on:click={() => {
                                 $uiView = "favourites";
-                                $selectedPlaylistId = null;
+                                $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $selectedSmartQuery =
                                     SmartQueries.favourites.value;
@@ -992,9 +995,29 @@
                             />{$LL.sidebar.favorites()}</item
                         >
 
+                        {#if $toDeletePlaylist?.tracks.length}
+                            <item
+                                class:selected={$uiView === "to-delete"}
+                                on:click={() => {
+                                    $uiView = "to-delete";
+                                    $query.orderBy = "none";
+                                    $query.reverse = false;
+                                    $selectedSmartQuery = null;
+                                }}
+                            >
+                                <Icon
+                                    icon="ant-design:delete-outlined"
+                                    size={15}
+                                    color={$uiView === "to-delete"
+                                        ? $currentThemeObject["accent"]
+                                        : "currentColor"}
+                                />{$LL.sidebar.toDelete()}</item
+                            >
+                        {/if}
+
                         <item
                             class:selected={$uiView === "playlists" &&
-                                $selectedPlaylistId}
+                                $selectedPlaylistFile}
                             on:click={() => {
                                 // expand playlists
                                 isPlaylistsExpanded = !isPlaylistsExpanded;
@@ -1008,7 +1031,7 @@
                                 icon="mdi:playlist-music"
                                 size={15}
                                 color={$uiView === "library" &&
-                                $selectedPlaylistId
+                                $selectedPlaylistFile
                                     ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.playlists()}
@@ -1022,8 +1045,10 @@
 
                         {#if isPlaylistsExpanded}
                             <div class="playlists">
-                                {#if $playlists}
-                                    {#each $playlists as playlist (playlist.id)}
+                                {#if $userPlaylists.sort((a, b) => {
+                                    return a.title.localeCompare(b.title);
+                                })}
+                                    {#each $userPlaylists as playlist (playlist.path)}
                                         <div
                                             animate:flip={{
                                                 duration: 300,
@@ -1033,26 +1058,24 @@
                                             class:dragover={draggingOverPlaylist ===
                                                 playlist}
                                             class:hover={hoveringOverPlaylistId ===
-                                                playlist.id}
-                                            class:selected={$selectedPlaylistId ===
-                                                playlist.id}
+                                                playlist?.title}
+                                            class:selected={$selectedPlaylistFile?.path ===
+                                                playlist.path}
                                             on:click={() => {
                                                 $uiView = "playlists";
                                                 $query.orderBy = "none";
                                                 $query.reverse = false;
-                                                $selectedPlaylistId =
-                                                    playlist.id;
+                                                $selectedPlaylistFile =
+                                                    playlist;
                                                 $selectedSmartQuery = null;
                                             }}
                                             on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
                                                 onMouseOverPlaylist(playlist)}
                                             on:mouseup|preventDefault|stopPropagation={() =>
-                                                onDropSongsToPlaylist(
-                                                    playlist.id
-                                                )}
+                                                onDropSongsToPlaylist(playlist)}
                                         >
-                                            {#if isRenamingPlaylist && playlistToEdit.id === playlist.id}
+                                            {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                                 <Input
                                                     bind:value={updatedPlaylistName}
                                                     onEnterPressed={() => {
@@ -1067,7 +1090,7 @@
                                             {:else}
                                                 <p>{playlist.title}</p>
                                             {/if}
-                                            {#if isRenamingPlaylist && playlistToEdit.id === playlist.id}
+                                            {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                                 <Icon
                                                     icon="mingcute:close-circle-fill"
                                                     size={14}
@@ -1154,7 +1177,7 @@
                                             $query.reverse = false;
                                             $selectedSmartQuery =
                                                 smartQuery.value;
-                                            $selectedPlaylistId = null;
+                                            $selectedPlaylistFile = null;
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
@@ -1184,7 +1207,7 @@
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseOverSmartPlaylist(query.id)}
                                     >
-                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.id}
+                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Input
                                                 bind:value={updatedSmartPlaylistName}
                                                 onEnterPressed={() => {
@@ -1199,7 +1222,7 @@
                                         {:else}
                                             <p>{query.name}</p>
                                         {/if}
-                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit === query.id}
+                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Icon
                                                 icon="mingcute:close-circle-fill"
                                                 size={14}
@@ -1212,7 +1235,7 @@
                                             <div
                                                 class="playlist-options"
                                                 class:visible={showSmartPlaylistMenu &&
-                                                    smartPlaylistToEdit ===
+                                                    smartPlaylistToEdit.id ===
                                                         query.id}
                                             >
                                                 <Icon
@@ -1223,7 +1246,7 @@
                                                         menuX = e.clientX;
                                                         menuY = e.clientY;
                                                         smartPlaylistToEdit =
-                                                            query.id;
+                                                            query;
                                                         showSmartPlaylistMenu =
                                                             !showSmartPlaylistMenu;
                                                     }}
@@ -1248,7 +1271,7 @@
                                 on:click={() => {
                                     $uiView = "your-music";
                                     $isTagCloudOpen = false;
-                                    $selectedPlaylistId = null;
+                                    $selectedPlaylistFile = null;
                                     $selectedSmartQuery = null;
                                 }}
                             >
@@ -1264,7 +1287,7 @@
                         <item
                             class:selected={$uiView === "internet-archive"}
                             on:click={() => {
-                                $selectedPlaylistId = null;
+                                $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $uiView = "internet-archive";
                             }}
@@ -1280,7 +1303,7 @@
                         <item
                             class:selected={$uiView === "map"}
                             on:click={() => {
-                                $selectedPlaylistId = null;
+                                $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "map";
@@ -1297,7 +1320,7 @@
                         <item
                             class:selected={$uiView === "analytics"}
                             on:click={() => {
-                                $selectedPlaylistId = null;
+                                $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "analytics";
@@ -1373,7 +1396,7 @@
                 />
                 <MenuOption
                     onClick={() => {
-                        updatedSmartPlaylistName = smartPlaylistToEdit;
+                        updatedSmartPlaylistName = smartPlaylistToEdit.name;
                         isRenamingSmartPlaylist = true;
                         showSmartPlaylistMenu = false;
                     }}
@@ -1475,7 +1498,8 @@
                     {#if !title && !album && !artist}
                         <button
                             class="add-metadata-btn"
-                            on:click={openTrackInfo}>{$LL.sidebar.addMetadataHint()}</button
+                            on:click={openTrackInfo}
+                            >{$LL.sidebar.addMetadataHint()}</button
                         >
                     {/if}
                     {#if album}
@@ -1584,7 +1608,7 @@
                     icon="mdi:information"
                     onClick={() => {
                         $rightClickedTrack = $currentSong;
-                        $isTrackInfoPopupOpen = true;
+                        $popupOpen = "track-info";
                     }}
                     color={$currentThemeObject["icon-secondary"]}
                 />
@@ -2362,7 +2386,7 @@
             visibility: hidden;
         }
     }
-    
+
     sidebar.hovered {
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,

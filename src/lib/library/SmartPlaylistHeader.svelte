@@ -10,7 +10,7 @@
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         playlistDuration,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
         smartQueryInitiator,
@@ -53,7 +53,7 @@
         // Close the builder UI and set the current selected query to the one we just saved
         $isSmartQueryBuilderOpen = false;
         $selectedSmartQuery = `~usq:${id}`;
-        $selectedPlaylistId = null
+        $selectedPlaylistFile = null
         $smartQuery.reset();
     }
 </script>

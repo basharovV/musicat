@@ -22,7 +22,7 @@
     import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
-        isTrackInfoPopupOpen,
+        popupOpen,
         os,
         rightClickedTrack,
         rightClickedTracks
@@ -52,7 +52,7 @@
     const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
 
     function onClose() {
-        $isTrackInfoPopupOpen = false;
+        $popupOpen = null;
     }
 
     function addDefaults(metadata: MetadataEntry[], format: TagType) {
@@ -451,7 +451,7 @@
         hotkeys.unbind(`${modifier}+enter`, "track-info");
         hotkeys.unbind("esc", "track-info");
         hotkeys.deleteScope("track-info");
-        $isTrackInfoPopupOpen = false;
+        $popupOpen = null;
     });
 
     $: {
@@ -670,7 +670,7 @@
         isFetchingOriginCountry = false;
     }
 
-    $: isMultiMode = $rightClickedTracks.length;
+    $: isMultiMode = $rightClickedTracks?.length;
 
     // File(s) table
     let tableOuterContainer;
@@ -782,8 +782,8 @@
 
         <div class="title-container">
             <h2>
-                {$rightClickedTracks.length
-                    ? `${$rightClickedTracks.length} tracks selected`
+                {$rightClickedTracks?.length
+                    ? `${$rightClickedTracks?.length} tracks selected`
                     : "Track info"}
             </h2>
             <small class="subtitle">{$LL.trackInfo.subtitle()}</small
@@ -863,7 +863,7 @@
                                     </td>
                                     <td>
                                         <p>
-                                            {track.fileInfo.sampleRate}
+                                            {track.fileInfo.sampleRate} hz
                                         </p></td
                                     >
                                     <td>

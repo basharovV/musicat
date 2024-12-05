@@ -1,5 +1,7 @@
+import { path } from "@tauri-apps/api";
+import { appConfigDir, audioDir, downloadDir } from "@tauri-apps/api/path";
+import * as fs from "@tauri-apps/plugin-fs";
 import { type, type OsType } from "@tauri-apps/plugin-os";
-import { appConfigDir, downloadDir } from "@tauri-apps/api/path";
 import type {
     ActionEvent,
     AddOriginCountryStatus,
@@ -16,23 +18,26 @@ import type {
     IAItem,
     ImportStatus,
     LastPlayedInfo,
+    PlaylistFile,
     PlaylistType,
+    Popup,
+    PopupType,
     QueueMode,
-    SidebarItem,
+    UiView,
     Song,
-    SongProject,
     StreamInfo,
     UIPreferences,
     UserSettings,
     WaveformPlayerState
 } from "src/App";
-import { derived, readable, writable, type Writable } from "svelte/store";
+import { derived, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import Query from "./SmartQueries";
-import { path } from "@tauri-apps/api";
-import * as fs from "@tauri-apps/plugin-fs";
+import { scanPlaylists } from "./M3UUtils";
+import { liveQuery } from "dexie";
+import { db } from "./db";
 
 export const L = derived(locale, (l) => {
     return i18nString(l);
@@ -103,9 +108,20 @@ export const volume: Writable<number> = writable(
 );
 export const isFullScreenVisualiser = writable(false);
 
-export const isInfoPopupOpen = writable(false);
-export const isTrackInfoPopupOpen = writable(false);
-export const uiView: Writable<SidebarItem> = writable("library");
+// Playlists (populated from folder)
+export const userPlaylists: Writable<PlaylistFile[]> = writable([]);
+export const toDeletePlaylist = liveQuery(async () => {
+    try {
+        const toDeletePlaylist = await db.internalPlaylists.get("todelete");
+        return toDeletePlaylist;
+    } catch (e) {
+        console.error("Error fetching todelete playlist", e);
+    }
+    return null;
+})
+
+export const popupOpen: Writable<PopupType> = writable(null);
+export const uiView: Writable<UiView> = writable("library");
 export const arrowFocus: Writable<ArrowFocus> = writable("library");
 export const draggedColumnIdx: Writable<number | null> = writable(null);
 
@@ -167,14 +183,13 @@ export const selectedTags = writable(new Set());
 export const isTagOrCondition = writable(false);
 
 // Playlists
-export const selectedPlaylistId: Writable<number> = writable(null);
+export const selectedPlaylistFile: Writable<PlaylistFile> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
 export const draggedAlbum: Writable<Album> = writable(null);
 export const isDraggingFromQueue = writable(false);
 export const dragGhostReset = writable(false);
 
 // Settings
-export const isSettingsOpen = writable(false);
 const defaultSettings: UserSettings = {
     foldersToWatch: [],
     albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"],
@@ -183,6 +198,7 @@ const defaultSettings: UserSettings = {
     scrapbookLocation: null,
     songbookLocation: null,
     downloadLocation: null,
+    playlistsLocation: null,
     theme: "dark",
     outputDevice: null, // default system device,
     followSystemOutput: true
@@ -212,7 +228,7 @@ export const userSettings: Writable<UserSettings> = writable(defaultSettings);
 const defaultUIPreferences: UIPreferences = {
     albumsViewShowSingles: false,
     albumsViewShowInfo: true,
-    albumsViewSortBy: 'title',
+    albumsViewSortBy: "title",
     albumsViewGridSize: 197
 };
 
@@ -231,6 +247,18 @@ export const foldersToWatch = derived(
     userSettings,
     (val) => val.foldersToWatch
 );
+
+export const playlistLocation = derived(
+    userSettings,
+    (val) => val.playlistsLocation
+);
+
+playlistLocation.subscribe((pl) => {
+    // Get playlists
+    if (pl) {
+        scanPlaylists();
+    }
+});
 
 export const libraryScrollPos: Writable<number> = writable(
     localStorage.getItem("libraryScrollPos")
@@ -307,6 +335,14 @@ async function init() {
     if (!fileSettings.downloadLocation) {
         fileSettings.downloadLocation = dir;
     }
+
+    // Same for playlists location
+    const playlistsDir = await audioDir();
+    if (!fileSettings.playlistsLocation) {
+        fileSettings.playlistsLocation =
+            playlistsDir.concat("/Musicat Playlists");
+    }
+
     // Get user settings
     userSettings.set({
         ...defaultSettings,

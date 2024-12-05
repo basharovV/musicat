@@ -20,6 +20,7 @@ export class MySubClassedDexie extends Dexie {
     artistProjects!: Table<ArtistProject>;
     scrapbook!: Table<ContentItem>;
     playlists!: Table<Playlist>;
+    internalPlaylists!: Table<Playlist>;
     constructor() {
         super("musicatdb");
         this.version(14).stores({
@@ -49,6 +50,18 @@ export class MySubClassedDexie extends Dexie {
                         album.displayTitle = album.title;
                         album.title = album.title.toLowerCase();
                     });
+            });
+
+        this.version(20)
+            .stores({
+                songs: "id, title, artist, composer, album, genre, year, path, duration, isFavourite, originCountry, dateAdded, [artist+year+album+trackNumber], [artist+album+trackNumber], [album+trackNumber], [artist+album], tags", // Primary key and indexed props
+                albums: "id, title, displayTitle, artist, year",
+                smartQueries: "++id, name",
+                artistProjects: "++id, name",
+                songProjects: "++id, title, artist, album",
+                scrapbook: "++id, name",
+                playlists: "++id, title",
+                internalPlaylists: "id, title"
             });
     }
 }

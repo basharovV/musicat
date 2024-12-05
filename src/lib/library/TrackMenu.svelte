@@ -1,30 +1,32 @@
 <script lang="ts">
+    import { invoke } from "@tauri-apps/api/core";
     import { type } from "@tauri-apps/plugin-os";
     import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
+    import type { Album, Song, ToImport } from "../../App";
     import { db } from "../../data/db";
+    import { deleteSongsFromPlaylist } from "../../data/M3UUtils";
     import {
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
-        isTrackInfoPopupOpen,
         isWikiOpen,
+        popupOpen,
         rightClickedTrack,
         rightClickedTracks,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedTags,
+        toDeletePlaylist,
         uiView,
         wikiArtist
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
+    import { dedupe } from "../../utils/ArrayUtils";
+    import { findCountryByArtist } from "../data/LibraryEnrichers";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
-    import { findCountryByArtist } from "../data/LibraryEnrichers";
-    import { invoke } from "@tauri-apps/api/core";
-    import type { Album, Song, ToImport } from "../../App";
     import MenuInput from "../menu/MenuInput.svelte";
-    import { dedupe } from "../../utils/ArrayUtils";
+    import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
-    import LL from "../../i18n/i18n-svelte";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -67,82 +69,107 @@
         isConfirmingRemoveFromPlaylist = false;
     }
 
-    async function removeTrackFromLibrary() {
-        let playlist;
+    /**
+     * Playlists are M3U files, and in special cases (like the to-delete playlist, a separate table)
+     * @param tracks
+     */
+    async function deleteTracksFromPlaylists(tracks: Song[]) {
+        // Delete from playlist
+        if ($selectedPlaylistFile) {
+            // Delete directly from M3U file
+            deleteSongsFromPlaylist($selectedPlaylistFile, tracks);
+        } else if ($uiView === "to-delete") {
+            // Delete from internal playlist (currently only used for the "to-delete" playlist)
+            const toDelete = await db.internalPlaylists.get($toDeletePlaylist.id);
+            tracks.forEach((t) => {
+                const trackIdx = toDelete.tracks.findIndex((pt) => pt === t.id);
+                toDelete.tracks.splice(trackIdx, 1);
+            });
+            await db.internalPlaylists.put(toDelete);
+        }
+    }
 
-        console.log("delete");
+    async function deleteTracksFromDB(tracks: Song[]) {
+        tracks.forEach((t) => {
+            db.songs.delete(t.id);
+        });
+    }
+
+    async function deleteTracksFromFileSystem(tracks: Song[]) {
+        // Delete from file system (ie. move to trash)
+        await invoke("delete_files", {
+            event: {
+                files: tracks.map((t) => t.path)
+            }
+        });
+    }
+
+    /**
+     * Removes track from the library - but not from disk!
+     * i.e from songs DB, playlists
+     */
+    async function removeTrackFromLibrary() {
+        console.log("[Track menu] Remove from library");
         if (isDestructiveConfirmType !== "remove") {
             songId = $rightClickedTrack?.id;
             isDestructiveConfirmType = "remove";
             return;
         }
 
+        let tracksToRemove = [];
         if ($rightClickedTracks.length) {
-            closeMenu();
-            if ($selectedPlaylistId) {
-                playlist = await db.playlists.get($selectedPlaylistId);
-
-                $rightClickedTracks.forEach((t) => {
-                    const trackIdx = playlist.tracks.findIndex(
-                        (pt) => pt === t.id
-                    );
-                    playlist.tracks.splice(trackIdx, 1);
-                });
-            }
-            $rightClickedTracks.forEach((t) => {
-                db.songs.delete(t.id);
-            });
-            $rightClickedTracks = [];
-            isDestructiveConfirmType = null;
+            tracksToRemove = $rightClickedTracks;
         } else if ($rightClickedTrack) {
-            closeMenu();
-            if ($selectedPlaylistId) {
-                playlist = await db.playlists.get($selectedPlaylistId);
-
-                const trackIdx = playlist.tracks.findIndex(
-                    (pt) => pt === $rightClickedTrack.id
-                );
-                playlist.tracks.splice(trackIdx, 1);
-            }
-            db.songs.delete($rightClickedTrack.id);
-            $rightClickedTrack = null;
-            isDestructiveConfirmType = null;
+            tracksToRemove.push($rightClickedTrack);
         }
+
+        closeMenu();
+
+        // Delete
+        await deleteTracksFromPlaylists(tracksToRemove);
+        await deleteTracksFromDB(tracksToRemove);
+
+        // Reset
+        if ($rightClickedTracks.length) {
+            $rightClickedTracks = [];
+        } else if ($rightClickedTrack) {
+            $rightClickedTrack = null;
+        }
+        isDestructiveConfirmType = null;
     }
 
     async function removeFromPlaylist() {
         if (isDestructiveConfirmType !== "remove_from_playlist") {
+            isDestructiveConfirmType = "remove_from_playlist";
             songId = $rightClickedTrack?.id;
             isConfirmingRemoveFromPlaylist = true;
             return;
         }
-        const playlist = await db.playlists.get($selectedPlaylistId);
+
+        let tracksToRemove = [];
         if ($rightClickedTracks.length) {
-            closeMenu();
-            $rightClickedTracks.forEach((t) => {
-                const trackIdx = playlist.tracks.findIndex((pt) => pt === t.id);
-                playlist.tracks.splice(trackIdx, 1);
-            });
-            $rightClickedTracks = [];
-            isDestructiveConfirmType = null;
+            tracksToRemove = $rightClickedTracks;
         } else if ($rightClickedTrack) {
-            closeMenu();
-            const trackIdx = playlist.tracks.findIndex(
-                (pt) => pt === $rightClickedTrack.id
-            );
-            playlist.tracks.splice(trackIdx, 1);
-            $rightClickedTrack = null;
-            isDestructiveConfirmType = null;
+            tracksToRemove.push($rightClickedTrack);
         }
-        await db.playlists.put(playlist);
+
+        closeMenu();
+        await deleteTracksFromPlaylists(tracksToRemove);
+
+        // Reset
+        if ($rightClickedTracks.length) {
+            $rightClickedTracks = [];
+        } else if ($rightClickedTrack) {
+            $rightClickedTrack = null;
+        }
+        isDestructiveConfirmType = null;
     }
 
     /**
      * Moves the files(s) to the system trash / Recycle bin
+     * Also performs deletion from DB
      */
     async function deleteFile() {
-        let playlist;
-
         console.log("delete");
         if (isDestructiveConfirmType !== "delete") {
             songId = $rightClickedTrack?.id;
@@ -150,47 +177,25 @@
             return;
         }
 
+        let tracksToRemove = [];
         if ($rightClickedTracks.length) {
-            closeMenu();
-            await invoke("delete_files", {
-                event: {
-                    files: $rightClickedTracks.map((t) => t.path)
-                }
-            });
-            if ($selectedPlaylistId) {
-                playlist = await db.playlists.get($selectedPlaylistId);
-
-                $rightClickedTracks.forEach((t) => {
-                    const trackIdx = playlist.tracks.findIndex(
-                        (pt) => pt === t.id
-                    );
-                    playlist.tracks.splice(trackIdx, 1);
-                });
-            }
-            $rightClickedTracks.forEach((t) => {
-                db.songs.delete(t.id);
-            });
-            $rightClickedTracks = [];
-            isDestructiveConfirmType = null;
+            tracksToRemove = $rightClickedTracks;
         } else if ($rightClickedTrack) {
-            closeMenu();
-            await invoke("delete_files", {
-                event: {
-                    files: [$rightClickedTrack.path]
-                }
-            });
-            if ($selectedPlaylistId) {
-                playlist = await db.playlists.get($selectedPlaylistId);
-
-                const trackIdx = playlist.tracks.findIndex(
-                    (pt) => pt === $rightClickedTrack.id
-                );
-                playlist.tracks.splice(trackIdx, 1);
-            }
-            db.songs.delete($rightClickedTrack.id);
-            $rightClickedTrack = null;
-            isDestructiveConfirmType = null;
+            tracksToRemove.push($rightClickedTrack);
         }
+
+        closeMenu();
+        await deleteTracksFromFileSystem(tracksToRemove);
+        await deleteTracksFromPlaylists(tracksToRemove);
+        await deleteTracksFromDB(tracksToRemove);
+
+        // Reset
+        if ($rightClickedTracks.length) {
+            $rightClickedTracks = [];
+        } else if ($rightClickedTrack) {
+            $rightClickedTrack = null;
+        }
+        isDestructiveConfirmType = null;
     }
 
     function searchArtistOnYouTube() {
@@ -238,7 +243,7 @@
     }
     function openInfo() {
         closeMenu();
-        $isTrackInfoPopupOpen = true;
+        $popupOpen = "track-info";
     }
     // Enrichers
 
@@ -385,18 +390,6 @@
                 : `Re-import ${$rightClickedTracks.length} tracks`}
             isLoading={isReimporting}
         />
-        {#if $selectedPlaylistId}
-            <MenuOption
-                isDestructive={true}
-                isConfirming={isDestructiveConfirmType ===
-                    "remove_from_playlist"}
-                onClick={removeFromPlaylist}
-                text={$rightClickedTrack
-                    ? "Remove from playlist"
-                    : `Remove  ${$rightClickedTracks.length} tracks from playlist`}
-                confirmText="Click again to confirm"
-            />
-        {/if}
         {#if $rightClickedTrack}
             <MenuDivider />
 
@@ -499,6 +492,18 @@
         {/if}
         <MenuDivider />
 
+        {#if $selectedPlaylistFile || $uiView === "to-delete"}
+            <MenuOption
+                isDestructive={true}
+                isConfirming={isDestructiveConfirmType ===
+                    "remove_from_playlist"}
+                onClick={removeFromPlaylist}
+                text={$rightClickedTrack
+                    ? "Remove from playlist"
+                    : `Remove  ${$rightClickedTracks.length} tracks from playlist`}
+                confirmText="Click again to confirm"
+            />
+        {/if}
         <MenuOption
             isDestructive={true}
             isConfirming={isDestructiveConfirmType === "remove"}

@@ -11,19 +11,17 @@
         fileToDownload,
         foldersToWatch,
         hoveredFiles,
-        isInfoPopupOpen,
+        popupOpen,
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
-        isSettingsOpen,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
-        isTrackInfoPopupOpen,
         isWaveformOpen,
         isWikiOpen,
         os,
-        selectedPlaylistId,
+        selectedPlaylistFile,
         selectedSmartQuery,
         sidebarManuallyOpened,
         sidebarTogglePos,
@@ -72,6 +70,9 @@
     import { cubicInOut } from "svelte/easing";
     import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
     import AlbumsHeader from "./lib/albums/AlbumsHeader.svelte";
+    import PrunePopup from "./lib/views/PrunePopup.svelte";
+    import ToDeleteHeader from "./lib/library/ToDeleteHeader.svelte";
+
     const appWindow = getCurrentWebviewWindow();
 
     console.log("locale", getLocaleFromNavigator());
@@ -101,8 +102,8 @@
     // }
 
     function onCloseAppInfo() {
-        if ($isInfoPopupOpen) {
-            $isInfoPopupOpen = false;
+        if ($popupOpen === "info") {
+            $popupOpen = null;
         }
     }
 
@@ -220,7 +221,6 @@
 
     $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
 
-    $: selectedPlaylist = db.playlists.get($selectedPlaylistId);
     $: selectedQuery = findQuery($selectedSmartQuery);
 
     $: if ($bottomBarNotification?.timeout) {
@@ -285,26 +285,21 @@
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
-
 <ThemeWrapper>
     <!-- <svelte:body on:click={onPageClick} /> -->
     <Toaster />
 
     <CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
 
-    {#if $isSettingsOpen}
+    {#if $popupOpen === "settings"}
         <div class="info">
             <SettingsPopup />
         </div>
-    {/if}
-
-    {#if $isInfoPopupOpen}
+    {:else if $popupOpen === "info"}
         <div class="info">
             <InfoPopup onClickOutside={onCloseAppInfo} />
         </div>
-    {/if}
-
-    {#if $isTrackInfoPopupOpen}
+    {:else if $popupOpen === "track-info"}
         <div class="info">
             <TrackInfoPopup />
         </div>
@@ -359,13 +354,16 @@
 
         <div class="header">
             {#if $uiView === "playlists"}
-                <!-- <p class="label">playlist:</p> -->
                 <div class="content" data-tauri-drag-region>
-                    {#await selectedPlaylist then playlist}
-                        <PlaylistHeader {playlist} />
-                    {/await}
+                    {#if $selectedPlaylistFile}
+                        <PlaylistHeader playlist={$selectedPlaylistFile} />
+                    {/if}
                 </div>
-            {:else if $uiView === "smart-query"}
+            {:else if $uiView === "to-delete"}
+                <div class="content" data-tauri-drag-region>
+                    <ToDeleteHeader />
+                </div>
+            {:else if $uiView === "smart-query" || $uiView === "favourites"}
                 <!-- <p class="label">playlist:</p> -->
                 <div class="content" data-tauri-drag-region>
                     {#await selectedQuery then query}
@@ -408,9 +406,9 @@
         </div>
 
         <div class="panel">
-            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites)/)}
+            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites|to-delete)/)}
                 <CanvasLibraryView />
-            {:else if $uiView === "playlists"}
+            {:else if $uiView === "playlists" || $uiView === "to-delete"}
                 <CanvasLibraryView />
             {:else if $uiView === "albums"}
                 <AlbumView />
@@ -422,6 +420,8 @@
                 <AnalyticsView />
             {:else if $uiView === "internet-archive"}
                 <InternetArchiveView />
+            {:else if $uiView === "prune"}
+                <PrunePopup />
             {/if}
         </div>
 

@@ -6,7 +6,7 @@
         currentSongLyrics,
         isLyricsHovered,
         isLyricsOpen,
-        isSettingsOpen,
+        popupOpen,
         isWaveformOpen,
         userSettings
     } from "../../data/store";
@@ -185,7 +185,7 @@
                 <ButtonWithIcon
                     text="Add key in settings"
                     onClick={() => {
-                        $isSettingsOpen = true;
+                        $popupOpen = 'settings';
                     }}
                 />
             </div>

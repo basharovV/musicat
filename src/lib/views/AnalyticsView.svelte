@@ -2,7 +2,7 @@
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
     import {
-        isSettingsOpen,
+        popupOpen,
         query,
         uiView,
         userSettings
