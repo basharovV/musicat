@@ -489,6 +489,8 @@ fn decode_loop(
             if probe_result.is_err() {
                 error!("Error probing file: {}", probe_result.err().unwrap());
                 path_str = None;
+                let _ = reset_control_sender.send(true);
+                let _ = playback_state_sender.send(false);
                 continue;
             }
 

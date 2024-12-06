@@ -430,6 +430,10 @@ type RootTranslation = {
 		 */
 		noArtwork: string
 		/**
+		 * P​a​s​t​e​ ​i​m​a​g​e​ ​o​r​ ​c​l​i​c​k​ ​t​o​ ​s​e​l​e​c​t​ ​f​i​l​e
+		 */
+		artworkTooltip: string
+		/**
 		 * F​e​t​c​h​ ​A​r​t
 		 */
 		fetchArt: string
@@ -1197,6 +1201,10 @@ export type TranslationFunctions = {
 		 * No artwork
 		 */
 		noArtwork: () => LocalizedString
+		/**
+		 * Paste image or click to select file
+		 */
+		artworkTooltip: () => LocalizedString
 		/**
 		 * Fetch Art
 		 */

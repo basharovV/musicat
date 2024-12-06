@@ -139,6 +139,7 @@ const en = {
         artworkReadyToSave: "Ready to save",
         artworkFound: "Found",
         noArtwork: "No artwork",
+        artworkTooltip: "Paste image or click to select file",
         fetchArt: "Fetch Art",
         metadata: "Metadata",
         tools: "Tools",

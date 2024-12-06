@@ -96,3 +96,10 @@ button:disabled {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
 }
+
+.toaster .wrapper .app-toast {
+    background-color: var(--overlay-bg);
+    backdrop-filter: blur(10px);
+    border: 0.7px solid color-mix(in srgb, var(--inverse) 70%, transparent);
+    color: var(--text);
+}

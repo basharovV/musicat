@@ -168,9 +168,14 @@ export async function reorderSongsInPlaylist(
     await writePlaylist(playlistFile, playlist);
 }
 
-export async function deleteSongsFromPlaylist(playlistFile: PlaylistFile, songs: Song[]): Promise<Song[]> {
+export async function deleteSongsFromPlaylist(
+    playlistFile: PlaylistFile,
+    songs: Song[]
+): Promise<Song[]> {
     const playlist = await parsePlaylist(playlistFile);
-    const newPlaylist = playlist.filter((ps) => !songs.find(s => s.id === ps.id));
+    const newPlaylist = playlist.filter(
+        (ps) => !songs.find((s) => s.id === ps.id)
+    );
     await writePlaylist(playlistFile, newPlaylist);
     return parsePlaylist(playlistFile);
 }

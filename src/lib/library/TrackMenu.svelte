@@ -77,7 +77,8 @@
         // Delete from playlist
         if ($selectedPlaylistFile) {
             // Delete directly from M3U file
-            deleteSongsFromPlaylist($selectedPlaylistFile, tracks);
+            await deleteSongsFromPlaylist($selectedPlaylistFile, tracks);
+            $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
         } else if ($uiView === "to-delete") {
             // Delete from internal playlist (currently only used for the "to-delete" playlist)
             const toDelete = await db.internalPlaylists.get($toDeletePlaylist.id);

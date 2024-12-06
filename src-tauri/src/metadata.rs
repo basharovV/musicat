@@ -1,9 +1,10 @@
 use artwork_cacher::look_for_art;
+use bytes::Bytes;
 use chksum_md5::MD5;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
 use lofty::id3::v2::{upgrade_v2, upgrade_v3};
-use lofty::picture::Picture;
+use lofty::picture::{MimeType, Picture};
 use lofty::probe::Probe;
 use lofty::read_from_path;
 use lofty::tag::{Accessor, ItemKey, ItemValue, TagItem, TagType};
@@ -35,7 +36,9 @@ pub struct WriteMetatadaEvent {
     metadata: Vec<MetadataEntry>,
     tag_type: Option<String>,
     file_path: String,
-    artwork_file_to_set: String,
+    artwork_file: String,
+    artwork_data: Vec<u8>,
+    artwork_data_mime_type: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -854,15 +857,33 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
             }
 
             // Set image if provided
-            if !v.artwork_file_to_set.is_empty() {
+            if !v.artwork_file.is_empty() {
                 let picture_file = File::options()
                     .read(true)
                     .write(true)
-                    .open(&Path::new(&v.artwork_file_to_set))?;
+                    .open(&Path::new(&v.artwork_file))?;
 
                 let mut reader = BufReader::new(picture_file);
                 let pic = Picture::from_reader(reader.get_mut());
                 to_write.set_picture(0, pic.unwrap());
+            } else if !v.artwork_data.is_empty() {
+                let mime_type = if let Some(mime) = &v.artwork_data_mime_type {
+                    match mime.as_str() {
+                        "image/jpeg" => MimeType::Jpeg,
+                        "image/png" => MimeType::Png,
+                        "image/tiff" => MimeType::Tiff,
+                        _ => MimeType::Unknown((mime.to_string())),
+                    }
+                } else {
+                    MimeType::Png
+                };
+                let pic = Picture::new_unchecked(
+                    lofty::picture::PictureType::CoverFront,
+                    Some(mime_type),
+                    None,
+                    v.artwork_data.clone(),
+                );
+                to_write.set_picture(0, pic);
             }
 
             for tag_item in tag.tags() {

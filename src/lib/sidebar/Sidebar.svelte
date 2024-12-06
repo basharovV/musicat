@@ -132,12 +132,17 @@
                     includeFolderArtwork: true
                 }
             });
+
             if (!songWithArtwork) {
                 title = "❗️File read error❗️";
                 artist = "Check permissions";
-                album = "in use by another program?"
+                album = "in use by another program?";
+                toast.error(
+                    `Error reading file ${song.path}. Check permissions, or if the file is used by another program.`,
+                    { className: "app-toast" }
+                );
                 return;
-            };
+            }
             console.log("sidebar::currentSong listener", songWithArtwork);
             title = songWithArtwork.title;
             fileName = song.file;
@@ -529,6 +534,7 @@
         if ($draggedSongs.length) {
             console.log("[Sidebar] Adding to playlist: ", playlist);
             await addSongsToPlaylists(playlist, $draggedSongs);
+            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
             toast.success(
                 `${
                     $draggedSongs.length > 1
@@ -644,6 +650,7 @@
         console.log("x", x, "x2", x2);
         let started = false;
         var lastFrameTime = 0;
+        let yPos = 35;
 
         function animate(elapsedTime) {
             if (!canvas) return;
@@ -678,8 +685,8 @@
 
                 // now do the frame update and render work
                 // ...
-                context.fillText(displayTitle, x, 25);
-                context.fillText(displayTitle, x2, 25);
+                context.fillText(displayTitle, x, yPos);
+                context.fillText(displayTitle, x2, yPos);
 
                 x -= speed;
                 x2 -= speed;
@@ -697,7 +704,7 @@
                 context.fillText(
                     displayTitle,
                     (canvas.width - textWidth) / 2,
-                    25
+                    yPos
                 );
             }
         }
@@ -1468,7 +1475,12 @@
             <div class="info">
                 {#if $currentSong}
                     {#if sidebarWidth && displayTitle}
-                        <div class="marquee-container">
+                        <div
+                            class="marquee-container"
+                            on:mousedown={() => {
+                                $draggedSongs = [$currentSong];
+                            }}
+                        >
                             <canvas
                                 class="show"
                                 bind:this={canvas}
@@ -2012,11 +2024,24 @@
         background-color: $sidebar_primary_color;
         color: var(--text, initial);
         width: 100%;
-        padding: 0.8em 0.3em;
+        padding: 0.5em 0.3em;
 
         .marquee-container {
             height: 20px;
             width: 100%;
+            pointer-events: all;
+            margin-bottom: 0.3em;
+            cursor: grab;
+            &:hover {
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 40%,
+                    transparent
+                );
+                border-radius: 5px;
+                mask-image: none;
+                border: 1px dashed var(--inverse);
+            }
             mask-image: linear-gradient(
                 to right,
                 transparent 0%,

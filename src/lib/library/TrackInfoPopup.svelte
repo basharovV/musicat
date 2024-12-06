@@ -1,9 +1,7 @@
 <script lang="ts">
-    import { readText } from "@tauri-apps/plugin-clipboard-manager";
+    import { pictureDir } from "@tauri-apps/api/path";
     import { open } from "@tauri-apps/plugin-dialog";
     import { open as fileOpen } from "@tauri-apps/plugin-shell";
-
-    import { pictureDir } from "@tauri-apps/api/path";
 
     import hotkeys from "hotkeys-js";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
@@ -22,8 +20,8 @@
     import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
-        popupOpen,
         os,
+        popupOpen,
         rightClickedTrack,
         rightClickedTracks
     } from "../../data/store";
@@ -45,6 +43,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
 
+    import { Image } from "@tauri-apps/api/image";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
     // optional
@@ -151,6 +150,7 @@
     // The preliminary artwork to be set (from an image on disk)
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
+    let artworkToSetData: Uint8Array = null;
     let isArtworkSet = false;
     let artworkFileToSet = null;
 
@@ -172,7 +172,15 @@
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: { path, isImport: false, includeFolderArtwork: true }
             });
-            if (songWithArtwork.artwork) {
+
+            if (!songWithArtwork) {
+                toast.error(
+                    `Error reading file ${path}. Check permissions, or if the file is used by another program.`,
+                    { className: "app-toast" }
+                );
+            }
+
+            if (songWithArtwork?.artwork) {
                 console.log("artwork");
                 artworkFormat = songWithArtwork.artwork.format;
                 if (songWithArtwork.artwork.data.length) {
@@ -225,9 +233,10 @@
                             metadata: toWrite,
                             "tag_type": metadata.tagType,
                             "file_path": $rightClickedTrack.path,
-                            "artwork_file_to_set": artworkFileToSet
+                            "artwork_file": artworkFileToSet
                                 ? artworkFileToSet
-                                : ""
+                                : "",
+                            "artwork_data": artworkToSetData ?? ""
                         }
                     ]
                 }
@@ -259,9 +268,10 @@
                                 ],
                                 "tag_type": fileMetadata.tagType,
                                 "file_path": track.path,
-                                "artwork_file_to_set": artworkFileToSet
+                                "artwork_file": artworkFileToSet
                                     ? artworkFileToSet
-                                    : ""
+                                    : "",
+                                "artwork_data": artworkToSetData ?? ""
                             };
                         })
                     )
@@ -277,6 +287,7 @@
                 // Roll back to current artwork
                 artworkToSetFormat = null;
                 artworkToSetSrc = null;
+                artworkToSetData = null;
             } else {
                 await reImportTracks(toImport.songs);
             }
@@ -353,6 +364,11 @@
     let unlisten;
 
     async function onImageClick(evt) {
+        console.log("clicked", artworkFocused);
+        if (!artworkFocused) {
+            artworkFocused = true;
+            return;
+        }
         // Open a selection dialog for directories
         const selected = await open({
             directory: false,
@@ -370,19 +386,12 @@
             const response = await fetch(src);
             if (response.status === 200) {
                 const type = response.headers.get("Content-Type");
-                // artworkSrc = src
                 artworkFormat = type;
                 isArtworkSet = true;
-                // const imageData = await (await response.body.getReader().read()).value;
-                // const imageData = await imageUrlToBase64(artworkSrc);
-                // console.log("body", imageData)
+                artworkFileToSet = selected;
+                artworkToSetData = null;
                 artworkToSetSrc = src;
                 artworkToSetFormat = type;
-                // return {
-                //     artworkSrc: src,
-                //     artworkFormat: "image/jpeg",
-                //     artworkFilenameMatch: artworkFilename
-                // }
             }
         }
     }
@@ -407,6 +416,7 @@
         artworkSrc = null;
         artworkToSetFormat = null;
         artworkToSetSrc = null;
+        artworkToSetData = null;
         foundArtwork = null;
         isArtworkSet = false;
         artworkFileToSet = null;
@@ -705,26 +715,57 @@
                 tableInnerScrollArea.clientHeight;
     }
 
+    async function onPaste(event: ClipboardEvent) {
+        if (!artworkFocused) {
+            return;
+        }
+
+        let img: Image;
+        let arrayBuffer: ArrayBuffer;
+
+        let mimeType: string;
+        if (event.clipboardData.items[0]) {
+            try {
+                mimeType = event.clipboardData.items[0].type;
+                arrayBuffer = await event.clipboardData.items[0]
+                    .getAsFile()
+                    .arrayBuffer();
+                console.log("mimeType", mimeType);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // try {
+        //     img = await readImage();
+        //     console.log("paste", await img.size());
+        // } catch (err) {
+        //     console.error(err);
+        // }
+
+        if (arrayBuffer && mimeType) {
+            // const rgba = await img.rgba();
+            const b64 = Buffer.from(arrayBuffer).toString("base64");
+            // Convert to base64 for src
+            const base64 = `data:${mimeType};base64, ${b64}`;
+            artworkToSetSrc = base64;
+            artworkToSetFormat = mimeType;
+            artworkToSetData = new Uint8Array(arrayBuffer);
+            artworkFileToSet = null;
+            isArtworkSet = true;
+        }
+        // const src = "asset://localhost/" + folder + artworkFilename;
+    }
+
     onMount(async () => {
         hotkeys.setScope("track-info");
-        document.addEventListener("paste", async (event: ClipboardEvent) => {
-            // event.stopPropagation();
-            // event.preventDefault();
-
-            const text = await readText();
-            console.log("paste", text);
-
-            // const src = "asset://localhost/" + folder + artworkFilename;
-
-            if (!text) {
-                try {
-                } catch (err) {
-                    console.error(err);
-                }
-            }
-        });
+        document.addEventListener("paste", onPaste);
 
         onTableResize();
+    });
+
+    onDestroy(() => {
+        document.removeEventListener("paste", onPaste);
     });
 
     let isFetchingArtwork = false;
@@ -786,8 +827,7 @@
                     ? `${$rightClickedTracks?.length} tracks selected`
                     : "Track info"}
             </h2>
-            <small class="subtitle">{$LL.trackInfo.subtitle()}</small
-            >
+            <small class="subtitle">{$LL.trackInfo.subtitle()}</small>
         </div>
     </header>
     <div class="top">
@@ -935,7 +975,18 @@
                 contenteditable
                 class="artwork-container"
                 class:focused={artworkFocused}
-                on:click={onImageClick}
+                on:mousedown|preventDefault={(e) => {
+                    onImageClick(e);
+                    //@ts-ignore
+                    e.currentTarget.focus();
+                }}
+                on:focus={() => (artworkFocused = true)}
+                on:blur={() => (artworkFocused = false)}
+                use:tippy={{
+                    content: $LL.trackInfo.artworkTooltip(),
+                    placement: "bottom",
+                    trigger: "focusin"
+                }}
             >
                 <div class="artwork-frame">
                     {#if (artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
@@ -1258,6 +1309,7 @@
         border-radius: 4px;
         overflow: hidden;
         cursor: pointer;
+        caret-color: transparent;
         border: 1px solid
             color-mix(in srgb, var(--background) 60%, var(--inverse));
 
@@ -1266,7 +1318,49 @@
         }
 
         &.focused {
-            border: 1px solid rgb(255, 255, 255);
+            .artwork-frame {
+                img {
+                    transform: scale(0.96);
+                }
+            }
+            background-image: linear-gradient(
+                    90deg,
+                    silver 50%,
+                    transparent 50%
+                ),
+                linear-gradient(90deg, silver 50%, transparent 50%),
+                linear-gradient(0deg, silver 50%, transparent 50%),
+                linear-gradient(0deg, silver 50%, transparent 50%);
+            background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+            background-size:
+                15px 2px,
+                15px 2px,
+                2px 15px,
+                2px 15px;
+            background-position:
+                left top,
+                right bottom,
+                left bottom,
+                right top;
+            animation: border-dance 2s infinite linear;
+        }
+
+        @keyframes border-dance {
+            0% {
+                background-position:
+                    left top,
+                    right bottom,
+                    left bottom,
+                    right top;
+            }
+
+            100% {
+                background-position:
+                    left 15px top,
+                    right 15px bottom,
+                    left bottom 15px,
+                    right top 15px;
+            }
         }
 
         .artwork-frame {
