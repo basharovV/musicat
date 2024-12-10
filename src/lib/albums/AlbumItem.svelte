@@ -145,8 +145,10 @@
         <p class="title">{album.displayTitle ?? album.title}</p>
         <p class="artist">{album?.artist}</p>
         <div class="info">
-            <small>{album?.year}</small>
-            <small>•</small>
+            {#if album?.year > 0}
+                <small>{album.year}</small>
+                <small>•</small>
+            {/if}
             <small>{album?.tracksIds.length} {$LL.albums.item.tracksLabel()}</small>
         </div>
     {/if}
