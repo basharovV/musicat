@@ -17,6 +17,7 @@ import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
 import { open } from "@tauri-apps/plugin-shell";
 import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
 import { openTauriImportDialog } from "../data/LibraryImporter";
+import { path } from "@tauri-apps/api";
 const appWindow = getCurrentWebviewWindow()
 
 export function startMenuListener() {
@@ -73,7 +74,7 @@ export function startMenuListener() {
                 try {
                     const dir = await appDataDir();
                     console.log("dir", dir);
-                    open(`${dir}${CACHE_DIR}`);
+                    open(await path.join(dir, CACHE_DIR));
                 } catch (err) {
                     console.error(err);
                 }
