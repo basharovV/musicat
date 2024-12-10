@@ -227,13 +227,13 @@
                 flex-direction: row;
                 gap: 5px;
                 max-width: 250px;
+                padding: 0 1.5em;
                 @media only screen and (max-width: 1050px) {
                     display: none;
                 }
                 .label {
                     opacity: 0.5;
                 }
-                padding: 0 1.5em;
 
                 .song {
                     overflow: hidden;

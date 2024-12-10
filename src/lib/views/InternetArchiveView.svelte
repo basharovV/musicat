@@ -476,14 +476,14 @@
             border-bottom: 0.7px solid
                 color-mix(in srgb, var(--inverse) 30%, transparent);
             background-color: var(--panel-background);
+            border-radius: 4px;
+            overflow: auto;
             &:not(:nth-child(1)) {
                 border-left: 0.7px solid #ffffff2a;
             }
             &:not(:last-child) {
                 border-right: 0.7px solid #ffffff2a;
             }
-            border-radius: 4px;
-            overflow: auto;
         }
         .column-collections {
             width: 100%;

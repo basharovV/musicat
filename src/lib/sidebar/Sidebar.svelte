@@ -1808,11 +1808,11 @@
         position: relative;
         user-select: none;
         padding: 0 1em 0.5em 1em;
+        margin-block-start: 0;
         &::-webkit-scrollbar {
             /* hide scrollbar */
             display: none;
         }
-        margin-block-start: 0;
         items {
             display: flex;
             flex-direction: column;
@@ -1841,10 +1841,10 @@
             cursor: default;
             &.selected {
                 color: var(--text-active, initial);
+                font-weight: bold;
                 .chevron {
                     visibility: visible;
                 }
-                font-weight: bold;
             }
 
             &:hover:not(.selected) {
@@ -1930,6 +1930,7 @@
                 color-mix(in srgb, var(--inverse) 80%, transparent);
             backdrop-filter: blur(8px);
             z-index: 10;
+            background-color: transparent;
             &::placeholder {
                 color: var(--text-inactive, initial);
             }
@@ -1944,7 +1945,6 @@
                     color: var(--text-inactive, initial);
                 }
             }
-            background-color: transparent;
         }
         .search-icon {
             position: absolute;
@@ -2032,6 +2032,14 @@
             pointer-events: all;
             margin-bottom: 0.3em;
             cursor: grab;
+            mask-image: linear-gradient(
+                to right,
+                transparent 0%,
+                white 15%,
+                white 85%,
+                transparent 100%
+            );
+            
             &:hover {
                 background-color: color-mix(
                     in srgb,
@@ -2042,13 +2050,6 @@
                 mask-image: none;
                 border: 1px dashed var(--inverse);
             }
-            mask-image: linear-gradient(
-                to right,
-                transparent 0%,
-                white 15%,
-                white 85%,
-                transparent 100%
-            );
 
             canvas {
                 width: 100%;
@@ -2154,12 +2155,6 @@
                 transparent
             );
             padding: 0em 0.6em;
-            &.with-icon {
-                padding: 0em 0.6em 0em 0.3em;
-                display: inline-flex;
-                align-items: center;
-                gap: 2px;
-            }
             margin: 0;
             border-radius: 2px;
             font-size: 0.62em;
@@ -2173,6 +2168,12 @@
             font-family: monospace;
             text-transform: uppercase;
             display: inline;
+            &.with-icon {
+                padding: 0em 0.6em 0em 0.3em;
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+            }
         }
     }
     .spectrum {

@@ -184,11 +184,6 @@
 
     .seekbar {
         background-color: color-mix(in srgb, var(--background) 76%, white);
-
-        &.light {
-            background-color: color-mix(in srgb, var(--background) 56%, black);
-        }
-
         height: 2px;
         width: 100%;
         overflow: visible;
@@ -196,6 +191,10 @@
         display: flex;
         position: relative;
         z-index: 0;
+
+        &.light {
+            background-color: color-mix(in srgb, var(--background) 56%, black);
+        }
 
         .buffered {
             position: absolute;
