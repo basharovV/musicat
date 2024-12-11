@@ -581,6 +581,7 @@ pub fn extract_metadata(
                 || ext_str.eq_ignore_ascii_case("aiff")
                 || ext_str.eq_ignore_ascii_case("ape")
                 || ext_str.eq_ignore_ascii_case("ogg")
+                || ext_str.eq_ignore_ascii_case("m4a")
             {
                 if let Ok(tagged_file) = read_from_path(&file_path) {
                     let id = MD5::hash(file_path.to_str().unwrap().as_bytes()).to_hex_lowercase();

@@ -17,7 +17,7 @@ use atomic_wait::wake_all;
 use cpal::traits::{DeviceTrait, HostTrait};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
-use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
+use symphonia::core::audio::{AudioBufferRef, Layout, SampleBuffer, SignalSpec};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
 use symphonia::core::errors::Error::ResetRequired;
 use symphonia::core::formats::{FormatOptions, SeekTo, Track};
@@ -545,9 +545,28 @@ fn decode_loop(
                 .make(&track.codec_params, &DecoderOptions { verify: false })
                 .unwrap();
 
+            let mut channels;
+            let mut first_packet = None;
+
+            if path.extension().and_then(|ext| ext.to_str()) == Some("m4a") {
+                if let Ok(packet) = reader.next_packet() {
+                    if let Ok(buffer) = decoder.decode(&packet) {
+                        channels = buffer.spec().channels;
+                    } else {
+                        channels = decoder.codec_params().channels.unwrap();
+                    }
+
+                    first_packet = Some(packet);
+                } else {
+                    channels = decoder.codec_params().channels.unwrap();
+                }
+            } else {
+                channels = decoder.codec_params().channels.unwrap();
+            }
+
             let spec = SignalSpec {
                 rate: decoder.codec_params().sample_rate.unwrap(),
-                channels: decoder.codec_params().channels.unwrap(),
+                channels
             };
 
             let mut should_reset_audio = false;
@@ -673,13 +692,13 @@ fn decode_loop(
                 let _ = app_handle.emit("audio_device_changed", clone_device_name2);
                 let _ = sender_sample_offset.send(SampleOffsetEvent {
                     sample_offset: Some(
-                        seek_ts * track.codec_params.channels.unwrap().count() as u64,
+                        seek_ts * previous_channels as u64,
                     ),
                 });
             }
 
             let end_pos_frame_idx = if end_pos.is_some() {
-                (end_pos.unwrap() * track.codec_params.sample_rate.unwrap() as f64) as u64
+                (end_pos.unwrap() * previous_channels as f64) as u64
             } else {
                 0
             };
@@ -854,9 +873,13 @@ fn decode_loop(
                             #[cfg(target_os = "macos")]
                             mediakeys::set_playing();
 
-                            let packet = match reader.next_packet() {
-                                Ok(packet) => packet,
-                                Err(err) => break Err(err),
+                            let packet = if let Some(packet) = first_packet.take() {
+                                packet
+                            } else {
+                                match reader.next_packet() {
+                                    Ok(packet) => packet,
+                                    Err(err) => break Err(err),
+                                }
                             };
 
                             // If the packet does not belong to the selected track, skip over it.
