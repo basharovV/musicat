@@ -58,7 +58,18 @@
         "withGlobalTauri": true,
         "windows": [],
         "security": {
-            "capabilities": ["main-capability"],
+            "capabilities": [
+                "main-capability",
+                {
+                    "identifier": "write-external-drives",
+                    "description": "Capability to be able to write artworks on external drives",
+                    "windows": ["*"],
+                    "permissions": [{
+                        "identifier": "fs:allow-write-file",
+                        "allow": ["**"]
+                    }]
+                }
+            ],
             "assetProtocol": {
                 "scope": ["**"],
                 "enable": true
