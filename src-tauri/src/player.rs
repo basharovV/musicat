@@ -943,13 +943,7 @@ fn decode_loop(
                                                 let _ =
                                                     sender_sample_offset.send(SampleOffsetEvent {
                                                         sample_offset: Some(
-                                                            seek_ts
-                                                                * track
-                                                                    .codec_params
-                                                                    .channels
-                                                                    .unwrap()
-                                                                    .count()
-                                                                    as u64,
+                                                            seek_ts * previous_channels as u64,
                                                         ),
                                                     });
                                             } else {
