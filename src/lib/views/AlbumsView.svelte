@@ -21,6 +21,7 @@
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import { path } from "@tauri-apps/api";
 
     let isLoading = true;
     let isVisible = false;
@@ -65,31 +66,32 @@
 
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
+        
+        if (await updatePlayingAlbum()) {
+            currentAlbumElement?.scrollIntoView({
+                block: "center",
+                behavior: "instant"
+            });
+
+            isVisible = true;
+            isInit = false;
+        }
+    }
+    
+    async function updatePlayingAlbum() {
         // Strip the song from album path
-        const albumPath = $currentSong.path.replace(
-            `/${$currentSong.file}`,
-            ""
-        );
+        const albumPath = await path.dirname($currentSong.path)
         // Find the album currently playing
         currentAlbum = await db.albums.get(
             md5(`${albumPath} - ${$currentSong.album}`.toLowerCase())
         );
-        if (!currentAlbum) return;
-        // $albumPlaylist = tracks;
-        // $playlistIsAlbum = true;
-
-        // Scroll to album
+        if (!currentAlbum) return false;
+        
         currentAlbumElement = document.querySelector(
             `[data-album='${currentAlbum.id}']`
         );
-
-        currentAlbumElement?.scrollIntoView({
-            block: "center",
-            behavior: "instant"
-        });
-
-        isVisible = true;
-        isInit = false;
+        
+        return true;
     }
 
     $: if (isInit && $playlist && $currentSong) {
@@ -97,6 +99,10 @@
     } else {
         isVisible = true;
         isInit = false;
+    }
+    
+    $: if ($currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
+        updatePlayingAlbum()
     }
 
     $: minWidth = $uiPreferences.albumsViewGridSize;
@@ -131,6 +137,7 @@
     }
 
     function scrollToCurrentAlbum() {
+        console.log(currentAlbumElement)
         currentAlbumElement?.scrollIntoView({
             block: "center",
             behavior: "smooth"
