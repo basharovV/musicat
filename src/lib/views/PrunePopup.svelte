@@ -155,7 +155,6 @@
         min-height: 350px;
         border-radius: 5px;
         color: white;
-        z-index: 1000;
         display: flex;
         flex-direction: column;
         justify-content: center;

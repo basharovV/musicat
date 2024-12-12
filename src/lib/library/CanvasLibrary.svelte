@@ -1005,7 +1005,11 @@
     }
 
     $: {
-        if (songs?.length && $query.query?.length && $popupOpen !== 'track-info') {
+        if (
+            songs?.length &&
+            $query.query?.length &&
+            $popupOpen !== "track-info"
+        ) {
             highlightSong(songs[0], 0, false, true);
         }
     }
@@ -1068,11 +1072,15 @@
             $rightClickedTrack = null;
         } else if (
             isDefault &&
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             $rightClickedTracks?.length
         ) {
             songsHighlighted = $rightClickedTracks;
-        } else if (isDefault && $popupOpen !== 'track-info' && $rightClickedTrack) {
+        } else if (
+            isDefault &&
+            $popupOpen !== "track-info" &&
+            $rightClickedTrack
+        ) {
             songsHighlighted = [$rightClickedTrack];
         } else {
             // Highlight single song, via a good old click
@@ -1086,7 +1094,7 @@
             rangeStartSongIdx = idx;
 
             // Extra - if the Info overlay is shown, use the arrows to replace the track shown in the overlay
-            if ($popupOpen === 'track-info' && isKeyboardArrows) {
+            if ($popupOpen === "track-info" && isKeyboardArrows) {
                 $rightClickedTrack = song;
             }
         }
@@ -1124,7 +1132,7 @@
             if (idx === draggingSongIdx) {
                 draggingSongIdx = null;
                 return;
-            };
+            }
 
             if ($query.orderBy !== "none") {
                 toast.error($LL.library.orderDisabledHint());
@@ -1144,7 +1152,7 @@
 
     hotkeys("esc", function (event, handler) {
         if (
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1202,7 +1210,7 @@
             }
         } else if (
             event.keyCode === 73 &&
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1214,18 +1222,18 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if ($popupOpen !== 'track-info' && songsHighlighted.length) {
+            if ($popupOpen !== "track-info" && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
                 }
-                $popupOpen = 'track-info';
+                $popupOpen = "track-info";
             }
         } else if (
             event.keyCode === 84 &&
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -1262,7 +1270,7 @@
             }
         } else if (
             event.keyCode === 13 &&
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
                     document.activeElement.tagName.toLowerCase() !==
@@ -1271,7 +1279,7 @@
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
-            if ($popupOpen !== 'track-info') {
+            if ($popupOpen !== "track-info") {
                 AudioPlayer.shouldPlay = false;
                 if ($queueMode === "library") {
                     $currentSongIdx = highlightedSongIdx;
@@ -2106,7 +2114,26 @@
                                                     }}
                                                 />
                                             {/if}
-
+                                            {#if hoveredSongIdx === songIdx && !(draggingSongIdx !== null || (draggingSongIdx === null && $draggedSongs?.length))}
+                                                <Path
+                                                    config={{
+                                                        x: -2,
+                                                        y:
+                                                            sandwichTopHeight +
+                                                            HEADER_HEIGHT +
+                                                            ROW_HEIGHT *
+                                                                songIdx +
+                                                            -DUMMY_PADDING +
+                                                            scrollOffset +
+                                                            7,
+                                                        listening: false,
+                                                        scaleX: 0.9,
+                                                        scaleY: 0.9,
+                                                        data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
+                                                        fill: "rgba(255, 255, 255, 0.05)"
+                                                    }}
+                                                />
+                                            {/if}
                                             {#if f.value === "title"}
                                                 <!-- Now playing icon -->
                                                 {#if $currentSong?.id === song.id}

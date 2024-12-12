@@ -178,6 +178,7 @@
                     `Error reading file ${path}. Check permissions, or if the file is used by another program.`,
                     { className: "app-toast" }
                 );
+                metadata = { mappedMetadata: [], tagType: null };
             }
 
             if (songWithArtwork?.artwork) {
@@ -1147,43 +1148,48 @@
                             {/if}
                         {/each}
                     </form>
-                    <div class="tools">
-                        <h5 class="section-title">
-                            <Icon icon="ri:tools-fill" />{$LL.trackInfo.tools()}
-                        </h5>
-                        <div class="tool">
-                            <div class="description">
-                                <p>
-                                    {$LL.trackInfo.fixLegacyEncodings.title()}
-                                </p>
-                                <small
-                                    >{$LL.trackInfo.fixLegacyEncodings.body()}</small
-                                >
-                            </div>
-                            <select bind:value={selectedEncoding}>
-                                <option value="placeholder"
-                                    >{$LL.trackInfo.fixLegacyEncodings.hint()}</option
-                                >
-                                {#each ENCODINGS as encoding}
-                                    <option
-                                        value={encoding}
-                                        class="encoding"
-                                        on:click={() => {
-                                            selectedEncoding = encoding;
-                                        }}
+                    {#if metadata?.mappedMetadata?.length}
+                        <div class="tools">
+                            <h5 class="section-title">
+                                <Icon
+                                    icon="ri:tools-fill"
+                                />{$LL.trackInfo.tools()}
+                            </h5>
+                            <div class="tool">
+                                <div class="description">
+                                    <p>
+                                        {$LL.trackInfo.fixLegacyEncodings.title()}
+                                    </p>
+                                    <small
+                                        >{$LL.trackInfo.fixLegacyEncodings.body()}</small
                                     >
-                                        <p>{encoding}</p>
-                                    </option>
-                                {/each}
-                            </select>
-                            <ButtonWithIcon
-                                text={$LL.trackInfo.fix()}
-                                theme="transparent"
-                                onClick={fixEncoding}
-                                disabled={selectedEncoding === "placeholder"}
-                            />
+                                </div>
+                                <select bind:value={selectedEncoding}>
+                                    <option value="placeholder"
+                                        >{$LL.trackInfo.fixLegacyEncodings.hint()}</option
+                                    >
+                                    {#each ENCODINGS as encoding}
+                                        <option
+                                            value={encoding}
+                                            class="encoding"
+                                            on:click={() => {
+                                                selectedEncoding = encoding;
+                                            }}
+                                        >
+                                            <p>{encoding}</p>
+                                        </option>
+                                    {/each}
+                                </select>
+                                <ButtonWithIcon
+                                    text={$LL.trackInfo.fix()}
+                                    theme="transparent"
+                                    onClick={fixEncoding}
+                                    disabled={selectedEncoding ===
+                                        "placeholder"}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    {/if}
                 {/if}
             {:else}
                 <p>{$LL.trackInfo.noMetadata()}</p>
