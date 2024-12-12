@@ -212,6 +212,7 @@
             width: 4px;
             left: -6px;
             z-index: 19;
+            cursor: ew-resize;
 
             &::after {
                 content: "";
@@ -234,8 +235,6 @@
                 background-color: var(--accent-secondary);
                 border-radius: 4px;
             }
-
-            cursor: ew-resize;
         }
     }
 

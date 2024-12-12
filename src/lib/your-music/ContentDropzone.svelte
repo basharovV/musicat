@@ -145,14 +145,14 @@
             height: 300px;
             padding: 3em;
             border: 1px solid white;
-            &.highlighted {
-                border: 1px solid red;
-            }
             background-color: black;
             pointer-events: visibleStroke;
             /* * {
                 pointer-events: none;
             } */
+            &.highlighted {
+                border: 1px solid red;
+            }
         }
     }
 </style>
