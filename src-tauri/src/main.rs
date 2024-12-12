@@ -522,6 +522,40 @@ async fn main() {
                 command_center.setup_remote_command_center();
             }
 
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+                let media_play_pause_shortcut = Shortcut::new(None, Code::MediaPlayPause);
+                let media_track_next_shortcut = Shortcut::new(None, Code::MediaTrackNext);
+                let media_track_previous_shortcut = Shortcut::new(None, Code::MediaTrackPrevious);
+                
+                app.handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new().with_handler(move |_app, shortcut, event| {
+                        if shortcut == &media_play_pause_shortcut {
+                            if event.state() == ShortcutState::Pressed {
+                                let _ = _app.emit("toggle_play", ());
+                            }
+                        } else if shortcut == &media_track_next_shortcut {
+                            if event.state() == ShortcutState::Pressed {
+                                let _ = _app.emit("play_next", ());
+                            }
+                        } else if shortcut == &media_track_previous_shortcut {
+                            if event.state() == ShortcutState::Pressed {
+                                let _ = _app.emit("play_previous", ());
+                            }
+                        }
+                    })
+                    .build(),
+                )?;
+
+                let global_shortcut = app.global_shortcut();
+                
+                global_shortcut.register(media_play_pause_shortcut)?;
+                global_shortcut.register(media_track_next_shortcut)?;
+                global_shortcut.register(media_track_previous_shortcut)?;
+            }
+
             Ok(())
         })
         .menu(|app| {

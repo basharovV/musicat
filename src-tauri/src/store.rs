@@ -3,7 +3,6 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
-
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UserSettings {
@@ -18,7 +17,7 @@ pub struct UserSettings {
     pub download_location: Option<String>,
     pub theme: String,
     pub output_device: Option<String>,
-    pub follow_system_output: bool
+    pub follow_system_output: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -39,7 +38,6 @@ pub enum LLM {
     #[serde(rename = "ollama")]
     Ollama,
 }
-
 
 pub fn load_settings(app: &AppHandle) -> Result<UserSettings, anyhow::Error> {
     let config_dir = app.path().app_config_dir().unwrap();

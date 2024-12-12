@@ -550,7 +550,7 @@ mod cpal {
                     }
                 } else {
                     // The sample buffer is not big enough to process all the samples.
-                    // TODO Error? 
+                    // TODO Error?
                     return;
                 }
             };
