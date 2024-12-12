@@ -4,8 +4,8 @@ use std::ptr;
 use std::rc::Rc;
 
 use block2::{Block, ConcreteBlock, RcBlock, StackBlock};
-use objc2::runtime::AnyObject;
 use objc2::rc::{Id, Retained};
+use objc2::runtime::AnyObject;
 use objc2::{class, msg_send, msg_send_id, sel, Encode, Encoding, RefEncode};
 use objc2_foundation::{
     ns_string, CGSize, NSArray, NSDictionary, NSNumber, NSObject, NSString, NSUInteger,
