@@ -687,6 +687,7 @@
             width: 4px;
             left: -2.5px;
             z-index: 100;
+            cursor: ew-resize;
             @media screen and (max-width: 210px) {
                 display: none;
             }
@@ -711,8 +712,6 @@
             &.resizing {
                 background-color: var(--accent-secondary);
             }
-
-            cursor: ew-resize;
         }
     }
 

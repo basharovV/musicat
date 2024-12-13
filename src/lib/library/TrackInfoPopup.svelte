@@ -1324,11 +1324,6 @@
         }
 
         &.focused {
-            .artwork-frame {
-                img {
-                    transform: scale(0.96);
-                }
-            }
             background-image: linear-gradient(
                     90deg,
                     silver 50%,
@@ -1349,6 +1344,12 @@
                 left bottom,
                 right top;
             animation: border-dance 2s infinite linear;
+            
+             .artwork-frame {
+                img {
+                    transform: scale(0.96);
+                }
+            }
         }
 
         @keyframes border-dance {
@@ -1765,6 +1766,7 @@
     form {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        column-gap: 3em;
 
         @media only screen and (max-width: 700px) {
             grid-template-columns: 1fr;
@@ -1795,7 +1797,6 @@
             }
         }
 
-        column-gap: 3em;
         .tag {
             display: flex;
             align-items: center;

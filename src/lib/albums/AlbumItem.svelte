@@ -155,6 +155,8 @@
 <style lang="scss">
     .playing {
         transform: scale(1.1);
+        z-index: 9;
+        
         .cd {
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
@@ -178,10 +180,11 @@
         .info {
             z-index: 20;
         }
-        z-index: 9;
     }
 
     .hovered:not(.playing) {
+        z-index: 8;
+
         .cd {
             z-index: 6;
         }
@@ -189,7 +192,6 @@
         .cd-img {
             transform: translate(12%, -5px) rotate(130deg) !important;
         }
-        z-index: 8;
     }
 
     .hovered,
@@ -275,11 +277,12 @@
             object-fit: cover;
             /* transition: left 0.2s cubic-bezier(0.075, 0.82, 0.165, 1); */
             transition: all 0.8s cubic-bezier(0.075, 0.82, 0.165, 1);
+            transform: translateX(5%) translateY(2%) rotate(0deg);
+            /* transform-origin: 5px 5px; */
+
             > img {
                 width: 95%;
             }
-            transform: translateX(5%) translateY(2%) rotate(0deg);
-            /* transform-origin: 5px 5px; */
         }
 
         .texture {

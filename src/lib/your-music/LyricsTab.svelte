@@ -587,10 +587,10 @@
             section {
                 display: inline-block;
                 &:hover {
+                    cursor: pointer;
                     .bar-count {
                         opacity: 1;
                     }
-                    cursor: pointer;
                 }
 
                 &.collapsed {
