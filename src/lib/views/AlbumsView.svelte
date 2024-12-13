@@ -101,8 +101,10 @@
         isInit = false;
     }
     
-    $: if ($currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
-        updatePlayingAlbum()
+    $: if (container && $currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
+        if (updatePlayingAlbum()) {
+            onScroll();
+        }
     }
 
     $: minWidth = $uiPreferences.albumsViewGridSize;
@@ -137,7 +139,6 @@
     }
 
     function scrollToCurrentAlbum() {
-        console.log(currentAlbumElement)
         currentAlbumElement?.scrollIntoView({
             block: "center",
             behavior: "smooth"
