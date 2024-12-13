@@ -51,19 +51,30 @@
     },
     "productName": "Musicat",
     "version": "0.10.0",
-    "identifier": "com.vbapps.musicat",
+    "identifier": "Musicat",
     "plugins": {},
     "app": {
         "macOSPrivateApi": true,
         "withGlobalTauri": true,
         "windows": [],
         "security": {
-            "capabilities": ["main-capability"],
+            "capabilities": [
+                "main-capability",
+                {
+                    "identifier": "write-external-drives",
+                    "description": "Capability to be able to write artworks on external drives",
+                    "windows": ["*"],
+                    "permissions": [{
+                        "identifier": "fs:allow-write-file",
+                        "allow": ["**"]
+                    }]
+                }
+            ],
             "assetProtocol": {
                 "scope": ["**"],
                 "enable": true
             },
-            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org; connect-src ipc: http://ipc.localhost"
+            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org; connect-src https://www.wikidata.org https://en.wikipedia.org https://upload.wikimedia.org https://dbpedia.org *.archive.org https://archive.org ipc: http://ipc.localhost asset: https://asset.localhost"
         }
     }
 }

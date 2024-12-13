@@ -30,7 +30,7 @@ import type {
     UserSettings,
     WaveformPlayerState
 } from "src/App";
-import { derived, writable, type Writable } from "svelte/store";
+import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
@@ -209,11 +209,16 @@ const defaultSettings: UserSettings = {
  */
 async function getSettings() {
     // use fs to read stetings file
-    const configDir = await appConfigDir();
-    const settingsPath = await path.join(configDir, "settings.json");
-    // Read contents
-    const contents = await fs.readTextFile(settingsPath);
-    return JSON.parse(contents);
+    try {
+        const configDir = await appConfigDir();
+        const settingsPath = await path.join(configDir, "settings.json");
+        // Read contents
+        const contents = await fs.readTextFile(settingsPath);
+        return JSON.parse(contents);
+    } catch (e) {
+        console.error("Error reading settings file", e);
+        return get(userSettings);
+    }
 }
 
 async function setSettings(settings: UserSettings) {
@@ -331,7 +336,8 @@ async function init() {
     // Set default download location
     const dir = await downloadDir();
 
-    const fileSettings = await getSettings();
+    let fileSettings = await getSettings();
+
     if (!fileSettings.downloadLocation) {
         fileSettings.downloadLocation = dir;
     }
@@ -340,7 +346,7 @@ async function init() {
     const playlistsDir = await audioDir();
     if (!fileSettings.playlistsLocation) {
         fileSettings.playlistsLocation =
-            playlistsDir.concat("/Musicat Playlists");
+            path.join(playlistsDir, "Musicat Playlists");
     }
 
     // Get user settings
@@ -351,6 +357,7 @@ async function init() {
 
     // Auto-persist settings
     userSettings.subscribe(async (val) => {
+        console.log("[store] userSettings", val);
         // Write settings to file
         await setSettings(val);
     });

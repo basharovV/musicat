@@ -6,6 +6,7 @@
 // } from "@tauri-apps/plugin-fs";
 // import { appDataDir } from "@tauri-apps/api/path";
 
+import { path } from "@tauri-apps/api";
 import { appDataDir } from "@tauri-apps/api/path";
 import { remove } from "@tauri-apps/plugin-fs";
 
@@ -107,7 +108,7 @@ export const CACHE_DIR =
 export const deleteCacheDirectory = async () => {
     try {
         const dataDir = await appDataDir();
-        await remove(`${dataDir}${CACHE_DIR}`, {
+        await remove(await path.join(dataDir, CACHE_DIR), {
             recursive: true
         });
     } catch (error) {

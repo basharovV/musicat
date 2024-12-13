@@ -35,9 +35,7 @@
         "top-left",
         "top-right"
     ];
-
-    let llms: LLM[] = ["gpt-3.5-turbo", "gpt-4", "ollama"];
-
+    
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
         $userSettings.albumArtworkFilenames = commaSeparatedFilenames

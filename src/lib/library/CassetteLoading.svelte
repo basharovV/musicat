@@ -304,9 +304,6 @@
         display: block;
         position: relative;
         float: left;
-        &.two {
-            float: right;
-        }
         width: 2.3em;
         height: 2.4em;
         border-radius: 50%;
@@ -319,6 +316,9 @@
             inset $cream 0 0.1em 0 0.4em,
             inset darken($cream, 25%) 0 0.2em 0 0.4em,
             inset darken($primary, 10%) -0.7em 1.5em 0 0;
+        &.two {
+            float: right;
+        }
     }
     .teethBox {
         position: absolute;
@@ -717,13 +717,13 @@
             inset darken($paper, 25%) 0 -0.3em 0 0,
             inset $c90red 0 -0.7em 0 0,
             darken($primary, 10%) 0.6em -1em 0 0.2em;
+        padding-top: 0.3em;
         .spineTitle {
             display: block;
             background: darken($paper, 25%);
             width: 8em;
             margin: 0 auto;
         }
-        padding-top: 0.3em;
     }
     .green {
         color: $c90green;

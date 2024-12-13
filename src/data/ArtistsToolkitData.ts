@@ -20,6 +20,7 @@ import {
     writeTextFile
 } from "@tauri-apps/plugin-fs";
 import fm from "front-matter";
+import { path } from "@tauri-apps/api";
 export async function addScrapbookFile(filePath) {
     console.log("adding item", filePath);
     const contentFileType = getContentFileType(filePath);
@@ -57,7 +58,7 @@ export async function scanScrapbook() {
             for (const entry of entries.filter(
                 (f) => !f.name.startsWith(".")
             )) {
-                const filePath = settings.scrapbookLocation + "/" + entry.name;
+                const filePath = await path.join(settings.scrapbookLocation, entry.name);
                 console.log("adding item", filePath);
                 const contentFileType = getContentFileType(filePath);
                 console.log("type", contentFileType);
@@ -138,7 +139,7 @@ export async function loadSongProjectsForArtist(artistName: string) {
     if (!songbookLocation) return;
 
     try {
-        const dirContents = await readDir(songbookLocation + "/" + artistName);
+        const dirContents = await readDir(await path.join(songbookLocation, artistName));
         const songFolders = dirContents.filter((item) => item.isDirectory);
         const songs: string[] = songFolders.map((folder) => folder.name);
         songs.sort();

@@ -13,6 +13,7 @@ import { db } from "./db";
 import { selectedPlaylistFile, userPlaylists, userSettings } from "./store";
 import { moveArrayElement } from "../utils/ArrayUtils";
 import { invoke } from "@tauri-apps/api/core";
+import { path } from "@tauri-apps/api";
 
 interface M3UTrack {
     duration: number; // Duration in seconds, -1 if unknown
@@ -81,7 +82,7 @@ export async function scanPlaylists() {
         if (entry.isFile && entry.name.endsWith(".m3u")) {
             m3uFiles.push({
                 title: entry.name.split(".m3u")[0],
-                path: playlistsLocation + "/" + entry.name
+                path: await path.join(playlistsLocation, entry.name)
             });
         }
     }
@@ -126,7 +127,7 @@ export async function addSongsToPlaylists(
 export async function createNewPlaylistFile(title: string) {
     await writePlaylist(
         {
-            path: get(userSettings).playlistsLocation + "/" + title + ".m3u",
+            path: await path.join(get(userSettings).playlistsLocation, `${title}.m3u`),
             title
         },
         []

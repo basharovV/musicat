@@ -11,7 +11,6 @@
         fileToDownload,
         foldersToWatch,
         hoveredFiles,
-        popupOpen,
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
@@ -21,6 +20,7 @@
         isWaveformOpen,
         isWikiOpen,
         os,
+        popupOpen,
         selectedPlaylistFile,
         selectedSmartQuery,
         sidebarManuallyOpened,
@@ -32,24 +32,30 @@
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { onDestroy, onMount } from "svelte";
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
+    import { cubicInOut } from "svelte/easing";
     import { blur, fade, fly } from "svelte/transition";
-    import { db } from "./data/db";
     import { startWatchingLibraryFolders } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryImporter";
     import { findQuery } from "./data/SmartQueries";
     import { setLocale } from "./i18n/i18n-svelte";
     import { loadLocale } from "./i18n/i18n-util.sync";
+    import AlbumsHeader from "./lib/albums/AlbumsHeader.svelte";
     import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
     import BottomBar from "./lib/library/BottomBar.svelte";
     import Dropzone from "./lib/library/Dropzone.svelte";
     import LyricsView from "./lib/library/LyricsView.svelte";
     import PlaylistHeader from "./lib/library/PlaylistHeader.svelte";
     import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
+    import TagCloud from "./lib/library/TagCloud.svelte";
+    import ToDeleteHeader from "./lib/library/ToDeleteHeader.svelte";
     import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
+    import audioPlayer from "./lib/player/AudioPlayer";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
     import Sidebar from "./lib/sidebar/Sidebar.svelte";
+    import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
     import CursorInfo from "./lib/ui/CursorInfo.svelte";
+    import Icon from "./lib/ui/Icon.svelte";
     import AlbumView from "./lib/views/AlbumsView.svelte";
     import AnalyticsView from "./lib/views/AnalyticsView.svelte";
     import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
@@ -57,21 +63,13 @@
     import InternetArchiveView from "./lib/views/InternetArchiveView.svelte";
     import MapView from "./lib/views/MapView.svelte";
     import NotesView from "./lib/views/NotesView.svelte";
+    import PrunePopup from "./lib/views/PrunePopup.svelte";
     import QueueOptions from "./lib/views/QueueOptions.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
+    import TopBar from "./lib/views/TopBar.svelte";
+    import WikiView from "./lib/views/WikiView.svelte";
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
     import { startMenuListener } from "./window/EventListener";
-    import WikiView from "./lib/views/WikiView.svelte";
-    import Icon from "./lib/ui/Icon.svelte";
-    import TopBar from "./lib/views/TopBar.svelte";
-    import { currentThemeObject } from "./theming/store";
-    import audioPlayer from "./lib/player/AudioPlayer";
-    import TagCloud from "./lib/library/TagCloud.svelte";
-    import { cubicInOut } from "svelte/easing";
-    import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
-    import AlbumsHeader from "./lib/albums/AlbumsHeader.svelte";
-    import PrunePopup from "./lib/views/PrunePopup.svelte";
-    import ToDeleteHeader from "./lib/library/ToDeleteHeader.svelte";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -689,6 +687,7 @@
             width: 4px;
             left: -2.5px;
             z-index: 100;
+            cursor: ew-resize;
             @media screen and (max-width: 210px) {
                 display: none;
             }
@@ -713,8 +712,6 @@
             &.resizing {
                 background-color: var(--accent-secondary);
             }
-
-            cursor: ew-resize;
         }
     }
 

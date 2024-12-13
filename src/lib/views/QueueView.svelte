@@ -1680,6 +1680,7 @@
 
     .smart-query {
         display: grid;
+        background-color: #4d347c;
         /* min-height: 51px; */
         .smart-query-builder {
             grid-column-start: 1;
@@ -1694,7 +1695,6 @@
             grid-row-start: 1;
             grid-row-end: 2;
         }
-        background-color: #4d347c;
     }
 
     .bottom-bar {
