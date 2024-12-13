@@ -333,20 +333,17 @@ async function init() {
     const osType = await type();
     os.set(osType);
 
-    // Set default download location
-    const dir = await downloadDir();
-
     let fileSettings = await getSettings();
 
-    if (!fileSettings.downloadLocation) {
-        fileSettings.downloadLocation = dir;
+    // Set default download location
+    if (typeof fileSettings.downloadLocation != 'string') {
+        fileSettings.downloadLocation = await downloadDir();
     }
 
     // Same for playlists location
-    const playlistsDir = await audioDir();
-    if (!fileSettings.playlistsLocation) {
+    if (typeof fileSettings.playlistsLocation != 'string') {
         fileSettings.playlistsLocation =
-            path.join(playlistsDir, "Musicat Playlists");
+            await path.join(await audioDir(), "Musicat Playlists");
     }
 
     // Get user settings
