@@ -6,6 +6,7 @@ import type { Album, Song } from "../../App";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import md5 from "md5";
 import { addOriginCountryStatus } from "../../data/store";
+import { path } from "@tauri-apps/api";
 
 export async function findCountryByArtist(artistName) {
     if (!artistName?.length) return null;
@@ -114,7 +115,7 @@ export async function fetchAlbumArt(
             console.log("imageData");
 
             if (imageBody) {
-                const filePath = album.path + "/cover." + imageExtension;
+                const filePath = await path.join(album.path,  `cover.${imageExtension}`);
                 console.log("filepath", filePath);
                 // Write a binary file to the `$APPDATA/avatar.png` path
                 await writeFile(filePath, imageBody);

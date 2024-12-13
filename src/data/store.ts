@@ -346,7 +346,7 @@ async function init() {
     const playlistsDir = await audioDir();
     if (!fileSettings.playlistsLocation) {
         fileSettings.playlistsLocation =
-            playlistsDir.concat("/Musicat Playlists");
+            path.join(playlistsDir, "Musicat Playlists");
     }
 
     // Get user settings
