@@ -618,8 +618,8 @@ pub fn extract_metadata(
                                 TagType::VorbisComments => Some("vorbis".to_string()),
                                 TagType::Id3v1 => Some("ID3v1".to_string()),
                                 TagType::Id3v2 => Some("ID3v2".to_string()),
+                                TagType::Mp4Ilst => Some("MP4".to_string()),
                                 TagType::Ape
-                                | TagType::Mp4Ilst
                                 | TagType::RiffInfo
                                 | TagType::AiffText => None,
                                 _ => todo!(),
@@ -643,6 +643,7 @@ pub fn extract_metadata(
                             FileType::Opus => Some("Opus".to_string()),
                             FileType::Speex => Some("Speex".to_string()),
                             FileType::Vorbis => Some("Vorbis".to_string()),
+                            FileType::Mp4 => Some("MP4".to_string()),
                             _ => None,
                         },
                     };
@@ -777,6 +778,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 "ID3v2.2" => tag_type = Some(TagType::Id3v2),
                 "ID3v2.3" => tag_type = Some(TagType::Id3v2),
                 "ID3v2.4" => tag_type = Some(TagType::Id3v2),
+                "iTunes" => tag_type = Some(TagType::Mp4Ilst),
                 _ => info!("Unhandled tag type: {:?}", v.tag_type),
             }
             let tag_type_value = tag_type.unwrap();
