@@ -44,7 +44,7 @@
     },
     "productName": "Musicat",
     "version": "0.10.0",
-    "identifier": "com.vbapps.musicat",
+    "identifier": "Musicat",
     "plugins": {},
     "app": {
         "withGlobalTauri": true,

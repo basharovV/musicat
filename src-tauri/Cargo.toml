@@ -1,11 +1,11 @@
 [package]
-name = "app"
+name = "Musicat"
 version = "0.10.0"
 description = "Musicat music player"
 authors = ["you"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/basharovV/musicat"
-default-run = "app"
+default-run = "Musicat"
 edition = "2021"
 rust-version = "1.70"
 

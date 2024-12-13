@@ -51,9 +51,15 @@ export async function startWatchingLibraryFolders() {
                             }
                             const filehash = md5(path);
                             const song = await db.songs.get(filehash);
+                            
+                            console.log(
+                                "[Folder watcher] File exists",
+                                fileExists
+                            );
 
                             // New file
-                            if (!song) {
+                            if (!song && fileExists) {
+                                console.log("[Folder watcher] File added");
                                 bottomBarNotification.set({
                                     text: "Folder watcher: File added - updating library...",
                                     timeout: 2000
@@ -62,6 +68,7 @@ export async function startWatchingLibraryFolders() {
                             }
                             // Deletion
                             else if (!fileExists && song) {
+                                console.log("[Folder watcher] File deleted");
                                 bottomBarNotification.set({
                                     text: "Folder watcher: File deleted - updating library...",
                                     timeout: 2000
@@ -72,6 +79,7 @@ export async function startWatchingLibraryFolders() {
                     } else if (result === "directory") {
                         const pathExists = await exists(path);
                         if (!pathExists) {
+                            console.log("[Folder watcher] Folder deleted");
                             bottomBarNotification.set({
                                 text: "Folder watcher: Folder deleted - updating library...",
                                 timeout: 2000
@@ -101,6 +109,7 @@ export async function startWatchingLibraryFolders() {
                                 await db.albums.delete(id);
                             }
                         } else {
+                            console.log("[Folder watcher] Folder added");
                             bottomBarNotification.set({
                                 text: "Folder watcher: Folder added - updating library...",
                                 timeout: 2000
