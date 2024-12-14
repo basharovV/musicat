@@ -1006,13 +1006,18 @@
 
     $: {
         if (
-            songs?.length &&
             $query.query?.length &&
             $popupOpen !== "track-info"
         ) {
-            highlightSong(songs[0], 0, false, true);
+            if (songs?.length === 0) {
+                songsHighlighted = [];
+            }
+            else {
+                highlightSong(songs[0], 0, false, true);
+            }
         }
     }
+
     export let songsHighlighted: Song[] = [];
     export let onSongsHighlighted = null;
 
