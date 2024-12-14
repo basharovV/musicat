@@ -177,7 +177,9 @@
                     >This feature uses the Genius API to check for lyrics</small
                 >
                 <p>
-                    Create one on <a href="https://genius.com/developers"
+                    Create one on <a
+                            href="https://genius.com/developers"
+                            target="_blank"
                         >genius.com/developers</a
                     >, <br />then add it in settings:
                 </p>
