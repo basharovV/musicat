@@ -5,8 +5,10 @@ import { db } from "../../data/db";
 import type { Album, Song } from "../../App";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import md5 from "md5";
-import { addOriginCountryStatus } from "../../data/store";
+import { addOriginCountryStatus, userSettings } from "../../data/store";
 import { path } from "@tauri-apps/api";
+import { get } from "svelte/store";
+import { fetch } from "@tauri-apps/plugin-http";
 
 export async function findCountryByArtist(artistName) {
     if (!artistName?.length) return null;
@@ -105,43 +107,70 @@ export async function fetchAlbumArt(
             }
         }
 
-        if (imageUrl && imageExtension) {
-            // Fetch image
-            const imageData = await fetch(imageUrl);
-            let imageArray = await imageData.body.getReader().read();
-
-            let imageBody = imageArray.value;
-
-            console.log("imageData");
-
-            if (imageBody) {
-                const filePath = await path.join(album.path,  `cover.${imageExtension}`);
-                console.log("filepath", filePath);
-                // Write a binary file to the `$APPDATA/avatar.png` path
-                await writeFile(filePath, imageBody);
-                let format = getImageFormat(imageExtension);
-                // Success! Let's write the artwork to the album
-
-                // TODO: Option to write to track directly?
-
-                await db.albums.update(album, {
-                    artwork: {
-                        src: convertFileSrc(filePath) + `?${Date.now()}`,
-                        format: format,
-                        size: {
-                            width: 200,
-                            height: 200
-                        }
-                    }
-                });
-                return {
-                    success: "Artwork saved!"
-                };
-                // Double success! Artwork should now be visible in the library
-            }
+        if (await fetchImage(album, imageUrl, imageExtension)) {
+            return {
+                success: "Artwork saved!"
+            };
         }
 
         console.log("got art", wikiResult);
+    } catch (err) {
+        console.error("Error fetching artwork", err);
+    }
+    
+    const settings = get(userSettings);
+    
+    if (settings.geniusApiKey) {
+        return fetchAlbumArtWithGenius(album, settings.geniusApiKey)
+    }
+
+    return {
+        error: "No artwork found!"
+    };
+}
+
+export async function fetchAlbumArtWithGenius(
+    album: Album,
+    geniusApiKey: string
+): Promise<{ success?: string; error?: string }> {
+    try {
+        const query = encodeURIComponent(`${album.displayTitle} ${album.artist}`);
+
+        const geniusResult = await (
+            await fetch(`https://api.genius.com/search?q=${query}`, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${geniusApiKey}`
+                }
+            })
+        );
+        const geniusData = await geniusResult.json();
+        console.log("result", geniusResult);
+        if (!geniusResult.ok) {
+            throw new Error("Genius API: " + JSON.stringify(geniusResult));
+        }
+
+        const hits = geniusData?.response?.hits;
+        const artist = album.artist.toLowerCase()
+        const hit = hits?.find(
+            (h) =>
+                h?.result.header_image_url &&
+                !h.result.header_image_url.includes("default_cover_image") &&
+                artist === h?.result?.artist_names?.toLowerCase()
+        )
+
+        if (hit) {
+            const imageUrl = hit.result?.header_image_url;
+            
+            const imageExtension = imageUrl.split("?")[0].split(".")?.pop();
+
+            if (await fetchImage(album, imageUrl, imageExtension)) {
+                return {
+                    success: "Artwork saved!"
+                };
+            }
+        }
 
         return {
             error: "No artwork found!"
@@ -153,6 +182,50 @@ export async function fetchAlbumArt(
             error: "Error fetching artwork." + err
         };
     }
+}
+
+async function fetchImage(
+    album: Album,
+    imageUrl?: string,
+    imageExtension?: string,
+): Promise<boolean> {
+    if (!imageUrl || !imageExtension) {
+        return false;
+    }
+
+    // Fetch image
+    const imageData = await fetch(imageUrl);
+    let imageArray = await imageData.body.getReader().read();
+
+    let imageBody = imageArray.value;
+
+    console.log("imageData");
+
+    if (imageBody) {
+        const filePath = await path.join(album.path,  `cover.${imageExtension}`);
+        console.log("filepath", filePath);
+        // Write a binary file to the `$APPDATA/avatar.png` path
+        await writeFile(filePath, imageBody);
+        let format = getImageFormat(imageExtension);
+        // Success! Let's write the artwork to the album
+
+        // TODO: Option to write to track directly?
+
+        await db.albums.update(album, {
+            artwork: {
+                src: convertFileSrc(filePath) + `?${Date.now()}`,
+                format: format,
+                size: {
+                    width: 200,
+                    height: 200
+                }
+            }
+        });
+        return true;
+        // Double success! Artwork should now be visible in the library
+    }
+
+    return false
 }
 
 export async function addCountryDataAllSongs() {
