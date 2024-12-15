@@ -188,12 +188,12 @@ async function fetchAlbumArtWithGenius(
         const data = await result.json();
         console.log("genius: ", data);
 
-        const artist = album.artist.toLowerCase()
+        const artist = toComparableString(album.artist)
         const hit = data.response.hits.find(
             (h) =>
                 h?.result.header_image_url &&
                 !h.result.header_image_url.includes("default_cover_image") &&
-                artist === h?.result?.artist_names?.toLowerCase()
+                artist === toComparableString(h?.result?.artist_names)
         )
 
         if (hit) {
@@ -244,11 +244,10 @@ async function fetchAlbumArtWithDiscogs(
         const data = await result.json();
         console.log("discogs: ", data);
         
-        const artist = album.artist.toLowerCase()
+        const artist = toComparableString(album.artist)
         const hit = data.results.find(
-            (h) => h.title.toLowerCase().startsWith(artist)
+            (h) => toComparableString(h.title).startsWith(artist)
         )
-        // console.log(hit)
         
         if (hit) {
             const imageUrl = hit.cover_image;
@@ -294,10 +293,10 @@ async function fetchAlbumArtWithMusicBrainz(
         const data = await result.json();
         console.log("musicbrainz: ", data);
         
-        const artist = album.artist.toLowerCase()
+        const artist = toComparableString(album.artist)
         let imageUrl;
         for (const release of data.releases) {
-            if (artist !== release["artist-credit"][0]?.name?.toLowerCase()) {
+            if (artist !== toComparableString(release["artist-credit"][0]?.name)) {
                 continue;
             }
             
@@ -331,6 +330,10 @@ async function fetchAlbumArtWithMusicBrainz(
             error: "Error fetching artwork." + err
         };
     }
+}
+
+function toComparableString(str) {
+    return str?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 async function fetchImage(
