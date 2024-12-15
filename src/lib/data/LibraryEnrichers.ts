@@ -246,7 +246,7 @@ async function fetchAlbumArtWithDiscogs(
         
         const artist = toComparableString(album.artist)
         const hit = data.results.find(
-            (h) => toComparableString(h.title).startsWith(artist)
+            (h) => h.type === "release" && toComparableString(h.title).startsWith(artist)
         )
         
         if (hit) {
