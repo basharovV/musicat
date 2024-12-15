@@ -73,6 +73,11 @@ export async function fetchAlbumArt(
         return result
     }
     
+    result = await fetchAlbumArtWithMusicBrainz(album)
+    if (result.success) {
+        return result
+    }
+    
     const settings = get(userSettings);
     
     if (settings.geniusApiKey) {
@@ -87,11 +92,6 @@ export async function fetchAlbumArt(
         if (result.success) {
             return result
         }
-    }
-    
-    result = await fetchAlbumArtWithMusicBrainz(album)
-    if (result.success) {
-        return result
     }
     
     return {
@@ -170,8 +170,8 @@ async function fetchAlbumArtWithGenius(
     geniusApiKey: string
 ): Promise<{ success?: string; error?: string }> {
     try {
-        const query = encodeURIComponent(`${album.displayTitle} ${album.artist}`);
-
+        const query = encodeURIComponent(`${album.displayTitle} - ${album.artist}`);
+        
         const result =
             await fetch(`https://api.genius.com/search?q=${query}`, {
                 method: "GET",
@@ -193,6 +193,7 @@ async function fetchAlbumArtWithGenius(
             (h) =>
                 h?.result.header_image_url &&
                 !h.result.header_image_url.includes("default_cover_image") &&
+                toComparableString(h.result.title).includes(toComparableString(album.displayTitle)) &&
                 artist === toComparableString(h?.result?.artist_names)
         )
 
@@ -300,14 +301,12 @@ async function fetchAlbumArtWithMusicBrainz(
                 continue;
             }
             
-            const result = await (
-                await fetch(`https://coverartarchive.org/release/${release.id}/front`, {
-                    method: "GET",
-                })
-            );
-            // console.log(result)
+            const result = await fetch(`https://coverartarchive.org/release/${release.id}/front`, {
+                method: "GET",
+                maxRedirections: 0
+            });
             
-            if (result.ok) {
+            if (result.status === 307) {
                 imageUrl = result.url;
                 
                 break;
