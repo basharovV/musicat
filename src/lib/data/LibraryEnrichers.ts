@@ -65,10 +65,48 @@ export async function fetchAlbumArt(
         const albumPath = song.path.replace(`/${song.file}`, "");
         album = await db.albums.get(md5(`${albumPath} - ${song.album}`.toLowerCase()));
     }
+    
+    let result;
+    
+    result = await fetchAlbumArtWithWikipedia(album)
+    if (result.success) {
+        return result
+    }
+    
+    const settings = get(userSettings);
+    
+    if (settings.geniusApiKey) {
+        result = await fetchAlbumArtWithGenius(album, settings.geniusApiKey)
+        if (result.success) {
+            return result
+        }
+    }
+    
+    if (settings.discogsApiKey) {
+        result = await fetchAlbumArtWithDiscogs(album, settings.discogsApiKey)
+        if (result.success) {
+            return result
+        }
+    }
+    
+    result = await fetchAlbumArtWithMusicBrainz(album)
+    if (result.success) {
+        return result
+    }
+    
+    return {
+        error: "No artwork found!"
+    };
+}
+
+async function fetchAlbumArtWithWikipedia(
+    album: Album,
+): Promise<{ success?: string; error?: string }> {
     try {
+        const ecArtist = encodeURIComponent(album.artist);
         const dbpediaResult = await (
             await fetch(
-                `https://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org&query=PREFIX+rdf%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX+dbpedia2%3A+%3Chttp%3A%2F%2Fdbpedia.org%2Fproperty%2F%3E%0D%0APREFIX+owl%3A+%3Chttp%3A%2F%2Fdbpedia.org%2Fontology%2F%3E%0D%0APREFIX+rdfs%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0ASELECT+DISTINCT+%3Fname%2C+%3FcoverArtVar+WHERE+%7B%0D%0A%09%3Fsubject+dbpedia2%3Aname+%3Fname+.%0D%0A%09%3Fsubject+rdfs%3Alabel+%3Flabel+.%0D%0A%09%7B+%3Fsubject+dbpedia2%3Aartist+%3Fartist+%7D+UNION+%7B+%3Fsubject+owl%3Aartist+%3Fartist+%7D%0D%0A%09%7B+%3Fartist+rdfs%3Alabel+%22${album.artist}%22%40en+%7D+UNION+%7B+%3Fartist+dbpedia2%3Aname+%22${album.artist}%22%40en+%7D%0D%0A%09%3Fsubject+rdf%3Atype+%3Chttp%3A%2F%2Fdbpedia.org%2Fontology%2FAlbum%3E+.%0D%0A%09%3Fsubject+dbpedia2%3Acover+%3FcoverArtVar+.%0D%0A%7D%0D%0ALimit+30%0D%0A&format=application%2Fsparql-results%2Bjson&timeout=10000&signal_void=on&signal_unconnected=on`
+                `https://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org&query=PREFIX+rdf%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX+dbpedia2%3A+%3Chttp%3A%2F%2Fdbpedia.org%2Fproperty%2F%3E%0D%0APREFIX+owl%3A+%3Chttp%3A%2F%2Fdbpedia.org%2Fontology%2F%3E%0D%0APREFIX+rdfs%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0ASELECT+DISTINCT+%3Fname%2C+%3FcoverArtVar+WHERE+%7B%0D%0A%09%3Fsubject+dbpedia2%3Aname+%3Fname+.%0D%0A%09%3Fsubject+rdfs%3Alabel+%3Flabel+.%0D%0A%09%7B+%3Fsubject+dbpedia2%3Aartist+%3Fartist+%7D+UNION+%7B+%3Fsubject+owl%3Aartist+%3Fartist+%7D%0D%0A%09%7B+%3Fartist+rdfs%3Alabel+%22${ecArtist}%22%40en+%7D+UNION+%7B+%3Fartist+dbpedia2%3Aname+%22${ecArtist}%22%40en+%7D%0D%0A%09%3Fsubject+rdf%3Atype+%3Chttp%3A%2F%2Fdbpedia.org%2Fontology%2FAlbum%3E+.%0D%0A%09%3Fsubject+dbpedia2%3Acover+%3FcoverArtVar+.%0D%0A%7D%0D%0ALimit+30%0D%0A&format=application%2Fsparql-results%2Bjson&timeout=10000&signal_void=on&signal_unconnected=on`
             )
         ).json();
         console.log("dbpedia", dbpediaResult);
@@ -114,46 +152,44 @@ export async function fetchAlbumArt(
         }
 
         console.log("got art", wikiResult);
+        
+        return {
+            error: "No artwork found!"
+        };
     } catch (err) {
         console.error("Error fetching artwork", err);
+        
+        return {
+            error: "Error fetching artwork." + err
+        };
     }
-    
-    const settings = get(userSettings);
-    
-    if (settings.geniusApiKey) {
-        return fetchAlbumArtWithGenius(album, settings.geniusApiKey)
-    }
-
-    return {
-        error: "No artwork found!"
-    };
 }
 
-export async function fetchAlbumArtWithGenius(
+async function fetchAlbumArtWithGenius(
     album: Album,
     geniusApiKey: string
 ): Promise<{ success?: string; error?: string }> {
     try {
         const query = encodeURIComponent(`${album.displayTitle} ${album.artist}`);
 
-        const geniusResult = await (
+        const result =
             await fetch(`https://api.genius.com/search?q=${query}`, {
                 method: "GET",
                 headers: {
                     "Accept": "application/json",
                     "Authorization": `Bearer ${geniusApiKey}`
                 }
-            })
-        );
-        const geniusData = await geniusResult.json();
-        console.log("result", geniusResult);
-        if (!geniusResult.ok) {
-            throw new Error("Genius API: " + JSON.stringify(geniusResult));
+            });
+        
+        if (!result.ok) {
+            throw new Error("Genius API: " + JSON.stringify(result));
         }
+        
+        const data = await result.json();
+        console.log("genius: ", data);
 
-        const hits = geniusData?.response?.hits;
         const artist = album.artist.toLowerCase()
-        const hit = hits?.find(
+        const hit = data.response.hits.find(
             (h) =>
                 h?.result.header_image_url &&
                 !h.result.header_image_url.includes("default_cover_image") &&
@@ -172,6 +208,119 @@ export async function fetchAlbumArtWithGenius(
             }
         }
 
+        return {
+            error: "No artwork found!"
+        };
+    } catch (err) {
+        console.error("Error fetching artwork", err);
+
+        return {
+            error: "Error fetching artwork." + err
+        };
+    }
+}
+
+async function fetchAlbumArtWithDiscogs(
+    album: Album,
+    discogsApiKey: string
+): Promise<{ success?: string; error?: string }> {
+    try {
+        const ecRelease = encodeURIComponent(album.displayTitle);
+        
+        const result = 
+            await fetch(`https://api.discogs.com/database/search?release_title=${ecRelease}&per_page=5&page=1`, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": `Discogs token=${discogsApiKey}`,
+                    "User-Agent": "Musicat +https://github.com/basharovV/musicat",
+                }
+            });
+        
+        if (!result.ok) {
+            throw new Error("Discogs API: " + JSON.stringify(result));
+        }
+        
+        const data = await result.json();
+        console.log("discogs: ", data);
+        
+        const artist = album.artist.toLowerCase()
+        const hit = data.results.find(
+            (h) => h.title.toLowerCase().startsWith(artist)
+        )
+        // console.log(hit)
+        
+        if (hit) {
+            const imageUrl = hit.cover_image;
+            const imageExtension = imageUrl.split("?")[0].split(".")?.pop();
+
+            if (await fetchImage(album, imageUrl, imageExtension)) {
+                return {
+                    success: "Artwork saved!"
+                };
+            }
+        }
+
+        return {
+            error: "No artwork found!"
+        };
+    } catch (err) {
+        console.error("Error fetching artwork", err);
+
+        return {
+            error: "Error fetching artwork." + err
+        };
+    }
+}
+
+async function fetchAlbumArtWithMusicBrainz(
+    album: Album
+): Promise<{ success?: string; error?: string }> {
+    try {
+        const ecRelease = encodeURIComponent(album.displayTitle);
+        const ecArtist = encodeURIComponent(album.artist);
+        
+        const result = 
+            await fetch(`https://musicbrainz.org/ws/2/release/?query=release:${ecRelease}%20AND%20artist:${ecArtist}`, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                }
+            });
+        if (!result.ok) {
+            throw new Error("MusicBrainz API: " + JSON.stringify(result));
+        }
+        
+        const data = await result.json();
+        console.log("musicbrainz: ", data);
+        
+        const artist = album.artist.toLowerCase()
+        let imageUrl;
+        for (const release of data.releases) {
+            if (artist !== release["artist-credit"][0]?.name?.toLowerCase()) {
+                continue;
+            }
+            
+            const result = await (
+                await fetch(`https://coverartarchive.org/release/${release.id}/front`, {
+                    method: "GET",
+                })
+            );
+            // console.log(result)
+            
+            if (result.ok) {
+                imageUrl = result.url;
+                
+                break;
+            }
+        }
+
+        if (imageUrl && await fetchImage(album, imageUrl, 'jpg')) {
+            return {
+                success: "Artwork saved!"
+            };
+        }
+        
         return {
             error: "No artwork found!"
         };

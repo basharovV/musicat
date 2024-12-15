@@ -169,6 +169,7 @@ interface UserSettings {
     outputDevice?: string;
     followSystemOutput: boolean;
     geniusApiKey?: string;
+    discogsApiKey?: string;
 }
 
 interface UIPreferences {

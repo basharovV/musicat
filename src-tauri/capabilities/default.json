@@ -82,6 +82,15 @@
                 },
                 {
                     "url": "https://*.archive.org"
+                },
+                {
+                    "url": "https://musicbrainz.org"
+                },
+                {
+                    "url": "https://coverartarchive.org"
+                },
+                {
+                    "url": "https://*.discogs.com"
                 }
             ]
         }
