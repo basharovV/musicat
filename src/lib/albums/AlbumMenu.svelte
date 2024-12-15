@@ -105,6 +105,7 @@
     let artworkResult: { success?: string; error?: string };
     let artworkResultForAlbum: String;
     async function fetchArtwork() {
+        artworkResult = null;
         isFetchingArtwork = true;
         artworkResultForAlbum = $rightClickedAlbum.id;
         artworkResult = await fetchAlbumArt($rightClickedAlbum);
