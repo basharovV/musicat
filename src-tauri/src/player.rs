@@ -45,7 +45,7 @@ use webrtc::peer_connection::RTCPeerConnection;
 
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
-use crate::output::{self, get_device_by_name, AudioOutput};
+use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig};
 use crate::store::load_settings;
 use crate::{
     dsp, GetWaveformRequest, GetWaveformResponse, SampleOffsetEvent, StreamFileRequest,
@@ -394,6 +394,8 @@ fn decode_loop(
     let reset_control = Arc::new(Mutex::new(reset_control_receiver));
     let device_change = Arc::new(Mutex::new(device_change_receiver));
 
+    let mut cached_devices: Option<Vec<DeviceWithConfig>> = None;
+
     let mut audio_output: Option<Result<Arc<Mutex<dyn AudioOutput>>, output::AudioOutputError>> =
         None;
 
@@ -569,11 +571,31 @@ fn decode_loop(
                 audio_device_name = settings.output_device;
                 follow_system_output = settings.follow_system_output;
             }
-            let output_device = output::get_device_by_name(if follow_system_output {
-                None
+
+            // Only reenumerate audio devices when manually switching tracks,
+            // otherwise use cached to avoid glitches
+            if !is_transition || cached_devices.as_ref().is_none() {
+                info!("Enumerating audio devices");
+                let dvces = output::enumerate_devices();
+                cached_devices.replace(dvces);
+            };
+
+            let output_device = if cached_devices.as_ref().is_some() && !follow_system_output {
+                info!("Using cached audio device: {:?}", audio_device_name);
+                cached_devices
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .map(|d| d.device.clone())
+                    .find(|device| device.name().unwrap() == audio_device_name.clone().unwrap())
             } else {
-                audio_device_name.clone()
-            });
+                let default = output::default_device();
+                info!(
+                    "Using default audio device: {:?}",
+                    default.clone().unwrap().name()
+                );
+                default
+            };
 
             let device_name = output_device.clone().unwrap().name().unwrap();
             // If we have a default audio device (we always should, but just in case)
@@ -589,12 +611,27 @@ fn decode_loop(
                 //     "cpal: device default config {:?}",
                 //     device.default_output_config()
                 // );
-                let supported_output_configs = device.supported_output_configs();
+                let supported_output_configs = if !is_transition || cached_devices.is_none() {
+                    device.supported_output_configs().ok().map(|c| c.collect()) // Read from device (may cause small glitch if playing)
+                } else {
+                    Some(
+                        cached_devices
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .find(|d| d.device.name().unwrap() == device_name)
+                            .unwrap()
+                            .config
+                            .clone(),
+                    )
+                };
+
                 let mut supports_sample_rate = false;
-                if let Ok(mut output_configs) = supported_output_configs {
+                if let Some(mut output_configs) = supported_output_configs {
                     info!(
                         "cpal: device supported configs {:?}",
                         output_configs
+                            .iter()
                             .by_ref()
                             .map(|c| format!(
                                 "min: {}, max: {}",
@@ -604,17 +641,15 @@ fn decode_loop(
                             .collect::<Vec<String>>()
                     );
                     supports_sample_rate = output_configs
+                        .iter()
                         .find(|c| {
                             return c
                                 .try_with_sample_rate(cpal::SampleRate(spec.rate))
                                 .is_some();
                         })
                         .is_some();
-                } else if (supported_output_configs.is_err()) {
-                    error!(
-                        "failed to get audio output device config: {}",
-                        supported_output_configs.err().unwrap()
-                    );
+                } else if (supported_output_configs.is_none()) {
+                    error!("failed to get audio output device config");
                     device = get_device_by_name(None).unwrap();
                 }
                 // If sample rate or channels changed - reinit the audio device with the new spec
@@ -950,11 +985,13 @@ fn decode_loop(
                                             let mut ramp_up_smpls = 0;
                                             let mut ramp_down_smpls = 0;
                                             // Avoid clicks by ramping down and up quickly
-                                            if let Some(frames) = track.codec_params.n_frames {
-                                                if packet.ts >= frames - packet.dur {
-                                                    ramp_down_smpls = packet.dur;
-                                                } else if packet.ts < packet.dur {
-                                                    ramp_up_smpls = packet.dur;
+                                            if (!is_transition) {
+                                                if let Some(frames) = track.codec_params.n_frames {
+                                                    if packet.ts >= frames - packet.dur {
+                                                        ramp_down_smpls = packet.dur;
+                                                    } else if packet.ts < packet.dur {
+                                                        ramp_up_smpls = packet.dur;
+                                                    }
                                                 }
                                             }
                                             guard.write(_decoded, ramp_up_smpls, ramp_down_smpls);

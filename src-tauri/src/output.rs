@@ -10,7 +10,9 @@
 use std::result;
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
-use ::cpal::{default_host, Device, SupportedStreamConfig};
+use ::cpal::{
+    default_host, Device, SupportedOutputConfigs, SupportedStreamConfig, SupportedStreamConfigRange,
+};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
@@ -550,7 +552,7 @@ mod cpal {
                     }
                 } else {
                     // The sample buffer is not big enough to process all the samples.
-                    // TODO Error? 
+                    // TODO Error?
                     return;
                 }
             };
@@ -711,6 +713,35 @@ pub fn get_device_by_name(name: Option<String>) -> Option<Device> {
                 })
         })
         .or(host.default_output_device());
+}
+
+pub fn default_device() -> Option<Device> {
+    let host = default_host();
+    return host.default_output_device();
+}
+
+pub struct DeviceWithConfig {
+    pub device: Device,
+    pub config: Vec<SupportedStreamConfigRange>,
+}
+
+pub fn enumerate_devices() -> Vec<DeviceWithConfig> {
+    let host = default_host();
+    host.devices()
+        .unwrap()
+        // Map to tuple of device and supported output configs
+        // Filter out devices that don't support output
+        .filter_map(|device| {
+            device
+                .supported_output_configs()
+                .ok()
+                .map(|configs| DeviceWithConfig {
+                    device: device,
+                    config: configs.collect(),
+                })
+                .filter(|d| d.config.len() > 0)
+        })
+        .collect()
 }
 
 fn fft(input: &[f32]) -> Vec<Complex<f32>> {
