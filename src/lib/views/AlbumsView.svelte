@@ -27,26 +27,44 @@
     let isVisible = false;
     let isInit = true;
 
-    let cachedAlbums: Album[] = [];
-
     $: albums = liveQuery(async () => {
-        let resultsArray: Album[] = [];
-        resultsArray = await db.albums
-            .orderBy($uiPreferences.albumsViewSortBy)
-            .toArray();
+        let albums = await db.albums.toArray();
+
+        if ($compressionSelected === "lossless") {
+            albums = albums.filter(({title, lossless}) => title.length && lossless);
+        } else if ($compressionSelected === "lossy") {
+            albums = albums.filter(({title, lossless}) => title.length && !lossless);
+        } else {
+            albums = albums.filter(({title}) => title.length);
+        }
+
+        if ($uiPreferences.albumsViewSortBy === 'title') {
+            albums.sort((a, b) => {
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        } else if ($uiPreferences.albumsViewSortBy === 'artist') {
+            albums.sort((a, b) => {
+                if (a.artist < b.artist) return -1;
+                if (a.artist > b.artist) return 1;
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        } else {
+            albums.sort((a, b) => {
+                if (a.year < b.year) return -1;
+                if (a.year > b.year) return 1;
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        }
 
         isLoading = false;
-        cachedAlbums = resultsArray;
-        return resultsArray.filter((a) => {
-            const hasTitle = a.title.length;
-            let compressionFilterMatch = true;
-            if ($compressionSelected === "lossless") {
-                compressionFilterMatch = a.lossless;
-            } else if ($compressionSelected === "lossy") {
-                compressionFilterMatch = a.lossless === false;
-            }
-            return hasTitle && compressionFilterMatch;
-        });
+
+        return albums;
     });
 
     $: queriedAlbums =
