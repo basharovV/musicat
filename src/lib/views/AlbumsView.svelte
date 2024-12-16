@@ -118,7 +118,7 @@
     async function onRightClick(e, album, idx) {
         highlightedAlbum = album.id;
         $rightClickedAlbum = album;
-        const tracks = await db.songs.bulkGet(album.tracksIds);
+        const tracks = (await db.songs.bulkGet(album.tracksIds)).sort((a, b) => a.trackNumber - b.trackNumber);
         $rightClickedTrack = null;
         $rightClickedTracks = tracks;
         showAlbumMenu = true;
