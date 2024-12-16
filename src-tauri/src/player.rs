@@ -404,6 +404,9 @@ fn decode_loop(
     let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
     let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
 
+
+    let mut current_max_frames = 1152;
+
     // Loop here!
     loop {
         cancel_token = CancellationToken::new();
@@ -553,16 +556,15 @@ fn decode_loop(
             };
 
             let mut should_reset_audio = false;
-            let mut new_max_frames = 1152;
             let mut max_frames_changed = false;
 
             let max_frames = decoder.codec_params().max_frames_per_packet;
-            info!("max frames: {:?}", max_frames);
+            info!("max frames: {:?} current: {:?}", max_frames, current_max_frames);
             if let Some(dur) = max_frames {
-                if (dur != new_max_frames) {
+                if (dur != current_max_frames) {
                     max_frames_changed = true;
                 }
-                new_max_frames = dur;
+                current_max_frames = dur;
             }
 
             // Check if audio device changed
@@ -654,6 +656,7 @@ fn decode_loop(
                 }
                 // If sample rate or channels changed - reinit the audio device with the new spec
                 // (if this sample rate isn't supported, it will be resampled)
+                
                 should_reset_audio = previous_audio_device_name != device.name().unwrap()
                     || supports_sample_rate && spec.rate != previous_sample_rate
                     || spec.channels.count() != previous_channels
@@ -683,7 +686,7 @@ fn decode_loop(
                 audio_output = Some(output::try_open(
                     &previous_audio_device_name,
                     spec,
-                    new_max_frames,
+                    current_max_frames,
                     volume_control_receiver.clone(),
                     sample_offset_receiver.clone(),
                     playback_state.clone(),
@@ -729,7 +732,7 @@ fn decode_loop(
 
                         // Resampling stuff
                         guard.resume();
-                        guard.update_resampler(spec, new_max_frames);
+                        guard.update_resampler(spec, current_max_frames);
 
                         // Until all samples have been flushed - don't start decoding
                         // Keep checking until all samples have been played (buffer is empty)
@@ -1018,7 +1021,6 @@ fn decode_loop(
                                 while let Ok(value) =
                                     next_track_receiver.try_lock().unwrap().try_recv()
                                 {
-                                    info!("received {:?}", value);
                                     next_track.replace(value);
                                 }
                                 if let Some(request) = next_track {
