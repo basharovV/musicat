@@ -436,6 +436,16 @@
                             /></td
                         >
                     </tr>
+                    <tr>
+                        <td>Discogs API Key</td>
+                        <td
+                            ><Input
+                                bind:value={$userSettings.discogsApiKey}
+                                fullWidth
+                                small
+                            /></td
+                        >
+                    </tr>
                 </tbody>
             </table>
         </section>

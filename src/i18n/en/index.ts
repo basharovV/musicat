@@ -186,7 +186,8 @@ const en = {
         enableAIFeatures: "Enable AI features",
         aiModel: "AI Model (LLM)",
         openApiKey: "OpenAI API Key",
-        geniusApiKey: "Genius API Key"
+        geniusApiKey: "Genius API Key",
+        discogsApiKey: "Discogs API Key"
     },
     wiki: {
         inArticle: "Found mentions from your library:",

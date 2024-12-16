@@ -34,15 +34,14 @@ export async function getLyrics(songTitle: string, artist: string) {
             throw new Error("Genius API: " + JSON.stringify(geniusResult));
         }
         const hits = geniusData?.response?.hits;
-        if (
-            hits?.filter(
-                (h) =>
-                    artist.toLowerCase() ===
-                    h?.result?.artist_names?.toLowerCase()
-            ).length
-        ) {
-            geniusPage = hits[0]?.result?.url;
-            let songId = hits[0]?.result?.id;
+        const hit = hits?.find(
+            (h) =>
+                artist.toLowerCase() ===
+                h?.result?.artist_names?.toLowerCase()
+        )
+        if (hit) {
+            geniusPage = hit.result?.url;
+            let songId = hit.result?.id;
 
             const songResult = await fetch(
                 `https://api.genius.com/songs/${songId}`,
