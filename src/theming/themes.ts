@@ -274,7 +274,6 @@ export const allThemes: { [key: string]: Theme } = {
         "library-favourite-icon": "#05A101",
         "library-favourite-hover-icon": "#7fbd7f",
         accent: "#F0D895",
-        // "accent-secondary": "#F0D895",
         "accent-secondary": "#7c715cf3",
         "text-active": "#F0D895",
         "text-inactive": "#aeafa8",
