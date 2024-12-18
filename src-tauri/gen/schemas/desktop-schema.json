@@ -5025,6 +5025,61 @@
           "const": "fs:write-files"
         },
         {
+          "description": "No features are enabled by default, as we believe\nthe shortcuts can be inherently dangerous and it is\napplication specific if specific shortcuts should be\nregistered or unregistered.\n",
+          "type": "string",
+          "const": "global-shortcut:default"
+        },
+        {
+          "description": "Enables the is_registered command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-is-registered"
+        },
+        {
+          "description": "Enables the register command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-register"
+        },
+        {
+          "description": "Enables the register_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-register-all"
+        },
+        {
+          "description": "Enables the unregister command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-unregister"
+        },
+        {
+          "description": "Enables the unregister_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-unregister-all"
+        },
+        {
+          "description": "Denies the is_registered command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-is-registered"
+        },
+        {
+          "description": "Denies the register command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-register"
+        },
+        {
+          "description": "Denies the register_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-register-all"
+        },
+        {
+          "description": "Denies the unregister command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-unregister"
+        },
+        {
+          "description": "Denies the unregister_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-unregister-all"
+        },
+        {
           "description": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n",
           "type": "string",
           "const": "http:default"
