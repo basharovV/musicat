@@ -1,14 +1,10 @@
-// Copyright 2019-2023 Tauri Programme within The Commons Conservancy
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: MIT
-
+use std::marker::PhantomData;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Instant;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::marker::PhantomData;
 use std::path::Path;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
@@ -43,6 +39,7 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
+use crate::constants::*;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::metadata::Song;
@@ -76,7 +73,7 @@ pub enum PlayerControlEvent {
 #[tauri::command]
 pub fn loop_region(
     event: LoopRegionRequest,
-    state: State<AudioStreamer>,
+    state: State<AudioPlayer>,
     _app_handle: tauri::AppHandle,
 ) {
     info!("Loop region{:?}", event);
@@ -88,7 +85,7 @@ pub fn loop_region(
 #[tauri::command]
 pub fn change_audio_device(
     event: ChangeAudioDeviceRequest,
-    state: State<AudioStreamer>,
+    state: State<AudioPlayer>,
     _app_handle: tauri::AppHandle,
 ) {
     info!("Change audio device{:?}", event);
@@ -104,12 +101,10 @@ pub const PAUSED: u32 = 0;
 pub const ACTIVE: u32 = 1;
 
 #[derive(Clone)]
-pub struct AudioStreamer<'a> {
+pub struct AudioPlayer<'a> {
     pub peer_connection: Arc<Mutex<Option<Arc<RTCPeerConnection>>>>,
     pub data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
     pub cancel_tokens: Arc<Mutex<HashMap<String, CancellationToken>>>,
-    phantom: PhantomData<&'a RTCPeerConnection>,
-    phantom2: PhantomData<&'a RTCDataChannel>,
     pub player_control_receiver: Arc<Mutex<Receiver<PlayerControlEvent>>>,
     pub player_control_sender: Sender<PlayerControlEvent>,
     pub next_track_receiver: Arc<Mutex<Receiver<StreamFileRequest>>>,
@@ -117,10 +112,12 @@ pub struct AudioStreamer<'a> {
     pub decoding_active: Arc<AtomicU32>,
     pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
     pub volume_control_sender: Sender<VolumeControlEvent>,
+    phantom: PhantomData<&'a RTCPeerConnection>,
+    phantom2: PhantomData<&'a RTCDataChannel>,
 }
 
-impl<'a> AudioStreamer<'a> {
-    pub fn create() -> Result<AudioStreamer<'a>, Box<dyn std::error::Error + Send + Sync>> {
+impl<'a> AudioPlayer<'a> {
+    pub fn create() -> Result<AudioPlayer<'a>, Box<dyn std::error::Error + Send + Sync>> {
         let (sender_vol, receiver_vol) = std::sync::mpsc::channel();
 
         // set up message passing
@@ -130,12 +127,10 @@ impl<'a> AudioStreamer<'a> {
         let (sender_next, receiver_next): (Sender<StreamFileRequest>, Receiver<StreamFileRequest>) =
             std::sync::mpsc::channel();
 
-        Ok(AudioStreamer {
+        Ok(AudioPlayer {
             peer_connection: Arc::new(Mutex::new(None)),
             data_channel: Arc::new(Mutex::new(None)),
             cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
-            phantom: PhantomData,
-            phantom2: PhantomData,
             player_control_receiver: Arc::new(Mutex::new(receiver_rx)),
             player_control_sender: sender_tx,
             next_track_receiver: Arc::new(Mutex::new(receiver_next)),
@@ -143,6 +138,8 @@ impl<'a> AudioStreamer<'a> {
             decoding_active: Arc::new(AtomicU32::new(ACTIVE)),
             volume_control_receiver: Arc::new(Mutex::new(receiver_vol)),
             volume_control_sender: sender_vol,
+            phantom: PhantomData,
+            phantom2: PhantomData,
         })
     }
 
@@ -181,6 +178,11 @@ impl<'a> AudioStreamer<'a> {
         wake_all(self.decoding_active.as_ref());
     }
 
+    /**
+     * Initialize WebRTC to stream the time domain FFT data over Data Channels.
+     * The audio callback sends the data during playback.
+     * There's be a small amount of latency, but it's acceptable.
+     */
     pub async fn init_webrtc(
         &self,
         app_handle: AppHandle,
@@ -227,7 +229,7 @@ impl<'a> AudioStreamer<'a> {
                 }),
             )
             .await?;
-        // &self.data_channel.on_close(Box::new(move || {}));
+
         data_channel.on_open(Box::new(move || {
             info!("Data channel opened");
             Box::pin(async {})
@@ -364,6 +366,12 @@ pub fn start_audio(
     );
 }
 
+/**
+ * The main audio decoding loop. The outer loop is used to switch between tracks.
+ * The inner loop is used to decode audio and send packets to the audio device.
+ * To pause, we pause the inner decoding loop using [`atomic_wait::wait`] and [`AtomicU32] flags.
+ * On every iteration, we check for events such as seeking, pausing, new track, etc.
+ */
 fn decode_loop(
     volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
     player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
@@ -376,16 +384,26 @@ fn decode_loop(
     let mut path_str: Option<String> = None;
     let mut path_str_clone: Option<String>;
     let mut seek = None;
+
+    /* Previous seek and duration used to time song
+     * info change during gapless transition */
     let mut prev_seek = 0.0;
     let mut prev_song: Option<Song> = None;
-    let mut end_pos = None; // for loop region
+
+    /* Current timestamp in seconds received every second from audio callback.
+     * Used to restore seek position after audio device change.*/
+    let mut timestamp: f64 = 0.0;
+
+    // for loop region
+    let mut end_pos = None;
+
     let mut volume = None;
     let mut audio_device_name = None;
     let mut previous_audio_device_name: String = String::new();
-    let mut timestamp: f64 = 0.0;
     let mut previous_sample_rate = 44100;
     let mut previous_channels = 2;
 
+    /* Channels for message passing */
     let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
     let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
     let (device_change_sender, device_change_receiver) = std::sync::mpsc::channel();
@@ -397,21 +415,24 @@ fn decode_loop(
     let reset_control = Arc::new(Mutex::new(reset_control_receiver));
     let device_change = Arc::new(Mutex::new(device_change_receiver));
 
+    /* Devices are cached to avoid accessing current audio device during playback
+    (which can cause an audible glitch when switching tracks automatically ie. gapless transition).
+    Therefore, audio devices are only accessed directly when switching tracks manually */
     let mut cached_devices: Option<Vec<DeviceWithConfig>> = None;
 
+    /* Current audio output for writing samples to. Can be reset when switching tracks */
     let mut audio_output: Option<Result<Arc<Mutex<dyn AudioOutput>>, output::AudioOutputError>> =
         None;
 
-    let mut cancel_token;
-
-    let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
+    /* This is set during a gapless transition, when we're already decoding the next track
+     * while playing the ending of the current one. */
+    let mut is_transition = false;
     let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
 
     let mut current_max_frames = 1152;
 
     // Loop here!
     loop {
-        cancel_token = CancellationToken::new();
         // info!("path_str is {:?}", path_str);
         path_str_clone = path_str.clone(); // Used for looping
         if let None = path_str {
@@ -435,7 +456,6 @@ fn decode_loop(
                         prev_seek = seek.unwrap_or(0.0);
                         seek.replace(request.start_pos.unwrap());
                         end_pos.replace(request.end_pos.unwrap());
-                        cancel_token.cancel();
                     }
                     PlayerControlEvent::ChangeAudioDevice(request) => {
                         info!("audio: change audio device! {:?}", request);
@@ -443,7 +463,6 @@ fn decode_loop(
                         if path_str_clone.is_some() && path_str.is_some() {
                             path_str.replace(path_str_clone.clone().unwrap());
                         }
-                        cancel_token.cancel();
                         is_reset = true;
                         is_transition = false;
                     }
@@ -569,7 +588,7 @@ fn decode_loop(
                 max_frames, current_max_frames
             );
             if let Some(dur) = max_frames {
-                if (dur != current_max_frames) {
+                if dur != current_max_frames {
                     max_frames_changed = true;
                 }
                 current_max_frames = dur;
@@ -637,7 +656,7 @@ fn decode_loop(
                 };
 
                 let mut supports_sample_rate = false;
-                if let Some(mut output_configs) = supported_output_configs {
+                if let Some(output_configs) = supported_output_configs {
                     info!(
                         "cpal: device supported configs {:?}",
                         output_configs
@@ -658,7 +677,7 @@ fn decode_loop(
                                 .is_some();
                         })
                         .is_some();
-                } else if (supported_output_configs.is_none()) {
+                } else if supported_output_configs.is_none() {
                     error!("failed to get audio output device config");
                     device = get_device_by_name(None).unwrap();
                 }
@@ -675,15 +694,46 @@ fn decode_loop(
             previous_channels = spec.channels.count();
             previous_audio_device_name = device_name.clone();
 
+            let song = crate::metadata::extract_metadata(
+                &Path::new(&p.clone().as_str()),
+                false,
+                false,
+                &app_handle,
+            );
+
             if audio_output.is_none() || should_reset_audio {
                 info!("player: Resetting audio device");
                 // Try to open the audio output.
 
-                if (should_reset_audio) {
+                if should_reset_audio {
                     info!("Stopping audio output");
                     if let Some(output) = audio_output {
-                        if let Ok(mut out) = output {
+                        if let Ok(out) = output {
                             if let Ok(mut guard) = out.try_lock() {
+                                /* If we determine that audio device should change for the next track, don't stop the stream immediately. 
+                                Wait until track has finished playing. */
+                                if is_transition {
+                                    while guard.has_remaining_samples() {
+                                        // Wait
+                                    }
+                                    is_transition = false; // Revert transition mode so that track/seek info is changed straight away
+
+                                    // Send song change event
+                                    if let Some(s) = &song {
+                                        let _ = app_handle.emit("song_change", Some(s));
+                                        let _ = reset_control_sender.send(true);
+                                        let _ = sender_sample_offset.send(SampleOffsetEvent {
+                                            sample_offset: Some(
+                                                seek_ts
+                                                    * track.codec_params.channels.unwrap().count()
+                                                        as u64,
+                                            ),
+                                        });
+                                    } else {
+                                        info!("ERROR getting song");
+                                    }
+                                }
+
                                 guard.flush();
                                 guard.pause();
                                 guard.stop_stream();
@@ -745,6 +795,7 @@ fn decode_loop(
                         // Until all samples have been flushed - don't start decoding
                         // Keep checking until all samples have been played (buffer is empty)
                         if is_reset {
+                            // TODO: Set volume to zero while flushing
                             while guard.has_remaining_samples() {
                                 guard.flush();
                                 info!("Buffer is not empty yet, waiting to continue...");
@@ -754,12 +805,6 @@ fn decode_loop(
                         }
 
                         // Set media keys / now playing
-                        let song = crate::metadata::extract_metadata(
-                            &Path::new(&p.clone().as_str()),
-                            false,
-                            false,
-                            &app_handle,
-                        );
                         if let Some(s) = &song {
                             #[cfg(target_os = "macos")]
                             mediakeys::set_now_playing_info(s);
@@ -785,7 +830,6 @@ fn decode_loop(
                                         seek.replace(request.seek.unwrap());
                                         end_pos = None;
                                         volume.replace(request.volume.unwrap());
-                                        cancel_token.cancel();
                                         guard.flush();
                                         is_reset = true;
                                         is_transition = false;
@@ -799,7 +843,6 @@ fn decode_loop(
                                             end_pos = None;
                                         }
                                         path_str.replace(path_str_clone.clone().unwrap());
-                                        cancel_token.cancel();
                                         guard.flush();
                                         is_reset = true;
                                         is_transition = false;
@@ -808,7 +851,6 @@ fn decode_loop(
                                         info!("audio: change audio device! {:?}", request);
                                         audio_device_name = request.audio_device;
                                         path_str.replace(path_str_clone.clone().unwrap());
-                                        cancel_token.cancel();
                                         guard.flush();
                                         guard.pause();
                                         seek.replace(timestamp); // Restore current seek position
@@ -855,7 +897,6 @@ fn decode_loop(
                                             seek.replace(request.seek.unwrap());
                                             end_pos = None;
                                             volume.replace(request.volume.unwrap());
-                                            cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
                                             is_transition = false;
@@ -869,7 +910,6 @@ fn decode_loop(
                                                 end_pos = None;
                                             }
                                             path_str.replace(path_str_clone.clone().unwrap());
-                                            cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
                                             is_transition = false;
@@ -878,7 +918,6 @@ fn decode_loop(
                                             info!("audio: change audio device! {:?}", request);
                                             audio_device_name = request.audio_device;
                                             path_str.replace(path_str_clone.clone().unwrap());
-                                            cancel_token.cancel();
                                             guard.flush();
                                             guard.pause();
                                             seek.replace(timestamp); // Restore current seek position
@@ -902,7 +941,7 @@ fn decode_loop(
                                 }
                             }
 
-                            if cancel_token.is_cancelled() {
+                            if is_reset {
                                 break Ok(());
                             }
 
@@ -952,9 +991,9 @@ fn decode_loop(
                                     last_sent_time = Instant::now();
 
                                     /*
-                                    The transition is 5 seconds long, since that is the size of the buffer.
-                                    So decoding starts 5 seconds before playback, and we can delay the song
-                                    change in the UI by this time.
+                                    The transition is [`BUFFER_SIZE`] seconds long
+                                    So decoding of the new track starts [`BUFFER_SIZE`] seconds before playback,
+                                    and we can delay the song change in the UI by this time.
                                      */
                                     if is_transition && !started_transition {
                                         started_transition = true;
@@ -969,11 +1008,15 @@ fn decode_loop(
                                         let seeked_to = prev_seek;
                                         let mut delta = 0.0;
 
-                                        if seeked_to > duration - 5.0 && seeked_to < duration {
+                                        if seeked_to > duration - BUFFER_SIZE
+                                            && seeked_to < duration
+                                        {
                                             delta = duration - seeked_to;
                                         }
 
-                                        if transition_time.elapsed().as_secs_f64() >= 5.0 - delta {
+                                        if transition_time.elapsed().as_secs_f64()
+                                            >= BUFFER_SIZE - delta
+                                        {
                                             if end_pos.is_some() {
                                                 let _ =
                                                     sender_sample_offset.send(SampleOffsetEvent {
@@ -1013,14 +1056,14 @@ fn decode_loop(
                                     "slowing down" decoding to allow the audio stream to read from the
                                     buffer as it's playing.
                                      */
-                                    if !cancel_token.is_cancelled() {
+                                    if !is_reset {
                                         // Write the decoded audio samples to the audio output if the presentation timestamp
                                         // for the packet is >= the seeked position (0 if not seeking).
                                         if packet.ts() >= seek_ts {
                                             let mut ramp_up_smpls = 0;
                                             let mut ramp_down_smpls = 0;
                                             // Avoid clicks by ramping down and up quickly
-                                            if (!is_transition) {
+                                            if !is_transition {
                                                 if let Some(frames) = track.codec_params.n_frames {
                                                     if packet.ts >= frames - packet.dur {
                                                         ramp_down_smpls = packet.dur;

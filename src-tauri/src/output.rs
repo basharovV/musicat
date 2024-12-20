@@ -47,6 +47,7 @@ mod cpal {
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
+    use crate::constants::BUFFER_SIZE;
     use crate::output::{fft, get_device_by_name, ifft};
     use crate::resampler::Resampler;
     use crate::{SampleOffsetEvent, VolumeControlEvent};
@@ -303,7 +304,8 @@ mod cpal {
             };
 
             // Create a ring buffer with a capacity
-            let ring_len = ((5000 * config.sample_rate.0 as usize) / 1000) * num_channels;
+            let ring_len = (((BUFFER_SIZE as usize * 1000) * config.sample_rate.0 as usize) / 1000)
+                * num_channels;
 
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
