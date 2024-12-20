@@ -45,6 +45,7 @@ use webrtc::peer_connection::RTCPeerConnection;
 
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
+use crate::metadata::Song;
 use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig};
 use crate::store::load_settings;
 use crate::{
@@ -375,6 +376,8 @@ fn decode_loop(
     let mut path_str: Option<String> = None;
     let mut path_str_clone: Option<String>;
     let mut seek = None;
+    let mut prev_seek = 0.0;
+    let mut prev_song: Option<Song> = None;
     let mut end_pos = None; // for loop region
     let mut volume = None;
     let mut audio_device_name = None;
@@ -404,7 +407,6 @@ fn decode_loop(
     let mut is_transition = false; // This is set to speed up decoding during transition (last 5s)
     let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
 
-
     let mut current_max_frames = 1152;
 
     // Loop here!
@@ -422,6 +424,7 @@ fn decode_loop(
                     PlayerControlEvent::StreamFile(request) => {
                         info!("audio: got file request! {:?}", request);
                         path_str.replace(request.path.unwrap());
+                        prev_seek = seek.unwrap_or(0.0);
                         seek.replace(request.seek.unwrap());
                         volume.replace(request.volume.unwrap());
                         audio_device_name = request.output_device;
@@ -429,6 +432,7 @@ fn decode_loop(
                     PlayerControlEvent::LoopRegion(request) => {
                         info!("audio: loop region! {:?}", request);
                         path_str.replace(path_str_clone.unwrap());
+                        prev_seek = seek.unwrap_or(0.0);
                         seek.replace(request.start_pos.unwrap());
                         end_pos.replace(request.end_pos.unwrap());
                         cancel_token.cancel();
@@ -441,6 +445,7 @@ fn decode_loop(
                         }
                         cancel_token.cancel();
                         is_reset = true;
+                        is_transition = false;
                     }
                 }
             }
@@ -559,7 +564,10 @@ fn decode_loop(
             let mut max_frames_changed = false;
 
             let max_frames = decoder.codec_params().max_frames_per_packet;
-            info!("max frames: {:?} current: {:?}", max_frames, current_max_frames);
+            info!(
+                "max frames: {:?} current: {:?}",
+                max_frames, current_max_frames
+            );
             if let Some(dur) = max_frames {
                 if (dur != current_max_frames) {
                     max_frames_changed = true;
@@ -656,7 +664,7 @@ fn decode_loop(
                 }
                 // If sample rate or channels changed - reinit the audio device with the new spec
                 // (if this sample rate isn't supported, it will be resampled)
-                
+
                 should_reset_audio = previous_audio_device_name != device.name().unwrap()
                     || supports_sample_rate && spec.rate != previous_sample_rate
                     || spec.channels.count() != previous_channels
@@ -742,6 +750,7 @@ fn decode_loop(
                                 info!("Buffer is not empty yet, waiting to continue...");
                             }
                             info!("Buffer is now empty. Continuing decoding...");
+                            is_reset = false;
                         }
 
                         // Set media keys / now playing
@@ -771,12 +780,15 @@ fn decode_loop(
                                             request
                                         );
                                         path_str.replace(request.path.unwrap());
+                                        prev_seek = seek.unwrap();
+                                        prev_song = song.clone();
                                         seek.replace(request.seek.unwrap());
                                         end_pos = None;
                                         volume.replace(request.volume.unwrap());
                                         cancel_token.cancel();
                                         guard.flush();
                                         is_reset = true;
+                                        is_transition = false;
                                     }
                                     PlayerControlEvent::LoopRegion(request) => {
                                         info!("audio: loop region! {:?}", request);
@@ -790,6 +802,7 @@ fn decode_loop(
                                         cancel_token.cancel();
                                         guard.flush();
                                         is_reset = true;
+                                        is_transition = false;
                                     }
                                     PlayerControlEvent::ChangeAudioDevice(request) => {
                                         info!("audio: change audio device! {:?}", request);
@@ -800,6 +813,7 @@ fn decode_loop(
                                         guard.pause();
                                         seek.replace(timestamp); // Restore current seek position
                                         is_reset = true;
+                                        is_transition = false;
                                     }
                                 }
                             }
@@ -836,12 +850,15 @@ fn decode_loop(
                                                 request
                                             );
                                             path_str.replace(request.path.unwrap());
+                                            prev_seek = seek.unwrap_or(0.0);
+                                            prev_song = song.clone();
                                             seek.replace(request.seek.unwrap());
                                             end_pos = None;
                                             volume.replace(request.volume.unwrap());
                                             cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
+                                            is_transition = false;
                                         }
                                         PlayerControlEvent::LoopRegion(request) => {
                                             info!("audio: loop region! {:?}", request);
@@ -855,6 +872,7 @@ fn decode_loop(
                                             cancel_token.cancel();
                                             guard.flush();
                                             is_reset = true;
+                                            is_transition = false;
                                         }
                                         PlayerControlEvent::ChangeAudioDevice(request) => {
                                             info!("audio: change audio device! {:?}", request);
@@ -865,6 +883,7 @@ fn decode_loop(
                                             guard.pause();
                                             seek.replace(timestamp); // Restore current seek position
                                             is_reset = true;
+                                            is_transition = false;
                                             if is_paused {
                                                 should_resume = false;
                                                 // Restore pause state after device change
@@ -941,7 +960,20 @@ fn decode_loop(
                                         started_transition = true;
                                         transition_time = last_sent_time;
                                     } else if is_transition && started_transition {
-                                        if transition_time.elapsed().as_secs() >= 5 {
+                                        // Note: At this point we're already decoding the new track,
+                                        // but we use the previous track's seek and duration info for this logic
+                                        // Check if seek position is within transition zone
+                                        // If so - make transition shorter by delta
+                                        let duration =
+                                            prev_song.clone().unwrap().file_info.duration.unwrap();
+                                        let seeked_to = prev_seek;
+                                        let mut delta = 0.0;
+
+                                        if seeked_to > duration - 5.0 && seeked_to < duration {
+                                            delta = duration - seeked_to;
+                                        }
+
+                                        if transition_time.elapsed().as_secs_f64() >= 5.0 - delta {
                                             if end_pos.is_some() {
                                                 let _ =
                                                     sender_sample_offset.send(SampleOffsetEvent {
@@ -1028,6 +1060,8 @@ fn decode_loop(
                                         is_transition = true;
                                         info!("player: next track received! {:?}", request);
                                         path_str.replace(path);
+                                        prev_seek = seek.unwrap_or(0.0);
+                                        prev_song = song.clone();
                                         seek.replace(request.seek.unwrap());
                                         volume.replace(request.volume.unwrap());
                                         is_reset = false;
