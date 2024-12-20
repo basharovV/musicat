@@ -110,9 +110,17 @@ type RootTranslation = {
 			 */
 			album: string
 			/**
+			 * A​l​b​u​m Artist
+			 */
+			albumArtist: string
+			/**
 			 * T​r​a​c​k
 			 */
 			track: string
+			/**
+			 * Compilation
+			 */
+			compilation: number
 			/**
 			 * Y​e​a​r
 			 */
@@ -883,9 +891,17 @@ export type TranslationFunctions = {
 			 */
 			album: () => LocalizedString
 			/**
+			 * Album Artist
+			 */
+			albumArtist: () => LocalizedString
+			/**
 			 * Track
 			 */
 			track: () => LocalizedString
+			/**
+			 * Compilation
+			 */
+			compilation: () => LocalizedString
 			/**
 			 * Year
 			 */
