@@ -706,7 +706,7 @@
                 Math.ceil(songsStartSlice + songsCountViewport)
             );
             // console.log("slice indexes", songsStartSlice, songsEndSlice);
-            songsSlice = songs.slice(songsStartSlice, songsEndSlice);
+            // songsSlice = songs.slice(songsStartSlice, songsEndSlice);
             // console.log("songSlice", songsSlice);
             // Make sure the window is always filled with the right amount of rows
             // console.log("songIdxSlice", songsEndSlice - songsStartSlice);
@@ -721,7 +721,7 @@
                 }
             }
 
-            // console.log("slice", songsIdxSlice);
+            console.log("slice", songsIdxSlice);
             // console.log(songsSlice.length);
             prevScrollPos = scrollPos;
         }
@@ -1636,7 +1636,7 @@
                                 }}
                             />
 
-                            {#if songsIdxSlice?.length}
+                            {#if songsIdxSlice?.length && songs?.length}
                                 {#each songsIdxSlice as idx, songIdx (songs[idx]?.viewModel?.viewId ?? songs[idx]?.id)}
                                     {@const song = songs[idx]}
                                     <!-- {@debug idx} -->

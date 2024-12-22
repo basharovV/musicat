@@ -237,7 +237,7 @@
                             "artwork_file": artworkFileToSet
                                 ? artworkFileToSet
                                 : "",
-                            "artwork_data": artworkToSetData ?? ""
+                            "artwork_data": artworkToSetData ?? []
                         }
                     ]
                 }
