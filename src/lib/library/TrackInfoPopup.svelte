@@ -225,23 +225,24 @@
                 .filter((m) => m.value !== null)
                 .map((t) => ({ id: t.id, value: t.value }));
             console.log("Writing: ", toWrite);
+            
+            const event = {
+                tracks: [
+                    {
+                        "song_id": $rightClickedTrack.id,
+                        metadata: toWrite,
+                        "tag_type": metadata.tagType,
+                        "file_path": $rightClickedTrack.path,
+                        "artwork_file": artworkFileToSet
+                            ? artworkFileToSet
+                            : "",
+                        "artwork_data": artworkToSetData ?? []
+                    }
+                ]
+            }
+            // console.log("event: ", event);
 
-            toImport = await invoke<ToImport>("write_metadatas", {
-                event: {
-                    tracks: [
-                        {
-                            "song_id": $rightClickedTrack.id,
-                            metadata: toWrite,
-                            "tag_type": metadata.tagType,
-                            "file_path": $rightClickedTrack.path,
-                            "artwork_file": artworkFileToSet
-                                ? artworkFileToSet
-                                : "",
-                            "artwork_data": artworkToSetData ?? []
-                        }
-                    ]
-                }
-            });
+            toImport = await invoke<ToImport>("write_metadatas", { event });
         } else if ($rightClickedTracks?.length) {
             console.log("Writing album");
             toImport = await invoke<ToImport>("write_metadatas", {
@@ -272,7 +273,7 @@
                                 "artwork_file": artworkFileToSet
                                     ? artworkFileToSet
                                     : "",
-                                "artwork_data": artworkToSetData ?? ""
+                                "artwork_data": artworkToSetData ?? []
                             };
                         })
                     )
@@ -605,7 +606,7 @@
                 errors[currentTag.id].errors.push("err:null-chars");
                 containsError = "err:null-chars"; // We want to display a prompt
             } // Invalid characters
-            else if (!currentTag.id.match(/^[a-zA-Z0-9_:-]+$/g)) {
+            else if (!currentTag.id.match(/^[a-zA-Z0-9©_:\-\.]+$/)) {
                 errors[currentTag.id].errors.push("err:invalid-chars");
             }
 
