@@ -8,7 +8,7 @@ use log::info;
 #[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
-use player::AudioStreamer;
+use player::AudioPlayer;
 use reqwest;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -18,7 +18,7 @@ use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Emitter, Listener, WindowEvent};
+use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
@@ -35,6 +35,7 @@ mod player;
 mod resampler;
 mod scrape;
 mod store;
+mod constants;
 
 #[cfg(test)]
 mod tests;
@@ -146,7 +147,7 @@ struct GetWaveformResponse {
 #[tauri::command]
 fn stream_file(
     event: StreamFileRequest,
-    state: State<AudioStreamer>,
+    state: State<AudioPlayer>,
     _app_handle: tauri::AppHandle,
 ) {
     info!("Stream file {:?}", event);
@@ -159,7 +160,7 @@ fn stream_file(
 #[tauri::command]
 fn queue_next(
     event: StreamFileRequest,
-    state: State<AudioStreamer>,
+    state: State<AudioPlayer>,
     _app_handle: tauri::AppHandle,
 ) {
     info!("Queue next file {:?}", event);
@@ -170,7 +171,7 @@ fn queue_next(
 #[tauri::command]
 fn get_waveform(
     event: GetWaveformRequest,
-    state: State<AudioStreamer>,
+    state: State<AudioPlayer>,
     _app_handle: tauri::AppHandle,
 ) -> () {
     info!("Get waveform {:?}", event);
@@ -207,7 +208,7 @@ pub struct VolumeControlEvent {
 }
 
 #[tauri::command]
-fn volume_control(event: VolumeControlEvent, state: State<AudioStreamer>) {
+fn volume_control(event: VolumeControlEvent, state: State<AudioPlayer>) {
     info!("Received volume_control event");
     match state.volume_control_sender.send(event) {
         Ok(_) => {
@@ -226,7 +227,7 @@ pub struct FlowControlEvent {
 }
 
 #[tauri::command]
-fn decode_control(event: FlowControlEvent, state: State<AudioStreamer>) {
+fn decode_control(event: FlowControlEvent, state: State<AudioPlayer>) {
     info!("Received decode control event: {:?}", event);
     match event.decoding_active {
         Some(true) => {
@@ -248,7 +249,7 @@ struct StreamStatus {
 #[tauri::command]
 async fn init_streamer(
     event: Option<String>,
-    state: State<'_, AudioStreamer<'_>>,
+    state: State<'_, AudioPlayer<'_>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<StreamStatus, ()> {
     info!("Get stream status {:?}", event);
@@ -343,7 +344,7 @@ async fn main() {
     // #[cfg(dev)]
     // let devtools = devtools::init(); // initialize the plugin as early as possible
 
-    let streamer = player::AudioStreamer::create().unwrap();
+    let streamer = player::AudioPlayer::create().unwrap();
 
     // let mut builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
 
@@ -358,7 +359,7 @@ async fn main() {
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app_.clone();
-            let state: State<player::AudioStreamer<'static>> = app.state();
+            let state: State<player::AudioPlayer<'static>> = app.state();
 
             let resource_path = app
                 .path()
@@ -460,7 +461,7 @@ async fn main() {
                 app.emit("menu", event.id.0).unwrap();
             });
 
-            app.listen_any("opened", move |event| {
+            app.listen_any("opened", move |_| {
                 let inner_size = window2.inner_size().unwrap();
                 handle_decorations(&window2, &inner_size);
             });

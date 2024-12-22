@@ -38,7 +38,10 @@
         let isIndexed = true;
 
         if ($uiView === "to-delete") {
-            if ($toDeletePlaylist === null || $toDeletePlaylist.tracks.length === 0) {
+            if (
+                $toDeletePlaylist === null ||
+                $toDeletePlaylist.tracks.length === 0
+            ) {
                 results = [];
             } else {
                 results = await db.songs.bulkGet($toDeletePlaylist.tracks);

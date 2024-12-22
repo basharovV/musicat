@@ -1,5 +1,4 @@
 use artwork_cacher::look_for_art;
-use bytes::Bytes;
 use chksum_md5::MD5;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
@@ -888,7 +887,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         "image/jpeg" => MimeType::Jpeg,
                         "image/png" => MimeType::Png,
                         "image/tiff" => MimeType::Tiff,
-                        _ => MimeType::Unknown((mime.to_string())),
+                        _ => MimeType::Unknown(mime.to_string()),
                     }
                 } else {
                     MimeType::Png

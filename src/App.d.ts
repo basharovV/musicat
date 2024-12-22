@@ -168,6 +168,8 @@ interface UserSettings {
     theme: string;
     outputDevice?: string;
     followSystemOutput: boolean;
+    geniusApiKey?: string;
+    discogsApiKey?: string;
 }
 
 interface UIPreferences {
