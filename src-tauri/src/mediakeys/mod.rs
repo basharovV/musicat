@@ -1,15 +1,13 @@
-use log::{error, info, warn};
+use log::{info, warn};
 use std::ffi::c_void;
 use std::ptr;
 use std::rc::Rc;
 
-use block2::{Block, ConcreteBlock, RcBlock, StackBlock};
+use block2::RcBlock;
 use objc2::rc::{Id, Retained};
 use objc2::runtime::AnyObject;
-use objc2::{class, msg_send, msg_send_id, sel, Encode, Encoding, RefEncode};
-use objc2_foundation::{
-    ns_string, CGSize, NSArray, NSDictionary, NSNumber, NSObject, NSString, NSUInteger,
-};
+use objc2::{class, msg_send, Encode, Encoding, RefEncode};
+use objc2_foundation::{CGSize, NSDictionary, NSNumber, NSObject, NSString, NSUInteger};
 
 use crate::metadata::{Artwork, Song};
 extern "C" {
@@ -184,11 +182,11 @@ unsafe fn set_artwork(artwork: &Option<Artwork>) -> *mut NSObject {
         info!("Size: {:?}", size);
         ns_image
     });
-    let size = CGSize::new(200f64, 200f64);
+    let _size = CGSize::new(200f64, 200f64);
 
     return ptr::null_mut();
     // TODO: This is not working yet. Maybe worth trying in objc1 instead.
-    let artwork: *mut NSObject = msg_send![media_artwork_class_alloc, initWithBoundsSize: size requestHandler: &*handler_block];
+    let artwork: *mut NSObject = msg_send![media_artwork_class_alloc, initWithBoundsSize: _size requestHandler: &*handler_block];
     return artwork;
 }
 

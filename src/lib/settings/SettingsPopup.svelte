@@ -35,9 +35,7 @@
         "top-left",
         "top-right"
     ];
-
-    let llms: LLM[] = ["gpt-3.5-turbo", "gpt-4", "ollama"];
-
+    
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
         $userSettings.albumArtworkFilenames = commaSeparatedFilenames
@@ -433,6 +431,16 @@
                         <td
                             ><Input
                                 bind:value={$userSettings.geniusApiKey}
+                                fullWidth
+                                small
+                            /></td
+                        >
+                    </tr>
+                    <tr>
+                        <td>Discogs API Key</td>
+                        <td
+                            ><Input
+                                bind:value={$userSettings.discogsApiKey}
                                 fullWidth
                                 small
                             /></td

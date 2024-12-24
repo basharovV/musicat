@@ -121,6 +121,11 @@ class AudioPlayer {
 
         playlist.subscribe(async (playlist) => {
             this.playlist = playlist;
+
+            if (playlist.length === 0) {
+                return;
+            }
+
             const shuffleEnabled = get(isShuffleEnabled);
             const shuffledPlylist = get(shuffledPlaylist);
             let newCurrentSongIdx = 0;

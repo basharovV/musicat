@@ -3,6 +3,63 @@
 version = 3
 
 [[package]]
+name = "Musicat"
+version = "0.10.0"
+dependencies = [
+ "anyhow",
+ "arrayvec",
+ "atomic-wait",
+ "base64 0.22.1",
+ "block2",
+ "bytes",
+ "chksum-md5",
+ "color-print",
+ "cpal",
+ "crc",
+ "env_logger",
+ "filetime",
+ "futures-util",
+ "http",
+ "http-range",
+ "lofty",
+ "log",
+ "log4rs",
+ "objc2",
+ "objc2-foundation",
+ "percent-encoding",
+ "rayon",
+ "rb",
+ "reqwest",
+ "ringbuffer",
+ "rubato",
+ "rustfft",
+ "scraper",
+ "serde",
+ "serde_json",
+ "symphonia",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-http",
+ "tauri-plugin-os",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-window-state",
+ "tauri-utils",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "trash",
+ "url",
+ "urlencoding",
+ "webrtc",
+ "window-vibrancy",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -131,63 +188,6 @@ name = "anyhow"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37bf3594c4c988a53154954629820791dde498571819ae4ca50ca811e060cc95"
-
-[[package]]
-name = "app"
-version = "0.10.0"
-dependencies = [
- "anyhow",
- "arrayvec",
- "atomic-wait",
- "base64 0.22.1",
- "block2",
- "bytes",
- "chksum-md5",
- "color-print",
- "cpal",
- "crc",
- "env_logger",
- "filetime",
- "futures-util",
- "http",
- "http-range",
- "lofty",
- "log",
- "log4rs",
- "objc2",
- "objc2-foundation",
- "percent-encoding",
- "rayon",
- "rb",
- "reqwest",
- "ringbuffer",
- "rubato",
- "rustfft",
- "scraper",
- "serde",
- "serde_json",
- "symphonia",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-http",
- "tauri-plugin-os",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-window-state",
- "tauri-utils",
- "tempfile",
- "tokio",
- "tokio-util",
- "trash",
- "url",
- "urlencoding",
- "webrtc",
- "window-vibrancy",
-]
 
 [[package]]
 name = "arboard"
@@ -5438,10 +5438,12 @@ dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
  "symphonia-bundle-mp3",
+ "symphonia-codec-aac",
  "symphonia-codec-adpcm",
  "symphonia-codec-pcm",
  "symphonia-codec-vorbis",
  "symphonia-core",
+ "symphonia-format-isomp4",
  "symphonia-format-mkv",
  "symphonia-format-ogg",
  "symphonia-format-riff",
@@ -5470,6 +5472,17 @@ dependencies = [
  "log",
  "symphonia-core",
  "symphonia-metadata",
+]
+
+[[package]]
+name = "symphonia-codec-aac"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdbf25b545ad0d3ee3e891ea643ad115aff4ca92f6aec472086b957a58522f70"
+dependencies = [
+ "lazy_static",
+ "log",
+ "symphonia-core",
 ]
 
 [[package]]
@@ -5515,6 +5528,19 @@ dependencies = [
  "lazy_static",
  "log",
  "rustfft",
+]
+
+[[package]]
+name = "symphonia-format-isomp4"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abfdf178d697e50ce1e5d9b982ba1b94c47218e03ec35022d9f0e071a16dc844"
+dependencies = [
+ "encoding_rs",
+ "log",
+ "symphonia-core",
+ "symphonia-metadata",
+ "symphonia-utils-xiph",
 ]
 
 [[package]]

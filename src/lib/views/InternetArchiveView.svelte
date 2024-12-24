@@ -123,6 +123,7 @@
                 <small
                     >public domain music from <a
                         href="https://archive.org/details/audio_music"
+                        target="_blank"
                         >archive.org</a
                     ></small
                 >

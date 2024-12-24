@@ -21,31 +21,50 @@
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import { path } from "@tauri-apps/api";
 
     let isLoading = true;
     let isVisible = false;
     let isInit = true;
 
-    let cachedAlbums: Album[] = [];
-
     $: albums = liveQuery(async () => {
-        let resultsArray: Album[] = [];
-        resultsArray = await db.albums
-            .orderBy($uiPreferences.albumsViewSortBy)
-            .toArray();
+        let albums = await db.albums.toArray();
+
+        if ($compressionSelected === "lossless") {
+            albums = albums.filter(({title, lossless}) => title.length && lossless);
+        } else if ($compressionSelected === "lossy") {
+            albums = albums.filter(({title, lossless}) => title.length && !lossless);
+        } else {
+            albums = albums.filter(({title}) => title.length);
+        }
+
+        if ($uiPreferences.albumsViewSortBy === 'title') {
+            albums.sort((a, b) => {
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        } else if ($uiPreferences.albumsViewSortBy === 'artist') {
+            albums.sort((a, b) => {
+                if (a.artist < b.artist) return -1;
+                if (a.artist > b.artist) return 1;
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        } else {
+            albums.sort((a, b) => {
+                if (a.year < b.year) return -1;
+                if (a.year > b.year) return 1;
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        }
 
         isLoading = false;
-        cachedAlbums = resultsArray;
-        return resultsArray.filter((a) => {
-            const hasTitle = a.title.length;
-            let compressionFilterMatch = true;
-            if ($compressionSelected === "lossless") {
-                compressionFilterMatch = a.lossless;
-            } else if ($compressionSelected === "lossy") {
-                compressionFilterMatch = a.lossless === false;
-            }
-            return hasTitle && compressionFilterMatch;
-        });
+
+        return albums;
     });
 
     $: queriedAlbums =
@@ -65,31 +84,32 @@
 
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
+        
+        if (await updatePlayingAlbum()) {
+            currentAlbumElement?.scrollIntoView({
+                block: "center",
+                behavior: "instant"
+            });
+
+            isVisible = true;
+            isInit = false;
+        }
+    }
+    
+    async function updatePlayingAlbum() {
         // Strip the song from album path
-        const albumPath = $currentSong.path.replace(
-            `/${$currentSong.file}`,
-            ""
-        );
+        const albumPath = await path.dirname($currentSong.path)
         // Find the album currently playing
         currentAlbum = await db.albums.get(
             md5(`${albumPath} - ${$currentSong.album}`.toLowerCase())
         );
-        if (!currentAlbum) return;
-        // $albumPlaylist = tracks;
-        // $playlistIsAlbum = true;
-
-        // Scroll to album
+        if (!currentAlbum) return false;
+        
         currentAlbumElement = document.querySelector(
             `[data-album='${currentAlbum.id}']`
         );
-
-        currentAlbumElement?.scrollIntoView({
-            block: "center",
-            behavior: "instant"
-        });
-
-        isVisible = true;
-        isInit = false;
+        
+        return true;
     }
 
     $: if (isInit && $playlist && $currentSong) {
@@ -97,6 +117,12 @@
     } else {
         isVisible = true;
         isInit = false;
+    }
+    
+    $: if (container && $currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
+        if (updatePlayingAlbum()) {
+            onScroll();
+        }
     }
 
     $: minWidth = $uiPreferences.albumsViewGridSize;

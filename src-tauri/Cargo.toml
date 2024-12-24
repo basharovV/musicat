@@ -1,11 +1,11 @@
 [package]
-name = "app"
+name = "Musicat"
 version = "0.10.0"
 description = "Musicat music player"
 authors = ["you"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/basharovV/musicat"
-default-run = "app"
+default-run = "Musicat"
 edition = "2021"
 rust-version = "1.70"
 
@@ -33,7 +33,7 @@ http = "1.1.0"
 http-range = "0.1.5"
 tauri-utils = "2.0.0-rc.6"
 percent-encoding = "2.3.1"
-symphonia = { version = "0.5.4", features = ["mp3", "flac", "opt-simd"] }
+symphonia = { version = "0.5.4", features = ["aac", "flac", "isomp4", "mp3", "opt-simd"] }
 webrtc = { git = "https://github.com/basharovV/webrtc.git" }
 crc = { version = "3.2.1" }
 log = "0.4.22"

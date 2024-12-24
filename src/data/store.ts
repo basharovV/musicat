@@ -30,7 +30,7 @@ import type {
     UserSettings,
     WaveformPlayerState
 } from "src/App";
-import { derived, writable, type Writable } from "svelte/store";
+import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
@@ -209,11 +209,16 @@ const defaultSettings: UserSettings = {
  */
 async function getSettings() {
     // use fs to read stetings file
-    const configDir = await appConfigDir();
-    const settingsPath = await path.join(configDir, "settings.json");
-    // Read contents
-    const contents = await fs.readTextFile(settingsPath);
-    return JSON.parse(contents);
+    try {
+        const configDir = await appConfigDir();
+        const settingsPath = await path.join(configDir, "settings.json");
+        // Read contents
+        const contents = await fs.readTextFile(settingsPath);
+        return JSON.parse(contents);
+    } catch (e) {
+        console.error("Error reading settings file", e);
+        return get(userSettings);
+    }
 }
 
 async function setSettings(settings: UserSettings) {
@@ -328,19 +333,17 @@ async function init() {
     const osType = await type();
     os.set(osType);
 
-    // Set default download location
-    const dir = await downloadDir();
+    let fileSettings = await getSettings();
 
-    const fileSettings = await getSettings();
-    if (!fileSettings.downloadLocation) {
-        fileSettings.downloadLocation = dir;
+    // Set default download location
+    if (typeof fileSettings.downloadLocation != 'string') {
+        fileSettings.downloadLocation = await downloadDir();
     }
 
     // Same for playlists location
-    const playlistsDir = await audioDir();
-    if (!fileSettings.playlistsLocation) {
+    if (typeof fileSettings.playlistsLocation != 'string') {
         fileSettings.playlistsLocation =
-            playlistsDir.concat("/Musicat Playlists");
+            await path.join(await audioDir(), "Musicat Playlists");
     }
 
     // Get user settings
@@ -351,6 +354,7 @@ async function init() {
 
     // Auto-persist settings
     userSettings.subscribe(async (val) => {
+        console.log("[store] userSettings", val);
         // Write settings to file
         await setSettings(val);
     });

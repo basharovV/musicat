@@ -27,6 +27,7 @@ import {
     songsJustAdded,
     userSettings
 } from "./store";
+import { path } from "@tauri-apps/api";
 const appWindow = getCurrentWebviewWindow();
 
 let addedSongs: Song[] = [];
@@ -357,7 +358,7 @@ export async function getArtistProfileImage(
                 filename.name.includes("profile")
             ) {
                 foundResult = {
-                    artworkSrc: convertFileSrc(folder + "/" + filename.name),
+                    artworkSrc: convertFileSrc(await path.join(folder, filename.name)),
                     artworkFormat: format,
                     artworkFilenameMatch: filename.name
                 };
