@@ -335,6 +335,14 @@ fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<
     }
 }
 
+fn request_accessibility_permissions() -> bool {
+    #[cfg(target_os = "macos")]
+    return macos_accessibility_client::accessibility::application_is_trusted_with_prompt();
+
+    #[cfg(not(target_os = "macos"))]
+    return true;
+}
+
 #[tokio::main]
 async fn main() {
     info!("Starting Musicat");
@@ -525,36 +533,50 @@ async fn main() {
 
             #[cfg(desktop)]
             {
-                use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+                if request_accessibility_permissions() {
+                    use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Shortcut, ShortcutState};
+                    
+                    let media_play_pause_shortcut = Shortcut::new(None, Code::MediaPlayPause);
+                    let media_track_next_shortcut = Shortcut::new(None, Code::MediaTrackNext);
+                    let media_track_previous_shortcut = Shortcut::new(None, Code::MediaTrackPrevious);
+                    
+                    app.handle().plugin(
+                        tauri_plugin_global_shortcut::Builder::new().with_handler(move |_app, shortcut, event| {
+                            if shortcut == &media_play_pause_shortcut {
+                                if event.state() == ShortcutState::Pressed {
+                                    let _ = _app.emit("toggle_play", ());
+                                }
+                            } else if shortcut == &media_track_next_shortcut {
+                                if event.state() == ShortcutState::Pressed {
+                                    let _ = _app.emit("play_next", ());
+                                }
+                            } else if shortcut == &media_track_previous_shortcut {
+                                if event.state() == ShortcutState::Pressed {
+                                    let _ = _app.emit("play_previous", ());
+                                }
+                            }
+                        })
+                        .build(),
+                    )?;
 
-                let media_play_pause_shortcut = Shortcut::new(None, Code::MediaPlayPause);
-                let media_track_next_shortcut = Shortcut::new(None, Code::MediaTrackNext);
-                let media_track_previous_shortcut = Shortcut::new(None, Code::MediaTrackPrevious);
-                
-                app.handle().plugin(
-                    tauri_plugin_global_shortcut::Builder::new().with_handler(move |_app, shortcut, event| {
-                        if shortcut == &media_play_pause_shortcut {
-                            if event.state() == ShortcutState::Pressed {
-                                let _ = _app.emit("toggle_play", ());
-                            }
-                        } else if shortcut == &media_track_next_shortcut {
-                            if event.state() == ShortcutState::Pressed {
-                                let _ = _app.emit("play_next", ());
-                            }
-                        } else if shortcut == &media_track_previous_shortcut {
-                            if event.state() == ShortcutState::Pressed {
-                                let _ = _app.emit("play_previous", ());
-                            }
-                        }
-                    })
-                    .build(),
-                )?;
-
-                let global_shortcut = app.global_shortcut();
-                
-                global_shortcut.register(media_play_pause_shortcut)?;
-                global_shortcut.register(media_track_next_shortcut)?;
-                global_shortcut.register(media_track_previous_shortcut)?;
+                    let global_shortcut = app.global_shortcut();
+                    
+                    if global_shortcut.is_registered(media_play_pause_shortcut) {
+                        global_shortcut.unregister(media_play_pause_shortcut.clone())?;
+                    }
+                    
+                    if global_shortcut.is_registered(media_track_next_shortcut) {
+                        global_shortcut.unregister(media_track_next_shortcut.clone())?;
+                    }
+                    
+                    if global_shortcut.is_registered(media_track_previous_shortcut) {
+                        global_shortcut.unregister(media_track_previous_shortcut.clone())?;
+                    }
+                    
+                    global_shortcut.register(media_play_pause_shortcut)?;
+                    global_shortcut.register(media_track_next_shortcut)?;
+                    global_shortcut.register(media_track_previous_shortcut)?;
+                }
             }
 
             Ok(())
