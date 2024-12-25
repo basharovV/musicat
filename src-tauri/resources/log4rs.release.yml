@@ -1,0 +1,22 @@
+appenders:
+    rollingfile:
+        kind: rolling_file
+        path: "$ENV{MUSICAT_LOG_DIR}/file.log"
+        encoder:
+            pattern: "[{d(%Y-%m-%dT%H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"
+        filters:
+            - kind: threshold
+              level: warn
+        policy:
+            trigger:
+                kind: time
+                interval: 10 minute
+            roller:
+                kind: fixed_window
+                pattern: "$ENV{MUSICAT_LOG_DIR}/file.log.{}"
+                base: 0
+                count: 2
+root:
+    level: warn
+    appenders:
+        - rollingfile

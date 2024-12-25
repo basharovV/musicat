@@ -360,13 +360,26 @@ async fn main() {
             let app_ = app.handle();
             let app2_ = app_.clone();
             let state: State<player::AudioPlayer<'static>> = app.state();
-
-            let resource_path = app
-                .path()
-                .resolve("resources/log4rs.yml", tauri::path::BaseDirectory::Resource)
-                .expect("failed to resolve resource");
+            
             env::set_var("MUSICAT_LOG_DIR", app.path().app_log_dir().unwrap());
-            log4rs::init_file(resource_path, Default::default()).unwrap();
+
+            #[cfg(dev)]
+            {
+                let resource_path = app
+                    .path()
+                    .resolve("resources/log4rs.dev.yml", tauri::path::BaseDirectory::Resource)
+                    .expect("failed to resolve resource");
+                log4rs::init_file(resource_path, Default::default()).unwrap();
+            }
+            
+           #[cfg(not(dev))]
+            {
+                let resource_path = app
+                    .path()
+                    .resolve("resources/log4rs.release.yml", tauri::path::BaseDirectory::Resource)
+                    .expect("failed to resolve resource");
+                log4rs::init_file(resource_path, Default::default()).unwrap();
+            }
 
             info!("Goes to stderr and file");
 
