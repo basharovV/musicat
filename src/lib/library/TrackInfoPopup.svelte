@@ -456,16 +456,6 @@
         onClose();
     });
 
-    onDestroy(() => {
-        if (unlisten) {
-            unlisten();
-        }
-        hotkeys.unbind(`${modifier}+enter`, "track-info");
-        hotkeys.unbind("esc", "track-info");
-        hotkeys.deleteScope("track-info");
-        $popupOpen = null;
-    });
-
     $: {
         if ($rightClickedTrack || $rightClickedTracks[0]) {
             reset();
@@ -759,7 +749,10 @@
         // const src = "asset://localhost/" + folder + artworkFilename;
     }
 
+    let previousScope;
+
     onMount(async () => {
+        previousScope = hotkeys.getScope();
         hotkeys.setScope("track-info");
         document.addEventListener("paste", onPaste);
 
@@ -767,6 +760,13 @@
     });
 
     onDestroy(() => {
+        if (unlisten) {
+            unlisten();
+        }
+        hotkeys.unbind(`${modifier}+enter`, "track-info");
+        hotkeys.unbind("esc", "track-info");
+        hotkeys.deleteScope("track-info", previousScope);
+        $popupOpen = null;
         document.removeEventListener("paste", onPaste);
     });
 

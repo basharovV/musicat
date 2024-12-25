@@ -80,9 +80,6 @@
 
     onMount(() => {
         hotkeys.setScope("prune");
-    });
-
-    onMount(() => {
         // Start playback if not playing
         if (!$isPlaying) audioPlayer?.playCurrent();
     });
