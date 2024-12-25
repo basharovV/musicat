@@ -1046,6 +1046,7 @@
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
     bind:fields
+    bind:columnOrder={$columnOrder}
     onResetOrder={resetColumnOrder}
     {isOrderChanged}
 />

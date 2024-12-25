@@ -5,6 +5,7 @@
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
+        columnOrder,
         isInit,
         isLyricsHovered,
         isLyricsOpen,
@@ -257,7 +258,12 @@
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
-    <CanvasLibrary allSongs={songs} {isLoading} dim={$isLyricsHovered} />
+    <CanvasLibrary
+        bind:columnOrder={$columnOrder}
+        allSongs={songs}
+        dim={$isLyricsHovered}
+        {isLoading}
+    />
 </div>
 
 <style lang="scss">
