@@ -639,7 +639,7 @@
                 overflow: hidden;
                 /* border-bottom: 0.7px solid #ffffff36; */
                 border-radius: 5px;
-                margin: 0px 7.5px 0 0;
+                margin: 0px 8px 0 0;
                 display: grid;
                 grid-template-rows: 1fr auto;
                 gap: 5px;
@@ -659,7 +659,7 @@
                 overflow: hidden;
                 border-bottom: 0.7px solid #ffffff36;
                 border-radius: 5px;
-                margin: 0px 7.5px 0 0;
+                margin: 0px 8px 0 0;
             }
 
             .close-wiki-prompt {
