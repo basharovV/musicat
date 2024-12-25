@@ -15,6 +15,11 @@
         playlist,
         playlistType
     } from "../../data/store";
+	
+	const HEADER_HEIGHT = 22;
+    const ROW_HEIGHT = 26;
+	
+	let canvasHeight = HEADER_HEIGHT;
 
     export let album: Album; // to display album data
 
@@ -27,6 +32,8 @@
 		tracks.sort((a, b) => {
 			return a.trackNumber - b.trackNumber;
 		});
+
+		canvasHeight = HEADER_HEIGHT + (tracks.length * ROW_HEIGHT) + 8;
 
 		return tracks
 	})
@@ -131,7 +138,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="songs">
+	<div class="songs" style="height: {canvasHeight}px">
 		<CanvasLibrary
 			bind:columnOrder={$albumColumnOrder}
 			allSongs={songs}
@@ -298,7 +305,6 @@
 	}
 	
 	.songs {
-		min-height: 300px;
 		position: relative;
         display: grid;
         grid-template-columns: 1fr;
