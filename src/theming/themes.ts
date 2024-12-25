@@ -30,6 +30,8 @@ export interface Theme {
     "library-text-color": string;
     "library-playing-bg": string;
     "library-playing-text": string;
+    "library-playing-title": string;
+    "library-title": string;
     "library-playing-icon": string;
     "library-highlight-bg": string;
     "library-hover-bg": string;
@@ -77,6 +79,8 @@ export const DEFAULT_THEME: Theme = {
     "library-text-color": "#d3d3d3",
     "library-playing-bg": "#5123dd",
     "library-playing-text": "#00ddff",
+    "library-playing-title": "#ffffff",
+    "library-title": "#ffffff",
     "library-playing-icon": "#00ddff",
     "library-highlight-bg": "#2e3357",
     "library-hover-bg": "#2e335737",
@@ -118,9 +122,10 @@ export const allThemes: { [key: string]: Theme } = {
         "transport-shuffle": "#9804d3",
         "panel-background": "#dfd8d8",
         "library-text-color": "#3e4040",
+        "library-title": "#282230",
         "library-playing-bg": "#36a4b5",
-        "library-playing-text": "#ffffff",
         "library-playing-icon": "#1a1718",
+        "library-playing-text": "#ffffff",
         "library-highlight-bg": "#9fb0b4",
         "library-hover-bg": "#c2cfd2",
         "library-header-bg": "#95afb37e",
@@ -155,9 +160,10 @@ export const allThemes: { [key: string]: Theme } = {
         "transport-shuffle": "#9804d3",
         "panel-background": "#e3dfe8",
         "library-text-color": "#3e4040",
+        "library-title": "#282230",
         "library-playing-bg": "#5123dd",
-        "library-playing-text": "#ffffff",
         "library-playing-icon": "#efe2e6",
+        "library-playing-text": "#ffffff",
         "library-highlight-bg": "#5123dd45",
         "library-hover-bg": "#5123dd1c",
         "library-header-bg": "#998bbb7e",
@@ -194,7 +200,9 @@ export const allThemes: { [key: string]: Theme } = {
         "panel-background": "#181e25",
         "library-text-color": "#8cb3b8",
         "library-playing-bg": "#23cedd",
-        "library-playing-text": "#000000",
+        "library-playing-text": "#444444",
+        "library-playing-title": "#000000",
+        "library-title": "#eeeeee",
         "library-playing-icon": "#1a1718",
         "library-highlight-bg": "#2e4f57",
         "library-hover-bg": "#1d2a30",
@@ -232,7 +240,8 @@ export const allThemes: { [key: string]: Theme } = {
         "library-playing-bg": "#f3d2ba",
         "library-highlight-bg": "#f3caad82",
         "library-hover-bg": "#f4ceb238",
-        "library-playing-text": "#3d1507",
+        "library-playing-text": "#444444",
+        "library-playing-title": "#3d1507",
         "library-playing-icon": "#073d23",
         "library-favourite-icon": "#f3d2ba",
         "library-favourite-hover-icon": "#f6decd",
@@ -267,7 +276,7 @@ export const allThemes: { [key: string]: Theme } = {
         "panel-background": "black",
         "library-text-color": "#05A101",
         "library-playing-bg": "transparent",
-        "library-playing-text": "white",
+        "library-playing-text": "#ffffff",
         "library-header-bg": 'black',
         "library-header-text": "#acb4ac",
         "library-playing-icon": "#7fbd7f",
