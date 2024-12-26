@@ -63,6 +63,18 @@ export class MySubClassedDexie extends Dexie {
                 playlists: "++id, title",
                 internalPlaylists: "id, title"
             });
+        
+        this.version(21)
+            .stores({
+                songs: "id, title, artist, composer, album, albumArtist, genre, year, compilation, path, duration, isFavourite, originCountry, dateAdded, [artist+year+album+trackNumber], [albumArtist+album+trackNumber], [album+trackNumber], [albumArtist+album], tags", // Primary key and indexed props
+                albums: "id, title, displayTitle, artist, year, compilation",
+                smartQueries: "++id, name",
+                artistProjects: "++id, name",
+                songProjects: "++id, title, artist, album",
+                scrapbook: "++id, name",
+                playlists: "++id, title",
+                internalPlaylists: "id, title"
+            });
     }
 }
 

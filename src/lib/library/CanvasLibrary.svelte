@@ -232,6 +232,16 @@
             }
         },
         {
+            name: $LL.library.fields.albumArtist(),
+            value: "albumArtist",
+            show: true,
+            viewProps: {
+                width: 0,
+                x: 0,
+                autoWidth: true
+            }
+        },
+        {
             name: $LL.library.fields.track(),
             value: "trackNumber",
             show: true,
@@ -248,6 +258,16 @@
             show: true,
             viewProps: {
                 width: 100,
+                x: 0,
+                autoWidth: false
+            }
+        },
+         {
+            name: $LL.library.fields.compilation(),
+            value: "compilation",
+            show: true,
+            viewProps: {
+                width: 63,
                 x: 0,
                 autoWidth: false
             }
@@ -614,6 +634,8 @@
                 case "artist":
                     return width > 300;
                 case "album":
+                    return width > 450;
+                case "albumArtist":
                     return width > 450;
                 case "composer":
                     return width > 650;

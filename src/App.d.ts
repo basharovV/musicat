@@ -47,6 +47,7 @@ interface Song {
     title: string;
     artist: string;
     album: string;
+    albumArtist?: string;
     year: number;
     genre: string[];
     composer: string[];

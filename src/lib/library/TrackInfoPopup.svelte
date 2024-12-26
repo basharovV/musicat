@@ -48,7 +48,7 @@
     import LL from "../../i18n/i18n-svelte";
     // optional
 
-    const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
+    const ALBUM_FIELDS = ["album", "albumArtist", "artist", "date", "genre", "compilation"];
 
     function onClose() {
         $popupOpen = null;
@@ -475,6 +475,7 @@
     }
 
     $: artistInput =
+        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")?.value === "1" || metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")?.value ? "" :
         metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
             ?.value ?? "";
 
