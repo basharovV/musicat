@@ -10,9 +10,7 @@
 use std::result;
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
-use ::cpal::{
-    default_host, Device, SupportedOutputConfigs, SupportedStreamConfig, SupportedStreamConfigRange,
-};
+use ::cpal::{default_host, Device, SupportedStreamConfigRange};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
@@ -45,11 +43,11 @@ pub enum AudioOutputError {
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
 mod cpal {
-    use std::ops::Deref;
     use std::sync::mpsc::{Receiver, Sender};
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
+    use crate::constants::BUFFER_SIZE;
     use crate::output::{fft, get_device_by_name, ifft};
     use crate::resampler::Resampler;
     use crate::{SampleOffsetEvent, VolumeControlEvent};
@@ -57,7 +55,7 @@ mod cpal {
     use super::{AudioOutput, AudioOutputError, Result};
 
     use bytes::Bytes;
-    use cpal::{Sample, SupportedBufferSize};
+    use cpal::Sample;
     use symphonia::core::audio::{AudioBufferRef, Layout, RawSample, SampleBuffer, SignalSpec};
     use symphonia::core::conv::{ConvertibleSample, IntoSample};
     use symphonia::core::units::TimeBase;
@@ -187,7 +185,10 @@ mod cpal {
                     device_change_receiver,
                     timestamp_sender,
                     data_channel,
-                    |packet, volume| ((packet as f64) * volume) as i16,
+                    |packet: i16, volume: f64| {
+                        ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
+                            .clamp(i16::MIN as f64, i16::MAX as f64) as i16
+                    },
                     |data| {
                         let mut byte_array = Vec::with_capacity(data.len());
 
@@ -210,7 +211,10 @@ mod cpal {
                     device_change_receiver,
                     timestamp_sender,
                     data_channel,
-                    |packet, volume| ((packet as f64) * volume) as u16,
+                    |packet: u16, volume: f64| {
+                        ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
+                            .clamp(0.0, u16::MAX as f64) as u16
+                    },
                     |data| {
                         let mut byte_array = Vec::with_capacity(data.len());
 
@@ -233,7 +237,7 @@ mod cpal {
                     device_change_receiver,
                     timestamp_sender,
                     data_channel,
-                    |packet, volume| ((packet as f64) * volume) as f32,
+                    |packet, volume| ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0)) as f32,
                     |data| {
                         let fft_result = fft(&data);
 
@@ -300,7 +304,8 @@ mod cpal {
             };
 
             // Create a ring buffer with a capacity
-            let ring_len = ((5000 * config.sample_rate.0 as usize) / 1000) * num_channels;
+            let ring_len = (((BUFFER_SIZE as usize * 1000) * config.sample_rate.0 as usize) / 1000)
+                * num_channels;
 
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());

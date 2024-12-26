@@ -1,5 +1,4 @@
 use artwork_cacher::look_for_art;
-use bytes::Bytes;
 use chksum_md5::MD5;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
@@ -595,6 +594,7 @@ pub fn extract_metadata(
                 || ext_str.eq_ignore_ascii_case("aiff")
                 || ext_str.eq_ignore_ascii_case("ape")
                 || ext_str.eq_ignore_ascii_case("ogg")
+                || ext_str.eq_ignore_ascii_case("m4a")
             {
                 match read_from_path(&file_path) {
                     Ok(tagged_file) => {
@@ -635,8 +635,8 @@ pub fn extract_metadata(
                                     TagType::VorbisComments => Some("vorbis".to_string()),
                                     TagType::Id3v1 => Some("ID3v1".to_string()),
                                     TagType::Id3v2 => Some("ID3v2".to_string()),
+                                    TagType::Mp4Ilst => Some("MP4".to_string()),
                                     TagType::Ape
-                                    | TagType::Mp4Ilst
                                     | TagType::RiffInfo
                                     | TagType::AiffText => None,
                                     _ => todo!(),
@@ -660,6 +660,7 @@ pub fn extract_metadata(
                                 FileType::Opus => Some("Opus".to_string()),
                                 FileType::Speex => Some("Speex".to_string()),
                                 FileType::Vorbis => Some("Vorbis".to_string()),
+                                FileType::Mp4 => Some("MP4".to_string()),
                                 _ => None,
                             },
                         };
@@ -810,6 +811,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 "ID3v2.2" => tag_type = Some(TagType::Id3v2),
                 "ID3v2.3" => tag_type = Some(TagType::Id3v2),
                 "ID3v2.4" => tag_type = Some(TagType::Id3v2),
+                "iTunes" => tag_type = Some(TagType::Mp4Ilst),
                 _ => info!("Unhandled tag type: {:?}", v.tag_type),
             }
             let tag_type_value = tag_type.unwrap();
@@ -906,7 +908,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         "image/jpeg" => MimeType::Jpeg,
                         "image/png" => MimeType::Png,
                         "image/tiff" => MimeType::Tiff,
-                        _ => MimeType::Unknown((mime.to_string())),
+                        _ => MimeType::Unknown(mime.to_string()),
                     }
                 } else {
                     MimeType::Png

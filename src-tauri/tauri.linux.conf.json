@@ -27,7 +27,7 @@
         "longDescription": "",
         "fileAssociations": [
             {
-                "ext": ["mp3", "flac", "wav", "aiff", "ape", "ogg"],
+                "ext": ["mp3", "flac", "wav", "aiff", "ape", "ogg", "m4a"],
                 "name": "Music",
                 "description": "Music files",
                 "role": "Editor",
