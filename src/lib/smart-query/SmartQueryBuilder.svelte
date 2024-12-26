@@ -253,12 +253,12 @@
         }
 
         button {
-            background-color: rgb(98, 77, 212);
+            background-color: var(--smart-playlist-button-bg);
             border-radius: 4px;
 
             &:disabled {
-                background-color: rgb(73, 53, 184);
-                color: rgb(116, 114, 114);
+                background-color: var(--smart-playlist-button-disabled-bg);
+                color: var(--smart-playlist-button-disabled);
             }
         }
     }

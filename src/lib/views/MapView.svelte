@@ -46,6 +46,8 @@
         findCountryByArtist
     } from "../data/LibraryEnrichers";
     import ProgressBar from "../ui/ProgressBar.svelte";
+    import { currentThemeObject } from "../../theming/store";
+
     let isLoading = true;
 
     let container: HTMLElement;
@@ -307,7 +309,7 @@
             selector: "#map",
             showTooltip: true,
             visualizeData: {
-                scale: ["#eeeeee", "#999999"],
+                scale: [$currentThemeObject["mapview-scale-1"], $currentThemeObject["mapview-scale-2"]],
                 values: dataCountMap ? dataCountMap : []
             },
             // Play country
@@ -387,25 +389,26 @@
             regionsSelectableOne: true,
             regionStyle: {
                 initial: {
-                    fill: "#645479",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-bg"],
+                    stroke: $currentThemeObject["mapview-region-border"],
                     strokeWidth: 0.5,
                     fillOpacity: 1
                 },
                 selected: {
-                    fill: "#59CD70",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-selected-bg"],
+                    stroke: $currentThemeObject["mapview-region-selected-border"],
                     strokeWidth: 1,
                     fillOpacity: 1
                 },
                 selectedHover: {
-                    fill: "#59CD70",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-selected-hover-bg"],
+                    stroke: $currentThemeObject["mapview-region-selected-hover-border"],
                     strokeWidth: 1,
                     fillOpacity: 1
                 },
                 hover: {
-                    stroke: "#C1B1F3",
+                    fill: $currentThemeObject["mapview-region-hover-bg"],
+                    stroke: $currentThemeObject["mapview-region-hover-border"],
                     strokeWidth: 1
                 }
             }

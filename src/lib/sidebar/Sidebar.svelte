@@ -1903,7 +1903,8 @@
             user-select: none;
             margin: 0.3em 0;
             /* transition: height 1s ease-in-out; */
-            opacity: 0.2;
+            color: var(--header-text);
+            opacity: var(--header-opacity);
             cursor: default;
             &:hover {
                 opacity: 0.5;
@@ -2344,13 +2345,13 @@
             position: relative;
 
             &.dragover {
-                background-color: #5123dd;
+                background-color: var(--sidebar-item-drag-bg);
                 border-radius: 5px;
             }
 
             &.hover {
                 border-radius: 5px;
-                background-color: #392f5d3b;
+                background-color: var(--sidebar-item-hover-bg);
                 .playlist-options {
                     display: flex;
                 }
@@ -2368,7 +2369,7 @@
                     left: -4px;
                     position: absolute;
                     height: 70%;
-                    background-color: #5123dd;
+                    background-color: var(--sidebar-item-selected-pipe-bg);
                     border-radius: 4px;
                 }
             }

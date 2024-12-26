@@ -15,11 +15,11 @@
         border-bottom: 0.7px solid #ffffff1f;
         border-top: 0.7px solid #ffffff0e;
         margin: 5px 5px 0 0;
-        background-color: #9c86b10f;
+        background-color: var(--waveform-bg);
 
 
         &:hover {
-            background-color: #9c86b11c;
+            background-color: var(--waveform-bg-hover);
         }
     }
 </style>

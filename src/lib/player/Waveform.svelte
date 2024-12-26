@@ -21,7 +21,9 @@
     import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
     import hotkeys from "hotkeys-js";
     import { db } from "../../data/db";
-const appWindow = getCurrentWebviewWindow()
+    import { currentThemeObject } from "../../theming/store";
+
+    const appWindow = getCurrentWebviewWindow()
 
     let container;
     let isMounted = false;
@@ -40,13 +42,13 @@ const appWindow = getCurrentWebviewWindow()
         "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV";
     onMount(async () => {
         const { default: WaveSurfer } = await import("wavesurfer.js");
-
+        
         wavesurfer = WaveSurfer.create({
             container,
-            waveColor: "#64578cca",
-            progressColor: "#cfbfff",
+            waveColor: $currentThemeObject["waveform-wave"],
+            progressColor: $currentThemeObject["waveform-progress"],
             cursorWidth: 1,
-            cursorColor: "white",
+            cursorColor: $currentThemeObject["waveform-cursor"],
             // backend: 'MediaElement',
             barWidth: 1.5,
             responsive: true,
@@ -58,10 +60,10 @@ const appWindow = getCurrentWebviewWindow()
         });
         wavesurfer.registerPlugin(
             Hover.create({
-                lineColor: "#f8f8f882",
+                lineColor: $currentThemeObject["waveform-hover-line"],
                 lineWidth: 1,
-                labelBackground: "transparent",
-                labelColor: "#fff",
+                labelBackground: $currentThemeObject["waveform-hover-label-bg"],
+                labelColor: $currentThemeObject["waveform-hover-label-text"],
                 labelSize: "11px"
             })
         );
@@ -162,7 +164,7 @@ const appWindow = getCurrentWebviewWindow()
         });
 
         wsRegions.enableDragSelection({
-            color: "rgba(220, 188, 255, 0.229)"
+            color: $currentThemeObject["waveform-region-loop"]
         });
 
         wavesurfer.on("click", (pos) => {
@@ -183,7 +185,7 @@ const appWindow = getCurrentWebviewWindow()
                     wsRegions.addRegion({
                         start: posSeconds,
                         content: marker.title,
-                        color: "rgb(0, 197, 108)"
+                        color: $currentThemeObject["waveform-region-current"]
                     });
                 }
             } else {
@@ -198,7 +200,6 @@ const appWindow = getCurrentWebviewWindow()
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
-            console.log("waveform", event);
             await wavesurfer.load(
                 null,
                 event.payload.data,
@@ -243,7 +244,7 @@ const appWindow = getCurrentWebviewWindow()
             wsRegions.addRegion({
                 start: $waveformPeaks.loopStartPos,
                 end: $waveformPeaks.loopEndPos,
-                color: "rgba(220, 188, 255, 0.227)"
+                color: $currentThemeObject["waveform-region-loop"]
             });
         }
 
@@ -251,7 +252,7 @@ const appWindow = getCurrentWebviewWindow()
             wsRegions.addRegion({
                 start: m.pos,
                 content: m.title,
-                color: "rgb(0, 197, 108)"
+                color: $currentThemeObject["waveform-region-current"]
             });
         });
     }
@@ -276,7 +277,7 @@ const appWindow = getCurrentWebviewWindow()
                 wsRegions.addRegion({
                     start: m.pos,
                     content: m.title,
-                    color: "rgb(0, 197, 108)"
+                    color: $currentThemeObject["waveform-region-current"]
                 });
             });
         }
@@ -360,7 +361,7 @@ const appWindow = getCurrentWebviewWindow()
                 position: absolute;
                 top: 0;
                 bottom: 0;
-                background-color: rgba(255, 255, 255, 0.386);
+                background-color: var(--waveform-hoverhead-line-bg);
             }
         }
     }

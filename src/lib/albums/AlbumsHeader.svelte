@@ -93,6 +93,8 @@
             font-size: 3em;
             opacity: 0.3;
             margin-left: 0.1em;
+            color: var(--header-text);
+            opacity: var(--header-opacity);
         }
 
         .options {

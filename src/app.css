@@ -4,13 +4,13 @@
 
 a {
     font-weight: 500;
-    color: #acafff;
+    color: var(--link);
     text-decoration: inherit;
     -webkit-user-select: none;
     user-select: none;
 }
 a:hover {
-    color: #8086ff;
+    color: var(--link-hover);
 }
 
 body {
