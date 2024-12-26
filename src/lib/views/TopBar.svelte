@@ -373,7 +373,7 @@
             max-width: 600px;
             margin: 0 5px;
             z-index: 12;
-            top: -7.5px;
+            top: -8px;
             .elapsed-time {
                 width: max-content;
                 white-space: nowrap;
