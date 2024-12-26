@@ -628,7 +628,7 @@
         }
 
         .queue {
-            grid-row: 2/6;
+            grid-row: 2/5;
             grid-column: 2;
             overflow: hidden;
             height: 100%;
