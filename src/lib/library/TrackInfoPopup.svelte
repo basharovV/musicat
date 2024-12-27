@@ -48,7 +48,7 @@
     import LL from "../../i18n/i18n-svelte";
     // optional
 
-    const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
+    const ALBUM_FIELDS = ["album", "albumArtist", "artist", "date", "genre", "compilation"];
 
     function onClose() {
         $popupOpen = null;
@@ -456,16 +456,6 @@
         onClose();
     });
 
-    onDestroy(() => {
-        if (unlisten) {
-            unlisten();
-        }
-        hotkeys.unbind(`${modifier}+enter`, "track-info");
-        hotkeys.unbind("esc", "track-info");
-        hotkeys.deleteScope("track-info");
-        $popupOpen = null;
-    });
-
     $: {
         if ($rightClickedTrack || $rightClickedTracks[0]) {
             reset();
@@ -485,6 +475,7 @@
     }
 
     $: artistInput =
+        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")?.value === "1" || metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")?.value ? "" :
         metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
             ?.value ?? "";
 
@@ -759,7 +750,10 @@
         // const src = "asset://localhost/" + folder + artworkFilename;
     }
 
+    let previousScope;
+
     onMount(async () => {
+        previousScope = hotkeys.getScope();
         hotkeys.setScope("track-info");
         document.addEventListener("paste", onPaste);
 
@@ -767,6 +761,13 @@
     });
 
     onDestroy(() => {
+        if (unlisten) {
+            unlisten();
+        }
+        hotkeys.unbind(`${modifier}+enter`, "track-info");
+        hotkeys.unbind("esc", "track-info");
+        hotkeys.deleteScope("track-info", previousScope);
+        $popupOpen = null;
         document.removeEventListener("paste", onPaste);
     });
 

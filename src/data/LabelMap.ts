@@ -24,6 +24,8 @@ interface TagFieldMap {
     location?: string;
     isrc?: string;
     bpm?: string;
+    compilation?: string;
+    discNumber?: string;
     encodingTool?: string;
     gapless?: string;
     normalization?: string;
@@ -38,13 +40,15 @@ const genericToVorbisMap: TagFieldMap = {
     genre: "GENRE",
     date: "DATE",
     trackNumber: "TRACKNUMBER",
+    compilation: "COMPILATION",
+    discNumber: "DISCNUMBER",
     copyright: "COPYRIGHT",
     publisher: "PUBLISHER",
     performer: "PERFORMER",
     license: "LICENSE",
     location: "LOCATION",
     isrc: "ISRC",
-    bpm: "BPM"
+    bpm: "BPM",
 };
 
 const vorbisToGenericMap = inverse(genericToVorbisMap);
@@ -79,10 +83,12 @@ const genericToId3v22Map: TagFieldMap = {
     genre: "TCO",
     date: "TYE",
     trackNumber: "TRK",
+    compilation: "TCP",
+    discNumber: "TPA",
     copyright: "TCR",
     publisher: "TPB",
     isrc: "TRC",
-    bpm: "TBP"
+    bpm: "TBP",
 };
 
 const id3v22ToGenericMap = inverse(genericToId3v22Map);
@@ -101,10 +107,12 @@ const genericToId3v23Map: TagFieldMap = {
     genre: "TCON",
     date: "TDAT",
     trackNumber: "TRCK",
+    compilation: "TCMP",
+    discNumber: "TPOS",
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v23ToGenericMap = inverse(genericToId3v23Map);
@@ -123,10 +131,12 @@ const genericToId3v24Map: TagFieldMap = {
     genre: "TCON",
     date: "TDRC",
     trackNumber: "TRCK",
+    compilation: "TCMP",
+    discNumber: "TPOS",
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v24ToGenericMap = inverse(genericToId3v24Map);

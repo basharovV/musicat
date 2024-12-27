@@ -89,6 +89,8 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     pub album: String,
+    album_artist: Option<String>,
+    compilation: i32,
     year: i32,
     genre: Vec<String>,
     composer: Vec<String>,
@@ -107,6 +109,7 @@ pub struct Album {
     title: String,         // We store the title in lower case for indexed case insensitive searches
     display_title: String, // The display title with actual case
     artist: String,
+    compilation: i32,
     year: i32,
     genre: Vec<String>,
     tracks_ids: Vec<String>,
@@ -453,12 +456,19 @@ fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
     if !artwork_src.is_empty() {
         artwork_src = convert_file_src(artwork_src);
     }
-
+    
     return Some(Album {
         id: album_id,
         title: song.album.clone().to_lowercase(),
         display_title: song.album.clone(),
-        artist: song.artist.clone(),
+        artist: if song.album_artist.is_some() {
+            song.album_artist.clone().unwrap()
+        } else if song.compilation == 1 {
+            String::from("Compilation")
+        } else {
+            song.artist.clone()
+        },
+        compilation: song.compilation,
         tracks_ids: vec![song.id.clone()],
         lossless: song.file_info.lossless,
         path: album_path.to_string(),
@@ -596,6 +606,8 @@ pub fn extract_metadata(
                         let mut title = String::new();
                         let mut artist = String::new();
                         let mut album = String::new();
+                        let mut album_artist = None;
+                        let mut compilation = 0;
                         let mut year = 0;
                         let mut genre = Vec::new();
                         let mut composer = Vec::new();
@@ -675,6 +687,13 @@ pub fn extract_metadata(
                             if album.is_empty() {
                                 album = tag.album().unwrap_or_default().to_string();
                             }
+                            if album_artist.is_none() {
+                                // album_artist = Some(tag.get_string(&ItemKey::AlbumArtist).unwrap_or_default().to_string());
+                                album_artist = tag.get_string(&ItemKey::AlbumArtist).map(|s| s.to_string());
+                            }
+                            if compilation == 0 {
+                                compilation = tag.get_string(&ItemKey::FlagCompilation).unwrap_or_default().parse::<u32>().ok().unwrap_or(0) as i32;
+                            }
                             if genre.is_empty() {
                                 genre = tag.genre().map_or_else(Vec::new, |g| {
                                     g.split('/').map(String::from).collect()
@@ -731,6 +750,8 @@ pub fn extract_metadata(
                             title,
                             artist,
                             album,
+                            album_artist,
+                            compilation,
                             year,
                             genre,
                             composer,

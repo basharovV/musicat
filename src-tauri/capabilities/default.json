@@ -53,7 +53,10 @@
                     "path": "$APPCONFIG/log.txt"
                 },
                 {
-                    "path": "$RESOURCE/log4rs.yml"
+                    "path": "$RESOURCE/log4rs.dev.yml"
+                },
+                {
+                    "path": "$RESOURCE/log4rs.release.yml"
                 }
             ]
         },
