@@ -11,7 +11,7 @@ export interface Theme {
     "text-inactive": string;
     /**  Window background (will be made more translucent on macOS) */
     "background": string;
-    /**  Overlays, popups, menus */
+    /**  Overlays, popups */
     "overlay-bg": string;
     /**  Primary accent color used for active items that need to stand out */
     "accent": string;
@@ -25,6 +25,25 @@ export interface Theme {
     "header-text": string;
     "link": string;
     "link-hover": string;
+    /** Menus */
+    "menu-bg": string;
+    "menu-border": string;
+    "menu-checkbox-off": string;
+    "menu-checkbox-on": string;
+    "menu-item-confirm-bg": string;
+    "menu-item-destructive-hover-bg": string;
+    "menu-item-destructive-hover-text": string;
+    "menu-item-disabled": string;
+    "menu-item-highlight-bg": string;
+    "menu-item-highlight-border": string;
+    "menu-item-highlight-text": string;
+    "menu-item-highlight-secondary-bg": string;
+    "menu-item-highlight-secondary-border": string;
+    "menu-item-highlight-secondary-text": string;
+    "menu-item-loading-from": string;
+    "menu-item-loading-to": string;
+    "menu-item-text": string;
+    "menu-shadow": string;
     /** Play, pause, next, previous */
     "transport-controls": string;
     "transport-favorite": string;
@@ -133,6 +152,24 @@ export const DEFAULT_THEME: Theme = {
     "link-hover": "#8086ff",
     "icon-primary": "#ffffff",
     "icon-secondary": "#948f8f",
+    "menu-bg": "#20202296",
+    "menu-border": "#ffffff3b",
+    "menu-checkbox-off": "#808080",
+    "menu-checkbox-on": "#ffffff",
+    "menu-item-confirm-bg": "#d2630e",
+    "menu-item-destructive-hover-bg": "#d20e32",
+    "menu-item-destructive-hover-text": "#ffffff",
+    "menu-item-disabled": "#aeaeae66",
+    "menu-item-highlight-bg": "#ffffffcb",
+    "menu-item-highlight-border": "transparent",
+    "menu-item-highlight-text": "#252424",
+    "menu-item-highlight-secondary-bg": "#ffffff32",
+    "menu-item-highlight-secondary-border": "#ffffff1a",
+    "menu-item-highlight-secondary-text": "#ffffff",
+    "menu-item-loading-from": "inherit",
+    "menu-item-loading-to": "#dba4fac1",
+    "menu-item-text": "#ffffff",
+    "menu-shadow": "#00000022",
     "transport-controls": "#ffffff",
     "transport-favorite": "#59cd7a",
     "transport-seekbar-hoverhead": "#00C56C",
