@@ -61,13 +61,15 @@
             "capabilities": [
                 "main-capability",
                 {
-                    "identifier": "write-external-drives",
-                    "description": "Capability to be able to write artworks on external drives",
+                    "identifier": "use-external-drives",
+                    "description": "Capability to be able to use library on external drives",
                     "windows": ["*"],
-                    "permissions": [{
-                        "identifier": "fs:allow-write-file",
-                        "allow": ["**"]
-                    }]
+                    "permissions": [
+                        {
+                            "identifier": "fs:scope",
+                            "allow": ["**"]
+                        }
+                    ]
                 }
             ],
             "assetProtocol": {
