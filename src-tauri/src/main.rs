@@ -17,6 +17,10 @@ use std::error::Error;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
+#[cfg(not(target_os = "windows"))]
+use std::os::unix::fs::MetadataExt;
+#[cfg(target_os = "windows")]
+use std::os::windows::fs::MetadataExt;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
@@ -303,12 +307,26 @@ async fn download_file(
         .sync_all()
         .map_err(|e| e.to_string())?;
 
-    // Move the temporary file to the final destination
+    let temp_dev = get_device_id(temp_file.path());
     let temp_path = temp_file.into_temp_path();
     let final_path = Path::new(&path);
-    temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+    let final_dev = get_device_id(&final_path);
+
+    if temp_dev == final_dev {
+        // Move the temporary file to the final destination
+        temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+    } else {
+        // Copy the temporary file to the final destination since files aren't on the same device
+        fs::copy(temp_path, final_path).expect("Failed to copy file");
+    }
 
     Ok(())
+}
+
+fn get_device_id(path: &Path) -> u64 {
+    let parent_path = path.parent().expect("Failed to get parent directory");
+    let metadata = fs::metadata(parent_path).expect("Failed to get metadata");
+    metadata.dev()
 }
 
 struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
