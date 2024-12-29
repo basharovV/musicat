@@ -144,7 +144,7 @@
         width: auto;
         height: fit-content;
         margin: auto;
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background-color: var(--overlay-bg);
         backdrop-filter: blur(10px);
         min-width: 500px;
@@ -182,24 +182,22 @@
                 &.pressed {
                     h1 {
                         transition: all 0.2s ease-in-out;
-                        box-shadow: 0px 0px 20px
-                            color-mix(in srgb, #ff4747, transparent 20%);
+                        box-shadow: 0px 0px 20px var(--prune-button-delete-pressed-shadow);
                     }
                 }
                 h1 {
-                    background-color: rgba(255, 0, 0, 0.49);
+                    background-color: var(--prune-button-delete-bg);
                 }
             }
             .keep {
                 &.pressed {
                     h1 {
                         transition: all 0.2s ease-in-out;
-                        box-shadow: 0px 0px 20px
-                            color-mix(in srgb, #00ff00, transparent 20%);
+                        box-shadow: 0px 0px 20px var(--prune-button-keep-pressed-shadow);
                     }
                 }
                 h1 {
-                    background-color: rgba(0, 128, 0, 0.451);
+                    background-color: var(--prune-button-keep-bg);
                 }
             }
 
@@ -228,7 +226,7 @@
         }
 
         .for-delete {
-            color: rgb(255, 90, 90);
+            color: var(--prune-fordelete);
         }
 
         .footer {

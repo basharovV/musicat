@@ -506,10 +506,8 @@
             padding: 1em;
             max-width: 100%;
             z-index: 10;
-            /* background-color: var(--overlay-bg); */
             backdrop-filter: blur(10px) brightness(0.95);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 70%, transparent);
+            border-bottom: 1px solid color-mix(in srgb, var(--inverse) 70%, transparent);
 
             .info-playing,
             .info-wiki {

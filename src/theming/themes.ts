@@ -13,6 +13,7 @@ export interface Theme {
     "background": string;
     /**  Overlays, popups */
     "overlay-bg": string;
+    "overlay-shadow": string;
     /**  Primary accent color used for active items that need to stand out */
     "accent": string;
     "accent-secondary": string;
@@ -25,6 +26,7 @@ export interface Theme {
     "header-text": string;
     "link": string;
     "link-hover": string;
+    "title": string;
     /** Menus */
     "menu-bg": string;
     "menu-border": string;
@@ -91,6 +93,15 @@ export interface Theme {
     "album-playing-play-hover-icon": string;
     "album-playing-shadow": string;
     "album-playing-title-bg": string;
+    /** Popups */
+    "popup-data-field-bg": string;
+    "popup-song-artwork-about": string;
+    "popup-song-artwork-found": string;
+    "popup-song-artwork-notfound": string;
+    "popup-song-metadata-prompt-error": string;
+    "popup-song-metadata-title": string;
+    "popup-song-metadata-validation-error": string;
+    "popup-song-metadata-validation-warning": string;
     /** Oscilloscope line color */
     "oscilloscope": string;
     /** Waveform */
@@ -126,6 +137,12 @@ export interface Theme {
     /** Analytics/Stats */
     "analytics-primary": string;
     "analytics-secondary": string;
+    /** Prune */
+    "prune-button-delete-bg": string;
+    "prune-button-delete-pressed-shadow": string;
+    "prune-button-keep-bg": string;
+    "prune-button-keep-pressed-shadow": string;
+    "prune-fordelete": string;
 }
 export const allFonts = {
     "2Peas": {
@@ -141,8 +158,11 @@ export const DEFAULT_THEME: Theme = {
     "text-inactive": "#938e8e",
     "background": "#242026cb",
     "overlay-bg": "#3c3c3f33",
+    "overlay-shadow": "#00000042",
     "accent": "#45fffcf3",
     "accent-secondary": "#632fff",
+    "icon-primary": "#ffffff",
+    "icon-secondary": "#948f8f",
     "button-bg": "#1c1b1b",
     "button-text": "#ffffff",
     "input-bg": "#4d494966",
@@ -150,8 +170,7 @@ export const DEFAULT_THEME: Theme = {
     "header-text": "var(--text)",
     "link": "#acafff",
     "link-hover": "#8086ff",
-    "icon-primary": "#ffffff",
-    "icon-secondary": "#948f8f",
+    "title": "#7dffee",
     "menu-bg": "#20202296",
     "menu-border": "#ffffff3b",
     "menu-checkbox-off": "#808080",
@@ -212,6 +231,14 @@ export const DEFAULT_THEME: Theme = {
     "album-playing-play-hover-icon": "#ffffff",
     "album-playing-shadow": "#5123dd",
     "album-playing-title-bg": "#632fff",
+    "popup-data-field-bg": "#0000001e",
+    "popup-song-artwork-about": "#82c9df",
+    "popup-song-artwork-found": "#44a15e",
+    "popup-song-artwork-notfound": "#808080",
+    "popup-song-metadata-prompt-error": "#6f5757",
+    "popup-song-metadata-title": "#ffe6ac",
+    "popup-song-metadata-validation-error": "#a12e2e",
+    "popup-song-metadata-validation-warning": "#e19a00",
     "oscilloscope": "#14D8BD",
     "waveform-bg": "#9c86b10f",
     "waveform-bg-hover": "#9c86b11c",
@@ -241,6 +268,11 @@ export const DEFAULT_THEME: Theme = {
     "progressbar-value-bg": "#23DD7F",
     "analytics-primary": "#23dd7f",
     "analytics-secondary": "#855dff",
+    "prune-button-delete-bg": "#ff00007d",
+    "prune-button-delete-pressed-shadow": "#ff4747aa",
+    "prune-button-keep-bg": "#00800073",
+    "prune-button-keep-pressed-shadow": "#00ff00aa",
+    "prune-fordelete": "#ff5a5a",
 };
 
 export const allThemes: { [key: string]: Theme } = {

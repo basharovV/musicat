@@ -473,11 +473,10 @@
         position: relative;
         align-items: center;
         border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background-color: var(--overlay-bg);
         backdrop-filter: blur(10px);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         overflow: auto;
 
         @media only screen and (max-width: 400px) {
@@ -493,12 +492,8 @@
         top: 0;
         padding: 0.4em 0;
         width: 100%;
-        background-color: color-mix(
-            in srgb,
-            var(--background) 26%,
-            transparent
-        );
-        border-bottom: 1px solid rgb(53, 51, 51);
+        background-color: color-mix(in srgb, var(--background) 26%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--background) 70%, var(--inverse));
         backdrop-filter: blur(10px);
         z-index: 20;
 
@@ -620,7 +615,7 @@
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        border: 1px solid grey;
+        border: 1px solid rgb(from var(--inverse) r g b / 0.4);
         border-radius: 6px;
         padding: 1px 10px;
         margin-bottom: 5px;
