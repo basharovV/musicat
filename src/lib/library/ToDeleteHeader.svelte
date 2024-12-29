@@ -100,6 +100,16 @@
         $selectedSmartQuery = null;
         $query.orderBy = $query.libraryOrderBy;
     }
+    
+    async function keepAll() {
+        db.internalPlaylists.delete($toDeletePlaylist.id);
+        
+        $uiView = "library";
+        $isSmartQueryBuilderOpen = false;
+        $selectedPlaylistFile = null;
+        $selectedSmartQuery = null;
+        $query.orderBy = $query.libraryOrderBy;
+    }
 </script>
 
 <h3 class="title">{$LL.toDelete.title()}</h3>
@@ -114,7 +124,7 @@
     text={$LL.toDelete.keepAllBtn()}
     disabled={$toDeletePlaylist?.tracks.length === 0}
     onClick={async () => {
-        // deleteAll();
+        keepAll();
     }}
 />
 <ButtonWithIcon
