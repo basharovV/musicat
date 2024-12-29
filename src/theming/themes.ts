@@ -144,6 +144,8 @@ export interface Theme {
     "prune-button-keep-bg": string;
     "prune-button-keep-pressed-shadow": string;
     "prune-fordelete": string;
+    /** Wiki */
+    "wiki-bg": string;
 }
 export const allFonts = {
     "2Peas": {
@@ -275,6 +277,7 @@ export const DEFAULT_THEME: Theme = {
     "prune-button-keep-bg": "#00800073",
     "prune-button-keep-pressed-shadow": "#00ff00aa",
     "prune-fordelete": "#ff5a5a",
+    "wiki-bg": "#ffffff1b",
 };
 
 export const allThemes: { [key: string]: Theme } = {

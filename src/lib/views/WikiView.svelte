@@ -493,10 +493,10 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
-        border-left: 0.7px solid #ffffff2a;
-        border-right: 0.7px solid #ffffff2a;
+        border-left: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
+        border-right: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
         margin: 5px 0 0 0;
-        background-color: #ffffff1b;
+        background-color: var(--wiki-bg);
 
         header {
             position: sticky;
@@ -530,7 +530,7 @@
                 width: fit-content;
             }
             p {
-                background-color: #ffffff1b;
+                background-color: var(--wiki-bg);
                 margin: 0;
                 width: fit-content;
                 padding: 0 5px;
@@ -555,8 +555,7 @@
             max-width: 100%;
 
             .in-article {
-                border-bottom: 1px solid
-                    color-mix(in srgb, var(--inverse) 40%, transparent);
+                border-bottom: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
                 > p {
                     font-weight: normal;
                     font-size: 14px;
@@ -591,7 +590,7 @@
                         li {
                             margin: 5px 5px 0px 0;
                             padding: 2px 5px;
-                            background-color: #ffffff1b;
+                            background-color: var(--wiki-bg);
                             border: 1px solid
                                 color-mix(
                                     in srgb,
