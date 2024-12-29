@@ -104,18 +104,21 @@
 
     function onAlbumClicked(ev: MouseEvent) {
         ev.preventDefault();
+        ev.stopPropagation();
         const albumId = ev.currentTarget.getAttribute("data-album");
         playAlbum(albumId);
     }
 
     function onArtistClicked(ev: MouseEvent) {
         ev.preventDefault();
+        ev.stopPropagation();
         const artist = ev.currentTarget.getAttribute("data-artist");
         playArtist(artist);
     }
 
     function onSongClicked(ev: MouseEvent) {
         ev.preventDefault();
+        ev.stopPropagation();
         const songId = ev.currentTarget.getAttribute("data-song");
         playSong(songId);
     }
