@@ -243,7 +243,7 @@
         svg {
             height: 10px;
             width: 10px;
-            fill: rgb(0, 197, 108);
+            fill: var(--transport-seekbar-hoverhead);
             position: absolute;
             overflow: visible;
             pointer-events: none;

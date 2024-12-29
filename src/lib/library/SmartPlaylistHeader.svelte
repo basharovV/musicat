@@ -191,7 +191,7 @@
         padding: 5px;
     }
     button {
-        background-color: rgb(98, 77, 212);
+        background-color: var(--smart-playlist-button-bg);
         border-radius: 4px;
         height: auto;
         padding: 0.3em 1em;
@@ -200,8 +200,8 @@
         }
 
         &:disabled {
-            background-color: rgb(73, 53, 184);
-            color: rgb(116, 114, 114);
+            background-color: var(--smart-playlist-button-disabled-bg);
+            color: var(--smart-playlist-button-disabled);
         }
     }
 </style>
