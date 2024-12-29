@@ -237,6 +237,7 @@ const en = {
         enterHintTooltip: "Press ENTER to autocomplete"
     },
     albums: {
+        title: "Albums",
         options: {
             orderBy: "order by",
             orderByFields: {

@@ -4,9 +4,12 @@
         currentSong,
         currentSongIdx,
         isPlaying,
+        isSmartQueryBuilderOpen,
         playlist,
         popupOpen,
+        query,
         selectedPlaylistFile,
+        selectedSmartQuery,
         toDeletePlaylist,
         uiView
     } from "../../data/store";
@@ -25,6 +28,7 @@
 
     let pressedK = false;
     let pressedD = false;
+    let atEnd = false
 
     async function getOrCreatePlaylist() {
         let toDelete = $toDeletePlaylist;
@@ -42,17 +46,34 @@
 
     async function addToDelete() {
         const toDelete = await getOrCreatePlaylist();
-        toDelete.tracks.push($currentSong.id);
-        db.internalPlaylists.put(toDelete);
-        if (
-            !(
-                $playlist.length === 0 ||
-                $currentSongIdx === $playlist?.length - 1
-            )
-        ) {
+
+        if (!atEnd || !toDelete.tracks.includes($currentSong.id)) {
+            toDelete.tracks.push($currentSong.id);
+            db.internalPlaylists.put(toDelete);
+        }
+
+        if ($playlist.length !== 0 && !atEnd) {
             audioPlayer.playNext();
             pressedD = true;
             setTimeout(() => (pressedD = false), 300);
+        }
+    }
+    
+    async function gotoToDeleteView() {
+        const toDelete = $toDeletePlaylist;
+        
+        if (!toDelete || toDelete.tracks.length === 0) {
+            if ($toDeletePlaylist) {
+                db.internalPlaylists.delete($toDeletePlaylist.id);
+            }
+        
+            $uiView = "library";
+            $isSmartQueryBuilderOpen = false;
+            $selectedPlaylistFile = null;
+            $selectedSmartQuery = null;
+            $query.orderBy = $query.libraryOrderBy;
+        } else {
+            $uiView = "to-delete";
         }
     }
 
@@ -61,13 +82,7 @@
     });
 
     hotkeys("k", "prune", () => {
-        console.log('pressed "k"');
-        if (
-            !(
-                $playlist.length === 0 ||
-                $currentSongIdx === $playlist?.length - 1
-            )
-        ) {
+        if ($playlist.length !== 0 && !atEnd) {
             audioPlayer.playNext();
             pressedK = true;
             setTimeout(() => (pressedK = false), 300);
@@ -75,7 +90,7 @@
     });
 
     hotkeys("q", "prune", () => {
-        $uiView = "to-delete";
+        gotoToDeleteView();
     });
 
     onMount(() => {
@@ -87,6 +102,8 @@
     onDestroy(() => {
         hotkeys.deleteScope("prune");
     });
+    
+    $: atEnd = $currentSongIdx === $playlist?.length - 1
 </script>
 
 <div class="container">

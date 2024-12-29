@@ -419,7 +419,7 @@ interface IAItem {
     date?: number;
     performer?: string;
     writer?: string;
-    original: IAFile;
+    originals: IAFile[];
 }
 
 interface AudioDevice {
