@@ -146,6 +146,12 @@ export interface Theme {
     "prune-fordelete": string;
     /** Wiki */
     "wiki-bg": string;
+    "wiki-header-bg": string;
+	"wiki-inarticle-bg": string;
+	"wiki-pill-bg": string;
+	"wiki-pill-text": string;
+	"wiki-pill-hover-bg": string;
+	"wiki-pill-hover-text": string;
 }
 export const allFonts = {
     "2Peas": {
@@ -277,7 +283,13 @@ export const DEFAULT_THEME: Theme = {
     "prune-button-keep-bg": "#00800073",
     "prune-button-keep-pressed-shadow": "#00ff00aa",
     "prune-fordelete": "#ff5a5a",
-    "wiki-bg": "#ffffff1b",
+    "wiki-bg": "#ffffff18",
+    "wiki-header-bg": "var(--wiki-bg)",
+	"wiki-inarticle-bg": "var(--wiki-bg)",
+	"wiki-pill-bg": "var(--wiki-bg)",
+	"wiki-pill-text": "var(--text-secondary)",
+	"wiki-pill-hover-bg": "color-mix(in srgb, var(--button-bg) 20%, transparent)",
+	"wiki-pill-hover-text": "var(--text-secondary)"
 };
 
 export const allThemes: { [key: string]: Theme } = {

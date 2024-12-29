@@ -365,96 +365,87 @@
             {/if}
         </header>
 
-        <div class="content">
-            {#if isLoading}
+        {#if isLoading}
+            <div class="content">
                 <p transition:fade={{ duration: 200 }}>Loading...</p>
-            {:else}
-                <!-- {#if wtfResult}
-                {#each sections as section}
-                    <h2>{section.title()}</h2>
-                    {#each section.paragraphs() as paragrah}
-                        {@html paragrah.html()}
-                        <br />
-                        <br />
-                    {/each}
-                {/each}
-            {/if} -->
+            </div>
+        {:else}
+            {#if wikiResult || wtfResult}
+                {#if (!isLoadingMentions && albumMentions.length > 0) || songMentions.length > 0 || artistMentions.length > 0}
+                    <div
+                        class="in-article"
+                        transition:fly={{
+                            duration: 300,
+                            y: -20,
+                            opacity: 0.4
+                        }}
+                    >
+                        <p>
+                            {$LL.wiki.inArticle()}
+                            <span>{$LL.wiki.clickHint()}</span>
+                        </p>
+                        {#if albumMentions.length > 0}
+                            <div>
+                                <p>{$LL.wiki.albums()}</p>
+                                <ul>
+                                    {#each albumMentions as album}
+                                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                                        <li
+                                            on:click={() => {
+                                                scrollToMention(album);
+                                            }}
+                                        >
+                                            <p>
+                                                {album.data.displayTitle}
+                                            </p>
+                                        </li>
+                                    {/each}
+                                    <ul></ul>
+                                </ul>
+                            </div>
+                        {/if}
+                        {#if songMentions.length > 0}
+                            <div>
+                                <p>{$LL.wiki.songs()}</p>
+                                <ul>
+                                    {#each songMentions as song}
+                                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                                        <li
+                                            on:click={() => {
+                                                scrollToMention(song);
+                                            }}
+                                        >
+                                            <p>{song.data.title}</p>
+                                        </li>
+                                    {/each}
 
-                {#if wikiResult || wtfResult}
-                    {#if (!isLoadingMentions && albumMentions.length > 0) || songMentions.length > 0 || artistMentions.length > 0}
-                        <div
-                            class="in-article"
-                            transition:fly={{
-                                duration: 300,
-                                y: -20,
-                                opacity: 0.4
-                            }}
-                        >
-                            <p>
-                                {$LL.wiki.inArticle()}
-                                <span>{$LL.wiki.clickHint()}</span>
-                            </p>
-                            {#if albumMentions.length > 0}
-                                <div>
-                                    <p>{$LL.wiki.albums()}</p>
-                                    <ul>
-                                        {#each albumMentions as album}
-                                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                            <li
-                                                on:click={() => {
-                                                    scrollToMention(album);
-                                                }}
-                                            >
-                                                <p>
-                                                    {album.data.displayTitle}
-                                                </p>
-                                            </li>
-                                        {/each}
-                                        <ul></ul>
-                                    </ul>
-                                </div>
-                            {/if}
-                            {#if songMentions.length > 0}
-                                <div>
-                                    <p>{$LL.wiki.songs()}</p>
-                                    <ul>
-                                        {#each songMentions as song}
-                                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                            <li
-                                                on:click={() => {
-                                                    scrollToMention(song);
-                                                }}
-                                            >
-                                                <p>{song.data.title}</p>
-                                            </li>
-                                        {/each}
+                                    <ul></ul>
+                                </ul>
+                            </div>
+                        {/if}
 
-                                        <ul></ul>
-                                    </ul>
-                                </div>
-                            {/if}
-
-                            {#if artistMentions.length > 0}
-                                <div>
-                                    <p>{$LL.wiki.artists()}</p>
-                                    <ul>
-                                        {#each artistMentions as artist}
-                                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                            <li
-                                                role="listitem"
-                                                on:click={() => {
-                                                    scrollToMention(artist);
-                                                }}
-                                            >
-                                                <p>{artist.data}</p>
-                                            </li>
-                                        {/each}
-                                    </ul>
-                                </div>
-                            {/if}
-                        </div>
-                    {/if}
-                    {@html wikiResult.html}
+                        {#if artistMentions.length > 0}
+                            <div>
+                                <p>{$LL.wiki.artists()}</p>
+                                <ul>
+                                    {#each artistMentions as artist}
+                                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                                        <li
+                                            role="listitem"
+                                            on:click={() => {
+                                                scrollToMention(artist);
+                                            }}
+                                        >
+                                            <p>{artist.data}</p>
+                                        </li>
+                                    {/each}
+                                </ul>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+                <div class="content">
+                {@html wikiResult.html}
                     <!-- {#each wtfResult.sections() as section}
                         <h2>{section.title()}</h2>
                         {#each Array.isArray(section.tables()) ? Object(section.tables()) : [section.tables()] as table}
@@ -475,9 +466,9 @@
                             {/each}
                         {/each}
                     {/each} -->
-                {/if}
+                </div>
             {/if}
-        </div>
+        {/if}
     </div>
 
     <ShadowGradient type="bottom" />
@@ -496,7 +487,6 @@
         border-left: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
         border-right: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
         margin: 5px 0 0 0;
-        background-color: var(--wiki-bg);
 
         header {
             position: sticky;
@@ -508,6 +498,7 @@
             z-index: 10;
             backdrop-filter: blur(10px) brightness(0.95);
             border-bottom: 1px solid color-mix(in srgb, var(--inverse) 70%, transparent);
+            background-color: var(--wiki-header-bg);
 
             .info-playing,
             .info-wiki {
@@ -530,7 +521,8 @@
                 width: fit-content;
             }
             p {
-                background-color: var(--wiki-bg);
+                background-color: var(--wiki-pill-bg);
+                color: var(--wiki-pill-text);
                 margin: 0;
                 width: fit-content;
                 padding: 0 5px;
@@ -547,84 +539,84 @@
             display: grid;
             grid-template-rows: auto 1fr;
         }
-
-        .content {
+        
+        .in-article {
+            background-color: var(--wiki-inarticle-bg);
+            border-bottom: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
             padding: 1em;
-            text-align: start;
-            color: var(--text);
-            max-width: 100%;
 
-            .in-article {
-                border-bottom: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
-                > p {
-                    font-weight: normal;
+            > p {
+                font-weight: normal;
+                font-size: 14px;
+                margin: 0 0 5px 0;
+                text-align: left;
+                opacity: 0.7;
+
+                span {
                     font-size: 14px;
-                    margin: 0 0 5px 0;
-                    text-align: left;
-                    opacity: 0.7;
-
-                    span {
-                        font-size: 14px;
-                        opacity: 0.5;
-                    }
+                    opacity: 0.5;
                 }
-                > div {
-                    display: grid;
-                    grid-template-columns: 70px 1fr;
+            }
+            > div {
+                display: grid;
+                grid-template-columns: 70px 1fr;
+                align-items: flex-start;
+                gap: 10px;
+                p {
+                    margin: 5px 0 0 0;
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                }
+                ul {
+                    padding: 0;
+                    list-style-type: none;
+                    display: flex;
                     align-items: flex-start;
-                    gap: 10px;
-                    p {
-                        margin: 5px 0 0 0;
-                        font-size: 14px;
-                        color: var(--text-secondary);
-                    }
-                    ul {
-                        padding: 0;
-                        list-style-type: none;
-                        display: flex;
-                        align-items: flex-start;
-                        justify-content: flex-start;
-                        flex-wrap: wrap;
-                        margin: 0 0 5px 0;
+                    justify-content: flex-start;
+                    flex-wrap: wrap;
+                    margin: 0 0 5px 0;
 
-                        li {
-                            margin: 5px 5px 0px 0;
-                            padding: 2px 5px;
-                            background-color: var(--wiki-bg);
-                            border: 1px solid
-                                color-mix(
-                                    in srgb,
-                                    var(--inverse) 40%,
-                                    transparent
-                                );
-                            border-radius: 5px;
-                            display: flex;
-                            flex-direction: column;
-                            cursor: pointer;
-                            &:hover {
-                                background-color: color-mix(
-                                    in srgb,
-                                    var(--button-bg) 20%,
-                                    transparent
-                                );
-                            }
+                    li {
+                        margin: 5px 5px 0px 0;
+                        padding: 2px 5px;
+                        background-color: var(--wiki-pill-bg);
+                        border: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
+                        border-radius: 5px;
+                        display: flex;
+                        flex-direction: column;
+                        cursor: pointer;
+                        &:hover {
+                            background-color: var(--wiki-pill-hover-bg);
+                            
                             p {
-                                font-size: 14px;
-                                margin: 0;
-                                width: max-content;
-                                line-height: initial;
-                                /* min-width: 100px; */
+                                color: var(--wiki-pill-hover-text);
                             }
-                            small {
-                                font-size: 12px;
-                                opacity: 0.7;
-                                margin: 0;
-                                line-height: initial;
-                            }
+                        }
+                        p {
+                            font-size: 14px;
+                            margin: 0;
+                            width: max-content;
+                            line-height: initial;
+                            color: var(--wiki-pill-text);
+                        }
+                        small {
+                            font-size: 12px;
+                            opacity: 0.7;
+                            margin: 0;
+                            line-height: initial;
                         }
                     }
                 }
             }
+        }
+
+        .content {
+            padding: 1em;
+            text-align: start;
+            background-color: var(--wiki-bg);
+            color: var(--text);
+            max-width: 100%;
+
             :global(.hatnote),
             :global(.infobox),
             :global(.mw-editsection) {
