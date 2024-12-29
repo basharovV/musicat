@@ -8,6 +8,7 @@
     } from "../player/WebAudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import { currentThemeObject } from "../../theming/store";
+    import { path } from "@tauri-apps/api";
 
     export let file: IAFile;
     let downloadProgress = null;
@@ -16,7 +17,7 @@
         console.log("download");
         downloadProgress = 0;
         try {
-            file.downloadLocation = `${$userSettings.downloadLocation}/${file.title ?? file.name}`;
+            file.downloadLocation = await path.join($userSettings.downloadLocation, await path.basename(file.title ?? file.name));
             // Append extension if doesn't exist
             if (!file.downloadLocation.match(/\/[^\/]+\.[^\/]+$/)) {
                 file.downloadLocation += `.${file.format}`;
