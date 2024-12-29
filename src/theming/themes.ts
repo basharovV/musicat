@@ -47,7 +47,8 @@ export interface Theme {
     "menu-item-text": string;
     "menu-shadow": string;
     /** Play, pause, next, previous */
-    "transport-controls": string;
+    "transport-control": string;
+    "transport-control-hover": string;
     "transport-favorite": string;
     "transport-seekbar-hoverhead": string;
     "transport-shuffle": string;
@@ -189,7 +190,8 @@ export const DEFAULT_THEME: Theme = {
     "menu-item-loading-to": "#dba4fac1",
     "menu-item-text": "#ffffff",
     "menu-shadow": "#00000022",
-    "transport-controls": "#ffffff",
+    "transport-control": "#ffffff",
+    "transport-control-hover": "rgb(from var(--transport-control) r g b / 0.5)",
     "transport-favorite": "#59cd7a",
     "transport-seekbar-hoverhead": "#00C56C",
     "transport-shuffle": "#e1ff00",
@@ -292,7 +294,7 @@ export const allThemes: { [key: string]: Theme } = {
         "input-bg": "#86808066",
         "icon-primary": "#2c0b3e",
         "icon-secondary": "#716a6a",
-        "transport-controls": "#333135",
+        "transport-control": "#333135",
         "transport-favorite": "#49ab65",
         "transport-shuffle": "#9804d3",
         "panel-background": "#dfd8d8",
@@ -332,7 +334,7 @@ export const allThemes: { [key: string]: Theme } = {
         "input-bg": "#86808066",
         "icon-primary": "#2c0b3e",
         "icon-secondary": "#716a6a",
-        "transport-controls": "#333135",
+        "transport-control": "#333135",
         "transport-favorite": "#49ab65",
         "transport-shuffle": "#9804d3",
         "panel-background": "#e3dfe8",
@@ -373,7 +375,7 @@ export const allThemes: { [key: string]: Theme } = {
         "button-bg": "#486d7b",
         "icon-primary": "#ffffff",
         "icon-secondary": "#797676",
-        "transport-controls": "#e9d6fb",
+        "transport-control": "#e9d6fb",
         "transport-favorite": "#59cd7a",
         "transport-shuffle": "#e1ff00",
         "panel-background": "#181e25",
@@ -450,7 +452,7 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#be3153f3",
         "album-playing-shadow": "#be3153",
         "album-playing-title-bg": "#be3153f3",
-        "transport-controls": "#be3153",
+        "transport-control": "#be3153",
         "transport-favorite": "#ff386a",
         "transport-shuffle": "#be3153",
     },
