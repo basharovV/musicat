@@ -110,7 +110,7 @@ type RootTranslation = {
 			 */
 			album: string
 			/**
-			 * A​l​b​u​m Artist
+			 * A​l​b​u​m​ ​A​r​t​i​s​t
 			 */
 			albumArtist: string
 			/**
@@ -118,9 +118,9 @@ type RootTranslation = {
 			 */
 			track: string
 			/**
-			 * Compilation
+			 * C​o​m​p​i​l
 			 */
-			compilation: number
+			compilation: string
 			/**
 			 * Y​e​a​r
 			 */
@@ -599,6 +599,10 @@ type RootTranslation = {
 		 * G​e​n​i​u​s​ ​A​P​I​ ​K​e​y
 		 */
 		geniusApiKey: string
+		/**
+		 * D​i​s​c​o​g​s​ ​A​P​I​ ​K​e​y
+		 */
+		discogsApiKey: string
 	}
 	wiki: {
 		/**
@@ -708,6 +712,10 @@ type RootTranslation = {
 		enterHintTooltip: string
 	}
 	albums: {
+		/**
+		 * A​l​b​u​m​s
+		 */
+		title: string
 		options: {
 			/**
 			 * o​r​d​e​r​ ​b​y
@@ -899,7 +907,7 @@ export type TranslationFunctions = {
 			 */
 			track: () => LocalizedString
 			/**
-			 * Compilation
+			 * Compil
 			 */
 			compilation: () => LocalizedString
 			/**
@@ -1379,6 +1387,10 @@ export type TranslationFunctions = {
 		 * Genius API Key
 		 */
 		geniusApiKey: () => LocalizedString
+		/**
+		 * Discogs API Key
+		 */
+		discogsApiKey: () => LocalizedString
 	}
 	wiki: {
 		/**
@@ -1487,6 +1499,10 @@ export type TranslationFunctions = {
 		enterHintTooltip: () => LocalizedString
 	}
 	albums: {
+		/**
+		 * Albums
+		 */
+		title: () => LocalizedString
 		options: {
 			/**
 			 * order by
