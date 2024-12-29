@@ -124,7 +124,7 @@
                             isPlayingCurrentAlbum
                                 ? "pause-button"
                                 : "play-button"}
-                            on:click={playPauseToggle}
+                            on:click|stopPropagation={playPauseToggle}
                         >
                             <Icon
                                 icon={$playlistType === "album" &&

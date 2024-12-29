@@ -18,6 +18,7 @@
         uiView
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
+    import AlbumDetails from "../albums/AlbumDetails.svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
@@ -142,6 +143,15 @@
         showAlbumMenu = true;
         pos = { x: e.clientX, y: e.clientY };
     }
+    
+    let detailsAlbum;
+    async function onLeftClick(e, album, idx) {
+        if (detailsAlbum == album) {
+            detailsAlbum = null;
+        } else {
+            detailsAlbum = album;
+        }
+    }
 
     let container: HTMLDivElement;
 
@@ -211,7 +221,7 @@
                 class="grid"
                 class:show={$albums && $query.query?.length === 0}
                 class:visible={isVisible}
-                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.1fr));width: 100%;"
+                style="grid-template-columns: repeat(auto-fit, minmax({minWidth}px, 0.1fr));width: 100%;grid-auto-flow: dense;"
             >
                 {#if $albums}
                     {#each $albums as album, idx (album.id)}
@@ -219,6 +229,8 @@
                             <div
                                 on:contextmenu|preventDefault={(e) =>
                                     onRightClick(e, album, idx)}
+                                on:click|preventDefault={(e) =>
+                                    onLeftClick(e, album, idx)}
                                 data-album={album.id}
                             >
                                 <AlbumItem
@@ -227,6 +239,16 @@
                                     {showInfo}
                                 />
                             </div>
+                            {#if detailsAlbum === album}
+                                <!-- <div
+                                    class="details"
+                                >
+                                    {album.title}, {album.tracksIds}
+                                </div> -->
+                                <AlbumDetails
+                                    {album}
+                                />
+                            {/if}
                         {/if}
                     {/each}
                 {/if}
