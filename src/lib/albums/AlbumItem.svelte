@@ -117,15 +117,12 @@
                     </div>
                 {/if}
                 {#if isHovered || ($playlistType === "album" && isPlayingCurrentAlbum)}
-                    <div class="play-button-container">
-                        <div
-                            class={$playlistType === "album" &&
-                            $isPlaying &&
-                            isPlayingCurrentAlbum
-                                ? "pause-button"
-                                : "play-button"}
-                            on:click={playPauseToggle}
-                        >
+                    <div class={$playlistType === "album" &&
+                        $isPlaying &&
+                        isPlayingCurrentAlbum
+                            ? "play-button-container pause-button"
+                            : "play-button-container play-button"}>
+                        <div class="button" on:click={playPauseToggle}>
                             <Icon
                                 icon={$playlistType === "album" &&
                                 $isPlaying &&
@@ -133,7 +130,6 @@
                                     ? "fe:pause"
                                     : "fe:play"}
                                 size={25}
-                                color="white"
                             />
                         </div>
                     </div>
@@ -163,7 +159,7 @@
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
             box-shadow: 2px 2px 50px 40px
-                color-mix(in srgb, var(--library-playing-bg) 50%, transparent) !important;
+                color-mix(in srgb, var(--album-playing-shadow) 50%, transparent) !important;
             .hinge {
                 background-color: rgba(167, 164, 173, 0.078);
             }
@@ -173,7 +169,7 @@
             transform: translate(15%, -10px) rotate(140deg) !important;
         }
         .title {
-            background-color: var(--accent-secondary);
+            background-color: var(--album-playing-title-bg);
             border-radius: 4px;
             color: var(--text);
             z-index: 20;
@@ -364,38 +360,62 @@
                 .play-button-container {
                     position: absolute;
                     align-self: center;
-                    border: 1px solid
-                        color-mix(
-                            in srgb,
-                            var(--library-playing-bg) 60%,
-                            transparent
-                        );
-                    background-color: #25222b;
                     border-radius: 50px;
                     width: 40px;
                     height: 40px;
                     display: flex;
                     z-index: 10;
 
-                    &:hover {
-                        background-color: var(--library-playing-bg);
-                    }
-                    &:active {
-                        background-color: var(--library-playing-bg);
-                        transform: scale(0.9);
-                    }
-                    .play-button {
-                        position: relative;
-                        left: 1px;
-                        font-size: 2em;
-                        margin: auto;
-                        align-self: center;
+                    &.play-button {
+                        border: 1px solid
+                            color-mix(
+                                in srgb,
+                                var(--album-playing-play-border) 60%,
+                                transparent
+                            );
+                        background-color: var(--album-playing-play-bg);
+                        
+                        .button {
+                            position: relative;
+                            left: 1px;
+                            font-size: 2em;
+                            margin: auto;
+                            align-self: center;
+                            color: var(--album-playing-play-icon);
+                        }
+                        
+                        &:hover {
+                            background-color: var(--album-playing-play-hover-bg);
+                            
+                            .button {
+                                color: var(--album-playing-play-hover-icon);
+                            }
+                        }
                     }
 
-                    .pause-button {
-                        font-size: 2.2em;
-                        margin: auto;
-                        align-self: center;
+                    &.pause-button {
+                        border: 1px solid
+                            color-mix(
+                                in srgb,
+                                var(--album-playing-pause-border) 60%,
+                                transparent
+                            );
+                        background-color: var(--album-playing-pause-bg);
+                        
+                        .button {
+                            font-size: 2.2em;
+                            margin: auto;
+                            align-self: center;
+                            color: var(--album-playing-pause-icon);
+                        }
+                        
+                        &:hover {
+                            background-color: var(--album-playing-pause-hover-bg);
+                            
+                            .button {
+                                color: var(--album-playing-pause-hover-icon);
+                            }
+                        }
                     }
                 }
 

@@ -410,7 +410,7 @@
                     -webkit-appearance: none;
                     width: 100%;
                     height: 5px;
-                    background: #474747d4;
+                    background: color-mix(in srgb, var(--inverse) 20%, transparent);
                     outline: none;
                     opacity: 1;
                     margin: auto;
@@ -423,13 +423,13 @@
                         appearance: none;
                         width: 20px;
                         height: 20px;
-                        background: url("/images/volume-up.svg");
+                        background: var(--transport-volume-thumb-url);
                     }
 
                     &::-moz-range-thumb {
                         width: 20px;
                         height: 20px;
-                        background: #04aa6d;
+                        background: var(--transport-volume-thumb-secondary);
                     }
                 }
             }

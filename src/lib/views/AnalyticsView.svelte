@@ -342,7 +342,7 @@
                 border-right: 1px solid rgba(255, 255, 255, 0.11);
                 border-bottom: 1px solid rgba(255, 255, 255, 0.11);
                 span {
-                    color: #855dff;
+                    color: var(--analytics-secondary);
                 }
             }
             &.country {
@@ -350,7 +350,7 @@
                 grid-column: 5 / 7;
                 border-bottom: 1px solid rgba(255, 255, 255, 0.11);
                 span {
-                    color: #23dd7f;
+                    color: var(--analytics-primary);
                 }
             }
             &.timeline {
@@ -359,7 +359,7 @@
                 grid-column: 1 / 7;
                 border-bottom: 1px solid rgba(255, 255, 255, 0.11);
                 span {
-                    color: #23dd7f;
+                    color: var(--analytics-primary);
                 }
             }
             &.short-summary {
@@ -370,7 +370,7 @@
                 align-items: center;
                 justify-content: flex-start;
                 h3 {
-                    color: #23dd7f;
+                    color: var(--analytics-primary);
                     font-weight: 300;
                     text-align: left;
                     margin: 0;
@@ -391,7 +391,7 @@
                 align-items: flex-start;
                 justify-content: flex-start;
                 h3 {
-                    color: #23dd7f;
+                    color: var(--analytics-primary);
                     font-weight: 300;
                     text-align: left;
                 }
@@ -420,7 +420,7 @@
                 align-items: flex-start;
                 justify-content: flex-start;
                 h3 {
-                    color: #23dd7f;
+                    color: var(--analytics-primary);
 
                     font-weight: 300;
                     text-align: left;
