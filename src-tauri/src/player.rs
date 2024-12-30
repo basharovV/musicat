@@ -29,6 +29,7 @@ use tokio::time::Duration;
 use tokio_util::sync::CancellationToken;
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::MediaEngine;
+use webrtc::api::setting_engine::SettingEngine;
 use webrtc::api::APIBuilder;
 use webrtc::data_channel::data_channel_init::RTCDataChannelInit;
 use webrtc::data_channel::RTCDataChannel;
@@ -202,11 +203,15 @@ impl<'a> AudioPlayer<'a> {
 
         // Use the default set of Interceptors
         registry = register_default_interceptors(registry, &mut m)?;
+        
+        let mut s = SettingEngine::default();
+        s.set_include_loopback_candidate(true);
 
         // Create the API object with the MediaEngine
         let api = APIBuilder::new()
             .with_media_engine(m)
             .with_interceptor_registry(registry)
+            .with_setting_engine(s)
             .build();
 
         // Prepare the configuration

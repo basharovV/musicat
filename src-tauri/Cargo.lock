@@ -2687,8 +2687,9 @@ dependencies = [
 
 [[package]]
 name = "interceptor"
-version = "0.12.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5ab04c530fd82e414e40394cabe5f0ebfe30d119f10fe29d6e3561926af412e"
 dependencies = [
  "async-trait",
  "bytes",
@@ -4698,8 +4699,9 @@ checksum = "3df6368f71f205ff9c33c076d170dd56ebf68e8161c733c0caa07a7a5509ed53"
 
 [[package]]
 name = "rtcp"
-version = "0.11.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8306430fb118b7834bbee50e744dc34826eca1da2158657a3d6cbc70e24c2096"
 dependencies = [
  "bytes",
  "thiserror",
@@ -4708,8 +4710,9 @@ dependencies = [
 
 [[package]]
 name = "rtp"
-version = "0.11.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e68baca5b6cb4980678713f0d06ef3a432aa642baefcbfd0f4dd2ef9eb5ab550"
 dependencies = [
  "bytes",
  "memchr",
@@ -4917,8 +4920,9 @@ dependencies = [
 
 [[package]]
 name = "sdp"
-version = "0.6.2"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02a526161f474ae94b966ba622379d939a8fe46c930eebbadb73e339622599d5"
 dependencies = [
  "rand 0.8.5",
  "substring",
@@ -5410,8 +5414,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "stun"
-version = "0.6.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea256fb46a13f9204e9dee9982997b2c3097db175a9fddaa8350310d03c4d5a3"
 dependencies = [
  "base64 0.22.1",
  "crc",
@@ -6497,8 +6502,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "turn"
-version = "0.8.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0044fdae001dd8a1e247ea6289abf12f4fcea1331a2364da512f9cd680bbd8cb"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -6981,8 +6987,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc"
-version = "0.11.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30367074d9f18231d28a74fab0120856b2b665da108d71a12beab7185a36f97b"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -7024,8 +7031,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-data"
-version = "0.9.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dec93b991efcd01b73c5b3503fa8adba159d069abe5785c988ebe14fcf8f05d1"
 dependencies = [
  "bytes",
  "log",
@@ -7038,8 +7046,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-dtls"
-version = "0.10.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7c9b89fc909f9da0499283b1112cd98f72fec28e55a54a9e352525ca65cd95c"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -7074,8 +7083,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-ice"
-version = "0.11.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0348b28b593f7709ac98d872beb58c0009523df652c78e01b950ab9c537ff17d"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -7098,8 +7108,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-mdns"
-version = "0.7.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6dfe9686c6c9c51428da4de415cb6ca2dc0591ce2b63212e23fd9cccf0e316b"
 dependencies = [
  "log",
  "socket2",
@@ -7110,8 +7121,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-media"
-version = "0.8.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e153be16b8650021ad3e9e49ab6e5fa9fb7f6d1c23c213fd8bbd1a1135a4c704"
 dependencies = [
  "byteorder",
  "bytes",
@@ -7122,8 +7134,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-sctp"
-version = "0.10.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5faf3846ec4b7e64b56338d62cbafe084aa79806b0379dff5cc74a8b7a2b3063"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -7139,8 +7152,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-srtp"
-version = "0.13.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "771db9993712a8fb3886d5be4613ebf27250ef422bd4071988bf55f1ed1a64fa"
 dependencies = [
  "aead",
  "aes",
@@ -7161,8 +7175,9 @@ dependencies = [
 
 [[package]]
 name = "webrtc-util"
-version = "0.9.0"
-source = "git+https://github.com/basharovV/webrtc.git#65ae41523af3edc9a2d947bfda76aa8217dbd8b3"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1438a8fd0d69c5775afb4a71470af92242dbd04059c61895163aa3c1ef933375"
 dependencies = [
  "async-trait",
  "bitflags 1.3.2",
