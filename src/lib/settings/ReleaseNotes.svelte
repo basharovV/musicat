@@ -1,10 +1,17 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Post from "../../../RELEASE-NOTES.md";
-    onMount(() => {});
+    let container: HTMLDivElement;
+    onMount(() => {
+        // Add target blank to all links
+        const links = container.querySelectorAll("a");
+        links.forEach((link) => {
+            link.setAttribute("target", "_blank");
+        });
+    });
 </script>
 
-<div>
+<div bind:this={container}>
     <Post />
 </div>
 
