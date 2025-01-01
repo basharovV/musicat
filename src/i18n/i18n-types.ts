@@ -162,6 +162,11 @@ type RootTranslation = {
 		 * S​w​i​t​c​h​ ​t​o​ ​f​i​l​e​ ​o​r​d​e​r​ ​t​o​ ​r​e​-​o​r​d​e​r​ ​t​r​a​c​k​s
 		 */
 		orderDisabledHint: string
+		/**
+		 * N​o​ ​r​e​s​u​l​t​s​ ​f​o​r​ ​"​{​q​u​e​r​y​}​"
+		 * @param {unknown} query
+		 */
+		queryNoResultsPlaceholder: RequiredParams<'query'>
 	}
 	bottomBar: {
 		/**
@@ -951,6 +956,10 @@ export type TranslationFunctions = {
 		 * Switch to file order to re-order tracks
 		 */
 		orderDisabledHint: () => LocalizedString
+		/**
+		 * No results for "{query}"
+		 */
+		queryNoResultsPlaceholder: (arg: { query: unknown }) => LocalizedString
 	}
 	bottomBar: {
 		/**

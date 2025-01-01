@@ -83,6 +83,7 @@
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
     import Scrollbar from "../ui/Scrollbar.svelte";
+    import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
 
     export let allSongs = null;
     export let dim = false;
@@ -2473,6 +2474,9 @@
                 {/if}
                 {#if $isSmartQueryBuilderOpen && noSongs}
                     <SmartQueryResultsPlaceholder />
+                {/if}
+                {#if $query.query?.length && noSongs}
+                    <QueryResultsPlaceholder />
                 {/if}
             </div>
         </div>
