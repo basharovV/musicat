@@ -14,10 +14,6 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-#[cfg(not(target_os = "windows"))]
-use std::os::unix::fs::MetadataExt;
-#[cfg(target_os = "windows")]
-use std::os::windows::fs::MetadataExt;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
@@ -317,11 +313,18 @@ async fn download_file(
 
 fn get_device_id(path: &Path) -> u64 {
     let parent_path = path.parent().expect("Failed to get parent directory");
-    let metadata = fs::metadata(parent_path).expect("Failed to get metadata");
-    #[cfg(target_os = "windows")]
-    return metadata.volume_serial_number() as u64;
-    #[cfg(not(target_os = "windows"))]
-    metadata.dev()
+
+    match file_id::get_file_id(parent_path).unwrap() {
+        file_id::FileId::Inode { device_id, .. } => device_id,
+        file_id::FileId::HighRes {
+            volume_serial_number,
+            ..
+        } => volume_serial_number,
+        file_id::FileId::LowRes {
+            volume_serial_number,
+            ..
+        } => volume_serial_number.into(),
+    }
 }
 
 struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
