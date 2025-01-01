@@ -14,13 +14,13 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use std::sync::Mutex;
-use std::{env, fs};
-use std::{io::Write, path::Path};
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 #[cfg(target_os = "windows")]
 use std::os::windows::fs::MetadataExt;
+use std::sync::Mutex;
+use std::{env, fs};
+use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
@@ -29,6 +29,7 @@ use tokio_util::sync::CancellationToken;
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
+mod constants;
 mod dsp;
 mod files;
 #[cfg(target_os = "macos")]
@@ -39,7 +40,6 @@ mod player;
 mod resampler;
 mod scrape;
 mod store;
-mod constants;
 
 #[cfg(test)]
 mod tests;
@@ -149,11 +149,7 @@ struct GetWaveformResponse {
 }
 
 #[tauri::command]
-fn stream_file(
-    event: StreamFileRequest,
-    state: State<AudioPlayer>,
-    _app_handle: tauri::AppHandle,
-) {
+fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Stream file {:?}", event);
     let _ = state
         .player_control_sender
@@ -162,11 +158,7 @@ fn stream_file(
 }
 
 #[tauri::command]
-fn queue_next(
-    event: StreamFileRequest,
-    state: State<AudioPlayer>,
-    _app_handle: tauri::AppHandle,
-) {
+fn queue_next(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Queue next file {:?}", event);
     // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
@@ -326,6 +318,9 @@ async fn download_file(
 fn get_device_id(path: &Path) -> u64 {
     let parent_path = path.parent().expect("Failed to get parent directory");
     let metadata = fs::metadata(parent_path).expect("Failed to get metadata");
+    #[cfg(target_os = "windows")]
+    return metadata.volume_serial_number() as u64;
+    #[cfg(not(target_os = "windows"))]
     metadata.dev()
 }
 
@@ -378,23 +373,29 @@ async fn main() {
             let app_ = app.handle();
             let app2_ = app_.clone();
             let state: State<player::AudioPlayer<'static>> = app.state();
-            
+
             env::set_var("MUSICAT_LOG_DIR", app.path().app_log_dir().unwrap());
 
             #[cfg(dev)]
             {
                 let resource_path = app
                     .path()
-                    .resolve("resources/log4rs.dev.yml", tauri::path::BaseDirectory::Resource)
+                    .resolve(
+                        "resources/log4rs.dev.yml",
+                        tauri::path::BaseDirectory::Resource,
+                    )
                     .expect("failed to resolve resource");
                 log4rs::init_file(resource_path, Default::default()).unwrap();
             }
-            
-           #[cfg(not(dev))]
+
+            #[cfg(not(dev))]
             {
                 let resource_path = app
                     .path()
-                    .resolve("resources/log4rs.release.yml", tauri::path::BaseDirectory::Resource)
+                    .resolve(
+                        "resources/log4rs.release.yml",
+                        tauri::path::BaseDirectory::Resource,
+                    )
                     .expect("failed to resolve resource");
                 log4rs::init_file(resource_path, Default::default()).unwrap();
             }
