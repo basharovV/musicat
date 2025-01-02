@@ -59,7 +59,8 @@ export const allSongs: Writable<Song[]> = writable([]);
 export const queriedSongs: Writable<Song[]> = writable([]);
 
 export const isPlaying = writable(false);
-export const current: Writable<PlayingSong> = writable({ song: null, index: 0, position: 0 }, async () => {
+
+async function restoreCurrentSong() {
     const item = localStorage.getItem("current");
 
     if (item) {
@@ -68,12 +69,23 @@ export const current: Writable<PlayingSong> = writable({ song: null, index: 0, p
         if (data.song) {
             const song = await db.songs.get(data.song);
 
-            current.set({ song, index: data.index, position: data.position });
+            current.set({
+                song,
+                index: data.index,
+                position: data.position
+            });
 
             playerTime.set(data.position);
         }
     }
-});
+}
+
+export const current: Writable<PlayingSong> = writable(
+    { song: null, index: 0, position: 0 },
+    () => {
+        restoreCurrentSong();
+    }
+);
 current.subscribe(({ song, index, position }) => {
     const data = song
         ? { song: song.id, index, position }
@@ -81,21 +93,27 @@ current.subscribe(({ song, index, position }) => {
 
     localStorage.setItem("current", JSON.stringify(data));
 });
-export const queue: Writable<Song[]> = writable([], async () => {
-    const item = localStorage.getItem("queue");
 
-    if (item) {
-        const promises = item.split(",").map(async (id, index) => ({ index, song: await db.songs.get(id)}));
-        const songs = await Promise.all(promises);
-
-        songs.sort((a, b) => a.index - b.index);
-
-        queue.set(songs.map(({song}) => song));
+async function readQueueFromFile() {
+    const queuePath = await path.join(await appConfigDir(), "queue.txt");
+    if (!fs.exists(queuePath)) {
+        return;
     }
-});
-queue.subscribe((songs) => {
-    localStorage.setItem("queue", songs.map(({id}) => id).join());
-});
+    let persistedQueue = await fs.readTextFile(queuePath);
+    if (!persistedQueue) {
+        return;
+    }
+    const songs = await db.songs.bulkGet(persistedQueue.split(","));
+    queue.set(songs);
+}
+
+async function writeQueueToFile(queue: Song[]) {
+    const queuePath = await path.join(await appConfigDir(), "queue.txt");
+    await fs.writeTextFile(queuePath, queue.map((song) => song.id).join(","));
+}
+
+export const queue: Writable<Song[]> = writable([]);
+
 export const queueCountry = writable(null); // ISO Country code
 export const queueDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
@@ -127,7 +145,7 @@ export const toDeletePlaylist = liveQuery(async () => {
         console.error("Error fetching todelete playlist", e);
     }
     return null;
-})
+});
 
 export const popupOpen: Writable<PopupType> = writable(null);
 export const uiView: Writable<UiView> = writable("library");
@@ -344,14 +362,16 @@ async function init() {
     let fileSettings = await getSettings();
 
     // Set default download location
-    if (typeof fileSettings.downloadLocation != 'string') {
+    if (typeof fileSettings.downloadLocation != "string") {
         fileSettings.downloadLocation = await downloadDir();
     }
 
     // Same for playlists location
-    if (typeof fileSettings.playlistsLocation != 'string') {
-        fileSettings.playlistsLocation =
-            await path.join(await audioDir(), "Musicat Playlists");
+    if (typeof fileSettings.playlistsLocation != "string") {
+        fileSettings.playlistsLocation = await path.join(
+            await audioDir(),
+            "Musicat Playlists"
+        );
     }
 
     // Get user settings
@@ -365,6 +385,14 @@ async function init() {
         console.log("[store] userSettings", val);
         // Write settings to file
         await setSettings(val);
+    });
+
+    // Get queue
+    await readQueueFromFile();
+
+    // Auto-persist queue
+    queue.subscribe(async (songs) => {
+        await writeQueueToFile(songs);
     });
 }
 
