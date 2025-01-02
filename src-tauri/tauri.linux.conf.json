@@ -43,7 +43,7 @@
         }
     },
     "productName": "Musicat",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "identifier": "Musicat",
     "plugins": {},
     "app": {
@@ -51,7 +51,7 @@
         "windows": [],
         "security": {
             "capabilities": ["main-capability"],
-            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org; connect-src https://www.wikidata.org https://en.wikipedia.org https://upload.wikimedia.org https://dbpedia.org *.archive.org https://archive.org ipc: http://ipc.localhost asset: https://asset.localhost"
+            "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org asset: https://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval';script-src 'self' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org; connect-src https://www.wikidata.org https://en.wikipedia.org https://upload.wikimedia.org https://dbpedia.org *.archive.org https://archive.org ipc: http://ipc.localhost asset: https://asset.localhost"
         }
     }
 }

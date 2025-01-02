@@ -80,6 +80,7 @@
     import TrackMenu from "./TrackMenu.svelte";
     import Scrollbar from "../ui/Scrollbar.svelte";
     import { setQueue } from "../../data/storeHelper";
+    import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
 
     export let allSongs = null;
     export let dim = false;
@@ -254,7 +255,7 @@
                 autoWidth: false
             }
         },
-         {
+        {
             name: $LL.library.fields.compilation(),
             value: "compilation",
             show: true,
@@ -578,7 +579,7 @@
         }
 
         scrollableArea = area;
-        // isScrollable = scrollableArea > 0;
+        isScrollable = contentHeight > viewportHeight;
         // console.log("scrollableArea", scrollableArea);
 
         setTimeout(() => {
@@ -735,7 +736,7 @@
                 }
             }
 
-            console.log("slice", songsIdxSlice);
+            // console.log("slice", songsIdxSlice);
             // console.log(songsSlice.length);
             prevScrollPos = scrollPos;
         }
@@ -779,6 +780,7 @@
         isResize = false,
         force = false
     ) {
+        if (!isScrollable) return;
         // console.log("onscroll", e, scrollProgress, scrollPosY);
         if (
             !force &&
@@ -827,7 +829,7 @@
             return;
         }
         scrollPos = newScrollPos;
-        if (e || scrollPosY && force) {
+        if (e || (scrollPosY && force)) {
             scrollNormalized =
                 scrollPos / (contentHeight - viewportHeight - HEADER_HEIGHT);
         }
@@ -961,12 +963,17 @@
         menuPos = { x: e.clientX, y: e.clientY };
     }
 
+    /**
+     * Highlight behaviour on query input:
+     * - if a single song is highlighted, it will stay highlighted as you type (if still in results)
+     * - if multiple songs are highlighted, they will be unhighlighted and the first song will be highlighted as you type
+     */
     $: {
         if ($query.query?.length && $popupOpen !== "track-info") {
             if (songs?.length === 0) {
-                songsHighlighted = [];
+                resetHighlight();
             } else {
-                highlightSong(songs[0], 0, false, true);
+                highlightFirst();
             }
         }
     }
@@ -999,7 +1006,7 @@
         isKeyboardArrows: boolean,
         isDefault = false
     ) {
-        // console.log("highlighted", song, idx);
+        // console.log("highlighted", song, idx, isKeyboardArrows, isDefault);
         if (!isKeyboardArrows && isShiftPressed) {
             if (rangeStartSongIdx === null) {
                 rangeStartSongIdx = idx;
@@ -1066,6 +1073,21 @@
         songsHighlighted.splice(songsHighlighted.indexOf(song), 1);
         songsHighlighted = songsHighlighted;
         onSongsHighlighted && onSongsHighlighted(songsHighlighted);
+    }
+
+    function resetHighlight() {
+        songsHighlighted = [];
+    }
+
+    function highlightFirst() {
+        // Only highlight first if previous highlight no longer exists after query update
+        if (
+            songsHighlighted.length > 1 ||
+            (songsHighlighted.length === 1 &&
+                !songs?.find((s) => s?.id === songsHighlighted[0]?.id))
+        ) {
+            highlightSong(songs[0], 0, false, true);
+        }
     }
 
     let draggingSongIdx = null;
@@ -2198,37 +2220,10 @@
                                         />
                                     {/if}
                                 {/each}
-                                {#if isScrollable}
-                                    <Rect
-                                        config={{
-                                            x: 0,
-                                            y: sandwichBottomY,
-                                            width,
-                                            height:
-                                                sandwichBottomHeight +
-                                                ROW_HEIGHT,
-                                            fill: OFFSCREEN_BG_COLOR,
-                                            listening: false
-                                        }}
-                                    />
-                                {/if}
                             {/if}
                         </Layer>
                         <!-- COLUMN HEADERS -->
                         <Layer>
-                            {#if isScrollable}
-                                <Rect
-                                    config={{
-                                        x: 0,
-                                        y: 0,
-                                        width,
-                                        height: sandwichTopHeight,
-                                        fill: OFFSCREEN_BG_COLOR,
-                                        listening: false
-                                    }}
-                                />
-                            {/if}
-
                             {#if columnToInsertIdx !== null}
                                 <Rect
                                     config={{
@@ -2445,17 +2440,22 @@
                             {/each}
                         </Layer>
                     </Stage>
-                    <Scrollbar
-                        onScroll={(s) => {
-                            onScroll(null, s);
-                        }}
-                        height={virtualViewportHeight}
-                        yPercent={scrollbarY}
-                        topPadding={HEADER_HEIGHT}
-                    />
+                    {#if isScrollable}
+                        <Scrollbar
+                            onScroll={(s) => {
+                                onScroll(null, s);
+                            }}
+                            height={virtualViewportHeight}
+                            yPercent={scrollbarY}
+                            topPadding={HEADER_HEIGHT}
+                        />
+                    {/if}
                 {/if}
                 {#if $isSmartQueryBuilderOpen && noSongs}
                     <SmartQueryResultsPlaceholder />
+                {/if}
+                {#if $query.query?.length && noSongs}
+                    <QueryResultsPlaceholder />
                 {/if}
             </div>
         </div>
