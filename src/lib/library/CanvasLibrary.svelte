@@ -19,7 +19,7 @@
         Stage,
         Tag,
         Text,
-        type KonvaDragTransformEvent
+        type KonvaDragTransformEvent,
     } from "svelte-konva";
     import { fly } from "svelte/transition";
     import { db } from "../../data/db";
@@ -65,13 +65,13 @@
         smartQuery,
         smartQueryInitiator,
         smartQueryResults,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
     import {
         moveArrayElement,
-        swapArrayElements
+        swapArrayElements,
     } from "../../utils/ArrayUtils";
     import { timeSince } from "../../utils/DateUtils";
     import AudioPlayer from "../player/AudioPlayer";
@@ -111,7 +111,7 @@
                     } else {
                         s.viewModel = {
                             index: idx,
-                            timeSinceAdded
+                            timeSinceAdded,
                         };
                     }
 
@@ -130,7 +130,7 @@
                             } else {
                                 song.viewModel = {
                                     isFirstAlbum: true,
-                                    isFirstArtist: false
+                                    isFirstArtist: false,
                                 };
                             }
                         }
@@ -150,7 +150,7 @@
                             } else {
                                 song.viewModel = {
                                     isFirstAlbum: false,
-                                    isFirstArtist: true
+                                    isFirstArtist: true,
                                 };
                             }
                         }
@@ -178,7 +178,7 @@
 
                     return {
                         songs: songsArray,
-                        state: status.state
+                        state: status.state,
                     };
                 },
                 {
@@ -186,9 +186,9 @@
                         previousAlbum: null,
                         previousArtist: null,
                         firstSongInPreviousAlbum: null,
-                        firstSongInPreviousArtist: null
-                    }
-                }
+                        firstSongInPreviousArtist: null,
+                    },
+                },
             )?.songs ?? [];
 
     const DEFAULT_FIELDS = [
@@ -199,8 +199,8 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
+                autoWidth: true,
+            },
         },
         {
             name: $LL.library.fields.artist(),
@@ -209,8 +209,8 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
+                autoWidth: true,
+            },
         },
         {
             name: $LL.library.fields.composer(),
@@ -219,8 +219,8 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
+                autoWidth: true,
+            },
         },
         {
             name: $LL.library.fields.album(),
@@ -229,8 +229,8 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
+                autoWidth: true,
+            },
         },
         {
             name: $LL.library.fields.albumArtist(),
@@ -239,8 +239,8 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
+                autoWidth: true,
+            },
         },
         {
             name: $LL.library.fields.track(),
@@ -249,8 +249,8 @@
             viewProps: {
                 width: 63,
                 x: 0,
-                autoWidth: false
-            }
+                autoWidth: false,
+            },
         },
         {
             name: $LL.library.fields.dateAdded(),
@@ -260,8 +260,8 @@
             viewProps: {
                 width: 100,
                 x: 0,
-                autoWidth: false
-            }
+                autoWidth: false,
+            },
         },
         {
             name: $LL.library.fields.compilation(),
@@ -270,8 +270,8 @@
             viewProps: {
                 width: 63,
                 x: 0,
-                autoWidth: false
-            }
+                autoWidth: false,
+            },
         },
         {
             name: $LL.library.fields.year(),
@@ -280,8 +280,8 @@
             viewProps: {
                 width: 63,
                 x: 0,
-                autoWidth: false
-            }
+                autoWidth: false,
+            },
         },
         {
             name: $LL.library.fields.genre(),
@@ -290,8 +290,8 @@
             viewProps: {
                 width: 100,
                 x: 0,
-                autoWidth: false
-            }
+                autoWidth: false,
+            },
         },
         {
             name: $LL.library.fields.origin(),
@@ -300,8 +300,8 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
+                autoWidth: true,
+            },
         },
         {
             name: $LL.library.fields.duration(),
@@ -310,8 +310,8 @@
             viewProps: {
                 width: 63,
                 x: 0,
-                autoWidth: false
-            }
+                autoWidth: false,
+            },
         },
         {
             name: $LL.library.fields.tags(),
@@ -320,9 +320,9 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
-        }
+                autoWidth: true,
+            },
+        },
     ];
 
     export let fields = DEFAULT_FIELDS;
@@ -602,7 +602,7 @@
         let previousWidth = 0;
 
         const sortedFields = $columnOrder.map((c) =>
-            fields.find((f) => f.value === c)
+            fields.find((f) => f.value === c),
         );
 
         /* Playlists show an additional file order column */
@@ -616,8 +616,8 @@
                 viewProps: {
                     width: 50,
                     x: 0,
-                    autoWidth: false
-                }
+                    autoWidth: false,
+                },
             });
         }
 
@@ -657,7 +657,7 @@
             .map((f) => f.viewProps.width);
         const totalFixedWidth = fixedWidths.reduce(
             (total, width) => total + width,
-            0
+            0,
         );
         // console.log("width", width, "totalFixedWidth", totalFixedWidth);
         // Calculate available width for 'auto' size rectangles
@@ -677,7 +677,7 @@
                 f.viewProps.width = rectWidth;
                 previousWidth = f.viewProps.width;
                 return f;
-            })
+            }),
         ];
         printInfo();
     }
@@ -722,11 +722,14 @@
             // scrollOffset = -contentY / 20;
             // console.log("scrollNormalized", scrollNormalized, "scrollableArea", scrollableArea);
             songsStartSlice = Math.floor(
-                Math.max(0, Math.floor(scrollNormalized * songsCountScrollable))
+                Math.max(
+                    0,
+                    Math.floor(scrollNormalized * songsCountScrollable),
+                ),
             );
             songsEndSlice = Math.min(
                 songs.length,
-                Math.ceil(songsStartSlice + songsCountViewport)
+                Math.ceil(songsStartSlice + songsCountViewport),
             );
             // console.log("slice indexes", songsStartSlice, songsEndSlice);
             // songsSlice = songs.slice(songsStartSlice, songsEndSlice);
@@ -786,7 +789,7 @@
         scrollProgress?: number, // From scrollbar
         scrollPosY?: number, // From programmatic scroll (eg. restore pos)
         isResize = false,
-        force = false
+        force = false,
     ) {
         if (!isScrollable) return;
         // console.log("onscroll", e, scrollProgress, scrollPosY);
@@ -809,7 +812,7 @@
             scrollNormalized = scrollProgress;
             newScrollPos = Math.round(
                 scrollNormalized *
-                    (contentHeight - viewportHeight - HEADER_HEIGHT)
+                    (contentHeight - viewportHeight - HEADER_HEIGHT),
             );
             // console.log(
             //     "NEW SCROLL POS",
@@ -1019,7 +1022,7 @@
         song: Song,
         idx,
         isKeyboardArrows: boolean,
-        isDefault = false
+        isDefault = false,
     ) {
         // console.log("highlighted", song, idx, isKeyboardArrows, isDefault);
         if (!isKeyboardArrows && isShiftPressed) {
@@ -1036,7 +1039,7 @@
                 }
                 songsHighlighted = songs.slice(
                     rangeStartSongIdx,
-                    rangeEndSongIdx + 1
+                    rangeEndSongIdx + 1,
                 );
                 rangeStartSongIdx = null;
                 rangeEndSongIdx = null;
@@ -1136,7 +1139,7 @@
             await reorderSongsInPlaylist(
                 $selectedPlaylistFile,
                 draggingSongIdx,
-                idx
+                idx,
             );
             $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
             draggingSongIdx = null;
@@ -1183,7 +1186,7 @@
                 toggleHighlight(
                     songs[highlightedSongIdx - 1],
                     highlightedSongIdx - 1,
-                    true
+                    true,
                 );
             }
         } else if (
@@ -1200,7 +1203,7 @@
                 toggleHighlight(
                     songs[highlightedSongIdx + 1],
                     highlightedSongIdx + 1,
-                    true
+                    true,
                 );
             }
         } else if (
@@ -1253,7 +1256,7 @@
                 const topTrackY =
                     stage
                         .findOne(
-                            `#${topTrack.viewModel?.viewId ?? topTrack.id}`
+                            `#${topTrack.viewModel?.viewId ?? topTrack.id}`,
                         )
                         .getAbsolutePosition().y +
                     ROW_HEIGHT +
@@ -1330,7 +1333,7 @@
 
     function handleColumnDrag(
         pos: { x: number; y: number },
-        index
+        index,
     ): { x: number; y: number } {
         console.log("over", pos);
         // const headerColumn = document.querySelector(`[data-index='${index}']`);
@@ -1361,7 +1364,7 @@
     function onDragMove(event: KonvaDragTransformEvent) {
         let x = event.detail.evt.offsetX;
         const index = displayFields.findIndex(
-            (f) => x >= f.viewProps.x && x <= f.viewProps.x + f.viewProps.width
+            (f) => x >= f.viewProps.x && x <= f.viewProps.x + f.viewProps.width,
         );
 
         dropColumnIdx = index;
@@ -1408,15 +1411,15 @@
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
         const $columnOrderOldIdx = $columnOrder.findIndex(
-            (c) => c === oldIdxField.value
+            (c) => c === oldIdxField.value,
         );
         const $columnOrderNewIdx = $columnOrder.findIndex(
-            (c) => c === newIdxField.value
+            (c) => c === newIdxField.value,
         );
         $columnOrder = moveArrayElement(
             $columnOrder,
             $columnOrderOldIdx,
-            $columnOrderNewIdx
+            $columnOrderNewIdx,
         );
         console.log("column order", $columnOrder);
         // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
@@ -1427,16 +1430,16 @@
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
         const $columnOrderOldIdx = $columnOrder.findIndex(
-            (c) => c === oldIdxField.value
+            (c) => c === oldIdxField.value,
         );
         const $columnOrderNewIdx = $columnOrder.findIndex(
-            (c) => c === newIdxField.value
+            (c) => c === newIdxField.value,
         );
         console.log("swap column", $columnOrderOldIdx, $columnOrderNewIdx);
         $columnOrder = swapArrayElements(
             $columnOrder,
             $columnOrderOldIdx,
-            $columnOrderNewIdx
+            $columnOrderNewIdx,
         );
         // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
         console.log("column order", $columnOrder);
@@ -1456,7 +1459,7 @@
 
     async function favouriteSong(song: Song) {
         await db.songs.update(song, {
-            isFavourite: true
+            isFavourite: true,
         });
 
         if ($currentSong?.id === song.id) {
@@ -1466,7 +1469,7 @@
 
     async function unfavouriteSong(song: Song) {
         await db.songs.update(song, {
-            isFavourite: false
+            isFavourite: false,
         });
         if ($currentSong?.id === song.id) {
             $currentSong.isFavourite = false;
@@ -1570,7 +1573,7 @@
 
     async function getSongTags(
         song: Song,
-        fieldWidth: number
+        fieldWidth: number,
     ): Promise<SongTags> {
         let offset = TAG_MARGIN;
         let hiddenLabelWidth = 0;
@@ -1602,8 +1605,8 @@
             {
                 visible: [],
                 hidden: [],
-                hiddenLabelOffset: 0
-            }
+                hiddenLabelOffset: 0,
+            },
         );
     }
 </script>
@@ -1657,7 +1660,7 @@
                         config={{
                             width,
                             height: viewportHeight,
-                            y: -sandwichTopHeight
+                            y: -sandwichTopHeight,
                         }}
                         bind:handle={stage}
                         on:wheel={onScroll}
@@ -1667,7 +1670,7 @@
                             bind:handle={layer}
                             config={{
                                 x: 0,
-                                y: HEADER_HEIGHT
+                                y: HEADER_HEIGHT,
                             }}
                         >
                             <Rect
@@ -1676,7 +1679,7 @@
                                     y: sandwichTopHeight,
                                     width,
                                     height: viewportHeight,
-                                    fill: BG_COLOR
+                                    fill: BG_COLOR,
                                 }}
                             />
 
@@ -1693,7 +1696,7 @@
                                             if (e.detail.evt.button === 0) {
                                                 toggleHighlight(
                                                     song,
-                                                    song.viewModel.index
+                                                    song.viewModel.index,
                                                 );
                                             } else if (
                                                 e.detail.evt.button === 2
@@ -1701,7 +1704,7 @@
                                                 onRightClick(
                                                     e.detail.evt,
                                                     song,
-                                                    song.viewModel.index
+                                                    song.viewModel.index,
                                                 );
                                             }
                                         }}
@@ -1712,14 +1715,14 @@
                                                 songIdx > songsSlice.length - 15
                                             ) {
                                                 scrollContainer?.scrollBy({
-                                                    top: ROW_HEIGHT
+                                                    top: ROW_HEIGHT,
                                                 });
                                             } else if (
                                                 draggingSongIdx !== null &&
                                                 songIdx < 10
                                             ) {
                                                 scrollContainer?.scrollBy({
-                                                    top: -ROW_HEIGHT
+                                                    top: -ROW_HEIGHT,
                                                 });
                                             }
                                         }}
@@ -1730,15 +1733,15 @@
                                             e.detail.evt.button === 0 &&
                                             onSongDragStart(
                                                 song,
-                                                song.viewModel?.index
+                                                song.viewModel?.index,
                                             )}
                                         config={{
-                                            visible: !song.dummy
+                                            visible: !song.dummy,
                                         }}
                                         on:mouseup={(e) => {
                                             onReorderSong(
                                                 song,
-                                                song.viewModel.index
+                                                song.viewModel.index,
                                             );
                                         }}
                                     >
@@ -1764,13 +1767,13 @@
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
                                                               isSongHighlighted(
-                                                                  song
+                                                                  song,
                                                               )
                                                             ? HIGHLIGHT_BG_COLOR
                                                             : hoveredSongIdx ===
                                                                 songIdx
                                                               ? ROW_BG_COLOR_HOVERED
-                                                              : ROW_BG_COLOR
+                                                              : ROW_BG_COLOR,
                                             }}
                                         />
                                         {#each displayFields as f, idx (f.value)}
@@ -1787,7 +1790,7 @@
                                                         width:
                                                             f.viewProps.width -
                                                             10,
-                                                        height: ROW_HEIGHT - 5
+                                                        height: ROW_HEIGHT - 5,
                                                     }}
                                                     on:mouseenter={() => {
                                                         hoveredField = f.value;
@@ -1798,7 +1801,7 @@
                                                     on:click={() => {
                                                         filterByField(
                                                             f.value,
-                                                            getValue(song, f)
+                                                            getValue(song, f),
                                                         );
                                                     }}
                                                 >
@@ -1812,7 +1815,7 @@
                                                                     ? CLICKABLE_CELL_BG_COLOR_HOVERED
                                                                     : CLICKABLE_CELL_BG_COLOR,
                                                             padding: 10,
-                                                            cornerRadius: 2
+                                                            cornerRadius: 2,
                                                         }}
                                                     />
                                                     <Text
@@ -1820,8 +1823,8 @@
                                                             text: validatedValue(
                                                                 getValue(
                                                                     song,
-                                                                    f
-                                                                )
+                                                                    f,
+                                                                ),
                                                             ),
                                                             listening: false,
                                                             y: 0,
@@ -1842,8 +1845,8 @@
                                                                     : TEXT_COLOR,
                                                             ellipsis:
                                                                 f.value.match(
-                                                                    /^(title|artist|album|genre)/
-                                                                ) !== null
+                                                                    /^(title|artist|album|genre)/,
+                                                                ) !== null,
                                                         }}
                                                     />
                                                 </Label>
@@ -1868,7 +1871,7 @@
                                                                         2.5,
                                                                     height:
                                                                         ROW_HEIGHT -
-                                                                        5
+                                                                        5,
                                                                 }}
                                                                 on:mouseenter={() => {
                                                                     hoveredField =
@@ -1888,7 +1891,7 @@
                                                                     $uiView =
                                                                         "library";
                                                                     $selectedTags.add(
-                                                                        tag.name
+                                                                        tag.name,
                                                                     );
                                                                     $selectedTags =
                                                                         $selectedTags;
@@ -1905,13 +1908,13 @@
                                                                                 tag
                                                                                 ? CLICKABLE_CELL_BG_COLOR_HOVERED
                                                                                 : CLICKABLE_CELL_BG_COLOR,
-                                                                        cornerRadius: 10
+                                                                        cornerRadius: 10,
                                                                     }}
                                                                 />
                                                                 <Text
                                                                     config={{
                                                                         text: validatedValue(
-                                                                            tag.name
+                                                                            tag.name,
                                                                         ),
                                                                         listening: false,
                                                                         y: 0,
@@ -1932,9 +1935,9 @@
                                                                                 : TEXT_COLOR,
                                                                         ellipsis:
                                                                             f.value.match(
-                                                                                /^(title|artist|album|genre)/
+                                                                                /^(title|artist|album|genre)/,
                                                                             ) !==
-                                                                            null
+                                                                            null,
                                                                     }}
                                                                 />
                                                             </Label>
@@ -1955,7 +1958,7 @@
                                                                         2.5,
                                                                     height:
                                                                         ROW_HEIGHT -
-                                                                        5
+                                                                        5,
                                                                 }}
                                                                 on:mouseenter={() => {
                                                                     hoveredField =
@@ -1970,7 +1973,7 @@
                                                                         null;
                                                                 }}
                                                                 on:click={(
-                                                                    e
+                                                                    e,
                                                                 ) => {
                                                                     // TODO: Show overflowed tags in menu
                                                                     menuPos = {
@@ -1981,7 +1984,7 @@
                                                                         y: e
                                                                             .detail
                                                                             .evt
-                                                                            .clientY
+                                                                            .clientY,
                                                                     };
                                                                     $rightClickedTrack =
                                                                         song;
@@ -1999,13 +2002,13 @@
                                                                                 "+overflow"
                                                                                 ? CLICKABLE_CELL_BG_COLOR_HOVERED
                                                                                 : CLICKABLE_CELL_BG_COLOR,
-                                                                        cornerRadius: 10
+                                                                        cornerRadius: 10,
                                                                     }}
                                                                 />
                                                                 <Text
                                                                     config={{
                                                                         text: validatedValue(
-                                                                            `+${tags.hidden.length}`
+                                                                            `+${tags.hidden.length}`,
                                                                         ),
                                                                         listening: false,
                                                                         y: 0,
@@ -2025,9 +2028,9 @@
                                                                                 : TEXT_COLOR,
                                                                         ellipsis:
                                                                             f.value.match(
-                                                                                /^(title|artist|album|genre)/
+                                                                                /^(title|artist|album|genre)/,
                                                                             ) !==
-                                                                            null
+                                                                            null,
                                                                     }}
                                                                 />
                                                             </Label>
@@ -2039,7 +2042,7 @@
                                                     config={{
                                                         x:
                                                             f.value.match(
-                                                                /^(title|artist|album|track)/
+                                                                /^(title|artist|album|track)/,
                                                             ) !== null
                                                                 ? f.viewProps
                                                                       .x + 10
@@ -2050,12 +2053,12 @@
                                                                 songIdx +
                                                             1,
                                                         text: validatedValue(
-                                                            getValue(song, f)
+                                                            getValue(song, f),
                                                         ),
                                                         listening: false,
                                                         align:
                                                             f.value.match(
-                                                                /^(title|artist|album|track)/
+                                                                /^(title|artist|album|track)/,
                                                             ) !== null
                                                                 ? "left"
                                                                 : "center",
@@ -2067,7 +2070,7 @@
                                                                       .width -
                                                                   10
                                                                 : f.value.match(
-                                                                        /^(title|artist|album|track)/
+                                                                        /^(title|artist|album|track)/,
                                                                     ) !== null
                                                                   ? f.value ===
                                                                         "title" &&
@@ -2085,7 +2088,7 @@
                                                                         .width,
                                                         padding:
                                                             f.value.match(
-                                                                /^(genre)/
+                                                                /^(genre)/,
                                                             ) !== null
                                                                 ? 10
                                                                 : 2,
@@ -2102,8 +2105,8 @@
                                                                   : TEXT_COLOR,
                                                         ellipsis:
                                                             f.value.match(
-                                                                /^(title|artist|album|genre)/
-                                                            ) !== null
+                                                                /^(title|artist|album|genre)/,
+                                                            ) !== null,
                                                     }}
                                                 />
                                             {/if}
@@ -2121,7 +2124,7 @@
                                                         scaleX: 0.9,
                                                         scaleY: 0.9,
                                                         data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
-                                                        fill: "rgba(255, 255, 255, 0.05)"
+                                                        fill: "rgba(255, 255, 255, 0.05)",
                                                     }}
                                                 />
                                             {/if}
@@ -2147,7 +2150,7 @@
                                                             data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
                                                             fill: $currentThemeObject[
                                                                 "library-playing-icon"
-                                                            ]
+                                                            ],
                                                         }}
                                                     />
                                                 {/if}
@@ -2157,7 +2160,7 @@
                                                     <Path
                                                         on:click={() =>
                                                             unfavouriteSong(
-                                                                song
+                                                                song,
                                                             )}
                                                         config={{
                                                             x:
@@ -2182,7 +2185,7 @@
                                                                       ]
                                                                     : $currentThemeObject[
                                                                           "library-favourite-icon"
-                                                                      ]
+                                                                      ],
                                                         }}
                                                     />
                                                 {:else if hoveredSongIdx === songIdx}
@@ -2213,7 +2216,7 @@
                                                                       ]
                                                                     : $currentThemeObject[
                                                                           "library-favourite-hover-icon"
-                                                                      ]
+                                                                      ],
                                                         }}
                                                     />
                                                 {/if}
@@ -2236,7 +2239,7 @@
                                                 width: width,
                                                 height: DROP_HINT_HEIGHT,
                                                 fill: PLAYING_BG_COLOR,
-                                                listening: false
+                                                listening: false,
                                             }}
                                         />
                                     {/if}
@@ -2253,7 +2256,7 @@
                                         height: viewportHeight,
                                         width: 2,
                                         fill: COLUMN_INSERT_HINT_COLOR,
-                                        listening: false
+                                        listening: false,
                                     }}
                                 />
                             {/if}
@@ -2266,7 +2269,7 @@
                                         draggable: true,
                                         dragBoundFunc(pos) {
                                             return handleColumnDrag(pos, idx);
-                                        }
+                                        },
                                     }}
                                     on:click={(ev) => {
                                         if (ev.detail.evt.button === 0)
@@ -2275,7 +2278,7 @@
                                             console.log("ev", ev);
                                             columnPickerPos = {
                                                 x: ev.detail.evt.clientX,
-                                                y: 15
+                                                y: 15,
                                             };
                                             showColumnPicker =
                                                 !showColumnPicker;
@@ -2320,7 +2323,7 @@
                                                           $query.orderBy ===
                                                               f.value
                                                         ? HEADER_BG_COLOR_HOVERED
-                                                        : HEADER_BG_COLOR
+                                                        : HEADER_BG_COLOR,
                                         }}
                                     />
                                     {#if hoveredColumnIdx === idx}
@@ -2332,7 +2335,7 @@
                                                 scaleX: 0.9,
                                                 scaleY: 0.9,
                                                 data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
-                                                fill: "rgba(255, 255, 255, 0.5)"
+                                                fill: "rgba(255, 255, 255, 0.5)",
                                             }}
                                         />
 
@@ -2346,7 +2349,7 @@
                                                     height: 20,
                                                     listening: false,
                                                     fill: "#212121d5",
-                                                    cornerRadius: 4
+                                                    cornerRadius: 4,
                                                 }}
                                             />
                                             <Text
@@ -2355,7 +2358,7 @@
                                                     y: 27,
                                                     text: $LL.library.resetToFileOrder(),
                                                     fontSize: 14,
-                                                    fill: "rgba(255, 255, 255)"
+                                                    fill: "rgba(255, 255, 255)",
                                                 }}
                                             />
                                         {/if}
@@ -2372,7 +2375,7 @@
                                                     scaleX: 0.6,
                                                     scaleY: 0.6,
                                                     data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
-                                                    fill: "rgba(255, 255, 255, 0.8)"
+                                                    fill: "rgba(255, 255, 255, 0.8)",
                                                 }}
                                             />
                                         {:else}
@@ -2384,7 +2387,7 @@
                                                     scaleX: 0.6,
                                                     scaleY: 0.6,
                                                     data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
-                                                    fill: "rgba(255, 255, 255, 0.8)"
+                                                    fill: "rgba(255, 255, 255, 0.8)",
                                                 }}
                                             />
                                         {/if}
@@ -2400,7 +2403,7 @@
                                                 scaleX: 0.6,
                                                 scaleY: 0.6,
                                                 data: "M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z",
-                                                fill: "rgba(255, 255, 255, 0.8)"
+                                                fill: "rgba(255, 255, 255, 0.8)",
                                             }}
                                         />
                                     {/if}
@@ -2418,7 +2421,7 @@
                                             align: "left",
                                             padding:
                                                 f.value.match(
-                                                    /^(track|duration)/
+                                                    /^(track|duration)/,
                                                 ) !== null
                                                     ? 8
                                                     : 10,
@@ -2440,7 +2443,7 @@
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
-                                            )
+                                            ),
                                         }}
                                     />
                                 </Group>
@@ -2454,7 +2457,7 @@
                                             height: viewportHeight,
                                             width: 0.5,
                                             fill: "rgba(242, 242, 242, 0.144)",
-                                            listening: false
+                                            listening: false,
                                         }}
                                     />
                                 {/if}

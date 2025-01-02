@@ -8,17 +8,13 @@
         AudioDevice,
         AudioDevices,
         LLM,
-        MiniPlayerLocation
+        MiniPlayerLocation,
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
     import tippy from "svelte-tippy";
     import { importPaths } from "../../data/LibraryImporter";
-    import {
-        importStatus,
-        popupOpen,
-        userSettings
-    } from "../../data/store";
+    import { importStatus, popupOpen, userSettings } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { allThemes } from "../../theming/themes";
     import { clickOutside } from "../../utils/ClickOutside";
@@ -33,9 +29,9 @@
         "bottom-left",
         "bottom-right",
         "top-left",
-        "top-right"
+        "top-right",
     ];
-    
+
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
         $userSettings.albumArtworkFilenames = commaSeparatedFilenames
@@ -60,7 +56,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -82,7 +78,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await downloadDir()
+            defaultPath: await downloadDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -100,7 +96,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -118,7 +114,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await downloadDir()
+            defaultPath: await downloadDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -136,7 +132,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await downloadDir()
+            defaultPath: await downloadDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -159,7 +155,7 @@
 
     let audioDevices: AudioDevices = {
         devices: [],
-        default: null
+        default: null,
     };
 
     let fallbackAudioDevice: AudioDevice;
@@ -169,8 +165,8 @@
         $userSettings.outputDevice = event.target.value;
         invoke("change_audio_device", {
             event: {
-                audioDevice: $userSettings.outputDevice
-            }
+                audioDevice: $userSettings.outputDevice,
+            },
         });
     }
 
@@ -180,8 +176,8 @@
             $userSettings.outputDevice = fallbackAudioDevice.name;
             invoke("change_audio_device", {
                 event: {
-                    audioDevice: $userSettings.outputDevice
-                }
+                    audioDevice: $userSettings.outputDevice,
+                },
             });
         }
     }
@@ -243,7 +239,7 @@
                             {:else if $userSettings.foldersToWatch.length}
                                 <small>
                                     {$LL.settings.folder(
-                                        $userSettings.foldersToWatch.length
+                                        $userSettings.foldersToWatch.length,
                                     )}
                                 </small>
                             {/if}
@@ -256,7 +252,7 @@
                                         use:tippy={{
                                             content:
                                                 "Removing a folder will not remove the tracks from your library.",
-                                            placement: "right"
+                                            placement: "right",
                                         }}
                                     >
                                         <Icon
@@ -492,8 +488,13 @@
         top: 0;
         padding: 0.4em 0;
         width: 100%;
-        background-color: color-mix(in srgb, var(--background) 26%, transparent);
-        border-bottom: 1px solid color-mix(in srgb, var(--background) 70%, var(--inverse));
+        background-color: color-mix(
+            in srgb,
+            var(--background) 26%,
+            transparent
+        );
+        border-bottom: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
         backdrop-filter: blur(10px);
         z-index: 20;
 

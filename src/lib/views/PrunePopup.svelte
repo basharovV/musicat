@@ -11,7 +11,7 @@
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
-        uiView
+        uiView,
     } from "../../data/store";
     import hotkeys from "hotkeys-js";
     import audioPlayer from "../player/AudioPlayer";
@@ -28,7 +28,7 @@
 
     let pressedK = false;
     let pressedD = false;
-    let atEnd = false
+    let atEnd = false;
 
     async function getOrCreatePlaylist() {
         let toDelete = $toDeletePlaylist;
@@ -37,7 +37,7 @@
                 id: "todelete",
                 title: $LL.toDelete.title(),
                 tracks: [],
-                path: null
+                path: null,
             });
             toDelete = await db.internalPlaylists.get("todelete");
         }
@@ -58,15 +58,15 @@
             setTimeout(() => (pressedD = false), 300);
         }
     }
-    
+
     async function gotoToDeleteView() {
         const toDelete = $toDeletePlaylist;
-        
+
         if (!toDelete || toDelete.tracks.length === 0) {
             if ($toDeletePlaylist) {
                 db.internalPlaylists.delete($toDeletePlaylist.id);
             }
-        
+
             $uiView = "library";
             $isSmartQueryBuilderOpen = false;
             $selectedPlaylistFile = null;
@@ -102,8 +102,8 @@
     onDestroy(() => {
         hotkeys.deleteScope("prune");
     });
-    
-    $: atEnd = $currentSongIdx === $playlist?.length - 1
+
+    $: atEnd = $currentSongIdx === $playlist?.length - 1;
 </script>
 
 <div class="container">
@@ -134,7 +134,9 @@
             </div>
         </div>
         <div class="for-delete">
-            <p>{$toDeletePlaylist?.tracks?.length ?? 0} tracks up for deletion</p>
+            <p>
+                {$toDeletePlaylist?.tracks?.length ?? 0} tracks up for deletion
+            </p>
         </div>
         <div class="footer">
             <p>Press Q to finish pruning</p>
@@ -199,7 +201,8 @@
                 &.pressed {
                     h1 {
                         transition: all 0.2s ease-in-out;
-                        box-shadow: 0px 0px 20px var(--prune-button-delete-pressed-shadow);
+                        box-shadow: 0px 0px 20px
+                            var(--prune-button-delete-pressed-shadow);
                     }
                 }
                 h1 {
@@ -210,7 +213,8 @@
                 &.pressed {
                     h1 {
                         transition: all 0.2s ease-in-out;
-                        box-shadow: 0px 0px 20px var(--prune-button-keep-pressed-shadow);
+                        box-shadow: 0px 0px 20px
+                            var(--prune-button-keep-pressed-shadow);
                     }
                 }
                 h1 {

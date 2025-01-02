@@ -8,7 +8,7 @@
         isLyricsOpen,
         popupOpen,
         isWaveformOpen,
-        userSettings
+        userSettings,
     } from "../../data/store";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -65,13 +65,13 @@
             try {
                 let result = await getLyrics(
                     $currentSong.title,
-                    $currentSong.artist
+                    $currentSong.artist,
                 );
                 $currentSongLyrics = result.lyrics
                     ? {
                           songId: $currentSong.id,
                           lyrics: result.lyrics,
-                          writers: result.writers
+                          writers: result.writers,
                       }
                     : null;
                 error = null;
@@ -178,16 +178,15 @@
                 >
                 <p>
                     Create one on <a
-                            href="https://genius.com/developers"
-                            target="_blank"
-                        >genius.com/developers</a
+                        href="https://genius.com/developers"
+                        target="_blank">genius.com/developers</a
                     >, <br />then add it in settings:
                 </p>
                 <br />
                 <ButtonWithIcon
                     text="Add key in settings"
                     onClick={() => {
-                        $popupOpen = 'settings';
+                        $popupOpen = "settings";
                     }}
                 />
             </div>

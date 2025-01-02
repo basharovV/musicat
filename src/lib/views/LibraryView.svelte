@@ -17,7 +17,7 @@
         smartQuery,
         smartQueryResults,
         smartQueryUpdater,
-        uiView
+        uiView,
     } from "../../data/store";
     import Library from "../library/Library.svelte";
     import SmartQuery from "../smart-query/Query";
@@ -50,7 +50,7 @@
                             .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
             }
         } else if ($uiView === "smart-query") {
@@ -95,7 +95,7 @@
                         ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy
+                          : $query.orderBy,
                 )
                 .and(
                     (song) =>
@@ -107,7 +107,7 @@
                             .startsWith($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase())
+                            .startsWith($query.query.toLowerCase()),
                 );
         } else {
             results = db.songs.orderBy(
@@ -115,7 +115,7 @@
                     ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy
+                      : $query.orderBy,
             );
         }
         let resultsArray: Song[] = [];
@@ -141,7 +141,7 @@
                     case "duration":
                     case "genre":
                         return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
+                            b[$query.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie

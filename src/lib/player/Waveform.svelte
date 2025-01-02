@@ -10,7 +10,7 @@
         os,
         playerTime,
         seekTime,
-        waveformPeaks
+        waveformPeaks,
     } from "../../data/store";
 
     import type { Event } from "@tauri-apps/api/event";
@@ -23,7 +23,7 @@
     import { db } from "../../data/db";
     import { currentThemeObject } from "../../theming/store";
 
-    const appWindow = getCurrentWebviewWindow()
+    const appWindow = getCurrentWebviewWindow();
 
     let container;
     let isMounted = false;
@@ -42,7 +42,7 @@
         "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV";
     onMount(async () => {
         const { default: WaveSurfer } = await import("wavesurfer.js");
-        
+
         wavesurfer = WaveSurfer.create({
             container,
             waveColor: $currentThemeObject["waveform-wave"],
@@ -64,16 +64,16 @@
                 lineWidth: 1,
                 labelBackground: $currentThemeObject["waveform-hover-label-bg"],
                 labelColor: $currentThemeObject["waveform-hover-label-text"],
-                labelSize: "11px"
-            })
+                labelSize: "11px",
+            }),
         );
         wavesurfer.registerPlugin(
             ZoomPlugin.create({
                 // the amount of zoom per wheel step, e.g. 0.5 means a 50% magnification per scroll
                 scale: 0.1,
                 // Optionally, specify the maximum pixels-per-second factor while zooming
-                maxZoom: 40
-            })
+                maxZoom: 40,
+            }),
         );
         wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
 
@@ -107,8 +107,8 @@
                         event: {
                             enabled: true,
                             start_pos: region.start,
-                            end_pos: region.end
-                        }
+                            end_pos: region.end,
+                        },
                     });
                 }
 
@@ -124,7 +124,7 @@
             region.remove();
             $currentSong.markers?.splice(
                 $currentSong.markers.findIndex((m) => m.pos === region.start),
-                1
+                1,
             );
             db.songs.put($currentSong);
             if (region.start !== region.end) {
@@ -134,8 +134,8 @@
                     event: {
                         enabled: false,
                         start_pos: null,
-                        end_pos: null
-                    }
+                        end_pos: null,
+                    },
                 });
                 $waveformPeaks.loopEnabled = false;
             }
@@ -148,8 +148,8 @@
                     event: {
                         enabled: true,
                         start_pos: region.start,
-                        end_pos: region.end
-                    }
+                        end_pos: region.end,
+                    },
                 });
 
                 $waveformPeaks.loopEnabled = true;
@@ -164,7 +164,7 @@
         });
 
         wsRegions.enableDragSelection({
-            color: $currentThemeObject["waveform-region-loop"]
+            color: $currentThemeObject["waveform-region-loop"],
         });
 
         wavesurfer.on("click", (pos) => {
@@ -174,7 +174,7 @@
                 if ($currentSong) {
                     const marker: Marker = {
                         pos: posSeconds,
-                        title: "👂"
+                        title: "👂",
                     };
                     if ($currentSong.markers) {
                         $currentSong.markers.push(marker);
@@ -185,7 +185,7 @@
                     wsRegions.addRegion({
                         start: posSeconds,
                         content: marker.title,
-                        color: $currentThemeObject["waveform-region-current"]
+                        color: $currentThemeObject["waveform-region-current"],
                     });
                 }
             } else {
@@ -203,14 +203,14 @@
             await wavesurfer.load(
                 null,
                 event.payload.data,
-                $currentSong.fileInfo.duration
+                $currentSong.fileInfo.duration,
             );
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
                     songId: $currentSong.id,
-                    data: event.payload.data
+                    data: event.payload.data,
                 };
             } else {
                 $waveformPeaks.data = event.payload.data;
@@ -221,7 +221,7 @@
     playerTime.subscribe((playerTime) => {
         if (wavesurfer && $currentSong) {
             wavesurfer.seekTo(
-                Math.min(playerTime / $currentSong.fileInfo.duration)
+                Math.min(playerTime / $currentSong.fileInfo.duration),
             );
         }
     });
@@ -230,7 +230,7 @@
         await wavesurfer.load(
             null,
             $waveformPeaks.data,
-            $currentSong.fileInfo.duration
+            $currentSong.fileInfo.duration,
         );
         pxPerSec = wavesurfer.options.minPxPerSec;
 
@@ -244,7 +244,7 @@
             wsRegions.addRegion({
                 start: $waveformPeaks.loopStartPos,
                 end: $waveformPeaks.loopEndPos,
-                color: $currentThemeObject["waveform-region-loop"]
+                color: $currentThemeObject["waveform-region-loop"],
             });
         }
 
@@ -252,7 +252,7 @@
             wsRegions.addRegion({
                 start: m.pos,
                 content: m.title,
-                color: $currentThemeObject["waveform-region-current"]
+                color: $currentThemeObject["waveform-region-current"],
             });
         });
     }
@@ -268,8 +268,8 @@
             wsRegions.clearRegions();
             const result = await invoke("get_waveform", {
                 event: {
-                    path: $currentSong.path
-                }
+                    path: $currentSong.path,
+                },
             });
             $waveformPeaks.songId = $currentSong.id;
 
@@ -277,7 +277,7 @@
                 wsRegions.addRegion({
                     start: m.pos,
                     content: m.title,
-                    color: $currentThemeObject["waveform-region-current"]
+                    color: $currentThemeObject["waveform-region-current"],
                 });
             });
         }
@@ -289,7 +289,7 @@
         getWaveform();
         console.log(
             "$currentSong.fileInfo.duration",
-            $currentSong.fileInfo.duration
+            $currentSong.fileInfo.duration,
         );
         wavesurfer.setOptions({ duration: $currentSong.fileInfo.duration });
 

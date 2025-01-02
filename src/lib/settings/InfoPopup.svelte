@@ -51,13 +51,13 @@
                         isReleaseNotesShown = true;
                         setTimeout(() => {
                             scrollToHeader.scrollIntoView({
-                                behavior: "smooth"
+                                behavior: "smooth",
                             });
                         }, 10);
                     } else {
                         popup.scrollTo({
                             top: 0,
-                            behavior: "smooth"
+                            behavior: "smooth",
                         });
                         setTimeout(() => {
                             isReleaseNotesShown = false;

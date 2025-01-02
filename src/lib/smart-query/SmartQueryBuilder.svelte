@@ -6,7 +6,7 @@
     import {
         isSmartQueryValid,
         smartQuery,
-        smartQueryInitiator
+        smartQueryInitiator,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { autoWidth } from "../../utils/AutoWidth";
@@ -96,7 +96,7 @@
 
                             return matched;
                         },
-                        []
+                        [],
                     );
 
                     matchingQueryParts = matchedQueryParts;
@@ -189,7 +189,7 @@
                 items={matchingQueryParts.map((p) => ({
                     text: $_(p.description),
                     description: $_(p.example),
-                    source: p
+                    source: p,
                 }))}
                 onItemSelected={onSelectPart}
             />

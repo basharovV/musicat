@@ -8,7 +8,7 @@
         playlist,
         queriedSongs,
         queueMode,
-        shuffledPlaylist
+        shuffledPlaylist,
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Input from "../ui/Input.svelte";
@@ -20,11 +20,11 @@
 
     async function createPlaylist() {
         const tracks = ($isShuffleEnabled ? $shuffledPlaylist : $playlist).map(
-            (t) => t.id
+            (t) => t.id,
         );
         await db.playlists.add({
             title: playlistName,
-            tracks
+            tracks,
         });
         playlistName = "";
     }

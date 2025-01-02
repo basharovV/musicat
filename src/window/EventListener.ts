@@ -18,7 +18,7 @@ import { open } from "@tauri-apps/plugin-shell";
 import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
 import { openTauriImportDialog } from "../data/LibraryImporter";
 import { path } from "@tauri-apps/api";
-const appWindow = getCurrentWebviewWindow()
+const appWindow = getCurrentWebviewWindow();
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {
@@ -26,11 +26,11 @@ export function startMenuListener() {
         switch (payload) {
             case "about":
                 console.log("about");
-                popupOpen.set('info');
+                popupOpen.set("info");
                 break;
             case "settings":
                 console.log("settings");
-                popupOpen.set('settings');
+                popupOpen.set("settings");
                 break;
             case "find":
                 console.log("find");

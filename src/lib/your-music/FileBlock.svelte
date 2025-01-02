@@ -22,8 +22,8 @@
                 event: {
                     path: item.path,
                     isImport: false,
-                    includeFolderArtwork: false
-                }
+                    includeFolderArtwork: false,
+                },
             });
             audioPlayer.shouldPlay = true;
             $playlist = [song];
@@ -104,8 +104,16 @@
             overflow: hidden;
             border-radius: 4px;
             border-width: 1px;
-            border-color: color-mix(in srgb, var(--type-bw-inverse) 11%, transparent);
-            background-color: color-mix(in srgb, var(--type-bw-inverse) 4%, transparent);
+            border-color: color-mix(
+                in srgb,
+                var(--type-bw-inverse) 11%,
+                transparent
+            );
+            background-color: color-mix(
+                in srgb,
+                var(--type-bw-inverse) 4%,
+                transparent
+            );
             padding: 0.7em 1em;
             display: flex;
             align-items: flex-end;

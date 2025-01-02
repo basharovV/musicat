@@ -17,7 +17,7 @@
         queriedSongs,
         rightClickedTrack,
         rightClickedTracks,
-        seekTime
+        seekTime,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
@@ -46,8 +46,8 @@
                 event: {
                     path: song.path,
                     isImport: false,
-                    includeFolderArtwork: true
-                }
+                    includeFolderArtwork: true,
+                },
             });
             console.log("test", songWithArtwork);
             duration = songWithArtwork.fileInfo.duration;
@@ -55,11 +55,11 @@
             if (songWithArtwork.artwork) {
                 if (songWithArtwork.artwork.data.length) {
                     let artworkBuffer = Buffer.from(
-                        songWithArtwork.artwork.data
+                        songWithArtwork.artwork.data,
                     );
                     let artworkFormat = songWithArtwork.artwork.format;
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
@@ -166,7 +166,7 @@
                     onClick={() => {
                         $rightClickedTrack = $currentSong;
                         $rightClickedTracks = [];
-                        $popupOpen = 'track-info';
+                        $popupOpen = "track-info";
                     }}
                     color={$currentThemeObject["icon-secondary"]}
                 />
@@ -180,7 +180,7 @@
             class="visualizer-icon"
             use:tippy={{
                 content: "waveform, loop region, marker editor",
-                placement: "top"
+                placement: "top",
             }}
         >
             <Icon
@@ -226,7 +226,6 @@
         @media screen and (max-width: 600px) {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto 40px;
-
         }
 
         &.sidebar-collapsed {

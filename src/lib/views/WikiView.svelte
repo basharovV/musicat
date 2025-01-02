@@ -14,9 +14,7 @@
         playlist,
         playlistType,
         queriedSongs,
-
-        wikiArtist
-
+        wikiArtist,
     } from "../../data/store";
     import { fade, fly } from "svelte/transition";
     import Icon from "../ui/Icon.svelte";
@@ -41,8 +39,8 @@
             const url = await getWikipediaUrlForArtist(artist);
             wikiResult = await invoke<GetHTMLResponse>("get_wikipedia", {
                 event: {
-                    url
-                }
+                    url,
+                },
             });
             console.log("result", wikiResult);
             error = null;
@@ -185,13 +183,13 @@
                         .and(
                             (a) =>
                                 a.displayTitle.toLowerCase() ===
-                                $currentSong.album.toLowerCase()
+                                $currentSong.album.toLowerCase(),
                         )
                         .first();
                     // Add playing class or remove it
                     link.classList.toggle(
                         "playing",
-                        $isPlaying && currentSongAlbum?.id === album.id
+                        $isPlaying && currentSongAlbum?.id === album.id,
                     );
                     link.addEventListener("click", onAlbumClicked);
                     if (!albums.find((a) => a.data.id === album.id))
@@ -208,7 +206,7 @@
                     // Add playing class or remove it
                     link.classList.toggle(
                         "playing",
-                        $isPlaying && $currentSong?.id === song.id
+                        $isPlaying && $currentSong?.id === song.id,
                     );
                     link.addEventListener("click", onSongClicked);
                     if (!songs.find((s) => s.data.id === song.id))
@@ -223,7 +221,7 @@
                 // Add playing class or remove it
                 link.classList.toggle(
                     "playing",
-                    $isPlaying && $currentSong?.artist === title
+                    $isPlaying && $currentSong?.artist === title,
                 );
                 link.addEventListener("click", onArtistClicked);
                 if (!artists.find((a) => a.data === title))
@@ -328,7 +326,10 @@
 <!-- Add style skin -->
 <div class="container" bind:this={container}>
     {#if isScrollToTopVisible}
-        <div class="scroll-to-top" transition:fly={{ duration: 150, y: 20, opacity: 0.3 }}>
+        <div
+            class="scroll-to-top"
+            transition:fly={{ duration: 150, y: 20, opacity: 0.3 }}
+        >
             <ButtonWithIcon
                 text="↑ Scroll to top"
                 onClick={() => scrollContainer?.scrollTo(0, 0)}
@@ -372,84 +373,83 @@
             <div class="content">
                 <p transition:fade={{ duration: 200 }}>Loading...</p>
             </div>
-        {:else}
-            {#if wikiResult || wtfResult}
-                {#if (!isLoadingMentions && albumMentions.length > 0) || songMentions.length > 0 || artistMentions.length > 0}
-                    <div
-                        class="in-article"
-                        transition:fly={{
-                            duration: 300,
-                            y: -20,
-                            opacity: 0.4
-                        }}
-                    >
-                        <p>
-                            {$LL.wiki.inArticle()}
-                            <span>{$LL.wiki.clickHint()}</span>
-                        </p>
-                        {#if albumMentions.length > 0}
-                            <div>
-                                <p>{$LL.wiki.albums()}</p>
-                                <ul>
-                                    {#each albumMentions as album}
-                                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                        <li
-                                            on:click={() => {
-                                                scrollToMention(album);
-                                            }}
-                                        >
-                                            <p>
-                                                {album.data.displayTitle}
-                                            </p>
-                                        </li>
-                                    {/each}
-                                    <ul></ul>
-                                </ul>
-                            </div>
-                        {/if}
-                        {#if songMentions.length > 0}
-                            <div>
-                                <p>{$LL.wiki.songs()}</p>
-                                <ul>
-                                    {#each songMentions as song}
-                                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                        <li
-                                            on:click={() => {
-                                                scrollToMention(song);
-                                            }}
-                                        >
-                                            <p>{song.data.title}</p>
-                                        </li>
-                                    {/each}
+        {:else if wikiResult || wtfResult}
+            {#if (!isLoadingMentions && albumMentions.length > 0) || songMentions.length > 0 || artistMentions.length > 0}
+                <div
+                    class="in-article"
+                    transition:fly={{
+                        duration: 300,
+                        y: -20,
+                        opacity: 0.4,
+                    }}
+                >
+                    <p>
+                        {$LL.wiki.inArticle()}
+                        <span>{$LL.wiki.clickHint()}</span>
+                    </p>
+                    {#if albumMentions.length > 0}
+                        <div>
+                            <p>{$LL.wiki.albums()}</p>
+                            <ul>
+                                {#each albumMentions as album}
+                                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                                    <li
+                                        on:click={() => {
+                                            scrollToMention(album);
+                                        }}
+                                    >
+                                        <p>
+                                            {album.data.displayTitle}
+                                        </p>
+                                    </li>
+                                {/each}
+                                <ul></ul>
+                            </ul>
+                        </div>
+                    {/if}
+                    {#if songMentions.length > 0}
+                        <div>
+                            <p>{$LL.wiki.songs()}</p>
+                            <ul>
+                                {#each songMentions as song}
+                                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                                    <li
+                                        on:click={() => {
+                                            scrollToMention(song);
+                                        }}
+                                    >
+                                        <p>{song.data.title}</p>
+                                    </li>
+                                {/each}
 
-                                    <ul></ul>
-                                </ul>
-                            </div>
-                        {/if}
+                                <ul></ul>
+                            </ul>
+                        </div>
+                    {/if}
 
-                        {#if artistMentions.length > 0}
-                            <div>
-                                <p>{$LL.wiki.artists()}</p>
-                                <ul>
-                                    {#each artistMentions as artist}
-                                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                        <li
-                                            role="listitem"
-                                            on:click={() => {
-                                                scrollToMention(artist);
-                                            }}
-                                        >
-                                            <p>{artist.data}</p>
-                                        </li>
-                                    {/each}
-                                </ul>
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
-                <div class="content">
+                    {#if artistMentions.length > 0}
+                        <div>
+                            <p>{$LL.wiki.artists()}</p>
+                            <ul>
+                                {#each artistMentions as artist}
+                                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                                    <li
+                                        role="listitem"
+                                        on:click={() => {
+                                            scrollToMention(artist);
+                                        }}
+                                    >
+                                        <p>{artist.data}</p>
+                                    </li>
+                                {/each}
+                            </ul>
+                        </div>
+                    {/if}
+                </div>
+            {/if}
+            <div class="content">
                 {@html wikiResult.html}
-                    <!-- {#each wtfResult.sections() as section}
+                <!-- {#each wtfResult.sections() as section}
                         <h2>{section.title()}</h2>
                         {#each Array.isArray(section.tables()) ? Object(section.tables()) : [section.tables()] as table}
                             {#each table.keyValue() as cell}
@@ -469,8 +469,7 @@
                             {/each}
                         {/each}
                     {/each} -->
-                </div>
-            {/if}
+            </div>
         {/if}
     </div>
 
@@ -488,7 +487,8 @@
         justify-content: center;
         border-radius: 5px;
         border-left: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
-        border-right: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
+        border-right: 1px solid
+            color-mix(in srgb, var(--bg) 70%, var(--inverse));
         margin: 5px 0 0 0;
 
         header {
@@ -500,7 +500,8 @@
             max-width: 100%;
             z-index: 10;
             backdrop-filter: blur(10px) brightness(0.95);
-            border-bottom: 1px solid color-mix(in srgb, var(--inverse) 70%, transparent);
+            border-bottom: 1px solid
+                color-mix(in srgb, var(--inverse) 70%, transparent);
             background-color: var(--wiki-header-bg);
 
             .info-playing,
@@ -542,10 +543,11 @@
             display: grid;
             grid-template-rows: auto 1fr;
         }
-        
+
         .in-article {
             background-color: var(--wiki-inarticle-bg);
-            border-bottom: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
+            border-bottom: 1px solid
+                color-mix(in srgb, var(--inverse) 40%, transparent);
             padding: 1em;
 
             > p {
@@ -583,14 +585,15 @@
                         margin: 5px 5px 0px 0;
                         padding: 2px 5px;
                         background-color: var(--wiki-pill-bg);
-                        border: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
+                        border: 1px solid
+                            color-mix(in srgb, var(--inverse) 40%, transparent);
                         border-radius: 5px;
                         display: flex;
                         flex-direction: column;
                         cursor: pointer;
                         &:hover {
                             background-color: var(--wiki-pill-hover-bg);
-                            
+
                             p {
                                 color: var(--wiki-pill-hover-text);
                             }

@@ -6,7 +6,7 @@
         currentFont,
         currentMode,
         currentThemeName,
-        currentThemeObject
+        currentThemeObject,
     } from "./store";
     import { allThemes } from "./themes";
 
@@ -17,7 +17,7 @@
     const INVALID_THEMES_MESSAGE = "Invalid themes object supplied";
     const INVALID_PREFIX_MESSAGE = "Invalid prefix string supplied";
     const INVALID_MODE_MESSAGE = `Invalid mode string supplied, must be one of: ${VALID_MODES.join(
-        ", "
+        ", ",
     )}`;
 
     /**
@@ -67,7 +67,7 @@
 
     setContext(CONTEXT_KEY, {
         current: currentThemeName,
-        theme: currentThemeName
+        theme: currentThemeName,
     });
 
     onMount(() => {
@@ -79,7 +79,7 @@
         darkSchemeQuery.addEventListener(
             "change",
             ({ matches }) =>
-                mode === "auto" && currentMode.set(matches ? "dark" : "light")
+                mode === "auto" && currentMode.set(matches ? "dark" : "light"),
         );
 
         // loading order: saved, prefers, fallback
@@ -88,7 +88,7 @@
         if (document) {
             document.documentElement.setAttribute(
                 "data-theme",
-                $currentThemeName
+                $currentThemeName,
             );
         }
         if (key && localStorage) localStorage.setItem(key, $currentThemeName);

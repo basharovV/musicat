@@ -23,7 +23,7 @@
         smartQueryResults,
         smartQueryUpdater,
         toDeletePlaylist,
-        uiView
+        uiView,
     } from "../../data/store";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
@@ -50,8 +50,8 @@
             results = results.map((s, idx) => ({
                 ...s,
                 viewModel: {
-                    viewId: idx.toString()
-                }
+                    viewId: idx.toString(),
+                },
             }));
             console.log("to delete songs", results);
             isIndexed = false;
@@ -63,8 +63,8 @@
             results = results.map((s, idx) => ({
                 ...s,
                 viewModel: {
-                    viewId: idx.toString()
-                }
+                    viewId: idx.toString(),
+                },
             }));
             isIndexed = false;
             // Filter within playlist
@@ -79,7 +79,7 @@
                             .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
             }
         } else if ($uiView === "smart-query" || $uiView === "favourites") {
@@ -123,7 +123,7 @@
                         ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy
+                          : $query.orderBy,
                 )
                 .and(
                     (song) =>
@@ -137,12 +137,14 @@
                             .toLowerCase()
                             .includes($query.query.toLowerCase()) ||
                         song.genre.some((g) =>
-                            g.toLowerCase().includes($query.query.toLowerCase())
+                            g
+                                .toLowerCase()
+                                .includes($query.query.toLowerCase()),
                         ) ||
                         song.tags
                             ?.map((t) => t.toLowerCase())
                             .join(" ")
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
         } else {
             results = db.songs.orderBy(
@@ -150,7 +152,7 @@
                     ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy
+                      : $query.orderBy,
             );
         }
         let resultsArray: Song[] = [];
@@ -212,7 +214,7 @@
                     case "duration":
                     case "genre":
                         result = String(a[$query.orderBy]).localeCompare(
-                            String(b[$query.orderBy])
+                            String(b[$query.orderBy]),
                         );
                         break;
                     case "artist":

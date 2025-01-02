@@ -10,7 +10,7 @@
         rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistFile,
-        shuffledPlaylist
+        shuffledPlaylist,
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
@@ -83,7 +83,7 @@
             closeMenu();
             const spliced = spliceMultiple(
                 $isShuffleEnabled ? $shuffledPlaylist : $playlist,
-                $rightClickedTracks.map((t) => t.viewModel.index)
+                $rightClickedTracks.map((t) => t.viewModel.index),
             );
             console.log("spliced", spliced);
             if ($isShuffleEnabled) {
@@ -98,7 +98,7 @@
 
             ($isShuffleEnabled ? $shuffledPlaylist : $playlist).splice(
                 $rightClickedTrack.viewModel.index,
-                1
+                1,
             );
             $playlist = $playlist;
             $rightClickedTrack = null;
@@ -125,7 +125,7 @@
         closeMenu();
         const query = $rightClickedTrack.path.replace(
             $rightClickedTrack.file,
-            ""
+            "",
         );
         open(query);
     }
@@ -135,7 +135,7 @@
             $rightClickedTrack.artist +
                 " " +
                 $rightClickedTrack.title +
-                " chords"
+                " chords",
         );
         open(`https://duckduckgo.com/?q=${query}`);
     }
@@ -145,13 +145,13 @@
             $rightClickedTrack.artist +
                 " " +
                 $rightClickedTrack.title +
-                " lyrics"
+                " lyrics",
         );
         open(`https://duckduckgo.com/?q=${query}`);
     }
     function openInfo() {
         closeMenu();
-        $popupOpen = 'track-info';
+        $popupOpen = "track-info";
     }
     // Enrichers
 

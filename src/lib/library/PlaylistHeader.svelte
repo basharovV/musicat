@@ -6,7 +6,7 @@
         playlistDuration,
         queriedSongs,
         query,
-        selectedPlaylistFile
+        selectedPlaylistFile,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";

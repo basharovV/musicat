@@ -217,11 +217,11 @@ class AudioPlayer {
         });
 
         appWindow.listen("audio_device_changed", async (event: any) => {
-            userSettings.update(userSettings => {
+            userSettings.update((userSettings) => {
                 userSettings.outputDevice = event.payload;
                 return userSettings;
-            })
-        })
+            });
+        });
     }
 
     async setupBuffers() {

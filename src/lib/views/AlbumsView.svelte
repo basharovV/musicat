@@ -15,7 +15,7 @@
         rightClickedTrack,
         rightClickedTracks,
         uiPreferences,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
@@ -31,20 +31,24 @@
         let albums = await db.albums.toArray();
 
         if ($compressionSelected === "lossless") {
-            albums = albums.filter(({title, lossless}) => title.length && lossless);
+            albums = albums.filter(
+                ({ title, lossless }) => title.length && lossless,
+            );
         } else if ($compressionSelected === "lossy") {
-            albums = albums.filter(({title, lossless}) => title.length && !lossless);
+            albums = albums.filter(
+                ({ title, lossless }) => title.length && !lossless,
+            );
         } else {
-            albums = albums.filter(({title}) => title.length);
+            albums = albums.filter(({ title }) => title.length);
         }
 
-        if ($uiPreferences.albumsViewSortBy === 'title') {
+        if ($uiPreferences.albumsViewSortBy === "title") {
             albums.sort((a, b) => {
                 if (a.title < b.title) return -1;
                 if (a.title > b.title) return 1;
                 return 0;
             });
-        } else if ($uiPreferences.albumsViewSortBy === 'artist') {
+        } else if ($uiPreferences.albumsViewSortBy === "artist") {
             albums.sort((a, b) => {
                 if (a.artist < b.artist) return -1;
                 if (a.artist > b.artist) return 1;
@@ -74,7 +78,7 @@
                       a.artist
                           .toLowerCase()
                           .includes($query.query.toLowerCase()) ||
-                      a.title.includes($query.query.toLowerCase())
+                      a.title.includes($query.query.toLowerCase()),
               )
             : [];
 
@@ -84,31 +88,31 @@
 
     async function showCurrentlyPlayingAlbum() {
         if (!$currentSong) return;
-        
+
         if (await updatePlayingAlbum()) {
             currentAlbumElement?.scrollIntoView({
                 block: "center",
-                behavior: "instant"
+                behavior: "instant",
             });
 
             isVisible = true;
             isInit = false;
         }
     }
-    
+
     async function updatePlayingAlbum() {
         // Strip the song from album path
-        const albumPath = await path.dirname($currentSong.path)
+        const albumPath = await path.dirname($currentSong.path);
         // Find the album currently playing
         currentAlbum = await db.albums.get(
-            md5(`${albumPath} - ${$currentSong.album}`.toLowerCase())
+            md5(`${albumPath} - ${$currentSong.album}`.toLowerCase()),
         );
         if (!currentAlbum) return false;
-        
+
         currentAlbumElement = document.querySelector(
-            `[data-album='${currentAlbum.id}']`
+            `[data-album='${currentAlbum.id}']`,
         );
-        
+
         return true;
     }
 
@@ -118,8 +122,11 @@
         isVisible = true;
         isInit = false;
     }
-    
-    $: if (container && $currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
+
+    $: if (
+        container &&
+        $currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()
+    ) {
         if (updatePlayingAlbum()) {
             onScroll();
         }
@@ -136,7 +143,9 @@
     async function onRightClick(e, album, idx) {
         highlightedAlbum = album.id;
         $rightClickedAlbum = album;
-        const tracks = (await db.songs.bulkGet(album.tracksIds)).sort((a, b) => a.trackNumber - b.trackNumber);
+        const tracks = (await db.songs.bulkGet(album.tracksIds)).sort(
+            (a, b) => a.trackNumber - b.trackNumber,
+        );
         $rightClickedTrack = null;
         $rightClickedTracks = tracks;
         showAlbumMenu = true;
@@ -159,7 +168,7 @@
     function scrollToCurrentAlbum() {
         currentAlbumElement?.scrollIntoView({
             block: "center",
-            behavior: "smooth"
+            behavior: "smooth",
         });
     }
     onMount(() => {
@@ -316,7 +325,6 @@
             opacity: 1;
         }
     }
-
 
     .loading {
         top: 0;

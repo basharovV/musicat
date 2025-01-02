@@ -118,7 +118,7 @@ export const toDeletePlaylist = liveQuery(async () => {
         console.error("Error fetching todelete playlist", e);
     }
     return null;
-})
+});
 
 export const popupOpen: Writable<PopupType> = writable(null);
 export const uiView: Writable<UiView> = writable("library");
@@ -336,14 +336,16 @@ async function init() {
     let fileSettings = await getSettings();
 
     // Set default download location
-    if (typeof fileSettings.downloadLocation != 'string') {
+    if (typeof fileSettings.downloadLocation != "string") {
         fileSettings.downloadLocation = await downloadDir();
     }
 
     // Same for playlists location
-    if (typeof fileSettings.playlistsLocation != 'string') {
-        fileSettings.playlistsLocation =
-            await path.join(await audioDir(), "Musicat Playlists");
+    if (typeof fileSettings.playlistsLocation != "string") {
+        fileSettings.playlistsLocation = await path.join(
+            await audioDir(),
+            "Musicat Playlists"
+        );
     }
 
     // Get user settings
