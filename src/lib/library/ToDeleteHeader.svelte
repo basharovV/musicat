@@ -4,8 +4,8 @@
     import {
         bottomBarNotification,
         isSmartQueryBuilderOpen,
-        playlistDuration,
         query,
+        queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
@@ -18,8 +18,8 @@
     let playlist = $toDeletePlaylist;
     let isDeleting = false;
     let durationText;
-    $: if ($playlistDuration) {
-        durationText = secondsToFriendlyTime($playlistDuration);
+    $: if ($queueDuration) {
+        durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }
@@ -100,10 +100,10 @@
         $selectedSmartQuery = null;
         $query.orderBy = $query.libraryOrderBy;
     }
-    
+
     async function keepAll() {
         db.internalPlaylists.delete($toDeletePlaylist.id);
-        
+
         $uiView = "library";
         $isSmartQueryBuilderOpen = false;
         $selectedPlaylistFile = null;

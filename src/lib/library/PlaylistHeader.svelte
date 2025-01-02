@@ -3,9 +3,9 @@
     import type { PlaylistFile } from "../../App";
     import { parsePlaylist, writePlaylist } from "../../data/M3UUtils";
     import {
-        playlistDuration,
         queriedSongs,
         query,
+        queueDuration,
         selectedPlaylistFile
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
@@ -25,8 +25,8 @@
     }
 
     let durationText;
-    $: if ($playlistDuration) {
-        durationText = secondsToFriendlyTime($playlistDuration);
+    $: if ($queueDuration) {
+        durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }

@@ -64,7 +64,6 @@
     import MapView from "./lib/views/MapView.svelte";
     import NotesView from "./lib/views/NotesView.svelte";
     import PrunePopup from "./lib/views/PrunePopup.svelte";
-    import QueueOptions from "./lib/views/QueueOptions.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
     import TopBar from "./lib/views/TopBar.svelte";
     import WikiView from "./lib/views/WikiView.svelte";
@@ -343,9 +342,7 @@
                     class="queue-container"
                     transition:fly={{ duration: 200, x: -200 }}
                 >
-                    <!-- <QueueView /> -->
                     <QueueView />
-                    <QueueOptions />
                 </div>
             {/if}
         </div>

@@ -1,54 +1,42 @@
 <script lang="ts">
-    import { fade, fly } from "svelte/transition";
-    import type { Album, Song } from "../../App";
+    import { fade } from "svelte/transition";
+    import type { Album } from "../../App";
     import { db } from "../../data/db";
     import {
-        albumPlaylist,
-        currentSong,
+        current,
         draggedAlbum,
         draggedSongs,
         isPlaying,
-        playlist,
-        playlistType
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
-    import { currentThemeObject } from "../../theming/store";
     import LL from "../../i18n/i18n-svelte";
+    import { setQueue } from "../../data/storeHelper";
 
     export let album: Album; // to display album data
     export let highlighted = false;
     export let showInfo = true;
 
-    // console.log("highlight", highlighted);
     let isHovered = false;
     async function playPauseToggle() {
-        if (
-            $playlistType === "album" &&
-            $currentSong?.album.toLowerCase() === album.title.toLowerCase()
-        ) {
-            if ($isPlaying) {
-                audioPlayer.pause();
-            } else {
-                audioPlayer.play(true);
-            }
+        if (isPlayingCurrentAlbum) {
+            audioPlayer.togglePlay();
         } else {
-            let tracks = await db.songs
+            const tracks = await db.songs
                 .where("id")
                 .anyOf(album.tracksIds)
                 .toArray();
-            tracks = tracks.sort((a, b) => {
+
+            tracks.sort((a, b) => {
                 return a.trackNumber - b.trackNumber;
             });
-            if (tracks) audioPlayer.playSong(tracks[0]);
-            $playlist = tracks;
-            $albumPlaylist = tracks;
-            $playlistType = "album";
+
+            setQueue(tracks, 0);
         }
     }
 
     $: isPlayingCurrentAlbum =
-        $currentSong?.album.toLowerCase() === album.title.toLowerCase();
+        $current.song?.album.toLowerCase() === album.title.toLowerCase();
 </script>
 
 <div
@@ -116,17 +104,13 @@
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
-                {#if isHovered || ($playlistType === "album" && isPlayingCurrentAlbum)}
-                    <div class={$playlistType === "album" &&
-                        $isPlaying &&
-                        isPlayingCurrentAlbum
+                {#if isHovered || isPlayingCurrentAlbum}
+                    <div class={$isPlaying && isPlayingCurrentAlbum
                             ? "play-button-container pause-button"
                             : "play-button-container play-button"}>
                         <div class="button" on:click={playPauseToggle}>
                             <Icon
-                                icon={$playlistType === "album" &&
-                                $isPlaying &&
-                                isPlayingCurrentAlbum
+                                icon={$isPlaying && isPlayingCurrentAlbum
                                     ? "fe:pause"
                                     : "fe:play"}
                                 size={25}
@@ -154,7 +138,7 @@
     .playing {
         transform: scale(1.1);
         z-index: 9;
-        
+
         .cd {
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
@@ -374,7 +358,7 @@
                                 transparent
                             );
                         background-color: var(--album-playing-play-bg);
-                        
+
                         .button {
                             position: relative;
                             left: 1px;
@@ -383,10 +367,10 @@
                             align-self: center;
                             color: var(--album-playing-play-icon);
                         }
-                        
+
                         &:hover {
                             background-color: var(--album-playing-play-hover-bg);
-                            
+
                             .button {
                                 color: var(--album-playing-play-hover-icon);
                             }
@@ -401,17 +385,17 @@
                                 transparent
                             );
                         background-color: var(--album-playing-pause-bg);
-                        
+
                         .button {
                             font-size: 2.2em;
                             margin: auto;
                             align-self: center;
                             color: var(--album-playing-pause-icon);
                         }
-                        
+
                         &:hover {
                             background-color: var(--album-playing-pause-hover-bg);
-                            
+
                             .button {
                                 color: var(--album-playing-pause-hover-icon);
                             }

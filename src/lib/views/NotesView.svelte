@@ -3,7 +3,7 @@
 </script>
 
 <div>
-    <!-- <Seekbar duration={$currentSong?.fileInfo?.duration} /> -->
+    <!-- <Seekbar duration={$current.song?.fileInfo?.duration} /> -->
     <Waveform />
 </div>
 

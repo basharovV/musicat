@@ -17,24 +17,20 @@ import type {
     IAFile,
     IAItem,
     ImportStatus,
-    LastPlayedInfo,
     PlaylistFile,
-    PlaylistType,
-    Popup,
     PopupType,
-    QueueMode,
     UiView,
     Song,
     StreamInfo,
     UIPreferences,
     UserSettings,
-    WaveformPlayerState
+    WaveformPlayerState,
+    PlayingSong
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
-import Query from "./SmartQueries";
 import { scanPlaylists } from "./M3UUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
@@ -50,8 +46,6 @@ interface Query {
     query: string;
 }
 
-type UIView = "library" | "albums";
-
 export const isInit = writable(true);
 export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
@@ -61,38 +55,53 @@ export const query: Writable<Query> = writable({
     query: ""
 });
 
-export const isPlaying = writable(false);
-export const currentSong: Writable<Song> = writable(null);
-export const currentSongIdx = writable(0);
-
-const defaultLastPlayedInfo: LastPlayedInfo = {
-    songId: null,
-    position: 0
-};
-
-export const lastPlayedInfo: Writable<LastPlayedInfo> = writable(
-    {
-        ...defaultLastPlayedInfo,
-        ...JSON.parse(localStorage.getItem("lastPlayedInfo"))
-    } || defaultLastPlayedInfo
-);
-// Auto-persist settings
-lastPlayedInfo.subscribe((val) =>
-    localStorage.setItem("lastPlayedInfo", JSON.stringify(val))
-);
-
-export const nextUpSong: Writable<Song> = writable(null);
+export const allSongs: Writable<Song[]> = writable([]);
 export const queriedSongs: Writable<Song[]> = writable([]);
 
-export const allSongs: Writable<Song[]> = writable([]);
-export const playlist: Writable<Song[]> = writable([]);
-export const shuffledPlaylist: Writable<Song[]> = writable([]);
-export const albumPlaylist: Writable<Song[]> = writable([]);
-export const playlistIsAlbum = writable(false);
-export const playlistCountry = writable(null); // ISO Country code
-export const playlistType: Writable<PlaylistType> = writable("library");
-export const playlistDuration: Writable<number> = writable(0);
+export const isPlaying = writable(false);
+export const current: Writable<PlayingSong> = writable({ song: null, index: 0, position: 0 }, async () => {
+    const item = localStorage.getItem("current");
+
+    if (item) {
+        const data = JSON.parse(item);
+
+        if (data.song) {
+            const song = await db.songs.get(data.song);
+
+            current.set({ song, index: data.index, position: data.position });
+
+            playerTime.set(data.position);
+        }
+    }
+});
+current.subscribe(({ song, index, position }) => {
+    const data = song
+        ? { song: song.id, index, position }
+        : { song: null, index: 0, position: 0 };
+
+    localStorage.setItem("current", JSON.stringify(data));
+});
+export const queue: Writable<Song[]> = writable([], async () => {
+    const item = localStorage.getItem("queue");
+
+    if (item) {
+        const promises = item.split(",").map(async (id, index) => ({ index, song: await db.songs.get(id)}));
+        const songs = await Promise.all(promises);
+
+        songs.sort((a, b) => a.index - b.index);
+
+        queue.set(songs.map(({song}) => song));
+    }
+});
+queue.subscribe((songs) => {
+    localStorage.setItem("queue", songs.map(({id}) => id).join());
+});
+export const queueCountry = writable(null); // ISO Country code
+export const queueDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
+export const shuffledQueue: Writable<Song[]> = writable([]);
+
+export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
@@ -306,7 +315,6 @@ export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 // Queue
 export const isQueueOpen = writable(false);
 export const isQueueCleared = writable(false);
-export const queueMode: Writable<QueueMode> = writable("library");
 
 // Wiki
 export const isWikiOpen = writable(false);

@@ -39,7 +39,7 @@
                 </li>
             {/each}
         </ul>
-    {:else}{/if}
+    {/if}
     <div class="add">
         <p>+</p>
         <form on:submit|preventDefault={onCreateSongProject}>

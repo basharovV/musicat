@@ -11,9 +11,6 @@
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isTagOrCondition,
-        lastPlayedInfo,
-        playlist,
-        playlistDuration,
         queriedSongs,
         query,
         selectedPlaylistFile,
@@ -196,10 +193,6 @@
             });
         }
 
-        $playlistDuration = resultsArray.reduce((total, song) => {
-            return total + song.fileInfo.duration;
-        }, 0);
-
         // Do sorting for non-indexed results
         if (!isIndexed) {
             resultsArray = resultsArray.sort((a, b) => {
@@ -238,17 +231,13 @@
         }
         if ($uiView === "library" && get(isInit)) {
             console.log("init");
-            const lastPlayed = get(lastPlayedInfo);
             // TESTING ONLY: Uncomment when needed
             // window["openedUrls"] = "file:///Users/slav/Downloads/Intrusive Thoughts 14-12-2023.mp3";
 
             if (window["openedUrls"]?.length) {
                 await audioPlayer.handleOpenedUrls(window["openedUrls"]);
-            } else if (lastPlayed.songId) {
-                audioPlayer.shouldRestoreLastPlayed = lastPlayed;
-                // audioPlayer.currentSong = await db.songs.get(lastPlayed.songId);
-                playlist.set(resultsArray);
             }
+
             isInit.set(false);
         }
         isLoading = false;

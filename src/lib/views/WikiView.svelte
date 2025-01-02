@@ -7,16 +7,10 @@
     import ShadowGradient from "../ui/ShadowGradient.svelte";
     import { getWikipediaUrlForArtist } from "../../data/WikipediaAPI";
     import {
-        albumPlaylist,
-        currentSong,
+        current,
         isPlaying,
         isWikiOpen,
-        playlist,
-        playlistType,
-        queriedSongs,
-
         wikiArtist
-
     } from "../../data/store";
     import { fade, fly } from "svelte/transition";
     import Icon from "../ui/Icon.svelte";
@@ -25,6 +19,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import LL from "../../i18n/i18n-svelte";
+    import { setQueue } from "../../data/storeHelper";
     wtf.extend(wtfHtml);
 
     let wikiResult: GetHTMLResponse;
@@ -71,7 +66,7 @@
             error = err;
         } finally {
             isLoading = false;
-            previousArtist = $currentSong?.artist;
+            previousArtist = $current.song?.artist;
         }
     }
 
@@ -81,8 +76,8 @@
 
     onMount(() => {
         isMounted = true;
-        $currentSong?.artist && getWiki($wikiArtist || $currentSong.artist);
-        // $currentSong?.artist && getWikiWtf($currentSong.artist);
+        $current.song?.artist && getWiki($wikiArtist || $current.song.artist);
+        // $current.song?.artist && getWikiWtf($current.song.artist);
     });
 
     onDestroy(() => {
@@ -93,7 +88,7 @@
         isMounted &&
         wikiResult &&
         $isPlaying !== undefined &&
-        $currentSong
+        $current.song
     ) {
         enrichLinks();
     }
@@ -181,11 +176,11 @@
                     link.closest("p")?.classList?.add("has-mention");
                     const currentSongAlbum = await db.albums
                         .where("artist")
-                        .equalsIgnoreCase($currentSong.artist)
+                        .equalsIgnoreCase($current.song.artist)
                         .and(
                             (a) =>
                                 a.displayTitle.toLowerCase() ===
-                                $currentSong.album.toLowerCase()
+                                $current.song.album.toLowerCase()
                         )
                         .first();
                     // Add playing class or remove it
@@ -208,7 +203,7 @@
                     // Add playing class or remove it
                     link.classList.toggle(
                         "playing",
-                        $isPlaying && $currentSong?.id === song.id
+                        $isPlaying && $current.song?.id === song.id
                     );
                     link.addEventListener("click", onSongClicked);
                     if (!songs.find((s) => s.data.id === song.id))
@@ -223,7 +218,7 @@
                 // Add playing class or remove it
                 link.classList.toggle(
                     "playing",
-                    $isPlaying && $currentSong?.artist === title
+                    $isPlaying && $current.song?.artist === title
                 );
                 link.addEventListener("click", onArtistClicked);
                 if (!artists.find((a) => a.data === title))
@@ -251,7 +246,7 @@
     async function playAlbum(albumId: string) {
         const album = await db.albums.get(albumId);
         if (
-            $currentSong?.album.toLowerCase() ===
+            $current.song?.album.toLowerCase() ===
             album.displayTitle.toLowerCase()
         ) {
             if ($isPlaying) {
@@ -264,17 +259,16 @@
                 .where("id")
                 .anyOf(album.tracksIds)
                 .toArray();
-            tracks = tracks.sort((a, b) => {
+
+            tracks.sort((a, b) => {
                 return a.trackNumber - b.trackNumber;
             });
-            if (tracks) audioPlayer.playSong(tracks[0]);
-            $playlist = tracks;
-            $albumPlaylist = tracks;
-            $playlistType = "album";
+
+            setQueue(tracks, 0);
         }
     }
     async function playArtist(artist: string) {
-        if ($currentSong?.artist.toLowerCase() === artist.toLowerCase()) {
+        if ($current.song?.artist.toLowerCase() === artist.toLowerCase()) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
@@ -286,16 +280,13 @@
                 .equals(artist)
                 .toArray();
 
-            if (tracks.length > 0) audioPlayer.playSong(tracks[0]);
-            $playlist = tracks;
-            $albumPlaylist = tracks;
-            $playlistType = "album";
+            setQueue(tracks, 0);
         }
     }
 
     async function playSong(songId: string) {
         const song = await db.songs.get(songId);
-        if ($currentSong?.title.toLowerCase() === song?.title.toLowerCase()) {
+        if ($current.song?.title.toLowerCase() === song?.title.toLowerCase()) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
@@ -309,7 +300,7 @@
     }
 
     function isPlayingAlbum(title: string) {
-        return $currentSong?.album.toLowerCase() === title.toLowerCase();
+        return $current.song?.album.toLowerCase() === title.toLowerCase();
     }
 
     let isScrollToTopVisible = false;
@@ -356,13 +347,13 @@
                     <p>{previousArtist}</p>
                 {/if}
             </div>
-            {#if previousArtist && previousArtist !== $currentSong?.artist}
+            {#if previousArtist && previousArtist !== $current.song?.artist}
                 <div class="info-playing">
                     <small>Current artist: </small>
                     <ButtonWithIcon
                         size="small"
-                        text="→ {$currentSong?.artist}"
-                        onClick={() => getWiki($currentSong?.artist)}
+                        text="→ {$current.song?.artist}"
+                        onClick={() => getWiki($current.song?.artist)}
                     />
                 </div>
             {/if}
@@ -542,7 +533,7 @@
             display: grid;
             grid-template-rows: auto 1fr;
         }
-        
+
         .in-article {
             background-color: var(--wiki-inarticle-bg);
             border-bottom: 1px solid color-mix(in srgb, var(--inverse) 40%, transparent);
@@ -590,7 +581,7 @@
                         cursor: pointer;
                         &:hover {
                             background-color: var(--wiki-pill-hover-bg);
-                            
+
                             p {
                                 color: var(--wiki-pill-hover-text);
                             }
