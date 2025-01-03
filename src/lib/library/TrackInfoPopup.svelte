@@ -20,8 +20,10 @@
     import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
+        current,
         lastWrittenSongs,
         os,
+        playerTime,
         popupOpen,
         rightClickedTrack,
         rightClickedTracks
@@ -47,6 +49,8 @@
     import { Image } from "@tauri-apps/api/image";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import { get } from "svelte/store";
     // optional
 
     const ALBUM_FIELDS = [
@@ -159,7 +163,7 @@
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
     let artworkToSetData: Uint8Array = null;
-    let isArtworkSet = false;
+    let isArtworkSet: "delete" | "replace" | false = false;
     let artworkFileToSet = null;
 
     let foundArtwork;
@@ -199,6 +203,7 @@
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                    foundArtwork = true;
                 }
 
                 previousArtworkFormat = artworkFormat;
@@ -233,21 +238,21 @@
                 .filter((m) => m.value !== null)
                 .map((t) => ({ id: t.id, value: t.value }));
             console.log("Writing: ", toWrite);
-            
+
             const event = {
                 tracks: [
                     {
-                        "song_id": $rightClickedTrack.id,
+                        song_id: $rightClickedTrack.id,
                         metadata: toWrite,
-                        "tag_type": metadata.tagType,
-                        "file_path": $rightClickedTrack.path,
-                        "artwork_file": artworkFileToSet
-                            ? artworkFileToSet
-                            : "",
-                        "artwork_data": artworkToSetData ?? []
+                        tag_type: metadata.tagType,
+                        file_path: $rightClickedTrack.path,
+                        artwork_file: artworkFileToSet ? artworkFileToSet : "",
+                        artwork_data: artworkToSetData ?? [],
+                        artwork_data_mime_type: artworkToSetFormat,
+                        delete_artwork: isArtworkSet === "delete"
                     }
                 ]
-            }
+            };
             // console.log("event: ", event);
 
             toImport = await invoke<ToImport>("write_metadatas", { event });
@@ -260,7 +265,7 @@
                             const fileMetadata =
                                 await readMappedMetadataFromSong(track);
                             return {
-                                "song_id": track.id,
+                                song_id: track.id,
                                 metadata: [
                                     ...fileMetadata?.mappedMetadata,
                                     ...metadata?.mappedMetadata
@@ -276,12 +281,14 @@
                                             value: t.value
                                         }))
                                 ],
-                                "tag_type": fileMetadata.tagType,
-                                "file_path": track.path,
-                                "artwork_file": artworkFileToSet
+                                tag_type: fileMetadata.tagType,
+                                file_path: track.path,
+                                artwork_file: artworkFileToSet
                                     ? artworkFileToSet
                                     : "",
-                                "artwork_data": artworkToSetData ?? []
+                                artwork_data: artworkToSetData ?? [],
+                                artwork_data_mime_type: artworkToSetFormat,
+                                delete_artwork: isArtworkSet === "delete"
                             };
                         })
                     )
@@ -393,6 +400,16 @@
             artworkFocused = true;
             return;
         }
+
+        if (artworkSrc && artworkFormat) {
+            // Let options for existing artwork (delete, replace) handle this
+            return;
+        }
+
+        await openArtworkFilePicker();
+    }
+
+    async function openArtworkFilePicker() {
         // Open a selection dialog for directories
         const selected = await open({
             directory: false,
@@ -411,7 +428,7 @@
             if (response.status === 200) {
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
-                isArtworkSet = true;
+                isArtworkSet = "replace";
                 artworkFileToSet = selected;
                 artworkToSetData = null;
                 artworkToSetSrc = src;
@@ -497,9 +514,13 @@
     }
 
     $: artistInput =
-        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")?.value === "1" || metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")?.value ? "" :
-        metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
-            ?.value ?? "";
+        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")
+            ?.value === "1" ||
+        metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")
+            ?.value
+            ? ""
+            : metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
+                  ?.value ?? "";
 
     let artistInputField: HTMLInputElement;
 
@@ -767,7 +788,7 @@
             artworkToSetFormat = mimeType;
             artworkToSetData = new Uint8Array(arrayBuffer);
             artworkFileToSet = null;
-            isArtworkSet = true;
+            isArtworkSet = "replace";
         }
         // const src = "asset://localhost/" + folder + artworkFilename;
     }
@@ -1014,7 +1035,7 @@
                 }}
             >
                 <div class="artwork-frame">
-                    {#if (artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
+                    {#if isArtworkSet !== "delete" && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
                         <img
                             alt="Artwork"
                             class="artwork"
@@ -1022,6 +1043,29 @@
                                 previousArtworkSrc ||
                                 artworkSrc}
                         />
+                        {#if artworkFocused && artworkSrc && artworkFormat && !foundArtwork}
+                            <div class="artwork-options">
+                                <Icon
+                                    icon={artworkToSetSrc
+                                        ? "mingcute:close-circle-fill"
+                                        : "ant-design:delete-outlined"}
+                                    onClick={() => {
+                                        if (artworkToSetSrc) {
+                                            artworkToSetSrc = null;
+                                            artworkToSetFormat = null;
+                                        } else {
+                                            isArtworkSet = "delete";
+                                        }
+                                    }}
+                                />
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openArtworkFilePicker();
+                                    }}
+                                />
+                            </div>
+                        {/if}
                     {:else}
                         <div class="artwork-placeholder">
                             <Icon icon="mdi:music-clef-treble" />
@@ -1034,8 +1078,7 @@
                 <small>{$LL.trackInfo.artworkReadyToSave()}</small>
             {:else if foundArtwork}
                 <small
-                    >{$LL.trackInfo.artworkFound()}
-                    {foundArtwork.artworkFilenameMatch}</small
+                    >{$LL.trackInfo.artworkFound()}</small
                 >
             {:else if artworkSrc}
                 <small>{$LL.trackInfo.encodedInFile()}</small>
@@ -1339,7 +1382,8 @@
         overflow: hidden;
         cursor: pointer;
         caret-color: transparent;
-        border: 1px solid color-mix(in srgb, var(--background) 60%, var(--inverse));
+        border: 1px solid
+            color-mix(in srgb, var(--background) 60%, var(--inverse));
 
         &:hover {
             border: 1px solid rgb(from var(--inverse) r g b / 0.517);
@@ -1366,8 +1410,8 @@
                 left bottom,
                 right top;
             animation: border-dance 2s infinite linear;
-            
-             .artwork-frame {
+
+            .artwork-frame {
                 img {
                     transform: scale(0.96);
                 }
@@ -1402,9 +1446,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
             img {
                 height: 100%;
                 width: 100%;
+            }
+
+            .artwork-options {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 2em;
+                background-color: var(--background);
             }
 
             .artwork-placeholder {
@@ -1631,7 +1690,7 @@
             text-overflow: ellipsis;
             overflow: hidden;
             display: block;
-            
+
             &.notfound {
                 color: var(--popup-song-artwork-notfound);
             }
@@ -1666,7 +1725,11 @@
         flex-direction: row;
         gap: 5px;
         align-items: center;
-        background-color: color-mix(in srgb, var(--background) 50%, var(--inverse));
+        background-color: color-mix(
+            in srgb,
+            var(--background) 50%,
+            var(--inverse)
+        );
         z-index: 11;
         border: 1px solid rgb(from var(--inverse) r g b / 0.08);
         top: -15px;
@@ -1684,7 +1747,8 @@
 
     .enrichment {
         margin-top: 1.5em;
-        border: 1px solid color-mix(in srgb, var(--background) 70%, var(--inverse));
+        border: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
         border-radius: 5px;
         padding: 2em 1em 1em 1em;
         grid-column: 1 / 3;
@@ -1741,8 +1805,13 @@
         color: var(--text);
         position: relative;
         width: 100%;
-        border: 1px solid color-mix(in srgb, var(--background) 70%, var(--inverse));
-        background-color: color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse));
+        border: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
+        background-color: color-mix(
+            in srgb,
+            var(--overlay-bg) 80%,
+            var(--inverse)
+        );
 
         font-family:
             system-ui,
@@ -1754,7 +1823,8 @@
 
         .section-title {
             color: var(--popup-song-metadata-title);
-            border: 1px solid rgb(from var(--popup-song-metadata-title) r g b / 0.08);
+            border: 1px solid
+                rgb(from var(--popup-song-metadata-title) r g b / 0.08);
         }
 
         > p {
@@ -1819,7 +1889,12 @@
                 }
                 &[data-tag-id="title"] {
                     &:hover {
-                        border: 1px solid color-mix(in srgb, var(--background) 60%, var(--inverse));
+                        border: 1px solid
+                            color-mix(
+                                in srgb,
+                                var(--background) 60%,
+                                var(--inverse)
+                            );
                         cursor: pointer;
                     }
                 }
@@ -1827,7 +1902,11 @@
 
             .line {
                 height: 1px;
-                background-color: color-mix(in srgb, var(--background) 60%, var(--inverse));
+                background-color: color-mix(
+                    in srgb,
+                    var(--background) 60%,
+                    var(--inverse)
+                );
                 width: 40px;
             }
 

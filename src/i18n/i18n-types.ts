@@ -435,7 +435,7 @@ type RootTranslation = {
 		 */
 		artworkReadyToSave: string
 		/**
-		 * F​o​u​n​d
+		 * F​o​u​n​d​ ​i​n​ ​f​o​l​d​e​r
 		 */
 		artworkFound: string
 		/**
@@ -1227,7 +1227,7 @@ export type TranslationFunctions = {
 		 */
 		artworkReadyToSave: () => LocalizedString
 		/**
-		 * Found
+		 * Found in folder
 		 */
 		artworkFound: () => LocalizedString
 		/**
