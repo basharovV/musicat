@@ -365,6 +365,14 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     loopStartPos: 0
 });
 
+/**
+ * Keep track of the song(s) that were last written to from the tag editor. 
+ * 
+ * Currently this is used to bypass the "same song check" in the sidebar, so that song
+ * info is updated even if the same song is played.
+ */
+export const lastWrittenSongs: Writable<Song[]> = writable(null);
+
 async function init() {
     // Set OS
     const osType = await type();

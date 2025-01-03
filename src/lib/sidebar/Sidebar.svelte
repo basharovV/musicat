@@ -18,7 +18,7 @@
         addSongsToPlaylists,
         createNewPlaylistFile,
         deletePlaylistFile,
-        renamePlaylist,
+        renamePlaylist
     } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
@@ -57,6 +57,7 @@
         userPlaylists,
         userSettings,
         toDeletePlaylist,
+        lastWrittenSongs
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -77,7 +78,7 @@
     const appWindow = tauriWindow.getCurrentWindow();
 
     // What to show in the sidebar
-    let song;
+    let song: Song;
     let title;
     let fileName;
     $: displayTitle = title ?? fileName;
@@ -125,8 +126,14 @@
 
     current.subscribe(async (current) => {
         if (current.song) {
-            if (current.song.file === fileName) {
+            if (
+                current.song.path === song?.path &&
+                !$lastWrittenSongs
+                    .map((s) => s.path)
+                    .includes(current.song.path)
+            ) {
                 // same song, no need to update
+                // (unless the metadata was just written to eg. updated artwork)
                 return;
             }
 

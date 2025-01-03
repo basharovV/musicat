@@ -20,6 +20,7 @@
     import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
+        lastWrittenSongs,
         os,
         popupOpen,
         rightClickedTrack,
@@ -48,7 +49,14 @@
     import LL from "../../i18n/i18n-svelte";
     // optional
 
-    const ALBUM_FIELDS = ["album", "albumArtist", "artist", "date", "genre", "compilation"];
+    const ALBUM_FIELDS = [
+        "album",
+        "albumArtist",
+        "artist",
+        "date",
+        "genre",
+        "compilation"
+    ];
 
     function onClose() {
         $popupOpen = null;
@@ -295,9 +303,6 @@
             }
         }
 
-        artworkFileToSet = null;
-        isArtworkSet = false;
-
         if (toImport.albums.length) {
             for (const album of toImport.albums) {
                 await reImportAlbum(album);
@@ -308,6 +313,9 @@
             position: "top-right"
         });
 
+        $lastWrittenSongs = $rightClickedTrack
+            ? [$rightClickedTrack]
+            : $rightClickedTracks;
         await reset();
     }
 

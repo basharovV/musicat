@@ -17,6 +17,7 @@
         rightClickedTrack,
         rightClickedTracks,
         seekTime,
+        lastWrittenSongs,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
@@ -27,7 +28,7 @@
 
     let duration;
     let artworkSrc;
-    let currentSongId;
+    let currentSong;
 
     $: elapsedTime = `${(~~($playerTime / 60))
         .toString()
@@ -43,8 +44,14 @@
 
     current.subscribe(async ({song}) => {
         if (song) {
-            if (song.id === currentSongId) {
+            if (
+                song.path === currentSong?.path &&
+                !$lastWrittenSongs
+                    .map((s) => s.path)
+                    .includes(song.path)
+            ) {
                 // same song, no need to update
+                // (unless the metadata was just written to eg. updated artwork)
                 return;
             }
 
@@ -56,7 +63,7 @@
                 }
             });
 
-            currentSongId = song.id;
+            currentSong = song.id;
             duration = songWithArtwork.fileInfo.duration;
 
             if (songWithArtwork.artwork) {
