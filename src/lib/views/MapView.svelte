@@ -46,6 +46,8 @@
         findCountryByArtist
     } from "../data/LibraryEnrichers";
     import ProgressBar from "../ui/ProgressBar.svelte";
+    import { currentThemeObject } from "../../theming/store";
+
     let isLoading = true;
 
     let container: HTMLElement;
@@ -307,7 +309,7 @@
             selector: "#map",
             showTooltip: true,
             visualizeData: {
-                scale: ["#eeeeee", "#999999"],
+                scale: [$currentThemeObject["mapview-scale-1"], $currentThemeObject["mapview-scale-2"]],
                 values: dataCountMap ? dataCountMap : []
             },
             // Play country
@@ -387,25 +389,26 @@
             regionsSelectableOne: true,
             regionStyle: {
                 initial: {
-                    fill: "#645479",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-bg"],
+                    stroke: $currentThemeObject["mapview-region-border"],
                     strokeWidth: 0.5,
                     fillOpacity: 1
                 },
                 selected: {
-                    fill: "#59CD70",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-selected-bg"],
+                    stroke: $currentThemeObject["mapview-region-selected-border"],
                     strokeWidth: 1,
                     fillOpacity: 1
                 },
                 selectedHover: {
-                    fill: "#59CD70",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-selected-hover-bg"],
+                    stroke: $currentThemeObject["mapview-region-selected-hover-border"],
                     strokeWidth: 1,
                     fillOpacity: 1
                 },
                 hover: {
-                    stroke: "#C1B1F3",
+                    fill: $currentThemeObject["mapview-region-hover-bg"],
+                    stroke: $currentThemeObject["mapview-region-hover-border"],
                     strokeWidth: 1
                 }
             }
@@ -776,10 +779,9 @@
         z-index: 10;
         padding: 2em;
         border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background: var(--overlay-bg);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
         small,
         p {

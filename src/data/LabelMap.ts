@@ -24,6 +24,11 @@ interface TagFieldMap {
     location?: string;
     isrc?: string;
     bpm?: string;
+    compilation?: string;
+    discNumber?: string;
+    encodingTool?: string;
+    gapless?: string;
+    normalization?: string;
 }
 
 const genericToVorbisMap: TagFieldMap = {
@@ -35,13 +40,15 @@ const genericToVorbisMap: TagFieldMap = {
     genre: "GENRE",
     date: "DATE",
     trackNumber: "TRACKNUMBER",
+    compilation: "COMPILATION",
+    discNumber: "DISCNUMBER",
     copyright: "COPYRIGHT",
     publisher: "PUBLISHER",
     performer: "PERFORMER",
     license: "LICENSE",
     location: "LOCATION",
     isrc: "ISRC",
-    bpm: "BPM"
+    bpm: "BPM",
 };
 
 const vorbisToGenericMap = inverse(genericToVorbisMap);
@@ -76,14 +83,21 @@ const genericToId3v22Map: TagFieldMap = {
     genre: "TCO",
     date: "TYE",
     trackNumber: "TRK",
+    compilation: "TCP",
+    discNumber: "TPA",
     copyright: "TCR",
     publisher: "TPB",
     isrc: "TRC",
-    bpm: "TBP"
+    bpm: "TBP",
 };
 
 const id3v22ToGenericMap = inverse(genericToId3v22Map);
 
+/*
+ID3v2.3
+-------
+
+*/
 const genericToId3v23Map: TagFieldMap = {
     title: "TIT2",
     artist: "TPE1",
@@ -93,14 +107,21 @@ const genericToId3v23Map: TagFieldMap = {
     genre: "TCON",
     date: "TDAT",
     trackNumber: "TRCK",
+    compilation: "TCMP",
+    discNumber: "TPOS",
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v23ToGenericMap = inverse(genericToId3v23Map);
 
+/*
+ID3v2.4
+-------
+
+*/
 const genericToId3v24Map: TagFieldMap = {
     title: "TIT2",
     artist: "TPE1",
@@ -110,13 +131,38 @@ const genericToId3v24Map: TagFieldMap = {
     genre: "TCON",
     date: "TDRC",
     trackNumber: "TRCK",
+    compilation: "TCMP",
+    discNumber: "TPOS",
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v24ToGenericMap = inverse(genericToId3v24Map);
+
+/*
+iTunes
+-------
+
+Reference: https://github.com/sergiomb2/libmp4v2/wiki/iTunesMetadata
+*/
+const genericToiTunesMap: TagFieldMap = {
+    title: "©nam",
+    artist: "©ART",
+    album: "©alb",
+    albumArtist: "aART",
+    composer: "©wrt",
+    genre: "gnre",
+    date: "©day",
+    trackNumber: "trkn",
+    copyright: "cprt",
+    encodingTool: "©too",
+    gapless: "----:com.apple.iTunes:iTunSMPB",
+    normalization: "----:com.apple.iTunes:iTunNORM",
+};
+
+const iTunesToGenericMap = inverse(genericToiTunesMap);
 
 function getMapForTagType(
     tagType: TagType,
@@ -133,6 +179,8 @@ function getMapForTagType(
             return fromGeneric ? genericToId3v23Map : id3v23ToGenericMap;
         case "ID3v2.4":
             return fromGeneric ? genericToId3v24Map : id3v24ToGenericMap;
+        case "iTunes":
+            return fromGeneric ? genericToiTunesMap : iTunesToGenericMap;
         default:
             return null;
     }

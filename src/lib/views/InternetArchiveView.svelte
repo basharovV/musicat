@@ -212,10 +212,12 @@
                 <div class="header">
                     {#if $iaSelectedCollection}
                         <div class="top-row">
-                            <img
-                                src="https://archive.org/services/img/{$iaSelectedCollection.id}"
-                            />
-                            <h2>{$iaSelectedCollection.title}</h2>
+                            <a href="https://archive.org/details/{$iaSelectedCollection.id}" target="_blank">
+                                <img
+                                    src="https://archive.org/services/img/{$iaSelectedCollection.id}"
+                                />
+                                <h2>{$iaSelectedCollection.title}</h2>
+                            </a>
                         </div>
                         {#if $iaSelectedCollection.description}
                             <p class="description">
@@ -282,7 +284,9 @@
             <div class="column-audio">
                 {#if isLoadingItem}
                     <div class="header">
-                        <h2>{$iaSelectedItem?.title}</h2>
+                        <a href="https://archive.org/details/{$iaSelectedItem?.id}" target="_blank">
+                            <h2>{$iaSelectedItem?.title}</h2>
+                        </a>
                         <p>Loading</p>
                         <div class="loading">
                             <LoadingSpinner />
@@ -290,11 +294,18 @@
                     </div>
                 {:else if $iaSelectedItem}
                     <div class="header">
-                        <h2>{$iaSelectedItem?.title}</h2>
+                        <a href="https://archive.org/details/{$iaSelectedItem?.id}" target="_blank">
+                            <h2>{$iaSelectedItem?.title}</h2>
+                        </a>
                     </div>
-                    <h3>Original</h3>
-                    {#if $iaSelectedItem.original}
-                        <IaFileBlock file={$iaSelectedItem.original} />
+                    {#if $iaSelectedItem.originals}
+                        <h3>Original</h3>
+
+                        <div class="files">
+                            {#each $iaSelectedItem.originals as file}
+                                <IaFileBlock {file} />
+                            {/each}
+                        </div>
                     {/if}
                     {#if $iaSelectedItem.files}
                         <h3>Files</h3>
@@ -399,7 +410,7 @@
                     -webkit-appearance: none;
                     width: 100%;
                     height: 5px;
-                    background: #474747d4;
+                    background: color-mix(in srgb, var(--inverse) 20%, transparent);
                     outline: none;
                     opacity: 1;
                     margin: auto;
@@ -412,13 +423,13 @@
                         appearance: none;
                         width: 20px;
                         height: 20px;
-                        background: url("/images/volume-up.svg");
+                        background: var(--transport-volume-thumb-url);
                     }
 
                     &::-moz-range-thumb {
                         width: 20px;
                         height: 20px;
-                        background: #04aa6d;
+                        background: var(--transport-volume-thumb-secondary);
                     }
                 }
             }
@@ -587,7 +598,7 @@
                 border-bottom: 0.7px solid
                     color-mix(in srgb, var(--inverse) 30%, transparent);
                 z-index: 2;
-                .top-row {
+                .top-row a {
                     display: flex;
                     width: 100%;
 

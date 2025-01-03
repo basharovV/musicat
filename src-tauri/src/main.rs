@@ -8,7 +8,7 @@ use log::info;
 #[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
-use player::AudioStreamer;
+use player::AudioPlayer;
 use reqwest;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -18,13 +18,14 @@ use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Emitter, Listener, WindowEvent};
+use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
+mod constants;
 mod dsp;
 mod files;
 #[cfg(target_os = "macos")]
@@ -144,11 +145,7 @@ struct GetWaveformResponse {
 }
 
 #[tauri::command]
-fn stream_file(
-    event: StreamFileRequest,
-    state: State<AudioStreamer>,
-    _app_handle: tauri::AppHandle,
-) {
+fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Stream file {:?}", event);
     let _ = state
         .player_control_sender
@@ -157,11 +154,7 @@ fn stream_file(
 }
 
 #[tauri::command]
-fn queue_next(
-    event: StreamFileRequest,
-    state: State<AudioStreamer>,
-    _app_handle: tauri::AppHandle,
-) {
+fn queue_next(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Queue next file {:?}", event);
     // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
@@ -170,7 +163,7 @@ fn queue_next(
 #[tauri::command]
 fn get_waveform(
     event: GetWaveformRequest,
-    state: State<AudioStreamer>,
+    state: State<AudioPlayer>,
     _app_handle: tauri::AppHandle,
 ) -> () {
     info!("Get waveform {:?}", event);
@@ -207,7 +200,7 @@ pub struct VolumeControlEvent {
 }
 
 #[tauri::command]
-fn volume_control(event: VolumeControlEvent, state: State<AudioStreamer>) {
+fn volume_control(event: VolumeControlEvent, state: State<AudioPlayer>) {
     info!("Received volume_control event");
     match state.volume_control_sender.send(event) {
         Ok(_) => {
@@ -226,7 +219,7 @@ pub struct FlowControlEvent {
 }
 
 #[tauri::command]
-fn decode_control(event: FlowControlEvent, state: State<AudioStreamer>) {
+fn decode_control(event: FlowControlEvent, state: State<AudioPlayer>) {
     info!("Received decode control event: {:?}", event);
     match event.decoding_active {
         Some(true) => {
@@ -248,7 +241,7 @@ struct StreamStatus {
 #[tauri::command]
 async fn init_streamer(
     event: Option<String>,
-    state: State<'_, AudioStreamer<'_>>,
+    state: State<'_, AudioPlayer<'_>>,
     _app_handle: tauri::AppHandle,
 ) -> Result<StreamStatus, ()> {
     info!("Get stream status {:?}", event);
@@ -302,12 +295,36 @@ async fn download_file(
         .sync_all()
         .map_err(|e| e.to_string())?;
 
-    // Move the temporary file to the final destination
+    let temp_dev = get_device_id(temp_file.path());
     let temp_path = temp_file.into_temp_path();
     let final_path = Path::new(&path);
-    temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+    let final_dev = get_device_id(&final_path);
+
+    if temp_dev == final_dev {
+        // Move the temporary file to the final destination
+        temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+    } else {
+        // Copy the temporary file to the final destination since files aren't on the same device
+        fs::copy(temp_path, final_path).expect("Failed to copy file");
+    }
 
     Ok(())
+}
+
+fn get_device_id(path: &Path) -> u64 {
+    let parent_path = path.parent().expect("Failed to get parent directory");
+
+    match file_id::get_file_id(parent_path).unwrap() {
+        file_id::FileId::Inode { device_id, .. } => device_id,
+        file_id::FileId::HighRes {
+            volume_serial_number,
+            ..
+        } => volume_serial_number,
+        file_id::FileId::LowRes {
+            volume_serial_number,
+            ..
+        } => volume_serial_number.into(),
+    }
 }
 
 struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
@@ -343,7 +360,7 @@ async fn main() {
     // #[cfg(dev)]
     // let devtools = devtools::init(); // initialize the plugin as early as possible
 
-    let streamer = player::AudioStreamer::create().unwrap();
+    let streamer = player::AudioPlayer::create().unwrap();
 
     // let mut builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
 
@@ -358,14 +375,33 @@ async fn main() {
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app_.clone();
-            let state: State<player::AudioStreamer<'static>> = app.state();
+            let state: State<player::AudioPlayer<'static>> = app.state();
 
-            let resource_path = app
-                .path()
-                .resolve("resources/log4rs.yml", tauri::path::BaseDirectory::Resource)
-                .expect("failed to resolve resource");
             env::set_var("MUSICAT_LOG_DIR", app.path().app_log_dir().unwrap());
-            log4rs::init_file(resource_path, Default::default()).unwrap();
+
+            #[cfg(dev)]
+            {
+                let resource_path = app
+                    .path()
+                    .resolve(
+                        "resources/log4rs.dev.yml",
+                        tauri::path::BaseDirectory::Resource,
+                    )
+                    .expect("failed to resolve resource");
+                log4rs::init_file(resource_path, Default::default()).unwrap();
+            }
+
+            #[cfg(not(dev))]
+            {
+                let resource_path = app
+                    .path()
+                    .resolve(
+                        "resources/log4rs.release.yml",
+                        tauri::path::BaseDirectory::Resource,
+                    )
+                    .expect("failed to resolve resource");
+                log4rs::init_file(resource_path, Default::default()).unwrap();
+            }
 
             info!("Goes to stderr and file");
 
@@ -460,7 +496,7 @@ async fn main() {
                 app.emit("menu", event.id.0).unwrap();
             });
 
-            app.listen_any("opened", move |event| {
+            app.listen_any("opened", move |_| {
                 let inner_size = window2.inner_size().unwrap();
                 handle_decorations(&window2, &inner_size);
             });

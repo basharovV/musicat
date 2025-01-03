@@ -47,6 +47,7 @@ interface Song {
     title: string;
     artist: string;
     album: string;
+    albumArtist?: string;
     year: number;
     genre: string[];
     composer: string[];
@@ -168,6 +169,8 @@ interface UserSettings {
     theme: string;
     outputDevice?: string;
     followSystemOutput: boolean;
+    geniusApiKey?: string;
+    discogsApiKey?: string;
 }
 
 interface UIPreferences {
@@ -416,7 +419,7 @@ interface IAItem {
     date?: number;
     performer?: string;
     writer?: string;
-    original: IAFile;
+    originals: IAFile[];
 }
 
 interface AudioDevice {

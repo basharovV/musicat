@@ -1580,14 +1580,12 @@
                 size={36}
                 disabled={$currentSongIdx === 0}
                 onClick={() => audioPlayer.playPrevious()}
-                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-middle"
                 size={42}
                 onClick={togglePlayPause}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
-                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-middle"
@@ -1596,7 +1594,6 @@
                 disabled={$playlist.length === 0 ||
                     $currentSongIdx === $playlist?.length - 1}
                 onClick={() => audioPlayer.playNext()}
-                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-side favourite {$currentSong?.isFavourite
@@ -1652,6 +1649,21 @@
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
     $sidebar_secondary_color: transparent;
+
+    :global {
+        sidebar .transport-middle {
+            color: var(--transport-control);
+
+            &:hover {
+                color: var(--transport-control-hover);
+                opacity: 1 !important;
+            }
+            &:active {
+                opacity: 0.9 !important;
+            }
+        }
+    }
+
     sidebar {
         position: relative;
         display: grid;
@@ -1903,7 +1915,8 @@
             user-select: none;
             margin: 0.3em 0;
             /* transition: height 1s ease-in-out; */
-            opacity: 0.2;
+            color: var(--header-text);
+            opacity: var(--header-opacity);
             cursor: default;
             &:hover {
                 opacity: 0.5;
@@ -2271,35 +2284,19 @@
             border-radius: 5px;
             user-select: none;
             letter-spacing: 0.4px;
-            /* background-color: color-mix(in srgb, var(--background) 66%, black); */
             .elapsed {
                 font-weight: 500;
                 color: var(--text-active);
             }
         }
     }
+
     transport {
-        /* background-color: rgb(255, 255, 255); */
         padding: 0em 1em 1em 1em;
         width: 100%;
-        color: white;
         z-index: 2;
         display: flex;
         justify-content: space-between;
-
-        .transport-middle {
-            align-self: center;
-            font-size: 42px;
-        }
-
-        :not(.off)[icon="ph:shuffle-bold"] {
-            color: #e1ff00;
-        }
-
-        .transport-side {
-            align-self: center;
-            font-size: 20px;
-        }
     }
 
     .other-controls {
@@ -2344,13 +2341,13 @@
             position: relative;
 
             &.dragover {
-                background-color: #5123dd;
+                background-color: var(--sidebar-item-drag-bg);
                 border-radius: 5px;
             }
 
             &.hover {
                 border-radius: 5px;
-                background-color: #392f5d3b;
+                background-color: var(--sidebar-item-hover-bg);
                 .playlist-options {
                     display: flex;
                 }
@@ -2368,7 +2365,7 @@
                     left: -4px;
                     position: absolute;
                     height: 70%;
-                    background-color: #5123dd;
+                    background-color: var(--sidebar-item-selected-pipe-bg);
                     border-radius: 4px;
                 }
             }

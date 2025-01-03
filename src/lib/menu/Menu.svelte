@@ -189,14 +189,13 @@
         display: flex;
         flex-direction: column;
         flex-wrap: wrap;
-        border: 1px solid rgba(255, 255, 255, 0.23);
-        box-shadow: 2px 2px 5px 0px #0002;
+        border: 1px solid var(--menu-border);
         border-radius: 8px;
-        background-color: #20202296;
+        background-color: var(--menu-bg);
         backdrop-filter: blur(8px);
         padding: 3px;
         font-weight: 400;
-        box-shadow: 10px 10px 10px 0px #0002;
+        box-shadow: 10px 10px 10px 0px var(--menu-shadow);
         z-index: 22;
         max-width: 300px;
         min-width: 65px;

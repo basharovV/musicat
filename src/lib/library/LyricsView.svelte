@@ -242,7 +242,7 @@
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(73, 70, 70);
         background: rgba(53, 50, 54, 0.8);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
 
         &.extra-space {

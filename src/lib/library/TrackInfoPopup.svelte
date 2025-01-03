@@ -48,7 +48,7 @@
     import LL from "../../i18n/i18n-svelte";
     // optional
 
-    const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
+    const ALBUM_FIELDS = ["album", "albumArtist", "artist", "date", "genre", "compilation"];
 
     function onClose() {
         $popupOpen = null;
@@ -225,23 +225,24 @@
                 .filter((m) => m.value !== null)
                 .map((t) => ({ id: t.id, value: t.value }));
             console.log("Writing: ", toWrite);
+            
+            const event = {
+                tracks: [
+                    {
+                        "song_id": $rightClickedTrack.id,
+                        metadata: toWrite,
+                        "tag_type": metadata.tagType,
+                        "file_path": $rightClickedTrack.path,
+                        "artwork_file": artworkFileToSet
+                            ? artworkFileToSet
+                            : "",
+                        "artwork_data": artworkToSetData ?? []
+                    }
+                ]
+            }
+            // console.log("event: ", event);
 
-            toImport = await invoke<ToImport>("write_metadatas", {
-                event: {
-                    tracks: [
-                        {
-                            "song_id": $rightClickedTrack.id,
-                            metadata: toWrite,
-                            "tag_type": metadata.tagType,
-                            "file_path": $rightClickedTrack.path,
-                            "artwork_file": artworkFileToSet
-                                ? artworkFileToSet
-                                : "",
-                            "artwork_data": artworkToSetData ?? ""
-                        }
-                    ]
-                }
-            });
+            toImport = await invoke<ToImport>("write_metadatas", { event });
         } else if ($rightClickedTracks?.length) {
             console.log("Writing album");
             toImport = await invoke<ToImport>("write_metadatas", {
@@ -272,7 +273,7 @@
                                 "artwork_file": artworkFileToSet
                                     ? artworkFileToSet
                                     : "",
-                                "artwork_data": artworkToSetData ?? ""
+                                "artwork_data": artworkToSetData ?? []
                             };
                         })
                     )
@@ -455,16 +456,6 @@
         onClose();
     });
 
-    onDestroy(() => {
-        if (unlisten) {
-            unlisten();
-        }
-        hotkeys.unbind(`${modifier}+enter`, "track-info");
-        hotkeys.unbind("esc", "track-info");
-        hotkeys.deleteScope("track-info");
-        $popupOpen = null;
-    });
-
     $: {
         if ($rightClickedTrack || $rightClickedTracks[0]) {
             reset();
@@ -484,6 +475,7 @@
     }
 
     $: artistInput =
+        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")?.value === "1" || metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")?.value ? "" :
         metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
             ?.value ?? "";
 
@@ -605,7 +597,7 @@
                 errors[currentTag.id].errors.push("err:null-chars");
                 containsError = "err:null-chars"; // We want to display a prompt
             } // Invalid characters
-            else if (!currentTag.id.match(/^[a-zA-Z0-9_:-]+$/g)) {
+            else if (!currentTag.id.match(/^[a-zA-Z0-9©_:\-\.]+$/)) {
                 errors[currentTag.id].errors.push("err:invalid-chars");
             }
 
@@ -758,7 +750,10 @@
         // const src = "asset://localhost/" + folder + artworkFilename;
     }
 
+    let previousScope;
+
     onMount(async () => {
+        previousScope = hotkeys.getScope();
         hotkeys.setScope("track-info");
         document.addEventListener("paste", onPaste);
 
@@ -766,6 +761,13 @@
     });
 
     onDestroy(() => {
+        if (unlisten) {
+            unlisten();
+        }
+        hotkeys.unbind(`${modifier}+enter`, "track-info");
+        hotkeys.unbind("esc", "track-info");
+        hotkeys.deleteScope("track-info", previousScope);
+        $popupOpen = null;
         document.removeEventListener("paste", onPaste);
     });
 
@@ -1016,7 +1018,7 @@
             {:else if artworkSrc}
                 <small>{$LL.trackInfo.encodedInFile()}</small>
             {:else}
-                <small style="color: grey">{$LL.trackInfo.noArtwork()}</small>
+                <small class="notfound">{$LL.trackInfo.noArtwork()}</small>
             {/if}
             <span
                 use:tippy={{
@@ -1216,10 +1218,9 @@
         position: relative;
         align-items: center;
         border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background-color: var(--overlay-bg);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
         overflow-y: auto;
         overflow-x: hidden;
@@ -1316,11 +1317,10 @@
         overflow: hidden;
         cursor: pointer;
         caret-color: transparent;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 60%, var(--inverse));
+        border: 1px solid color-mix(in srgb, var(--background) 60%, var(--inverse));
 
         &:hover {
-            border: 1px solid rgba(255, 255, 255, 0.517);
+            border: 1px solid rgb(from var(--inverse) r g b / 0.517);
         }
 
         &.focused {
@@ -1454,8 +1454,8 @@
         .section-title {
             top: -10px;
             margin: 0;
-            color: white;
-            border: 1px solid rgba(128, 128, 128, 0.16);
+            color: var(--title);
+            border: 1px solid rgb(from var(--inverse) r g b / 0.08);
         }
 
         .top-shadow {
@@ -1557,7 +1557,7 @@
                     border-right: 5px solid transparent;
 
                     p {
-                        background-color: rgba(0, 0, 0, 0.118);
+                        background-color: var(--popup-data-field-bg);
                         padding: 0.2em 0.5em;
                         width: fit-content;
                         border-radius: 4px;
@@ -1604,11 +1604,15 @@
     .user-section {
         padding: 0 0 0 1em;
         > small {
-            color: rgb(68, 161, 94);
+            color: var(--popup-song-artwork-found);
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
             display: block;
+            
+            &.notfound {
+                color: var(--popup-song-artwork-notfound);
+            }
         }
         span {
             cursor: default;
@@ -1617,7 +1621,7 @@
             display: flex;
             gap: 5px;
             align-items: center;
-            color: rgb(130, 201, 223);
+            color: var(--popup-song-artwork-about);
             user-select: none;
             &:hover {
                 opacity: 0.7;
@@ -1640,13 +1644,9 @@
         flex-direction: row;
         gap: 5px;
         align-items: center;
-        background-color: color-mix(
-            in srgb,
-            var(--background) 50%,
-            var(--inverse)
-        );
+        background-color: color-mix(in srgb, var(--background) 50%, var(--inverse));
         z-index: 11;
-        border: 1px solid rgba(28, 163, 201, 0.29);
+        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
         top: -15px;
         padding: 0 10px;
         letter-spacing: 1px;
@@ -1656,14 +1656,13 @@
         width: fit-content;
         margin: 0.5em 0;
         text-align: start;
-        color: #7dffee;
+        color: var(--title);
         text-transform: uppercase;
     }
 
     .enrichment {
         margin-top: 1.5em;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
+        border: 1px solid color-mix(in srgb, var(--background) 70%, var(--inverse));
         border-radius: 5px;
         padding: 2em 1em 1em 1em;
         grid-column: 1 / 3;
@@ -1675,9 +1674,8 @@
         position: relative;
 
         .section-title {
-            border: 1px solid rgba(28, 163, 201, 0.19);
-
-            color: #7dffee;
+            border: 1px solid rgb(from var(--inverse) r g b / 0.08);
+            color: var(--title);
         }
 
         .label {
@@ -1698,7 +1696,7 @@
 
             p {
                 margin: 0;
-                color: rgba(255, 255, 255, 0.768);
+                color: rgb(from var(--text) r g b / 0.768);
             }
         }
         .country {
@@ -1715,21 +1713,15 @@
 
     .metadata-section {
         margin-top: 2em;
-        /* border-top: 1px solid rgb(76, 74, 74); */
         border-radius: 5px;
         position: relative;
         padding: 2em 1em;
-        color: white;
+        color: var(--text);
         position: relative;
         width: 100%;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
+        border: 1px solid color-mix(in srgb, var(--background) 70%, var(--inverse));
+        background-color: color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse));
 
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
         font-family:
             system-ui,
             -apple-system,
@@ -1739,23 +1731,8 @@
             sans-serif;
 
         .section-title {
-            color: #ffe6ac;
-            border: 1px solid rgba(255, 203, 158, 0.145);
-        }
-        h4 {
-            user-select: none;
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: -13px;
-            background: rgba(67, 65, 73, 0.89);
-            padding: 0 1em;
-            z-index: 10;
-            text-transform: uppercase;
-            opacity: 0.5;
-            width: fit-content;
-            margin: 0 auto;
-            /* font-family: "2Peas"; */
+            color: var(--popup-song-metadata-title);
+            border: 1px solid rgb(from var(--popup-song-metadata-title) r g b / 0.08);
         }
 
         > p {
@@ -1820,12 +1797,7 @@
                 }
                 &[data-tag-id="title"] {
                     &:hover {
-                        border: 1px solid
-                            color-mix(
-                                in srgb,
-                                var(--background) 60%,
-                                var(--inverse)
-                            );
+                        border: 1px solid color-mix(in srgb, var(--background) 60%, var(--inverse));
                         cursor: pointer;
                     }
                 }
@@ -1833,20 +1805,16 @@
 
             .line {
                 height: 1px;
-                background-color: color-mix(
-                    in srgb,
-                    var(--background) 60%,
-                    var(--inverse)
-                );
+                background-color: color-mix(in srgb, var(--background) 60%, var(--inverse));
                 width: 40px;
             }
 
             &.validation-error {
-                border: 1px solid rgb(161, 46, 46);
+                border: 1px solid var(--popup-song-metadata-validation-error);
             }
 
             &.validation-warning {
-                border: 1px solid rgb(225, 154, 0);
+                border: 1px solid var(--popup-song-metadata-validation-warning);
             }
         }
 
@@ -1856,13 +1824,13 @@
     }
 
     .tools {
-        border: 1px solid rgba(255, 255, 255, 0.099);
+        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
         padding: 2em;
         margin: 2em;
         position: relative;
 
         .section-title {
-            color: rgb(170, 170, 170);
+            color: rgb(from var(--title) r g b / 0.85);
             border: transparent;
         }
 
@@ -1898,7 +1866,7 @@
         padding: 0.2em;
         border-radius: 8px;
         margin: 1em;
-        background-color: rgb(111, 87, 87);
+        background-color: var(--popup-song-metadata-prompt-error);
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
