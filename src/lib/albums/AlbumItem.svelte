@@ -20,9 +20,12 @@
     export let highlighted = false;
     export let showInfo = true;
 
-    // console.log("highlight", highlighted);
+    let cancel = false;
     let isHovered = false;
+
     async function playPauseToggle() {
+        cancel = true;
+
         if (
             $playlistType === "album" &&
             $currentSong?.album.toLowerCase() === album.title.toLowerCase()
@@ -71,16 +74,30 @@
         on:mouseleave={() => {
             isHovered = false;
         }}
-        on:mousedown|preventDefault={async () => {
-            let tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .toArray();
-            tracks = tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
-            $draggedSongs = tracks;
-            $draggedAlbum = album;
+        on:mousedown|preventDefault={async (e) => {
+            cancel = false;
+
+            if (e.button === 0) {
+                let tracks = await db.songs
+                    .where("id")
+                    .anyOf(album.tracksIds)
+                    .toArray();
+                tracks = tracks.sort((a, b) => {
+                    return a.trackNumber - b.trackNumber;
+                });
+
+                if (cancel) {
+                    $draggedSongs = [];
+                    $draggedAlbum = null;
+                }
+                else {
+                    $draggedSongs = tracks;
+                    $draggedAlbum = album;
+                }
+            }
+        }}
+        on:mouseup|preventDefault={async (e) => {
+            cancel = true;
         }}
     >
         <div class="hinge" />
