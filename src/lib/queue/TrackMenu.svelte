@@ -6,20 +6,18 @@
     import {
         isShuffleEnabled,
         popupOpen,
-        playlist,
-        rightClickedTrack,
-        rightClickedTracks,
-        selectedPlaylistFile,
-        shuffledPlaylist
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { findCountryByArtist } from "../data/LibraryEnrichers";
     import type { Song } from "../../App";
+    import { findQueueIndexes, updateQueues } from "../../data/storeHelper";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
+    export let songs: Song[] = [];
+
     let explorerName: string;
 
     onMount(async () => {
@@ -31,100 +29,84 @@
             case "windows":
                 explorerName = "Explorer";
                 break;
-            case "Linux":
+            case "linux":
                 explorerName = "File manager";
                 break;
         }
     });
 
-    let songId;
+    let song: Song | null = null;
     let isConfirmingDelete = false;
-    let isConfirmingRemoveFromPlaylist = false;
+    let confirmingLength = -1;
+    let confirmingHash = '';
 
-    $: {
-        if (
-            $rightClickedTracks?.map((s) => s.id).includes(songId) ||
-            songId !== $rightClickedTrack?.id
-        ) {
-            isConfirmingDelete = false;
-            isConfirmingRemoveFromPlaylist = false;
-        }
+    $: if (songs.length !== confirmingLength || songs[0].id !== confirmingHash) {
+        isConfirmingDelete = false;
+    }
+
+    $: if (songs.length === 1) {
+        song = songs[0];
+    } else {
+        song = null;
     }
 
     function closeMenu() {
         showMenu = false;
         isConfirmingDelete = false;
-        isConfirmingRemoveFromPlaylist = false;
-    }
-
-    function spliceMultiple(arr: Song[], indexes: number[]) {
-        // Sort the indexes in descending order to avoid index shifting issues
-        indexes.sort((a, b) => b - a);
-        // Create a copy of the array to avoid mutating the original array
-        let newArray = arr.slice();
-        // Iterate over the sorted indexes and remove elements
-        indexes.forEach((index) => {
-            if (index >= 0 && index < newArray.length) {
-                newArray.splice(index, 1);
-            }
-        });
-        return newArray;
     }
 
     async function removeFromQueue() {
         console.log("delete");
         if (!isConfirmingDelete) {
-            songId = $rightClickedTrack?.id;
+            confirmingLength = songs.length;
+            confirmingHash = songs[0].id;
             isConfirmingDelete = true;
             return;
         }
 
-        if ($rightClickedTracks.length) {
-            closeMenu();
-            const spliced = spliceMultiple(
-                $isShuffleEnabled ? $shuffledPlaylist : $playlist,
-                $rightClickedTracks.map((t) => t.viewModel.index)
-            );
-            console.log("spliced", spliced);
-            if ($isShuffleEnabled) {
-                $shuffledPlaylist = spliced;
-            } else {
-                $playlist = spliced;
-            }
-            $rightClickedTracks = [];
-            isConfirmingDelete = false;
-        } else if ($rightClickedTrack) {
-            closeMenu();
+        closeMenu();
 
-            ($isShuffleEnabled ? $shuffledPlaylist : $playlist).splice(
-                $rightClickedTrack.viewModel.index,
-                1
-            );
-            $playlist = $playlist;
-            $rightClickedTrack = null;
-            isConfirmingDelete = false;
+        const indexes = songs.map((t) => t.viewModel.index);
+
+        if ($isShuffleEnabled) {
+            const qIndexes = findQueueIndexes(songs)
+
+            updateQueues(qIndexes, indexes, (queue, indexes) => {
+                for (const index of indexes.sort((a, b) => b - a)) {
+                    queue.splice(index, 1);
+                }
+            });
+        } else {
+            updateQueues(indexes, null, (queue, indexes) => {
+                for (const index of indexes.sort((a, b) => b - a)) {
+                    queue.splice(index, 1);
+                }
+            });
         }
+
+        songs = [];
+        isConfirmingDelete = false;
     }
 
     function searchArtistOnYouTube() {
         closeMenu();
-        const query = encodeURIComponent($rightClickedTrack.artist);
+        const query = encodeURIComponent(song.artist);
         open(`https://www.youtube.com/results?search_query=${query}`);
     }
     function searchSongOnYouTube() {
         closeMenu();
-        const query = encodeURIComponent($rightClickedTrack.title);
+        const query = encodeURIComponent(song.title);
         open(`https://www.youtube.com/results?search_query=${query}`);
     }
     function searchArtistOnWikipedia() {
         closeMenu();
-        const query = encodeURIComponent($rightClickedTrack.artist);
+        const query = encodeURIComponent(song.artist);
         open(`https://en.wikipedia.org/wiki/${query}`);
     }
     function openInFinder() {
         closeMenu();
-        const query = $rightClickedTrack.path.replace(
-            $rightClickedTrack.file,
+        const query = song.path.replace(
+            song.file,
             ""
         );
         open(query);
@@ -132,9 +114,9 @@
     function lookUpChords() {
         closeMenu();
         const query = encodeURIComponent(
-            $rightClickedTrack.artist +
+            song.artist +
                 " " +
-                $rightClickedTrack.title +
+                song.title +
                 " chords"
         );
         open(`https://duckduckgo.com/?q=${query}`);
@@ -142,9 +124,9 @@
     function lookUpLyrics() {
         closeMenu();
         const query = encodeURIComponent(
-            $rightClickedTrack.artist +
+            song.artist +
                 " " +
-                $rightClickedTrack.title +
+                song.title +
                 " lyrics"
         );
         open(`https://duckduckgo.com/?q=${query}`);
@@ -159,15 +141,15 @@
 
     async function enrichArtistCountry() {
         isFetchingOriginCountry = true;
-        const country = await findCountryByArtist($rightClickedTrack.artist);
+        const country = await findCountryByArtist(song.artist);
         console.log("country", country);
         if (country) {
-            $rightClickedTrack.originCountry = country;
+            song.originCountry = country;
 
             // Find all songs with this artist
             const artistSongs = await db.songs
                 .where("artist")
-                .equals($rightClickedTrack.artist)
+                .equals(song.artist)
                 .toArray();
             artistSongs.forEach((s) => {
                 s.originCountry = country;
@@ -176,33 +158,39 @@
         }
         isFetchingOriginCountry = false;
     }
+
+    function unselect() {
+        closeMenu();
+        songs.length = 0;
+    }
 </script>
 
 {#if showMenu}
     <Menu {...pos} onClickOutside={closeMenu} fixed>
         <MenuOption
             isDisabled={true}
-            text={$rightClickedTrack
-                ? $rightClickedTrack.title
-                : $rightClickedTracks.length + " tracks"}
+            text={song
+                ? song.title
+                : songs.length + " tracks"}
         />
+        {#if songs.length > 1}
+            <MenuOption onClick={unselect} text="Unselect all" />
+        {/if}
         <MenuOption
             isDestructive={true}
             isConfirming={isConfirmingDelete}
-            onClick={() => {
-                removeFromQueue();
-            }}
-            text={$rightClickedTrack
+            onClick={removeFromQueue}
+            text={song
                 ? "Remove track from queue"
                 : "Remove tracks from queue"}
             confirmText="Click again to confirm"
         />
-        {#if $rightClickedTrack}
+        {#if song}
             <MenuDivider />
             <MenuOption text="Enrich" isDisabled />
             <MenuOption
                 onClick={enrichArtistCountry}
-                text={!$rightClickedTrack.originCountry
+                text={!song.originCountry
                     ? isFetchingOriginCountry
                         ? "Looking online..."
                         : "Origin country"

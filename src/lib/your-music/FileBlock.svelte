@@ -3,9 +3,9 @@
     import { open } from "@tauri-apps/plugin-shell";
     import type { ArtistFileItem, Song } from "src/App";
     import { getMetadataFromFile } from "../../data/LibraryImporter";
-    import { draggedScrapbookItems, playlist } from "../../data/store";
-    import audioPlayer from "../player/AudioPlayer";
+    import { draggedScrapbookItems } from "../../data/store";
     import Icon from "../ui/Icon.svelte";
+    import { setQueue } from "../../data/storeHelper";
 
     export let item: ArtistFileItem;
     export let style: "dashed" | "outline" = "outline";
@@ -25,8 +25,7 @@
                     includeFolderArtwork: false
                 }
             });
-            audioPlayer.shouldPlay = true;
-            $playlist = [song];
+            setQueue([song], 0);
         } else {
             // Play in default system app
             open(item.path);

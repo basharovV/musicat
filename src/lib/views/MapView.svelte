@@ -14,23 +14,17 @@
     import { db } from "../../data/db";
     import {
         addOriginCountryStatus,
-        currentSong,
         isSmartQueryBuilderOpen,
-        playlist,
-        playlistIsAlbum,
-        playlistCountry,
         queriedSongs,
         query,
+        queue,
+        queueCountry,
         selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
         smartQueryResults,
         smartQueryUpdater,
         uiView,
-        playlistType,
-        currentSongIdx,
-        isShuffleEnabled,
-        isQueueOpen
     } from "../../data/store";
     import SmartQuery from "../smart-query/Query";
     import { codes, countries } from "../data/CountryCodes";
@@ -47,6 +41,7 @@
     } from "../data/LibraryEnrichers";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { currentThemeObject } from "../../theming/store";
+    import { setQueue } from "../../data/storeHelper";
 
     let isLoading = true;
 
@@ -235,7 +230,7 @@
                     initialized = true;
                 }
 
-                $playlistCountry && setSelectedCountry($playlistCountry);
+                $queueCountry && setSelectedCountry($queueCountry);
             }
         }
         console.log("countMap", dataCountMap);
@@ -433,16 +428,14 @@
 
     function onCountryClicked() {
         // Should play immediately after setting playlist (and shuffling if necessary)
-        audioPlayer.shouldPlay = true;
-        $playlistCountry = selectedCountry;
-        $playlistType = "country";
-        $playlist = dataSetCountryValue.data;
         console.log(dataSetCountryValue.data[0]);
+        $queueCountry = selectedCountry;
+        setQueue(dataSetCountryValue.data, 0)
     }
 
     // Selected country
-    $: numberOfTracks = $playlist.length;
-    $: artists = [...new Set($playlist.map((item) => item.artist))];
+    $: numberOfTracks = $queue.length;
+    $: artists = [...new Set($queue.map((item) => item.artist))];
     $: numberOfArtists = artists.length;
     $: firstFewArtists = artists.slice(0, Math.min(3, artists.length));
 
@@ -510,7 +503,7 @@
 
 <container bind:this={container}>
     <div class="bg" />
-    <!-- 
+    <!--
     <Particles
         id="tsparticles"
         options={particlesOptions}
@@ -551,13 +544,11 @@
                         />
                     </div>
                 </div>
-            {:else if $playlistCountry}
+            {:else if $queueCountry}
                 <div id="info">
                     <p>Listening to music from</p>
                     <h2>
-                        {getFlagEmoji($playlistCountry)}{countries[
-                            $playlistCountry
-                        ]}
+                        {getFlagEmoji($queueCountry)}{countries[$queueCountry]}
                     </h2>
                     <small
                         >{numberOfTracks} tracks from {numberOfArtists} artists</small

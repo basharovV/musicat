@@ -10,7 +10,7 @@ export default {
     preprocess: [sveltePreprocess(), mdsvex(mdsvexConfig)],
 
     onwarn: (warning, handler) => {
-        if (warning.code.startsWith("a11y-")) {
+        if (warning.code.startsWith("a11y-") || warning.code === "css-unused-selector") {
             return;
         }
         handler(warning);
