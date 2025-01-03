@@ -157,33 +157,31 @@
                 text="Re-import album"
                 isLoading={isReimporting}
             />
-            {#if !$rightClickedAlbum.artwork}
-                <MenuDivider />
-                <MenuOption text="⚡️ Enrich" isDisabled />
+            <MenuDivider />
+            <MenuOption text="⚡️ Enrich" isDisabled />
+            <MenuOption
+                onClick={fetchArtwork}
+                isLoading={isFetchingArtwork}
+                text="Fetch artwork"
+                description={isFetchingArtwork
+                    ? "Fetching from Wikipedia..."
+                    : "Save to folder as cover.jpg"}
+            />
+            {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
                 <MenuOption
-                    onClick={fetchArtwork}
-                    isLoading={isFetchingArtwork}
-                    text="Fetch artwork"
-                    description={isFetchingArtwork
-                        ? "Fetching from Wikipedia..."
-                        : "Save to folder as cover.jpg"}
-                />
-                {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
-                    <MenuOption
-                        text={artworkResult.error || artworkResult.success}
-                        isDisabled
-                    />
-                {/if}
-                <MenuOption
-                    onClick={rescanLocalArtwork}
-                    text="Scan existing artwork"
-                    description="Check encoded art in tracks / folder image"
-                />
-                <MenuOption
-                    onClick={searchArtworkOnBrave}
-                    text="Search for artwork on Brave"
+                    text={artworkResult.error || artworkResult.success}
+                    isDisabled
                 />
             {/if}
+            <MenuOption
+                onClick={rescanLocalArtwork}
+                text="Scan existing artwork"
+                description="Check encoded art in tracks / folder image"
+            />
+            <MenuOption
+                onClick={searchArtworkOnBrave}
+                text="Search for artwork on Brave"
+            />
             <MenuDivider />
             <MenuOption
                 onClick={searchArtistOnYouTube}
