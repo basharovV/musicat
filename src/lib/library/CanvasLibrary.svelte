@@ -51,6 +51,7 @@
         popupOpen,
         queriedSongs,
         query,
+        queueMirrorsSearch,
         rightClickedTrack,
         rightClickedTracks,
         scrollToSong,
@@ -945,6 +946,9 @@
         } else {
             setQueue($queriedSongs, song.viewModel.index)
         }
+        if ($query.query.length) {
+            $queueMirrorsSearch = true;
+        }
     }
 
     function onRightClick(e, song, idx) {
@@ -1262,6 +1266,10 @@
             if ($popupOpen !== "track-info") {
                 AudioPlayer.shouldPlay = false;
                 setQueue($queriedSongs, songsHighlighted[0]);
+
+                if ($query.query.length) {
+                    $queueMirrorsSearch = true;
+                }
             }
         }
     }

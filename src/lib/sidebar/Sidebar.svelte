@@ -1069,8 +1069,13 @@
                                                 playlist.path}
                                             on:click={() => {
                                                 $uiView = "playlists";
-                                                $query.orderBy = "none";
-                                                $query.reverse = false;
+                                                // Opening a playlist will reset the query
+                                                $query = {
+                                                    ...$query,
+                                                    orderBy: "none",
+                                                    reverse: false,
+                                                    query: ""
+                                                };
                                                 $selectedPlaylistFile =
                                                     playlist;
                                                 $selectedSmartQuery = null;

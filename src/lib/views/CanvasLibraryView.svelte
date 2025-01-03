@@ -13,6 +13,8 @@
         isTagOrCondition,
         queriedSongs,
         query,
+        queue,
+        queueMirrorsSearch,
         selectedPlaylistFile,
         selectedSmartQuery,
         selectedTags,
@@ -26,6 +28,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
     import { parsePlaylist } from "../../data/M3UUtils";
+    import { setQueue } from "../../data/storeHelper";
 
     let isLoading = true;
 
@@ -240,6 +243,14 @@
 
             isInit.set(false);
         }
+
+        if ($queueMirrorsSearch) {
+            setQueue(resultsArray, false);
+            if ($query.query.length === 0) {
+                $queueMirrorsSearch = false;
+            }
+        }
+
         isLoading = false;
         return resultsArray;
     });

@@ -114,6 +114,17 @@ async function writeQueueToFile(queue: Song[]) {
 
 export const queue: Writable<Song[]> = writable([]);
 
+/**
+ * Flag used to let the queue automatically mirror the search results
+ * (only after explicitly playing a track from results)
+ *
+ * - Set to `true` typing in a search query -> playing song. Queue will be replaced with search results.
+ * Updating the query will continue to replace the queue. If current track is no longer in results,
+ * playback will continue from the beginning of the new queue.
+ * - Clearing the query will reset queue back to library and set the flag to `false`
+ *  */
+export const queueMirrorsSearch = writable(false);
+
 export const queueCountry = writable(null); // ISO Country code
 export const queueDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
