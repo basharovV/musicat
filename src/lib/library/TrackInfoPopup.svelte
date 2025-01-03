@@ -316,6 +316,20 @@
         $lastWrittenSongs = $rightClickedTrack
             ? [$rightClickedTrack]
             : $rightClickedTracks;
+
+        // If we changed the artwork tag, this offsets the audio data in the file,
+        // so we need to reload the song and seek to the current position
+        // (will cause audible gap)
+        const writtenTracks = $rightClickedTrack
+            ? [$rightClickedTrack]
+            : $rightClickedTracks;
+        if (
+            (artworkFileToSet || artworkToSetData) &&
+            writtenTracks.map((t) => t.id).includes($current.song.id)
+        ) {
+            audioPlayer.playCurrent(get(playerTime));
+        }
+
         await reset();
     }
 
