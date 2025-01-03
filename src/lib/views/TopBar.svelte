@@ -27,6 +27,7 @@
 
     let duration;
     let artworkSrc;
+    let currentSongId;
 
     $: elapsedTime = `${(~~($playerTime / 60))
         .toString()
@@ -42,6 +43,11 @@
 
     current.subscribe(async ({song}) => {
         if (song) {
+            if (song.id === currentSongId) {
+                // same song, no need to update
+                return;
+            }
+
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: {
                     path: song.path,
@@ -49,7 +55,8 @@
                     includeFolderArtwork: true
                 }
             });
-            console.log("test", songWithArtwork);
+
+            currentSongId = song.id;
             duration = songWithArtwork.fileInfo.duration;
 
             if (songWithArtwork.artwork) {

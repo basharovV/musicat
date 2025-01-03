@@ -125,6 +125,11 @@
 
     current.subscribe(async (current) => {
         if (current.song) {
+            if (current.song.file === fileName) {
+                // same song, no need to update
+                return;
+            }
+
             song = current.song;
 
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
