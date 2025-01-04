@@ -38,6 +38,7 @@ export interface Theme {
     "menu-border": string;
     "menu-checkbox-off": string;
     "menu-checkbox-on": string;
+    "menu-divider": string;
     "menu-item-confirm-bg": string;
     "menu-item-destructive-hover-bg": string;
     "menu-item-destructive-hover-text": string;
@@ -201,6 +202,7 @@ export const DEFAULT_THEME: Theme = {
     "menu-border": "#ffffff3b",
     "menu-checkbox-off": "#808080",
     "menu-checkbox-on": "#ffffff",
+    "menu-divider": "#494949",
     "menu-item-confirm-bg": "#d2630e",
     "menu-item-destructive-hover-bg": "#d20e32",
     "menu-item-destructive-hover-text": "#ffffff",
@@ -517,5 +519,5 @@ export const allThemes: { [key: string]: Theme } = {
         "icon-primary": "#E5F6F7",
         "icon-secondary": "#E5F6F7",
         "oscilloscope": "#07ea03",
-    }
+    },
 };

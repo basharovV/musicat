@@ -1447,7 +1447,6 @@
                     <Icon
                         icon="tabler:layout-sidebar-left-collapse"
                         size={22}
-                        color={$currentThemeObject["icon-secondary"]}
                         onClick={(e) => {
                             $isSidebarOpen = false;
                             $sidebarManuallyOpened = false;
@@ -1474,7 +1473,6 @@
                     icon={$isMiniPlayer
                         ? "gg:arrows-expand-up-right"
                         : "gg:arrows-expand-down-left"}
-                    color={$currentThemeObject["icon-secondary"]}
                     onClick={() => toggleMiniPlayer()}
                     boxed
                 />
@@ -1657,25 +1655,10 @@
     :global {
         sidebar {
             .transport-middle {
-                color: var(--transport-control);
+                color: var(--transport-control) !important;
 
                 &:hover {
-                    color: var(--transport-control-hover);
-                    opacity: 1 !important;
-                }
-                &:active {
-                    opacity: 0.9 !important;
-                }
-            }
-
-            .track-info-icon,
-            .transport-side,
-            .visualizer-icon {
-                color: var(--icon-secondary);
-
-                 &:hover {
-                    color: var(--icon-secondary-hover);
-                    opacity: 1 !important;
+                    color: var(--transport-control-hover) !important;
                 }
             }
 
@@ -1685,7 +1668,6 @@
 
                     &:hover {
                         color: var(--transport-favorite-hover);
-                        opacity: 1 !important;
                     }
                 }
 
@@ -1694,18 +1676,16 @@
 
                     &:hover {
                         color: var(--transport-shuffle-hover);
-                        opacity: 1 !important;
                     }
                 }
             }
 
             .visualizer-icon {
-                .active {
+                 .active {
                     color: var(--icon-tertiary);
 
                     &:hover {
                         color: var(--icon-tertiary-hover);
-                        opacity: 1 !important;
                     }
                 }
             }

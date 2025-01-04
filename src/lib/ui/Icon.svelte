@@ -267,12 +267,16 @@
         display: flex;
         align-items: center;
 
-        &.clickable:hover {
-            opacity: 0.5;
-        }
-        &.clickable:active {
-            opacity: 0.4;
-            transform: scale(0.95);
+        &.clickable {
+            color: var(--icon-secondary);
+
+            &:hover {
+                color: var(--icon-secondary-hover);
+            }
+            &:active {
+                opacity: 0.9;
+                transform: scale(0.95);
+            }
         }
 
         &.boxed {
