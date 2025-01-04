@@ -1,19 +1,19 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { current, isFullScreenVisualiser } from "../../data/store";
-    import audioPlayer from "./AudioPlayer";
-    import Icon from "../ui/Icon.svelte";
     import { AudioVisualiser } from "./AudioVisualiser";
     import { isIAPlaying } from "./WebAudioPlayer";
     import { WebAudioVisualiser } from "./WebAudioVisualiser";
 
+    export let width;
+    export let show = true;
+
+    let analyser: AudioVisualiser | WebAudioVisualiser;
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;
-    export let width;
     let height = 30;
-    let analyser: AudioVisualiser | WebAudioVisualiser;
-    export let show = true;
     let isMounted = false;
+    let song = null;
 
     $: if (analyser) {
         if (show) {
@@ -33,6 +33,10 @@
         analyser = new AudioVisualiser(canvas);
     }
 
+    $: if (isMounted && $current.song && $current.song.path !== song?.path) {
+        song = $current.song;
+    }
+
     onMount(() => {
         width = container.clientWidth;
         isMounted = true;
@@ -45,12 +49,7 @@
     class:full-screen={$isFullScreenVisualiser}
     class:mini={!$isFullScreenVisualiser}
 >
-    <canvas
-        bind:this={canvas}
-        class:hidden={$current.song === null}
-        {width}
-        {height}
-    />
+    <canvas bind:this={canvas} class:hidden={song === null} {width} {height} />
 </div>
 
 <style lang="scss">

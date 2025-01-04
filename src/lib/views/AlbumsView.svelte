@@ -125,7 +125,8 @@
 
     $: if (
         container &&
-        $current.song?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()
+        $current.song &&
+        $current.song.album.toLowerCase() !== currentAlbum?.title.toLowerCase()
     ) {
         if (updatePlayingAlbum()) {
             onScroll();

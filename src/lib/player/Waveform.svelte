@@ -6,8 +6,6 @@
 
     import {
         current,
-        isCmdOrCtrlPressed,
-        os,
         playerTime,
         seekTime,
         waveformPeaks,
@@ -122,11 +120,11 @@
             ev.stopPropagation();
             console.log("region-clicked");
             region.remove();
-            $current.song.markers?.splice(
-                $current.song.markers.findIndex((m) => m.pos === region.start),
+            song.markers?.splice(
+                song.markers.findIndex((m) => m.pos === region.start),
                 1,
             );
-            db.songs.put($current.song);
+            db.songs.put(song);
             if (region.start !== region.end) {
                 $waveformPeaks.loopStartPos = null;
                 $waveformPeaks.loopEndPos = null;
@@ -169,19 +167,19 @@
 
         wavesurfer.on("click", (pos) => {
             console.log("interaction", pos);
-            let posSeconds = $current.song.fileInfo.duration * pos;
+            let posSeconds = song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
-                if ($current.song) {
+                if (song) {
                     const marker: Marker = {
                         pos: posSeconds,
                         title: "👂",
                     };
-                    if ($current.song.markers) {
-                        $current.song.markers.push(marker);
+                    if (song.markers) {
+                        song.markers.push(marker);
                     } else {
-                        $current.song.markers = [marker];
+                        song.markers = [marker];
                     }
-                    db.songs.put($current.song);
+                    db.songs.put(song);
                     wsRegions.addRegion({
                         start: posSeconds,
                         content: marker.title,
@@ -189,7 +187,7 @@
                     });
                 }
             } else {
-                seekTime.set($current.song.fileInfo.duration * pos);
+                seekTime.set(song.fileInfo.duration * pos);
             }
         });
 
@@ -203,13 +201,13 @@
             await wavesurfer.load(
                 null,
                 event.payload.data,
-                $current.song.fileInfo.duration,
+                song.fileInfo.duration,
             );
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
-                    songId: $current.song.id,
+                    songId: song.id,
                     data: event.payload.data,
                 };
             } else {
@@ -219,10 +217,8 @@
     });
 
     playerTime.subscribe((playerTime) => {
-        if (wavesurfer && $current.song) {
-            wavesurfer.seekTo(
-                Math.min(playerTime / $current.song.fileInfo.duration),
-            );
+        if (wavesurfer && song) {
+            wavesurfer.seekTo(Math.min(playerTime / song.fileInfo.duration));
         }
     });
 
@@ -230,13 +226,12 @@
         await wavesurfer.load(
             null,
             $waveformPeaks.data,
-            $current.song.fileInfo.duration,
+            song.fileInfo.duration,
         );
+
         pxPerSec = wavesurfer.options.minPxPerSec;
 
-        if ($current.song) {
-            wavesurfer.seekTo($playerTime / $current.song.fileInfo.duration);
-        }
+        wavesurfer.seekTo($playerTime / song.fileInfo.duration);
 
         // Restore loop point
         if ($waveformPeaks.loopEnabled) {
@@ -248,7 +243,7 @@
             });
         }
 
-        $current.song.markers?.forEach((m) => {
+        song.markers?.forEach((m) => {
             wsRegions.addRegion({
                 start: m.pos,
                 content: m.title,
@@ -258,22 +253,25 @@
     }
 
     async function getWaveform() {
-        if (
-            $waveformPeaks?.data &&
-            $current.song?.id === $waveformPeaks.songId
-        ) {
+        if (!$waveformPeaks) {
+            return;
+        }
+
+        if ($waveformPeaks.data && song.id === $waveformPeaks.songId) {
             restoreState();
-        } else if ($current.song?.id !== $waveformPeaks?.songId) {
+        } else if (song.id !== $waveformPeaks.songId) {
             // Changing songs, reset and get new waveform
             wsRegions.clearRegions();
-            const result = await invoke("get_waveform", {
+
+            await invoke("get_waveform", {
                 event: {
-                    path: $current.song.path,
+                    path: song.path,
                 },
             });
-            $waveformPeaks.songId = $current.song.id;
 
-            $current.song.markers?.forEach((m) => {
+            $waveformPeaks.songId = song.id;
+
+            song.markers?.forEach((m) => {
                 wsRegions.addRegion({
                     start: m.pos,
                     content: m.title,
@@ -281,17 +279,23 @@
                 });
             });
         }
-        song = $current.song;
-        // console.log("result", result);
     }
 
-    $: if (isMounted && $current.song?.path !== song?.path && wavesurfer) {
+    $: if (
+        isMounted &&
+        $current.song &&
+        $current.song.path !== song?.path &&
+        wavesurfer
+    ) {
+        song = $current.song;
+
         getWaveform();
-        console.log(
-            "$current.song.fileInfo.duration",
-            $current.song.fileInfo.duration,
-        );
-        wavesurfer.setOptions({ duration: $current.song.fileInfo.duration });
+
+        console.log("song.fileInfo.duration", song.fileInfo.duration);
+
+        wavesurfer.setOptions({
+            duration: song.fileInfo.duration,
+        });
 
         if (wavesurfer.getDecodedData()) {
             wavesurfer.zoom(false);
