@@ -86,6 +86,11 @@
         const query = encodeURIComponent($rightClickedAlbum.artist);
         open(`https://en.wikipedia.org/wiki/${query}`);
     }
+    function searchArtworkOnBrave() {
+        closeMenu();
+        const query = encodeURIComponent(`${$rightClickedAlbum.artist} - ${$rightClickedAlbum.title}`);
+        open(`https://search.brave.com/images?q=${query}`);
+    }
     function openInFinder() {
         closeMenu();
         open($rightClickedAlbum.path);
@@ -98,8 +103,11 @@
     // Enrichers
     let isFetchingArtwork = false;
     let artworkResult: { success?: string; error?: string };
+    let artworkResultForAlbum: String;
     async function fetchArtwork() {
+        artworkResult = null;
         isFetchingArtwork = true;
+        artworkResultForAlbum = $rightClickedAlbum.id;
         artworkResult = await fetchAlbumArt($rightClickedAlbum);
         isFetchingArtwork = false;
     }
@@ -159,7 +167,7 @@
                     ? "Fetching from Wikipedia..."
                     : "Save to folder as cover.jpg"}
             />
-            {#if artworkResult}
+            {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
                 <MenuOption
                     text={artworkResult.error || artworkResult.success}
                     isDisabled
@@ -169,6 +177,10 @@
                 onClick={rescanLocalArtwork}
                 text="Scan existing artwork"
                 description="Check encoded art in tracks / folder image"
+            />
+            <MenuOption
+                onClick={searchArtworkOnBrave}
+                text="Search for artwork on Brave"
             />
             <MenuDivider />
             <MenuOption
