@@ -80,7 +80,7 @@
                 max={400}
                 value={minWidth}
                 on:input={(ev) => {
-                    $uiPreferences.albumsViewGridSize = ev.target.value;
+                    $uiPreferences.albumsViewGridSize = Number(ev.target.value);
                 }}
             /></label
         >
