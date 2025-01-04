@@ -645,7 +645,7 @@
         }
 
         .wiki {
-            grid-row: 3/6;
+            grid-row: 3/5;
             grid-column: 5;
             overflow-y: hidden;
             height: 100%;
