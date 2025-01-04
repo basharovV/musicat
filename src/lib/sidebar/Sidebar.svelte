@@ -128,9 +128,7 @@
         if (current.song) {
             if (
                 current.song.path === song?.path &&
-                !$lastWrittenSongs
-                    .map((s) => s.path)
-                    .includes(current.song.path)
+                !$lastWrittenSongs.some(({path}) => path === current.song.path)
             ) {
                 // same song, no need to update
                 // (unless the metadata was just written to eg. updated artwork)
