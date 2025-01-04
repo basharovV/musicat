@@ -15,7 +15,7 @@
         rightClickedTrack,
         rightClickedTracks,
         uiPreferences,
-        uiView,
+        uiView
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
@@ -25,7 +25,7 @@
     import VirtualList from "svelte-tiny-virtual-list";
     import { debounce } from "lodash-es";
 
-    const GAP = 10;
+    const GAP = 0;
     const PADDING = 14;
 
     let activeAlbums: Album[] = [];
@@ -50,11 +50,11 @@
 
         if ($compressionSelected === "lossless") {
             albums = albums.filter(
-                ({ title, lossless }) => title.length && lossless,
+                ({ title, lossless }) => title.length && lossless
             );
         } else if ($compressionSelected === "lossy") {
             albums = albums.filter(
-                ({ title, lossless }) => title.length && !lossless,
+                ({ title, lossless }) => title.length && !lossless
             );
         } else {
             albums = albums.filter(({ title }) => title.length);
@@ -95,7 +95,10 @@
         isInit = false;
     }
 
-    $: if (container && $current.song?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
+    $: if (
+        container &&
+        $current.song?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()
+    ) {
         if (updatePlayingAlbum()) {
             updateInView();
         }
@@ -105,6 +108,7 @@
     $: minWidth = $uiPreferences.albumsViewGridSize;
     $: queriedAlbums = [];
     $: showInfo = $uiPreferences.albumsViewShowInfo;
+    $: showSingles = $uiPreferences.albumsViewShowSingles;
 
     $: if ($albums && columnCount) {
         if ($query.query.length) {
@@ -113,28 +117,35 @@
                     a.artist
                         .toLowerCase()
                         .includes($query.query.toLowerCase()) ||
-                    a.title.includes($query.query.toLowerCase()),
+                    a.title.includes($query.query.toLowerCase())
             );
 
             activeAlbums = queriedAlbums;
-            rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
         } else {
             activeAlbums = $albums;
-            rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
         }
+
+        if (!showSingles) {
+            activeAlbums = activeAlbums.filter((a) => a.tracksIds.length > 1);
+        }
+        rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
+
 
         onResize();
 
-        lastCount = activeAlbums.length % columnCount;
+        const remainder = activeAlbums.length % columnCount;
+        lastCount = remainder === 0 ? columnCount : remainder;
     }
 
     function getContentWidth(element) {
         const widthWithPaddings = element.clientWidth;
         const elementComputedStyle = window.getComputedStyle(element, null);
 
-        return widthWithPaddings -
+        return (
+            widthWithPaddings -
             parseFloat(elementComputedStyle.paddingLeft) -
-            parseFloat(elementComputedStyle.paddingRight);
+            parseFloat(elementComputedStyle.paddingRight)
+        );
     }
 
     async function showCurrentlyPlayingAlbum() {
@@ -152,13 +163,15 @@
         const albumPath = await path.dirname($current?.song?.path);
         // Find the album currently playing
         currentAlbum = await db.albums.get(
-            md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
+            md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase())
         );
         if (!currentAlbum) return false;
 
-        const index = activeAlbums.findIndex((album) => album.id === currentAlbum.id);
+        const index = activeAlbums.findIndex(
+            (album) => album.id === currentAlbum.id
+        );
 
-        currentAlbumOffset = (Math.ceil(index / columnCount) * 225) + PADDING;
+        currentAlbumOffset = Math.ceil(index / columnCount) * 225 + PADDING;
 
         return true;
     }
@@ -171,27 +184,26 @@
         }
     }
 
+    let height = 0;
     function onResize() {
         if (!container) {
             return;
         }
-
+        height = container?.clientHeight;
         const contentWidth = getContentWidth(container) - PADDING - PADDING;
         const count = Math.floor((contentWidth - GAP) / (minWidth + GAP));
-        const remaining = contentWidth - (count * (minWidth + GAP)) + GAP;
+        const remaining = contentWidth - count * (minWidth + GAP) + GAP;
         const perColumn = Math.floor(remaining / count);
-        const max = Math.floor((contentWidth - (10 * GAP)) * 0.1);
+        const max = Math.floor((contentWidth - 10 * GAP) * 0.1);
 
         if (minWidth + perColumn > max) {
             columnWidth = Math.max(max, minWidth + Math.floor(perColumn / 2));
         } else {
             columnWidth = minWidth + perColumn;
         }
-        console.log(minWidth, max, perColumn, columnWidth)
-
         columnCount = count;
 
-        const size = Math.floor(columnWidth * 1.04319);
+        const size = Math.floor(columnWidth + (showInfo ? 55 : 0));
 
         itemSizes = Array(rowCount).fill(size);
         itemSizes[0] = PADDING;
@@ -202,7 +214,7 @@
         highlightedAlbum = album.id;
         $rightClickedAlbum = album;
         const tracks = (await db.songs.bulkGet(album.tracksIds)).sort(
-            (a, b) => a.trackNumber - b.trackNumber,
+            (a, b) => a.trackNumber - b.trackNumber
         );
         $rightClickedTrack = null;
         $rightClickedTracks = tracks;
@@ -213,18 +225,22 @@
     function scrollToCurrentAlbum() {
         virtualList.scrollToIndex = null;
 
-        const index = activeAlbums.findIndex((album) => album.id === currentAlbum.id);
+        const index = activeAlbums.findIndex(
+            (album) => album.id === currentAlbum.id
+        );
 
         setTimeout(() => {
             virtualList.scrollToIndex = Math.ceil(index / columnCount);
-        }, 5)
+        }, 5);
     }
 
     function updateInView(offset = lastOffset) {
         const { clientHeight } = container;
 
         lastOffset = offset;
-        isCurrentAlbumInView = offset < currentAlbumOffset && currentAlbumOffset < offset + clientHeight;
+        isCurrentAlbumInView =
+            offset < currentAlbumOffset &&
+            currentAlbumOffset < offset + clientHeight;
     }
 
     onMount(() => {
@@ -232,7 +248,7 @@
 
         albums.subscribe(() => {
             onResize();
-        })
+        });
     });
 </script>
 
@@ -258,7 +274,7 @@
             <VirtualList
                 bind:this={virtualList}
                 width="100%"
-                height={container?.clientHeight || "100%"}
+                height={height || "100%"}
                 itemCount={rowCount}
                 itemSize={itemSizes}
                 scrollToAlignment="center"
@@ -276,8 +292,11 @@
                     {#if index === 0 || index + 1 === rowCount}
                         <div></div>
                     {:else}
-                        {#each Array(index + 2 === rowCount ? lastCount : columnCount) as _, col (col)}
-                            {@const album = activeAlbums[((index - 1) * columnCount) + col]}
+                        {#each Array(columnCount) as _, col (col)}
+                            {@const albumIdx = (index - 1) * columnCount + col}
+                            {@const album =
+                                albumIdx < activeAlbums.length &&
+                                activeAlbums[albumIdx]}
                             {#if album}
                                 <div
                                     on:contextmenu|preventDefault={(e) =>
@@ -287,10 +306,13 @@
                                 >
                                     <AlbumItem
                                         {album}
-                                        highlighted={highlightedAlbum === album.id}
+                                        highlighted={highlightedAlbum ===
+                                            album.id}
                                         {showInfo}
                                     />
                                 </div>
+                            {:else}
+                                <div style="width: {columnWidth}px" />
                             {/if}
                         {/each}
                     {/if}
@@ -339,7 +361,7 @@
         height: 100%;
         width: 100%;
         position: relative;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 1fr;
         grid-template-columns: 1fr;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
@@ -381,11 +403,9 @@
         display: flex;
         justify-content: space-evenly;
         padding: 0 1em;
-        column-gap: 10px;
-
-        &.last-row {
-            column-gap: 10px;
-            justify-content: flex-start;
+        overflow-x: clip;
+        > div {
+            padding: 5px;
         }
     }
 
