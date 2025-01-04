@@ -17,7 +17,6 @@
         margin: 5px 5px 0 0;
         background-color: var(--waveform-bg);
 
-
         &:hover {
             background-color: var(--waveform-bg-hover);
         }

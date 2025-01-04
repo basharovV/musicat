@@ -1,9 +1,9 @@
 type ThemeType = "dark" | "light";
 
 export interface Theme {
-    "type": ThemeType;
+    type: ThemeType;
     /**  Primary text color */
-    "text": string;
+    text: string;
     /**  Secondary text color, for dimmed text */
     "text-secondary": string;
     /**  Text color for active items */
@@ -11,12 +11,12 @@ export interface Theme {
     /**  Text color for inactive items */
     "text-inactive": string;
     /**  Window background (will be made more translucent on macOS) */
-    "background": string;
+    background: string;
     /**  Overlays, popups */
     "overlay-bg": string;
     "overlay-shadow": string;
     /**  Primary accent color used for active items that need to stand out */
-    "accent": string;
+    accent: string;
     "accent-secondary": string;
     "icon-primary": string;
     "icon-secondary": string;
@@ -30,9 +30,9 @@ export interface Theme {
     "input-focus-outline": string;
     "header-opacity": number;
     "header-text": string;
-    "link": string;
+    link: string;
     "link-hover": string;
-    "title": string;
+    title: string;
     /** Menus */
     "menu-bg": string;
     "menu-border": string;
@@ -79,7 +79,7 @@ export interface Theme {
     "library-clickable-cell-bg": string;
     "library-clickable-cell-hover-bg": string;
     "library-favourite-icon": string;
-    "library-favourite-hover-icon": string,
+    "library-favourite-hover-icon": string;
     /** Smart playlist */
     "smart-playlist-builder-bg": string;
     "smart-playlist-builder-text": string;
@@ -113,7 +113,7 @@ export interface Theme {
     "popup-song-metadata-validation-error": string;
     "popup-song-metadata-validation-warning": string;
     /** Oscilloscope line color */
-    "oscilloscope": string;
+    oscilloscope: string;
     /** Waveform */
     "waveform-bg": string;
     "waveform-bg-hover": string;
@@ -160,11 +160,11 @@ export interface Theme {
     /** Wiki */
     "wiki-bg": string;
     "wiki-header-bg": string;
-	"wiki-inarticle-bg": string;
-	"wiki-pill-bg": string;
-	"wiki-pill-text": string;
-	"wiki-pill-hover-bg": string;
-	"wiki-pill-hover-text": string;
+    "wiki-inarticle-bg": string;
+    "wiki-pill-bg": string;
+    "wiki-pill-text": string;
+    "wiki-pill-hover-bg": string;
+    "wiki-pill-hover-text": string;
 }
 export const allFonts = {
     "2Peas": {
@@ -173,15 +173,15 @@ export const allFonts = {
 };
 
 export const DEFAULT_THEME: Theme = {
-    "type": "dark",
-    "text": "#ffffffde",
+    type: "dark",
+    text: "#ffffffde",
     "text-secondary": "#9fa0a2",
     "text-active": "#ffffff",
     "text-inactive": "#938e8e",
-    "background": "#242026cb",
+    background: "#242026cb",
     "overlay-bg": "#3c3c3f33",
     "overlay-shadow": "#00000042",
-    "accent": "#45fffcf3",
+    accent: "#45fffcf3",
     "accent-secondary": "#632fff",
     "icon-primary": "#ffffff",
     "icon-secondary": "#948f8f",
@@ -195,9 +195,9 @@ export const DEFAULT_THEME: Theme = {
     "input-focus-outline": "2px solid #7171bb",
     "header-opacity": 0.2,
     "header-text": "var(--text)",
-    "link": "#acafff",
+    link: "#acafff",
     "link-hover": "#8086ff",
-    "title": "#7dffee",
+    title: "#7dffee",
     "menu-bg": "#20202296",
     "menu-border": "#ffffff3b",
     "menu-checkbox-off": "#808080",
@@ -270,7 +270,7 @@ export const DEFAULT_THEME: Theme = {
     "popup-song-metadata-title": "#ffe6ac",
     "popup-song-metadata-validation-error": "#a12e2e",
     "popup-song-metadata-validation-warning": "#e19a00",
-    "oscilloscope": "#14D8BD",
+    oscilloscope: "#14D8BD",
     "waveform-bg": "#9c86b10f",
     "waveform-bg-hover": "#9c86b11c",
     "waveform-cursor": "#ffffff",
@@ -310,24 +310,25 @@ export const DEFAULT_THEME: Theme = {
     "prune-fordelete": "#ff5a5a",
     "wiki-bg": "#ffffff18",
     "wiki-header-bg": "var(--wiki-bg)",
-	"wiki-inarticle-bg": "var(--wiki-bg)",
-	"wiki-pill-bg": "var(--wiki-bg)",
-	"wiki-pill-text": "var(--text-secondary)",
-	"wiki-pill-hover-bg": "color-mix(in srgb, var(--button-bg) 20%, transparent)",
-	"wiki-pill-hover-text": "var(--text-secondary)"
+    "wiki-inarticle-bg": "var(--wiki-bg)",
+    "wiki-pill-bg": "var(--wiki-bg)",
+    "wiki-pill-text": "var(--text-secondary)",
+    "wiki-pill-hover-bg":
+        "color-mix(in srgb, var(--button-bg) 20%, transparent)",
+    "wiki-pill-hover-text": "var(--text-secondary)"
 };
 
 export const allThemes: { [key: string]: Theme } = {
     light: {
         ...DEFAULT_THEME,
-        "type": "light",
-        "text": "#282230",
+        type: "light",
+        text: "#282230",
         "text-secondary": "#56575b",
         "text-active": "#38353b",
         "text-inactive": "#707879",
-        "background": "#e8e1e1",
+        background: "#e8e1e1",
         "overlay-bg": "#f1f1f1c0",
-        "accent": "#5d00fff3",
+        accent: "#5d00fff3",
         "accent-secondary": "#da69ff",
         "button-bg": "#282b2c",
         "button-text": "#ede8f0",
@@ -356,18 +357,18 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#36a4b5",
         "album-playing-shadow": "#36a4b5",
         "album-playing-title-bg": "#da69ff",
-        "oscilloscope": "#017b94"
+        oscilloscope: "#017b94"
     },
     light2: {
         ...DEFAULT_THEME,
-        "type": "light",
-        "text": "#282230",
+        type: "light",
+        text: "#282230",
         "text-secondary": "#56575b",
         "text-active": "#38353b",
         "text-inactive": "#646067",
-        "background": "#e9e5efd9",
+        background: "#e9e5efd9",
         "overlay-bg": "#f1f1f1c0",
-        "accent": "#5d00fff3",
+        accent: "#5d00fff3",
         "accent-secondary": "#da69ff",
         "button-bg": "#282b2c",
         "button-text": "#ede8f0",
@@ -398,19 +399,19 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#5123dd",
         "album-playing-shadow": "#5123dd",
         "album-playing-title-bg": "#da69ff",
-        "oscilloscope": "#590194"
+        oscilloscope: "#590194"
     },
     dark: DEFAULT_THEME,
     amphibian: {
         ...DEFAULT_THEME,
-        "type": "dark",
-        "text": "#b6e1e3de",
+        type: "dark",
+        text: "#b6e1e3de",
         "text-secondary": "#819be8",
         "text-active": "#83e4ff",
         "text-inactive": "#668e93",
-        "background": "#233346",
+        background: "#233346",
         "overlay-bg": "#2333466d",
-        "accent": "#00ff62f3",
+        accent: "#00ff62f3",
         "accent-secondary": "#4453bbf3",
         "button-bg": "#486d7b",
         "icon-primary": "#ffffff",
@@ -437,17 +438,17 @@ export const allThemes: { [key: string]: Theme } = {
         "smart-playlist-builder-block-input-bg": "#1b474d6f",
         "album-playing-play-hover-bg": "#23cedd",
         "album-playing-shadow": "#23cedd",
-        "album-playing-title-bg": "#4453bbf3",
+        "album-playing-title-bg": "#4453bbf3"
     },
     turquoise: {
         ...DEFAULT_THEME,
-        "type": "dark",
-        "background": "#01796fda",
-        "text": "#eef4f1",
+        type: "dark",
+        background: "#01796fda",
+        text: "#eef4f1",
         "text-secondary": "#e4d7c7ff",
         "text-active": "#ffffff",
         "text-inactive": "#a3ccc5",
-        "accent": "#45fffcf3",
+        accent: "#45fffcf3",
         "accent-secondary": "#32ceb5f3",
         "overlay-bg": "#02564fc6",
         "panel-background": "#027167",
@@ -477,12 +478,12 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#f3d2ba",
         "album-playing-shadow": "#f3d2ba",
         "album-playing-title-bg": "#32ceb5f3",
-        "oscilloscope": "#d2ff2e"
+        oscilloscope: "#d2ff2e"
     },
     red: {
         ...DEFAULT_THEME,
-        "text": "#f1f1f1",
-        "background": "#562931",
+        text: "#f1f1f1",
+        background: "#562931",
         "accent-secondary": "#be3153f3",
         "library-playing-bg": "#be3153",
         "library-playing-text": "#ffffff",
@@ -494,17 +495,17 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-title-bg": "#be3153f3",
         "transport-control": "#be3153",
         "transport-favorite": "#ff386a",
-        "transport-shuffle": "#be3153",
+        "transport-shuffle": "#be3153"
     },
     winamp: {
         ...DEFAULT_THEME,
-        "type": "dark",
-        "background": "#25253e",
+        type: "dark",
+        background: "#25253e",
         "panel-background": "black",
         "library-text-color": "#05A101",
         "library-playing-bg": "transparent",
         "library-playing-text": "white",
-        "library-header-bg": 'black',
+        "library-header-bg": "black",
         "library-header-text": "#acb4ac",
         "library-playing-icon": "#7fbd7f",
         "library-favourite-icon": "#05A101",
@@ -512,7 +513,7 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#7c715cf3",
         "album-playing-shadow": "transparent",
         "album-playing-title-bg": "#7c715cf3",
-        "accent": "#F0D895",
+        accent: "#F0D895",
         "accent-secondary": "#7c715cf3",
         "text-active": "#F0D895",
         "text-inactive": "#aeafa8",

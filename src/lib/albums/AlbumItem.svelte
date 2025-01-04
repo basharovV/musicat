@@ -123,7 +123,8 @@
                     </div>
                 {/if}
                 {#if isHovered || isPlayingCurrentAlbum}
-                    <div class={$isPlaying && isPlayingCurrentAlbum
+                    <div
+                        class={$isPlaying && isPlayingCurrentAlbum
                             ? "play-button-container pause-button"
                             : "play-button-container play-button"}
                     >
@@ -193,7 +194,8 @@
                     background-image: url("images/cd-shimmer.png");
                     background-repeat: no-repeat;
                     z-index: 20;
-                    animation: playing-shimmer 3.5s cubic-bezier(.4,0,.41,.97) 1;
+                    animation: playing-shimmer 3.5s
+                        cubic-bezier(0.4, 0, 0.41, 0.97) 1;
                     pointer-events: none;
                 }
             }

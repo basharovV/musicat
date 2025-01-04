@@ -78,15 +78,15 @@
                     dragBoundFunc: function (pos) {
                         pos.y = Math.max(
                             topPadding,
-                            Math.min(pos.y, height - scrollbarHeight)
+                            Math.min(pos.y, height - scrollbarHeight),
                         );
                         onScroll(
                             (pos.y - topPadding) /
-                                (height - scrollbarHeight - topPadding)
+                                (height - scrollbarHeight - topPadding),
                         );
                         pos.x = 0;
                         return pos;
-                    }
+                    },
                 }}
             />
         </Layer>

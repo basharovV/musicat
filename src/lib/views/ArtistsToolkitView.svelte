@@ -7,7 +7,7 @@
         isFullScreenLyrics,
         isScrapbookShown,
         songbookSelectedArtist,
-        userSettings
+        userSettings,
     } from "../../data/store";
 
     import { blur } from "svelte/transition";
@@ -19,7 +19,7 @@
     import type { UnlistenFn } from "@tauri-apps/api/event";
     import {
         startWatchingScrapbookFolder,
-        startWatchingSongbookFolder
+        startWatchingSongbookFolder,
     } from "../../data/FolderWatcher";
     import { onDestroy } from "svelte";
     let selectedSong: Song;
@@ -239,7 +239,7 @@
     }
 
     .content {
-        width: 100%;    
+        width: 100%;
         grid-column: 1;
         grid-row: 2;
         z-index: 1;

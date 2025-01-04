@@ -75,10 +75,7 @@
         {/if}
 
         {#if onDelete}
-            <Icon
-                icon="mingcute:close-circle-fill"
-                onClick={onDelete}
-            />
+            <Icon icon="mingcute:close-circle-fill" onClick={onDelete} />
         {/if}
     {:else}
         <slot />

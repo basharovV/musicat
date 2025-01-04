@@ -98,13 +98,15 @@ class AudioPlayer {
             // If shuffle is enabled but not yet shuffled
             if (enabled && queue.length === 0) {
                 this.shuffle();
-            // If shuffle is disabled, need to unshuffle
+                // If shuffle is disabled, need to unshuffle
             } else if (!enabled && queue.length > 0) {
                 this.unshuffle();
                 // Restore position
                 const id = this.currentSong?.id;
                 if (id) {
-                    newCurrentSongIdx = this.queue.findIndex((s) => s.id === id);
+                    newCurrentSongIdx = this.queue.findIndex(
+                        (s) => s.id === id
+                    );
                 } else {
                     newCurrentSongIdx = 0;
                 }
@@ -146,30 +148,36 @@ class AudioPlayer {
 
                     const id = this.currentSong?.id;
                     if (id) {
-                        newCurrentSongIdx = this.queue.findIndex((s) => s.id === id);
+                        newCurrentSongIdx = this.queue.findIndex(
+                            (s) => s.id === id
+                        );
                     } else {
                         newCurrentSongIdx = 0;
                     }
 
                     this.shouldShuffle = true;
                 }
-            // If shuffle is disabled, need to unshuffle
+                // If shuffle is disabled, need to unshuffle
             } else if (!shuffleEnabled && get(shuffledQueue).length > 0) {
                 this.unshuffle();
                 // Restore position
                 const id = this.currentSong?.id;
                 if (id) {
-                    newCurrentSongIdx = this.queue.findIndex((s) => s.id === id);
+                    newCurrentSongIdx = this.queue.findIndex(
+                        (s) => s.id === id
+                    );
                 } else {
                     newCurrentSongIdx = 0;
                 }
-            // Shuffle was disabled already
+                // Shuffle was disabled already
             } else {
                 this.queue = queue;
 
                 const id = this.currentSong?.id;
                 if (id) {
-                    newCurrentSongIdx = this.queue.findIndex((s) => s.id === id);
+                    newCurrentSongIdx = this.queue.findIndex(
+                        (s) => s.id === id
+                    );
                 } else {
                     newCurrentSongIdx = 0;
                 }
@@ -212,7 +220,11 @@ class AudioPlayer {
             this.currentSong = event.payload;
             this.currentSongIdx += 1;
 
-            current.set({ song: this.currentSong, index: this.currentSongIdx, position: 0 });
+            current.set({
+                song: this.currentSong,
+                index: this.currentSongIdx,
+                position: 0
+            });
 
             this.setNextUpSong();
             this.isRunningTransition = false;
@@ -239,13 +251,13 @@ class AudioPlayer {
         });
 
         appWindow.listen("audio_device_changed", async (event: any) => {
-            userSettings.update(userSettings => {
+            userSettings.update((userSettings) => {
                 userSettings.outputDevice = event.payload;
                 return userSettings;
-            })
+            });
         });
 
-        appWindow.listen('close', () => {
+        appWindow.listen("close", () => {
             current.set({ ...get(current), position: get(playerTime) });
         });
     }
@@ -262,7 +274,11 @@ class AudioPlayer {
         var { position } = get(current);
         this.queue = shuffled;
         this.currentSongIdx = 0;
-        current.set({ song: this.currentSong, index: this.currentSongIdx, position });
+        current.set({
+            song: this.currentSong,
+            index: this.currentSongIdx,
+            position
+        });
         isShuffleEnabled.set(true);
     }
 

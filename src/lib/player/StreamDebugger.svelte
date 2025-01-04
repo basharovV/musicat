@@ -14,7 +14,9 @@
         status = "bad";
     }
 
-    $: bufferedTime = ($streamInfo.bufferedSamples / $current.song?.fileInfo?.sampleRate ?? 0).toFixed(2);
+    $: bufferedTime = (
+        $streamInfo.bufferedSamples / $current.song?.fileInfo?.sampleRate ?? 0
+    ).toFixed(2);
 </script>
 
 <div>

@@ -37,7 +37,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import {
         addCountryDataAllSongs,
-        findCountryByArtist
+        findCountryByArtist,
     } from "../data/LibraryEnrichers";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -73,7 +73,7 @@
                             .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
             }
         } else if ($uiView === "smart-query") {
@@ -118,7 +118,7 @@
                         ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy
+                          : $query.orderBy,
                 )
                 .and(
                     (song) =>
@@ -130,7 +130,7 @@
                             .startsWith($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase())
+                            .startsWith($query.query.toLowerCase()),
                 );
         } else {
             results = db.songs.orderBy(
@@ -138,7 +138,7 @@
                     ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy
+                      : $query.orderBy,
             );
         }
         let resultsArray: Song[] = [];
@@ -164,7 +164,7 @@
                     case "duration":
                     case "genre":
                         return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
+                            b[$query.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie
@@ -212,7 +212,7 @@
                               currentCountry[1].data.length;
                           return dataSetObj;
                       },
-                      {}
+                      {},
                   )
                 : [];
 
@@ -220,9 +220,9 @@
                 map.dataVisualization = new DataVisualization(
                     {
                         scale: ["#9070BB", "#984EFF"],
-                        values: dataCountMap ? dataCountMap : []
+                        values: dataCountMap ? dataCountMap : [],
                     },
-                    map
+                    map,
                 );
                 if (!initialized) {
                     map.updateSize();
@@ -245,7 +245,7 @@
         //     path.style.animation = null;
         // });
         const path: SVGPathElement = document.querySelector(
-            `[data-code=${countryCode}]`
+            `[data-code=${countryCode}]`,
         );
         let width = path.getBBox().width;
         let height = path.getBBox().height;
@@ -262,10 +262,10 @@
             // particleContainer._engine.actualOptions.particles.move.center.y =
             //     y;
             particleContainer._engine.plugins.presets.get(
-                "stars"
+                "stars",
             ).particles.move.center.x = x;
             particleContainer._engine.plugins.presets.get(
-                "stars"
+                "stars",
             ).particles.move.center.y = y;
             particleContainer._engine.load("stars");
         }
@@ -304,8 +304,11 @@
             selector: "#map",
             showTooltip: true,
             visualizeData: {
-                scale: [$currentThemeObject["mapview-scale-1"], $currentThemeObject["mapview-scale-2"]],
-                values: dataCountMap ? dataCountMap : []
+                scale: [
+                    $currentThemeObject["mapview-scale-1"],
+                    $currentThemeObject["mapview-scale-2"],
+                ],
+                values: dataCountMap ? dataCountMap : [],
             },
             // Play country
             onRegionClick(event, code) {
@@ -315,7 +318,7 @@
                     selectedCountry = code;
                     selectedCountryPos = {
                         x: event.pageX - 11 - mapPadding * 2,
-                        y: event.pageY
+                        y: event.pageY,
                     };
                     dataSetCountryValue = data[countries[code]] || null;
                     onCountryClicked();
@@ -333,14 +336,14 @@
                     let hoveredCountryPlaylist: Song[] = countryValue.data;
                     let hoveredCountryArtists: string[] = [
                         ...new Set(
-                            hoveredCountryPlaylist.map((item) => item.artist)
-                        )
+                            hoveredCountryPlaylist.map((item) => item.artist),
+                        ),
                     ];
                     let hoveredCountryNumArtists = hoveredCountryArtists.length;
                     let hoveredCountryFirstFewArtists =
                         hoveredCountryArtists.slice(
                             0,
-                            Math.min(3, artists.length)
+                            Math.min(3, artists.length),
                         );
 
                     let hoveredCountryFirstFewAlbums: {
@@ -350,7 +353,7 @@
                     }[] = hoveredCountryPlaylist.map((item) => ({
                         path: item.path.replace(`/${item.file}`, ""),
                         artist: item.artist,
-                        album: item.album
+                        album: item.album,
                     }));
 
                     // distinct albums
@@ -358,8 +361,8 @@
                         hoveredCountryFirstFewAlbums.filter(
                             (e, i) =>
                                 hoveredCountryFirstFewAlbums.findIndex(
-                                    (a) => a["album"] === e["album"]
-                                ) === i
+                                    (a) => a["album"] === e["album"],
+                                ) === i,
                         );
 
                     tooltipData = {
@@ -367,7 +370,7 @@
                         emoji: getFlagEmoji(code),
                         numberOfArtists: hoveredCountryNumArtists,
                         artists: hoveredCountryFirstFewArtists,
-                        albums: hoveredCountryFirstFewAlbums
+                        albums: hoveredCountryFirstFewAlbums,
                     };
                 } else {
                     tooltipData = {
@@ -375,7 +378,7 @@
                         emoji: getFlagEmoji(code),
                         numberOfArtists: 0,
                         artists: [],
-                        albums: []
+                        albums: [],
                     };
                 }
             },
@@ -387,26 +390,32 @@
                     fill: $currentThemeObject["mapview-region-bg"],
                     stroke: $currentThemeObject["mapview-region-border"],
                     strokeWidth: 0.5,
-                    fillOpacity: 1
+                    fillOpacity: 1,
                 },
                 selected: {
                     fill: $currentThemeObject["mapview-region-selected-bg"],
-                    stroke: $currentThemeObject["mapview-region-selected-border"],
+                    stroke: $currentThemeObject[
+                        "mapview-region-selected-border"
+                    ],
                     strokeWidth: 1,
-                    fillOpacity: 1
+                    fillOpacity: 1,
                 },
                 selectedHover: {
-                    fill: $currentThemeObject["mapview-region-selected-hover-bg"],
-                    stroke: $currentThemeObject["mapview-region-selected-hover-border"],
+                    fill: $currentThemeObject[
+                        "mapview-region-selected-hover-bg"
+                    ],
+                    stroke: $currentThemeObject[
+                        "mapview-region-selected-hover-border"
+                    ],
                     strokeWidth: 1,
-                    fillOpacity: 1
+                    fillOpacity: 1,
                 },
                 hover: {
                     fill: $currentThemeObject["mapview-region-hover-bg"],
                     stroke: $currentThemeObject["mapview-region-hover-border"],
-                    strokeWidth: 1
-                }
-            }
+                    strokeWidth: 1,
+                },
+            },
         });
     }
 
@@ -430,7 +439,7 @@
         // Should play immediately after setting playlist (and shuffling if necessary)
         console.log(dataSetCountryValue.data[0]);
         $queueCountry = selectedCountry;
-        setQueue(dataSetCountryValue.data, 0)
+        setQueue(dataSetCountryValue.data, 0);
     }
 
     // Selected country
@@ -445,45 +454,45 @@
         preset: "stars",
         fullScreen: false,
         background: {
-            color: "transparent"
-        }
+            color: "transparent",
+        },
     };
 
     let particlesInit = async (engine) => {
         const options = {
             particles: {
                 number: {
-                    value: 100
+                    value: 100,
                 },
                 move: {
                     center: {
                         radius: 50,
                         x: 800,
                         y: 500,
-                        mode: "precise"
+                        mode: "precise",
                     },
                     bounce: true,
                     direction: "outside",
                     enable: true,
                     outModes: {
-                        default: "out"
+                        default: "out",
                     },
                     random: true,
                     speed: 0.4,
-                    straight: false
+                    straight: false,
                 },
                 opacity: {
                     animation: {
                         enable: true,
                         speed: 1,
-                        sync: false
+                        sync: false,
                     },
-                    value: { min: 0, max: 0.3 }
+                    value: { min: 0, max: 0.3 },
                 },
                 size: {
-                    value: { min: 1, max: 3 }
-                }
-            }
+                    value: { min: 1, max: 3 },
+                },
+            },
         };
 
         await loadSlim(engine, false);

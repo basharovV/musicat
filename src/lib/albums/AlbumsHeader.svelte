@@ -3,7 +3,7 @@
         isQueueOpen,
         isSidebarOpen,
         os,
-        uiPreferences
+        uiPreferences,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import Dropdown from "../ui/Dropdown.svelte";
@@ -14,20 +14,20 @@
     const fields = [
         {
             value: "title",
-            label: $LL.albums.options.orderByFields.title()
+            label: $LL.albums.options.orderByFields.title(),
         },
         {
             value: "artist",
-            label: $LL.albums.options.orderByFields.artist()
+            label: $LL.albums.options.orderByFields.artist(),
         },
         {
             value: "year",
-            label: $LL.albums.options.orderByFields.year()
-        }
+            label: $LL.albums.options.orderByFields.year(),
+        },
     ];
 
     $: orderBy = fields.find(
-        (f) => f.value === $uiPreferences.albumsViewSortBy
+        (f) => f.value === $uiPreferences.albumsViewSortBy,
     );
 </script>
 

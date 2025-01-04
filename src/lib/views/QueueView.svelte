@@ -11,7 +11,7 @@
         Text,
         Label,
         Tag,
-        type KonvaDragTransformEvent
+        type KonvaDragTransformEvent,
     } from "svelte-konva";
 
     import { liveQuery } from "dexie";
@@ -65,7 +65,12 @@
     import TrackMenu from "../queue/TrackMenu.svelte";
     import { currentThemeObject } from "../../theming/store";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
-    import { findQueueIndex, findQueueIndexes, setQueue, updateQueues } from "../../data/storeHelper";
+    import {
+        findQueueIndex,
+        findQueueIndexes,
+        setQueue,
+        updateQueues,
+    } from "../../data/storeHelper";
     import QueueMenu from "../queue/QueueMenu.svelte";
 
     export let allSongs = null;
@@ -75,15 +80,13 @@
 
     const WINDOW_CONTROLS_WIDTH = 70;
 
-    $: songs = ($isShuffleEnabled ? $shuffledQueue : $queue).map(
-            (s, idx) => ({
-                ...s,
-                viewModel: {
-                    index: idx,
-                    viewId: idx.toString()
-                }
-            })
-        );
+    $: songs = ($isShuffleEnabled ? $shuffledQueue : $queue).map((s, idx) => ({
+        ...s,
+        viewModel: {
+            index: idx,
+            viewId: idx.toString(),
+        },
+    }));
 
     const DEFAULT_FIELDS = [
         {
@@ -93,9 +96,9 @@
             viewProps: {
                 width: 0,
                 x: 0,
-                autoWidth: true
-            }
-        }
+                autoWidth: true,
+            },
+        },
     ];
 
     export let fields = DEFAULT_FIELDS;
@@ -277,7 +280,7 @@
         setTimeout(() => {
             scrollContainer.scrollTo({
                 top: 0,
-                behavior: "instant"
+                behavior: "instant",
             });
             ready = true;
         }, 50);
@@ -285,12 +288,12 @@
         $forceRefreshLibrary = false;
     } else if ($uiView.match(/^(playlists|map)/)) {
         scrollContainer?.scrollTo({
-            top: 0
+            top: 0,
         });
         ready = true;
     } else if ($uiView.match(/^(smart-query|favourites)/)) {
         scrollContainer?.scrollTo({
-            top: 0
+            top: 0,
         });
         ready = true;
     }
@@ -384,7 +387,7 @@
             .map((f) => f.viewProps.width);
         const totalFixedWidth = fixedWidths.reduce(
             (total, width) => total + width,
-            0
+            0,
         );
         // console.log("width", width, "totalFixedWidth", totalFixedWidth);
         // Calculate available width for 'auto' size rectangles
@@ -404,7 +407,7 @@
                 f.viewProps.width = rectWidth;
                 previousWidth = f.viewProps.width;
                 return f;
-            })
+            }),
         ];
         printInfo();
     }
@@ -449,30 +452,33 @@
             // scrollOffset = -contentY / 20;
 
             songsStartSlice = Math.floor(
-                Math.max(0, Math.floor(scrollNormalized * songsCountScrollable))
+                Math.max(
+                    0,
+                    Math.floor(scrollNormalized * songsCountScrollable),
+                ),
             );
             songsEndSlice = Math.min(
                 songs.length,
-                Math.ceil(songsStartSlice + songsCountViewport)
+                Math.ceil(songsStartSlice + songsCountViewport),
             );
             // console.log("start", songsStartSlice, "end", songsEndSlice);
 
             const getTopOffscreenRows = (
                 firstOnScreenIdx,
                 backwardsCount,
-                prefix
+                prefix,
             ) => {
                 let offscreenRows = [];
                 let firstSongIdx = Math.max(
                     0,
-                    firstOnScreenIdx - backwardsCount
+                    firstOnScreenIdx - backwardsCount,
                 );
                 let lastSongIdx = Math.max(0, firstOnScreenIdx);
                 if (firstOnScreenIdx >= 0 && lastSongIdx >= 0) {
                     offscreenRows.unshift(
                         ...songs
                             .slice(firstSongIdx, lastSongIdx)
-                            .map((s) => ({ ...s, dummy: true }))
+                            .map((s) => ({ ...s, dummy: true })),
                     );
                 }
                 let dummyCount =
@@ -481,7 +487,7 @@
                         : 0;
                 if (dummyCount) {
                     offscreenRows.unshift(
-                        ...getDummyRows(dummyCount, "dummy-top")
+                        ...getDummyRows(dummyCount, "dummy-top"),
                     );
                 }
                 return offscreenRows;
@@ -490,13 +496,13 @@
             const getBottomOffscreenRows = (
                 lastOnScreenIdx,
                 forwardsCount,
-                prefix
+                prefix,
             ) => {
                 let offscreenRows = [];
                 let firstSongIdx = Math.min(songs.length - 1, lastOnScreenIdx);
                 let lastSongIdx = Math.min(
                     songs.length - 1,
-                    lastOnScreenIdx + forwardsCount
+                    lastOnScreenIdx + forwardsCount,
                 );
                 // console.log("first", firstSongIdx, "lastSongIdx", lastSongIdx);
 
@@ -508,7 +514,7 @@
                     offscreenRows.push(
                         ...songs
                             .slice(firstSongIdx, lastSongIdx)
-                            .map((s) => ({ ...s, dummy: true }))
+                            .map((s) => ({ ...s, dummy: true })),
                     );
                 }
                 let dummyRemainder =
@@ -517,7 +523,7 @@
                     dummyRemainder < 0 ? Math.abs(dummyRemainder) : 0;
                 if (dummyCount) {
                     offscreenRows.push(
-                        ...getDummyRows(dummyCount, "dummy-bottom")
+                        ...getDummyRows(dummyCount, "dummy-bottom"),
                     );
                 }
                 // console.log("bottom", offscreenRows);
@@ -531,7 +537,7 @@
                     .map((s, idx) => ({
                         ...s,
                         id: `${prefix}-${idx}`,
-                        dummy: true
+                        dummy: true,
                     }));
             };
 
@@ -542,7 +548,7 @@
             // console.log("diff", diff);
             if (diff) {
                 songsSlice = songsSlice.concat(
-                    getDummyRows(diff, "dummy-middle")
+                    getDummyRows(diff, "dummy-middle"),
                 );
             }
             // console.log("slice", songsSlice);
@@ -550,15 +556,15 @@
             songsSlice = getTopOffscreenRows(
                 songsStartSlice,
                 DUMMY_COUNT,
-                "dummy-top"
+                "dummy-top",
             )
                 .concat(...songsSlice)
                 .concat(
                     ...getBottomOffscreenRows(
                         songsEndSlice,
                         DUMMY_COUNT,
-                        "dummy-bottom"
-                    )
+                        "dummy-bottom",
+                    ),
                 );
             // console.log(songsSlice.length);
             prevScrollPos = scrollPos;
@@ -599,7 +605,7 @@
         if ($isPlaying && $current.song) {
             scrollContainer.scrollTo({
                 top: adjustedPos,
-                behavior: "smooth"
+                behavior: "smooth",
             });
         }
     }
@@ -629,7 +635,11 @@
     let songsHighlighted: Song[] = [];
     let onSongsHighlighted = null;
 
-    $: if (songs?.length && $query.query?.length && $popupOpen !== 'track-info') {
+    $: if (
+        songs?.length &&
+        $query.query?.length &&
+        $popupOpen !== "track-info"
+    ) {
         highlightSong(songs[0], 0, false, true);
     }
 
@@ -695,7 +705,7 @@
         song: Song,
         idx,
         isKeyboardArrows: boolean,
-        isDefault = false
+        isDefault = false,
     ) {
         console.log("highlighted", song, idx);
         if (!isKeyboardArrows && isShiftPressed) {
@@ -712,7 +722,7 @@
                 }
                 songsHighlighted = songs.slice(
                     rangeStartSongIdx,
-                    rangeEndSongIdx + 1
+                    rangeEndSongIdx + 1,
                 );
                 rangeStartSongIdx = null;
                 rangeEndSongIdx = null;
@@ -741,7 +751,7 @@
             shouldProcessDrag = true;
 
             // Extra - if the Info overlay is shown, use the arrows to replace the track shown in the overlay
-            if ($popupOpen === 'track-info' && isKeyboardArrows) {
+            if ($popupOpen === "track-info" && isKeyboardArrows) {
                 $rightClickedTrack = song;
             }
         }
@@ -769,16 +779,12 @@
                     $draggedSongs,
                     (queue, newSongs) => {
                         queue.push(...newSongs);
-                    }
+                    },
                 );
             } else {
-                updateQueues(
-                    $draggedSongs,
-                    null,
-                    (queue, newSongs) => {
-                        queue.push(...newSongs);
-                    }
-                );
+                updateQueues($draggedSongs, null, (queue, newSongs) => {
+                    queue.push(...newSongs);
+                });
             }
         }
 
@@ -794,7 +800,8 @@
 
         console.log("mouse up - song", $isDraggingFromQueue);
 
-        const delta = song.viewModel?.index > $draggedSongs[0].viewModel?.index ? 1 : 0;
+        const delta =
+            song.viewModel?.index > $draggedSongs[0].viewModel?.index ? 1 : 0;
 
         if ($isDraggingFromQueue) {
             if ($draggedSongs.includes(song)) {
@@ -805,20 +812,12 @@
 
             if ($isShuffleEnabled) {
                 updateQueues(
-                    [
-                        findQueueIndex($shuffledQueue[idx]),
-                        $draggedSongs,
-                        delta
-                    ],
+                    [findQueueIndex($shuffledQueue[idx]), $draggedSongs, delta],
                     [idx, $draggedSongs, delta],
-                    reorderSongs
+                    reorderSongs,
                 );
             } else {
-                updateQueues(
-                    [idx, $draggedSongs, delta],
-                    null,
-                    reorderSongs
-                );
+                updateQueues([idx, $draggedSongs, delta], null, reorderSongs);
             }
 
             songsHighlighted = [];
@@ -828,14 +827,11 @@
 
             if ($isShuffleEnabled) {
                 updateQueues(
-                    [
-                        findQueueIndex($shuffledQueue[idx]),
-                        $draggedSongs,
-                    ],
+                    [findQueueIndex($shuffledQueue[idx]), $draggedSongs],
                     [idx, $draggedSongs],
                     (queue, [index, newSongs]) => {
                         queue.splice(index + delta, 0, ...newSongs);
-                    }
+                    },
                 );
             } else {
                 updateQueues(
@@ -843,13 +839,13 @@
                     null,
                     (queue, [index, newSongs]) => {
                         queue.splice(index + delta, 0, ...newSongs);
-                    }
+                    },
                 );
             }
 
             // Avoid layout shift - compensate for the scroll jump after adding new elements
             scrollContainer.scrollBy({
-                top: ROW_HEIGHT * $draggedSongs.length
+                top: ROW_HEIGHT * $draggedSongs.length,
             });
         }
 
@@ -868,12 +864,16 @@
 
         const newIndex = queue.findIndex((song) => song.id === id);
 
-        queue.splice(newIndex + delta, 0, ...songs.sort((a, b) => a.viewModel.index - b.viewModel.index));
+        queue.splice(
+            newIndex + delta,
+            0,
+            ...songs.sort((a, b) => a.viewModel.index - b.viewModel.index),
+        );
     }
 
     function onStageClick(e) {
         if (e.detail.evt.button === 2) {
-            e.preventDefault()
+            e.preventDefault();
             showQueueMenu = true;
             menuPos = { x: e.detail.evt.clientX, y: e.detail.evt.clientY };
         }
@@ -913,7 +913,7 @@
                 onMouseDownSong(
                     queue[highlightedSongIdx - 1],
                     highlightedSongIdx - 1,
-                    true
+                    true,
                 );
             }
         } else if (
@@ -930,12 +930,12 @@
                 onMouseDownSong(
                     songs[highlightedSongIdx + 1],
                     highlightedSongIdx + 1,
-                    true
+                    true,
                 );
             }
         } else if (
             event.keyCode === 73 &&
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
@@ -947,18 +947,18 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if ($popupOpen !== 'track-info' && songsHighlighted.length) {
+            if ($popupOpen !== "track-info" && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
                 }
-                $popupOpen = 'track-info';
+                $popupOpen = "track-info";
             }
         } else if (
             event.keyCode === 13 &&
-            $popupOpen !== 'track-info' &&
+            $popupOpen !== "track-info" &&
             (document.activeElement.id === "search" ||
                 (document.activeElement.id !== "search" &&
                     document.activeElement.tagName.toLowerCase() !==
@@ -967,8 +967,8 @@
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
-            if ($popupOpen !== 'track-info') {
-                setQueue($queriedSongs, highlightedSongIdx)
+            if ($popupOpen !== "track-info") {
+                setQueue($queriedSongs, highlightedSongIdx);
             }
         }
     }
@@ -1012,7 +1012,7 @@
 
     async function favouriteSong(song: Song) {
         await db.songs.update(song, {
-            isFavourite: true
+            isFavourite: true,
         });
 
         song.isFavourite = true;
@@ -1024,7 +1024,7 @@
 
     async function unfavouriteSong(song: Song) {
         await db.songs.update(song, {
-            isFavourite: false
+            isFavourite: false,
         });
         song.isFavourite = false;
         songs = songs;
@@ -1088,7 +1088,11 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
 <QueueMenu bind:showMenu={showQueueMenu} bind:pos={menuPos} />
-<TrackMenu bind:showMenu={showTrackMenu} bind:pos={menuPos} bind:songs={songsHighlighted} />
+<TrackMenu
+    bind:showMenu={showTrackMenu}
+    bind:pos={menuPos}
+    bind:songs={songsHighlighted}
+/>
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
@@ -1145,7 +1149,7 @@
                         config={{
                             width,
                             height: virtualViewportHeight,
-                            y: -sandwichTopHeight
+                            y: -sandwichTopHeight,
                         }}
                         bind:handle={stage}
                         on:click={onStageClick}
@@ -1157,7 +1161,7 @@
                                     y: sandwichTopHeight,
                                     width,
                                     height: viewportHeight,
-                                    fill: BG_COLOR
+                                    fill: BG_COLOR,
                                 }}
                             />
 
@@ -1167,7 +1171,7 @@
                                         on:dblclick={() =>
                                             onDoubleClickSong(
                                                 song,
-                                                song?.viewModel?.index
+                                                song?.viewModel?.index,
                                             )}
                                         on:click={(e) => {
                                             if (e.detail.evt.button === 2) {
@@ -1176,7 +1180,7 @@
                                                 onRightClick(
                                                     e.detail.evt,
                                                     song,
-                                                    song.viewModel.index
+                                                    song.viewModel.index,
                                                 );
                                             }
                                         }}
@@ -1187,14 +1191,14 @@
                                                 songIdx > songsSlice.length - 15
                                             ) {
                                                 scrollContainer?.scrollBy({
-                                                    top: ROW_HEIGHT
+                                                    top: ROW_HEIGHT,
                                                 });
                                             } else if (
                                                 $draggedSongs?.length &&
                                                 songIdx < 10
                                             ) {
                                                 scrollContainer?.scrollBy({
-                                                    top: -ROW_HEIGHT
+                                                    top: -ROW_HEIGHT,
                                                 });
                                             }
                                         }}
@@ -1205,7 +1209,7 @@
                                             e.detail.evt.button === 0 &&
                                             onMouseDownSong(
                                                 song,
-                                                song.viewModel?.index
+                                                song.viewModel?.index,
                                             )}
                                         config={{
                                             x: 0,
@@ -1220,7 +1224,7 @@
                                         on:mouseup={(e) => {
                                             onMouseUpSong(
                                                 song,
-                                                song.viewModel.index
+                                                song.viewModel.index,
                                             );
                                         }}
                                     >
@@ -1229,26 +1233,26 @@
                                                 width: width,
                                                 height: ROW_HEIGHT,
                                                 listening: true,
-                                                fill:
-                                                    $draggedSongs.includes(song)
-                                                        ? DRAGGING_SOURCE_COLOR
-                                                        : $current.index ===
-                                                                song?.viewModel
-                                                                    ?.index &&
-                                                            song.id ===
-                                                                $current.song?.id
-                                                          ? PLAYING_BG_COLOR
-                                                          : songsHighlighted &&
-                                                              isSongIdxHighlighted(
-                                                                  song
-                                                                      ?.viewModel
-                                                                      ?.index
-                                                              )
-                                                            ? HIGHLIGHT_BG_COLOR
-                                                            : hoveredSongIdx ===
-                                                                songIdx
-                                                              ? ROW_BG_COLOR_HOVERED
-                                                              : ROW_BG_COLOR
+                                                fill: $draggedSongs.includes(
+                                                    song,
+                                                )
+                                                    ? DRAGGING_SOURCE_COLOR
+                                                    : $current.index ===
+                                                            song?.viewModel
+                                                                ?.index &&
+                                                        song.id ===
+                                                            $current.song?.id
+                                                      ? PLAYING_BG_COLOR
+                                                      : songsHighlighted &&
+                                                          isSongIdxHighlighted(
+                                                              song?.viewModel
+                                                                  ?.index,
+                                                          )
+                                                        ? HIGHLIGHT_BG_COLOR
+                                                        : hoveredSongIdx ===
+                                                            songIdx
+                                                          ? ROW_BG_COLOR_HOVERED
+                                                          : ROW_BG_COLOR,
                                             }}
                                         />
                                         {#each displayFields as f, idx (f.value)}
@@ -1256,18 +1260,18 @@
                                                 config={{
                                                     x:
                                                         f.value.match(
-                                                            /^(title|artist|album|track)/
+                                                            /^(title|artist|album|track)/,
                                                         ) !== null
                                                             ? f.viewProps.x + 10
                                                             : f.viewProps.x,
                                                     y: 1,
                                                     text: validatedValue(
-                                                        song[f.value]
+                                                        song[f.value],
                                                     ),
                                                     listening: false,
                                                     align:
                                                         f.value.match(
-                                                            /^(title|artist|album|track)/
+                                                            /^(title|artist|album|track)/,
                                                         ) !== null
                                                             ? "left"
                                                             : "center",
@@ -1277,11 +1281,12 @@
                                                             ? f.viewProps
                                                                   .width - 10
                                                             : f.value.match(
-                                                                    /^(title|artist|album|track)/
+                                                                    /^(title|artist|album|track)/,
                                                                 ) !== null
                                                               ? f.value ===
                                                                     "title" &&
-                                                                $current.song?.id ===
+                                                                $current.song
+                                                                    ?.id ===
                                                                     song.id
                                                                   ? f.viewProps
                                                                         .width -
@@ -1293,7 +1298,7 @@
                                                                     .width,
                                                     padding:
                                                         f.value.match(
-                                                            /^(genre)/
+                                                            /^(genre)/,
                                                         ) !== null
                                                             ? 10
                                                             : 2,
@@ -1310,8 +1315,8 @@
                                                             : TEXT_COLOR,
                                                     ellipsis:
                                                         f.value.match(
-                                                            /^(title|artist|album|genre)/
-                                                        ) !== null
+                                                            /^(title|artist|album|genre)/,
+                                                        ) !== null,
                                                 }}
                                             />
 
@@ -1324,7 +1329,7 @@
                                                         scaleX: 0.9,
                                                         scaleY: 0.9,
                                                         data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
-                                                        fill: "rgba(255, 255, 255, 0.5)"
+                                                        fill: "rgba(255, 255, 255, 0.5)",
                                                     }}
                                                 />
                                             {/if}
@@ -1344,7 +1349,7 @@
                                                             data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
                                                             fill: $currentThemeObject[
                                                                 "library-playing-icon"
-                                                            ]
+                                                            ],
                                                         }}
                                                     />
                                                 {/if}
@@ -1354,7 +1359,7 @@
                                                     <Path
                                                         on:click={() =>
                                                             unfavouriteSong(
-                                                                song
+                                                                song,
                                                             )}
                                                         config={{
                                                             x:
@@ -1365,13 +1370,15 @@
                                                             scaleY: 0.36,
                                                             data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                             fill:
-                                                                $current.song?.id === song.id
+                                                                $current.song
+                                                                    ?.id ===
+                                                                song.id
                                                                     ? $currentThemeObject[
                                                                           "library-playing-icon"
                                                                       ]
                                                                     : $currentThemeObject[
                                                                           "library-favourite-icon"
-                                                                      ]
+                                                                      ],
                                                         }}
                                                     />
                                                 {:else if hoveredSongIdx === songIdx}
@@ -1388,13 +1395,15 @@
                                                             data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                             fill: "transparent",
                                                             stroke:
-                                                                $current.song?.id === song.id
+                                                                $current.song
+                                                                    ?.id ===
+                                                                song.id
                                                                     ? $currentThemeObject[
                                                                           "library-playing-icon"
                                                                       ]
                                                                     : $currentThemeObject[
                                                                           "library-favourite-hover-icon"
-                                                                      ]
+                                                                      ],
                                                         }}
                                                     />
                                                 {/if}
@@ -1407,7 +1416,7 @@
                                             on:mouseup={(e) => {
                                                 onMouseUpSong(
                                                     song,
-                                                    song.viewModel.index
+                                                    song.viewModel.index,
                                                 );
                                             }}
                                             config={{
@@ -1419,13 +1428,14 @@
                                                     -DUMMY_PADDING +
                                                     scrollOffset +
                                                     (song.viewModel?.index >
-                                                    $draggedSongs[0].viewModel?.index
+                                                    $draggedSongs[0].viewModel
+                                                        ?.index
                                                         ? ROW_HEIGHT
                                                         : 0),
                                                 width: width,
                                                 height: DROP_HINT_HEIGHT,
                                                 fill: PLAYING_BG_COLOR,
-                                                listening: true
+                                                listening: true,
                                             }}
                                         />
                                     {/if}
@@ -1440,7 +1450,7 @@
                                                 sandwichBottomHeight +
                                                 ROW_HEIGHT,
                                             fill: OFFSCREEN_BG_COLOR,
-                                            listening: false
+                                            listening: false,
                                         }}
                                     />
                                 {/if}
@@ -1457,7 +1467,7 @@
                                         height: HEADER_HEIGHT,
                                         fontSize: 13.5,
                                         verticalAlign: "middle",
-                                        fill: TEXT_COLOR
+                                        fill: TEXT_COLOR,
                                     }}
                                 />
                             {/if}
@@ -1471,7 +1481,7 @@
                                         width,
                                         height: sandwichTopHeight,
                                         fill: OFFSCREEN_BG_COLOR,
-                                        listening: false
+                                        listening: false,
                                     }}
                                 />
                             {/if}
@@ -1484,7 +1494,7 @@
                                         height: viewportHeight,
                                         width: 2,
                                         fill: COLUMN_INSERT_HINT_COLOR,
-                                        listening: false
+                                        listening: false,
                                     }}
                                 />
                             {/if}
@@ -1493,7 +1503,7 @@
                                 config={{
                                     x: 0,
                                     y: sandwichTopHeight,
-                                    width: width
+                                    width: width,
                                 }}
                             >
                                 <Rect
@@ -1501,7 +1511,7 @@
                                         width: width - 0.5,
                                         height: HEADER_HEIGHT,
                                         listening: true,
-                                        fill: HEADER_BG_COLOR
+                                        fill: HEADER_BG_COLOR,
                                     }}
                                 />
                                 <Rect
@@ -1510,7 +1520,7 @@
                                         y: HEADER_HEIGHT,
                                         width: width,
                                         height: 0.5,
-                                        fill: "#544e55"
+                                        fill: "#544e55",
                                     }}
                                 />
                                 <Text
@@ -1530,7 +1540,7 @@
                                         fontFamily:
                                             "-apple-system, Avenir, Helvetica, Arial, sans-serif",
                                         fill: TEXT_COLOR,
-                                        listening: false
+                                        listening: false,
                                     }}
                                 />
                             </Group>

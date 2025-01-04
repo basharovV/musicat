@@ -9,7 +9,7 @@
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
@@ -66,8 +66,8 @@
         // Delete from file system (ie. move to trash)
         await invoke("delete_files", {
             event: {
-                files: tracks.map((t) => t.path)
-            }
+                files: tracks.map((t) => t.path),
+            },
         });
     }
 
@@ -79,7 +79,7 @@
 
         $bottomBarNotification = {
             text: $LL.toDelete.notification.deleting(count),
-            timeout: 2000
+            timeout: 2000,
         };
 
         await deleteTracksFromFileSystem(songs);
@@ -89,7 +89,7 @@
 
         $bottomBarNotification = {
             text: $LL.toDelete.notification.deleted(count),
-            timeout: 2000
+            timeout: 2000,
         };
 
         isDeleting = false;

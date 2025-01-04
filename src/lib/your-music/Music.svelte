@@ -2,13 +2,13 @@
     import type { ArtistProject, SongProject } from "src/App";
     import {
         currentSongProjects,
-        songbookSelectedArtist
+        songbookSelectedArtist,
     } from "../../data/store";
 
     import {
         deleteSongProject,
         loadSongProject,
-        loadSongProjectsForArtist
+        loadSongProjectsForArtist,
     } from "../../data/ArtistsToolkitData";
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
@@ -21,7 +21,7 @@
     async function loadSongbook() {
         isLoading = true;
         $currentSongProjects = await loadSongProjectsForArtist(
-            $songbookSelectedArtist.name
+            $songbookSelectedArtist.name,
         );
         // Sort the $currentSongProjects alphabetically
         console.log("songbook: $currentSongProjects", $currentSongProjects);
@@ -42,7 +42,7 @@
     async function onSelectSong(song: string) {
         selectedSongProject = await loadSongProject(
             $songbookSelectedArtist.name,
-            song
+            song,
         );
     }
 

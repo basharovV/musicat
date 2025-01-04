@@ -13,7 +13,9 @@
         <span class="slider round"></span>
     </label>
     <!-- svelte-ignore a11y-no-noninteractive-element-to-interactive-role -->
-    <p role="button" class:active={checked} on:click={() => (checked = true)}>{textOn}</p>
+    <p role="button" class:active={checked} on:click={() => (checked = true)}>
+        {textOn}
+    </p>
 </div>
 
 <style lang="scss">
@@ -57,7 +59,8 @@
         right: 0;
         bottom: 0;
         /* background-color: color-mix(in srgb, var(--type-bw-inverse) 10%, transparent); */
-        border: 1px solid color-mix(in srgb, var(--type-bw-inverse) 30%, transparent);
+        border: 1px solid
+            color-mix(in srgb, var(--type-bw-inverse) 30%, transparent);
         -webkit-transition: 0.4s;
         transition: 0.4s;
     }
