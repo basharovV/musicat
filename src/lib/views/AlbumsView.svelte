@@ -7,10 +7,10 @@
     import { db } from "../../data/db";
     import {
         compressionSelected,
-        currentSong,
+        current,
         isPlaying,
-        playlist,
         query,
+        queue,
         rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
@@ -89,16 +89,13 @@
         return albums;
     });
 
-    $: if (isInit && $playlist && $currentSong) {
+    $: if (isInit && $queue && $current?.song) {
         showCurrentlyPlayingAlbum();
     } else {
         isInit = false;
     }
 
-    $: if (
-        container &&
-        $currentSong?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()
-    ) {
+    $: if (container && $current.song?.album.toLowerCase() !== currentAlbum?.title.toLowerCase()) {
         if (updatePlayingAlbum()) {
             updateInView();
         }
@@ -141,7 +138,7 @@
     }
 
     async function showCurrentlyPlayingAlbum() {
-        if (!$currentSong) return;
+        if (!$current?.song) return;
 
         if (await updatePlayingAlbum()) {
             scrollToCurrentAlbum();
@@ -152,10 +149,10 @@
 
     async function updatePlayingAlbum() {
         // Strip the song from album path
-        const albumPath = await path.dirname($currentSong.path);
+        const albumPath = await path.dirname($current?.song?.path);
         // Find the album currently playing
         currentAlbum = await db.albums.get(
-            md5(`${albumPath} - ${$currentSong.album}`.toLowerCase()),
+            md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
         );
         if (!currentAlbum) return false;
 

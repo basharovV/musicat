@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { currentSong, isFullScreenVisualiser } from "../../data/store";
+    import { current, isFullScreenVisualiser } from "../../data/store";
     import audioPlayer from "./AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import { AudioVisualiser } from "./AudioVisualiser";
@@ -47,7 +47,7 @@
 >
     <canvas
         bind:this={canvas}
-        class:hidden={$currentSong === null}
+        class:hidden={$current.song === null}
         {width}
         {height}
     />

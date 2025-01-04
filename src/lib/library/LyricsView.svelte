@@ -2,7 +2,7 @@
     import { fade, fly } from "svelte/transition";
     import { getLyrics } from "../../data/LyricsGrabber";
     import {
-        currentSong,
+        current,
         currentSongLyrics,
         isLyricsHovered,
         isLyricsOpen,
@@ -57,19 +57,19 @@
 
     async function grabLyrics() {
         if (
-            $currentSongLyrics?.songId !== $currentSong.id &&
-            $currentSong?.title &&
-            $currentSong?.artist
+            $currentSongLyrics?.songId !== $current.song.id &&
+            $current.song?.title &&
+            $current.song?.artist
         ) {
             isLoading = true;
             try {
                 let result = await getLyrics(
-                    $currentSong.title,
-                    $currentSong.artist
+                    $current.song.title,
+                    $current.song.artist
                 );
                 $currentSongLyrics = result.lyrics
                     ? {
-                          songId: $currentSong.id,
+                          songId: $current.song.id,
                           lyrics: result.lyrics,
                           writers: result.writers
                       }
@@ -109,7 +109,7 @@
     }
 
     let isEmpty = false;
-    $: if ($currentSong && $currentSong?.title && $currentSong?.artist) {
+    $: if ($current.song && $current.song?.title && $current.song?.artist) {
         grabLyrics();
     } else {
         $currentSongLyrics = null;
@@ -152,7 +152,7 @@
             </div>
             <div class="info">
                 <p>Lyrics</p>
-                <small>{$currentSong.title}</small>
+                <small>{$current.song.title}</small>
             </div>
             <div class="options">
                 <Icon

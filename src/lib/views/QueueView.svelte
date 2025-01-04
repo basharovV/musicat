@@ -25,22 +25,13 @@
 
     import {
         arrowFocus,
-        bottomBarNotification,
         columnOrder,
-        compressionSelected,
-        currentSong,
-        currentSongIdx,
+        current,
         draggedAlbum,
-        draggedColumnIdx,
         draggedSongs,
-        emptyDropEvent,
-        fileDropHandler,
         forceRefreshLibrary,
-        importStatus,
-        isCmdOrCtrlPressed,
         isDraggingFromQueue,
         isPlaying,
-        isQueueOpen,
         isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
@@ -48,65 +39,51 @@
         popupOpen,
         libraryScrollPos,
         os,
-        playlist,
-        playlistIsAlbum,
-        playlistType,
+        queue,
         queriedSongs,
         query,
         rightClickedTrack,
         rightClickedTracks,
-        selectedPlaylistFile,
         shouldFocusFind,
-        shuffledPlaylist,
+        shuffledQueue,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
-        uiView
+        uiView,
     } from "../../data/store";
-    import {
-        moveArrayElement,
-        swapArrayElements
-    } from "../../utils/ArrayUtils";
+    import { moveArrayElement } from "../../utils/ArrayUtils";
     import AudioPlayer from "../player/AudioPlayer";
     import SmartQueryBuilder from "../smart-query/SmartQueryBuilder.svelte";
     import SmartQueryMainHeader from "../smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
     import ColumnPicker from "../library/ColumnPicker.svelte";
     import ImportPlaceholder from "../library/ImportPlaceholder.svelte";
-    import TrackMenu from "../library/TrackMenu.svelte";
     import { getQueryPart } from "../smart-query/QueryParts";
     import { UserQueryPart } from "../smart-query/UserQueryPart";
     import Konva from "konva";
     import audioPlayer from "../player/AudioPlayer";
-    import QueueMenu from "../library/QueueMenu.svelte";
+    import TrackMenu from "../queue/TrackMenu.svelte";
     import { currentThemeObject } from "../../theming/store";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import { findQueueIndex, findQueueIndexes, setQueue, updateQueues } from "../../data/storeHelper";
+    import QueueMenu from "../queue/QueueMenu.svelte";
 
     export let allSongs = null;
     export let dim = false;
     export let isLoading = false;
-    export let theme = "default";
     export let isInit = true;
 
     const WINDOW_CONTROLS_WIDTH = 70;
 
-    $: queue = ($isShuffleEnabled ? $shuffledPlaylist : $playlist).map(
-        (s, idx) => ({
-            ...s,
-            viewModel: {
-                index: idx,
-                viewId: idx.toString()
-            }
-        })
-    );
-
-    $: songs = queue.length
-        ? queue.filter((v, i) =>
-              $playlistType.match(/(album|country)/)
-                  ? true
-                  : v.viewModel.index >= $currentSongIdx
-          )
-        : [];
+    $: songs = ($isShuffleEnabled ? $shuffledQueue : $queue).map(
+            (s, idx) => ({
+                ...s,
+                viewModel: {
+                    index: idx,
+                    viewId: idx.toString()
+                }
+            })
+        );
 
     const DEFAULT_FIELDS = [
         {
@@ -123,12 +100,17 @@
 
     export let fields = DEFAULT_FIELDS;
 
+    let currentSongY = 0;
+    let currentSongInView = false;
+    let currentSongScrollIdx = null;
+
     let hoveredColumnIdx = null;
     let hoveredSongIdx = null; // Index is slice-specific
     let columnToInsertIdx = null;
     let columnToInsertXPos = 0;
     let hoveredField = null;
     let isDraggingOver = false;
+    let isOver = false;
 
     $: isOrderChanged =
         JSON.stringify($columnOrder) !==
@@ -311,6 +293,12 @@
             top: 0
         });
         ready = true;
+    }
+
+    $: if ($current.index !== null) {
+        let idx = $current.index;
+        currentSongY = idx * ROW_HEIGHT;
+        currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
     }
 
     function drawSongDataGrid() {
@@ -591,7 +579,7 @@
             let idx =
                 currentSongScrollIdx !== null
                     ? currentSongScrollIdx
-                    : $currentSongIdx;
+                    : $current.index;
             currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         }
 
@@ -601,18 +589,6 @@
         }
     }
 
-    let currentSongY = 0;
-    $: if (
-        !$playlistType.match(/^(album|country)$/) &&
-        !$isShuffleEnabled &&
-        $currentSongIdx !== null
-    ) {
-        let idx = $currentSongIdx;
-        currentSongY = idx * ROW_HEIGHT;
-        currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
-        // console.log("currentSongY", currentSongY);
-    }
-
     function scrollToCurrentSong() {
         // console.log("y", currentSongY);
 
@@ -620,7 +596,7 @@
         if (currentSongY > viewportHeight / 2.3) {
             adjustedPos -= viewportHeight / 2.3;
         }
-        if ($isPlaying && $currentSong) {
+        if ($isPlaying && $current.song) {
             scrollContainer.scrollTo({
                 top: adjustedPos,
                 behavior: "smooth"
@@ -628,16 +604,38 @@
         }
     }
 
+    current.subscribe(async () => {
+        if (isOver) {
+            return;
+        }
+
+        if (scrollContainer && !currentSongInView) {
+            scrollToCurrentSong();
+        }
+    });
+
     // LIBRARY FUNCTIONALITY
 
+    let isMetaPressed = false;
     let isShiftPressed = false;
     let rangeStartSongIdx = null;
     let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
+    let showQueueMenu = false;
     let showTrackMenu = false;
     let menuPos;
-    let currentSongInView = false;
-    let currentSongScrollIdx = null;
+    let shouldProcessDrag = false;
+
+    let songsHighlighted: Song[] = [];
+    let onSongsHighlighted = null;
+
+    $: if (songs?.length && $query.query?.length && $popupOpen !== 'track-info') {
+        highlightSong(songs[0], 0, false, true);
+    }
+
+    isShuffleEnabled.subscribe(() => {
+        songsHighlighted = [];
+    });
 
     function onDoubleClickSong(song, idx) {
         audioPlayer.playSong(song, 0, true, idx);
@@ -648,25 +646,9 @@
             highlightSong(song, idx, false);
         }
 
-        // console.log("songIdsHighlighted", songsHighlighted);
-        if (songsHighlighted.length > 1) {
-            $rightClickedTracks = songsHighlighted;
-            $rightClickedTrack = null;
-        } else {
-            $rightClickedTrack = song;
-        }
         showTrackMenu = true;
         menuPos = { x: e.clientX, y: e.clientY };
     }
-
-    $: {
-        if (songs?.length && $query.query?.length && $popupOpen !== 'track-info') {
-            highlightSong(songs[0], 0, false, true);
-        }
-    }
-    export let songsHighlighted: Song[] = [];
-    export let onSongsHighlighted = null;
-    let shouldProcessDrag = false;
 
     function isSongHighlighted(song: Song) {
         return songsHighlighted.map((s) => s?.id).includes(song?.id);
@@ -685,11 +667,13 @@
 
         highlightedSongIdx = idx;
         if (isSongIdxHighlighted(idx)) {
-            if (songsHighlighted.length) {
+            if (isMetaPressed) {
+                unhighlightSong(song);
+            } else if (isShiftPressed) {
+                shouldProcessDrag = true;
+            } else {
                 songsHighlighted = [];
                 highlightSong(song, idx, isKeyboardArrows);
-            } else {
-                unhighlightSong(song);
             }
         } else {
             highlightSong(song, idx, isKeyboardArrows);
@@ -699,12 +683,10 @@
             // console.log("songshighlighted", songsHighlighted);
             if (songsHighlighted.length > 1) {
                 $draggedSongs = songsHighlighted;
+                $isDraggingFromQueue = true;
             } else {
                 $draggedSongs = [song];
                 $isDraggingFromQueue = true;
-                if (idx !== undefined && song.id !== $currentSong?.id) {
-                    draggingSongIdx = idx;
-                }
             }
         }
     }
@@ -728,7 +710,7 @@
                     rangeStartSongIdx = rangeEndSongIdx;
                     rangeEndSongIdx = startIdx;
                 }
-                songsHighlighted = queue.slice(
+                songsHighlighted = songs.slice(
                     rangeStartSongIdx,
                     rangeEndSongIdx + 1
                 );
@@ -765,81 +747,136 @@
         }
         // console.log("start", rangeStartSongIdx);
 
-        songsHighlighted = songsHighlighted;
         console.log("highlighted2", songsHighlighted);
         onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
 
     function unhighlightSong(song: Song) {
         songsHighlighted.splice(songsHighlighted.indexOf(song), 1);
-        songsHighlighted = songsHighlighted;
         onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
 
-    let draggingSongIdx = null;
-
     // Something got released over the queue
-    async function onMouseUpContainer() {
-        audioPlayer.shouldPlay = false;
+    async function onMouseUpContainer(e) {
+        if (hoveredSongIdx) {
+            return;
+        }
+
         if ($draggedSongs?.length) {
             if ($isShuffleEnabled) {
-                $shuffledPlaylist.push(...$draggedSongs);
-                $shuffledPlaylist = $shuffledPlaylist;
+                updateQueues(
+                    $draggedSongs,
+                    $draggedSongs,
+                    (queue, newSongs) => {
+                        queue.push(...newSongs);
+                    }
+                );
             } else {
-                $playlist.push(...$draggedSongs);
-                $playlist = $playlist;
+                updateQueues(
+                    $draggedSongs,
+                    null,
+                    (queue, newSongs) => {
+                        queue.push(...newSongs);
+                    }
+                );
             }
         }
 
         $draggedSongs = [];
         $draggedAlbum = null;
-        draggingSongIdx = null;
-        $isDraggingFromQueue = false;
     }
 
     // Something got released over a song in the queue
     async function onMouseUpSong(song: Song, idx: number) {
-        console.log("mouse up");
-        if (draggingSongIdx !== null && idx !== draggingSongIdx) {
-            console.log("reorder song", draggingSongIdx, idx);
-            // let playlist = await db.playlists.get($selectedPlaylistId);
+        if (!$draggedSongs?.length) {
+            return;
+        }
+
+        console.log("mouse up - song", $isDraggingFromQueue);
+
+        const delta = song.viewModel?.index > $draggedSongs[0].viewModel?.index ? 1 : 0;
+
+        if ($isDraggingFromQueue) {
+            if ($draggedSongs.includes(song)) {
+                return;
+            }
+
+            console.log("reorder song", $draggedSongs, idx);
 
             if ($isShuffleEnabled) {
-                $shuffledPlaylist = moveArrayElement(
-                    $shuffledPlaylist,
-                    draggingSongIdx,
-                    idx
+                updateQueues(
+                    [
+                        findQueueIndex($shuffledQueue[idx]),
+                        $draggedSongs,
+                        delta
+                    ],
+                    [idx, $draggedSongs, delta],
+                    reorderSongs
                 );
             } else {
-                audioPlayer.shouldPlay = false;
-                $playlist = moveArrayElement($playlist, draggingSongIdx, idx);
+                updateQueues(
+                    [idx, $draggedSongs, delta],
+                    null,
+                    reorderSongs
+                );
             }
-        } else if (
-            $draggedSongs?.length &&
-            draggingSongIdx === null &&
-            !$isDraggingFromQueue
-        ) {
+
+            songsHighlighted = [];
+        } else {
             // Drop from library
-            console.log("drop to queue", $draggedSongs);
-            audioPlayer.shouldPlay = false;
+            console.log("drop to queue", $draggedSongs, idx);
+
             if ($isShuffleEnabled) {
-                $shuffledPlaylist.splice(idx + 1, 0, ...$draggedSongs);
-                $shuffledPlaylist = $shuffledPlaylist;
+                updateQueues(
+                    [
+                        findQueueIndex($shuffledQueue[idx]),
+                        $draggedSongs,
+                    ],
+                    [idx, $draggedSongs],
+                    (queue, [index, newSongs]) => {
+                        queue.splice(index + delta, 0, ...newSongs);
+                    }
+                );
             } else {
-                // "patch" the index value for the queue to avoid the duplicate key error when rendering
-                // For this we'll need to re-calculate all the indexes
-                $playlist.splice(idx + 1, 0, ...$draggedSongs);
-                $playlist = $playlist;
+                updateQueues(
+                    [idx, $draggedSongs],
+                    null,
+                    (queue, [index, newSongs]) => {
+                        queue.splice(index + delta, 0, ...newSongs);
+                    }
+                );
             }
+
             // Avoid layout shift - compensate for the scroll jump after adding new elements
             scrollContainer.scrollBy({
                 top: ROW_HEIGHT * $draggedSongs.length
             });
         }
+
         $draggedSongs = [];
         $draggedAlbum = null;
-        draggingSongIdx = null;
         $isDraggingFromQueue = false;
+    }
+
+    function reorderSongs(queue, [index, songs, delta]) {
+        const id = queue[index].id;
+        const indexes = songs.map((t) => t.viewModel.index);
+
+        for (const index of indexes.sort((a, b) => b - a)) {
+            queue.splice(index, 1);
+        }
+
+        const newIndex = queue.findIndex((song) => song.id === id);
+
+        queue.splice(newIndex + delta, 0, ...songs.sort((a, b) => a.viewModel.index - b.viewModel.index));
+    }
+
+    function onStageClick(e) {
+        if (e.detail.evt.button === 2) {
+            e.preventDefault()
+            showQueueMenu = true;
+            menuPos = { x: e.detail.evt.clientX, y: e.detail.evt.clientY };
+        }
     }
 
     // Shortcuts
@@ -856,6 +893,12 @@
         if (event.keyCode === 16) {
             isShiftPressed = true;
             console.log("shift pressed");
+        } else if ($os !== "macos" && event.keyCode === 17) {
+            isMetaPressed = true;
+            console.log("ctrl pressed");
+        } else if ($os === "macos" && event.keyCode === 91) {
+            isMetaPressed = true;
+            console.log("cmd pressed");
         } else if (
             event.keyCode === 38 &&
             (document.activeElement.id === "search" ||
@@ -883,9 +926,9 @@
         ) {
             // down
             event.preventDefault();
-            if (highlightedSongIdx < queue.length) {
+            if (highlightedSongIdx < songs.length) {
                 onMouseDownSong(
-                    queue[highlightedSongIdx + 1],
+                    songs[highlightedSongIdx + 1],
                     highlightedSongIdx + 1,
                     true
                 );
@@ -925,12 +968,7 @@
             // 'Enter' to play highlighted track
             event.preventDefault();
             if ($popupOpen !== 'track-info') {
-                AudioPlayer.shouldPlay = false;
-                $playlist = $queriedSongs;
-                $playlistType =
-                    $uiView === "playlists" ? "playlist" : "library";
-                $currentSongIdx = highlightedSongIdx;
-                AudioPlayer.playSong(songsHighlighted[0]);
+                setQueue($queriedSongs, highlightedSongIdx)
             }
         }
     }
@@ -938,6 +976,12 @@
         if (event.keyCode === 16) {
             isShiftPressed = false;
             console.log("shift lifted");
+        } else if (event.keyCode === 17) {
+            isMetaPressed = false;
+            console.log("ctrl lifted");
+        } else if (event.keyCode === 91) {
+            isMetaPressed = false;
+            console.log("cmd lifted");
         }
     }
 
@@ -972,9 +1016,9 @@
         });
 
         song.isFavourite = true;
-        queue = queue;
-        if ($currentSong?.id === song.id) {
-            $currentSong.isFavourite = true;
+        songs = songs;
+        if ($current.song?.id === song.id) {
+            $current.song.isFavourite = true;
         }
     }
 
@@ -983,9 +1027,9 @@
             isFavourite: false
         });
         song.isFavourite = false;
-        queue = queue;
-        if ($currentSong?.id === song.id) {
-            $currentSong.isFavourite = false;
+        songs = songs;
+        if ($current.song?.id === song.id) {
+            $current.song.isFavourite = false;
         }
     }
 
@@ -1043,7 +1087,8 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<QueueMenu bind:showMenu={showTrackMenu} bind:pos={menuPos} />
+<QueueMenu bind:showMenu={showQueueMenu} bind:pos={menuPos} />
+<TrackMenu bind:showMenu={showTrackMenu} bind:pos={menuPos} bind:songs={songsHighlighted} />
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
@@ -1069,11 +1114,13 @@
             class:ready
             on:scroll={onScroll}
             bind:this={scrollContainer}
-            on:mouseup={() => onMouseUpContainer()}
+            on:mouseup={onMouseUpContainer}
             on:mouseenter={() => {
+                isOver = true;
                 isDraggingOver = $draggedSongs?.length > 0;
             }}
             on:mouseleave={() => {
+                isOver = false;
                 isDraggingOver = false;
             }}
         >
@@ -1101,6 +1148,7 @@
                             y: -sandwichTopHeight
                         }}
                         bind:handle={stage}
+                        on:click={onStageClick}
                     >
                         <Layer>
                             <Rect
@@ -1123,6 +1171,8 @@
                                             )}
                                         on:click={(e) => {
                                             if (e.detail.evt.button === 2) {
+                                                e.preventDefault();
+
                                                 onRightClick(
                                                     e.detail.evt,
                                                     song,
@@ -1133,18 +1183,14 @@
                                         on:mouseenter={() => {
                                             hoveredSongIdx = songIdx;
                                             if (
-                                                (draggingSongIdx !== null ||
-                                                    (draggingSongIdx === null &&
-                                                        $draggedSongs?.length)) &&
+                                                $draggedSongs?.length &&
                                                 songIdx > songsSlice.length - 15
                                             ) {
                                                 scrollContainer?.scrollBy({
                                                     top: ROW_HEIGHT
                                                 });
                                             } else if (
-                                                (draggingSongIdx !== null ||
-                                                    (draggingSongIdx === null &&
-                                                        $draggedSongs?.length)) &&
+                                                $draggedSongs?.length &&
                                                 songIdx < 10
                                             ) {
                                                 scrollContainer?.scrollBy({
@@ -1169,7 +1215,7 @@
                                                 ROW_HEIGHT * songIdx +
                                                 -DUMMY_PADDING +
                                                 scrollOffset,
-                                            visible: !song.dummy
+                                            visible: !song.dummy,
                                         }}
                                         on:mouseup={(e) => {
                                             onMouseUpSong(
@@ -1184,14 +1230,13 @@
                                                 height: ROW_HEIGHT,
                                                 listening: true,
                                                 fill:
-                                                    draggingSongIdx ===
-                                                    song.viewModel?.index
+                                                    $draggedSongs.includes(song)
                                                         ? DRAGGING_SOURCE_COLOR
-                                                        : $currentSongIdx ===
+                                                        : $current.index ===
                                                                 song?.viewModel
                                                                     ?.index &&
                                                             song.id ===
-                                                                $currentSong?.id
+                                                                $current.song?.id
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
                                                               isSongIdxHighlighted(
@@ -1236,7 +1281,7 @@
                                                                 ) !== null
                                                               ? f.value ===
                                                                     "title" &&
-                                                                $currentSong?.id ===
+                                                                $current.song?.id ===
                                                                     song.id
                                                                   ? f.viewProps
                                                                         .width -
@@ -1256,11 +1301,11 @@
                                                     fontSize: 13.5,
                                                     verticalAlign: "middle",
                                                     fill:
-                                                        $currentSongIdx ===
+                                                        $current.index ===
                                                             song?.viewModel
                                                                 ?.index &&
                                                         song.id ===
-                                                            $currentSong?.id
+                                                            $current.song?.id
                                                             ? PLAYING_TEXT_COLOR
                                                             : TEXT_COLOR,
                                                     ellipsis:
@@ -1270,7 +1315,7 @@
                                                 }}
                                             />
 
-                                            {#if hoveredSongIdx === songIdx && !(draggingSongIdx !== null || (draggingSongIdx === null && $draggedSongs?.length))}
+                                            {#if hoveredSongIdx === songIdx && $draggedSongs?.length === 0}
                                                 <Path
                                                     config={{
                                                         x: -2,
@@ -1286,7 +1331,7 @@
 
                                             {#if f.value === "title"}
                                                 <!-- Now playing icon -->
-                                                {#if $currentSongIdx === song?.viewModel?.index && song.id === $currentSong?.id}
+                                                {#if $current.index === song?.viewModel?.index && song.id === $current.song?.id}
                                                     <Path
                                                         config={{
                                                             x:
@@ -1320,7 +1365,7 @@
                                                             scaleY: 0.36,
                                                             data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                             fill:
-                                                                $currentSong?.id === song.id
+                                                                $current.song?.id === song.id
                                                                     ? $currentThemeObject[
                                                                           "library-playing-icon"
                                                                       ]
@@ -1342,8 +1387,8 @@
                                                             scaleY: 0.36,
                                                             data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                             fill: "transparent",
-                                                            stroke: 
-                                                                $currentSong?.id === song.id
+                                                            stroke:
+                                                                $current.song?.id === song.id
                                                                     ? $currentThemeObject[
                                                                           "library-playing-icon"
                                                                       ]
@@ -1357,7 +1402,7 @@
                                         {/each}
                                     </Group>
 
-                                    {#if hoveredSongIdx === songIdx && (draggingSongIdx !== null || (draggingSongIdx === null && $draggedSongs?.length))}
+                                    {#if hoveredSongIdx === songIdx && $draggedSongs?.length}
                                         <Rect
                                             on:mouseup={(e) => {
                                                 onMouseUpSong(
@@ -1374,7 +1419,7 @@
                                                     -DUMMY_PADDING +
                                                     scrollOffset +
                                                     (song.viewModel?.index >
-                                                    draggingSongIdx
+                                                    $draggedSongs[0].viewModel?.index
                                                         ? ROW_HEIGHT
                                                         : 0),
                                                 width: width,
@@ -1488,31 +1533,6 @@
                                         listening: false
                                     }}
                                 />
-                                <Text
-                                    config={{
-                                        x:
-                                            !$isSidebarOpen && $os === "macos"
-                                                ? 50 + WINDOW_CONTROLS_WIDTH
-                                                : 50,
-                                        text:
-                                            $playlistType === "country"
-                                                ? "(country mode)"
-                                                : $playlistType === "album"
-                                                  ? "(album mode)"
-                                                  : "(library mode)",
-                                        align: "left",
-                                        padding: 10,
-                                        height: HEADER_HEIGHT,
-                                        fontSize: 12,
-                                        letterSpacing: 0,
-                                        fontStyle: "normal",
-                                        verticalAlign: "middle",
-                                        fontFamily:
-                                            "-apple-system, Avenir, Helvetica, Arial, sans-serif",
-                                        fill: TEXT_COLOR,
-                                        listening: false
-                                    }}
-                                />
                             </Group>
                         </Layer>
                     </Stage>
@@ -1532,6 +1552,7 @@
         position: relative;
         max-width: 290px;
         width: 290px;
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1542,7 +1563,7 @@
         overflow: hidden;
         margin: 4px 0 0 0;
         &.dragover {
-            border: 1.5px solid var(--accent-secondary);    
+            border: 1.5px solid var(--accent-secondary);
         }
     }
     .container {

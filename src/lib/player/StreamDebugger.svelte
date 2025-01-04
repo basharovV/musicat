@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { currentSong, streamInfo } from "../../data/store";
+    import { current, streamInfo } from "../../data/store";
 
     $: playbackRate =
-        $currentSong?.fileInfo?.bitDepth *
-        $currentSong?.fileInfo?.sampleRate *
-        $currentSong?.fileInfo?.channels;
+        $current.song?.fileInfo?.bitDepth *
+        $current.song?.fileInfo?.sampleRate *
+        $current.song?.fileInfo?.channels;
 
     let diff = $streamInfo.receiveRate / 1000 - playbackRate;
     let status = "ok";
@@ -14,7 +14,7 @@
         status = "bad";
     }
 
-    $: bufferedTime = ($streamInfo.bufferedSamples / $currentSong?.fileInfo?.sampleRate ?? 0).toFixed(2);
+    $: bufferedTime = ($streamInfo.bufferedSamples / $current.song?.fileInfo?.sampleRate ?? 0).toFixed(2);
 </script>
 
 <div>

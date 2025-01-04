@@ -124,13 +124,13 @@ export async function addSongsToPlaylists(
     await writePlaylist(playlistFile, [...existingSongs, ...songs]);
 }
 
-export async function createNewPlaylistFile(title: string) {
+export async function createNewPlaylistFile(title: string, songs: Song[] = []) {
     await writePlaylist(
         {
             path: await path.join(get(userSettings).playlistsLocation, `${title}.m3u`),
             title
         },
-        []
+        songs
     );
     await scanPlaylists();
 }
