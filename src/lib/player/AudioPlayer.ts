@@ -13,7 +13,7 @@ import {
     seekTime,
     shuffledQueue,
     userSettings,
-    volume
+    volume,
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
 
@@ -74,7 +74,7 @@ class AudioPlayer {
     stats = {
         packetDropCounter: 0,
         packetReceivedCounter: 0,
-        totalPacketCounter: 0
+        totalPacketCounter: 0,
     };
     flowControlSendInterval;
 
@@ -210,8 +210,8 @@ class AudioPlayer {
         volume.subscribe(async (vol) => {
             await invoke("volume_control", {
                 event: {
-                    volume: vol * 0.75
-                }
+                    volume: vol * 0.75,
+                },
             });
             localStorage.setItem("volume", String(vol));
         });
@@ -223,7 +223,7 @@ class AudioPlayer {
             current.set({
                 song: this.currentSong,
                 index: this.currentSongIdx,
-                position: 0
+                position: 0,
             });
 
             this.setNextUpSong();
@@ -277,7 +277,7 @@ class AudioPlayer {
         current.set({
             song: this.currentSong,
             index: this.currentSongIdx,
-            position
+            position,
         });
         isShuffleEnabled.set(true);
     }
@@ -301,8 +301,11 @@ class AudioPlayer {
     }
 
     playCurrent(seek: number = 0) {
-        const { song, position } = get(current);
-        this.playSong(song, seek || position);
+        if (this.currentSong) {
+            this.playSong(this.currentSong, seek);
+        } else {
+            this.playSong(this.queue[this.currentSongIdx], seek);
+        }
     }
 
     hasNext() {
@@ -341,10 +344,10 @@ class AudioPlayer {
                               sizes: this.artworkSrc.size
                                   ? `${this.artworkSrc.size.width}x${this.artworkSrc.size.height}`
                                   : "128x128",
-                              type: this.artworkSrc.format
-                          }
+                              type: this.artworkSrc.format,
+                          },
                       ]
-                    : []
+                    : [],
             });
         }
     }
@@ -356,7 +359,7 @@ class AudioPlayer {
                 () => {
                     console.log("action handler play");
                     this.play(true);
-                }
+                },
             ],
             [
                 "pause",
@@ -364,25 +367,25 @@ class AudioPlayer {
                     console.log("action handler pause");
                     // Pause active playback
                     this.pause();
-                }
+                },
             ],
             [
                 "previoustrack",
                 () => {
                     /* ... */
-                }
+                },
             ],
             [
                 "nexttrack",
                 () => {
                     /* ... */
-                }
+                },
             ],
             [
                 "stop",
                 () => {
                     /* ... */
-                }
+                },
             ],
             ["seekbackward", null],
             ["seekforward", null],
@@ -390,8 +393,8 @@ class AudioPlayer {
                 "seekto",
                 (details) => {
                     /* ... */
-                }
-            ]
+                },
+            ],
         ];
 
         for (const [action, handler] of actionHandlers) {
@@ -422,8 +425,8 @@ class AudioPlayer {
                     path: nextSong.path,
                     seek: 0,
                     file_info: nextSong.fileInfo,
-                    volume: get(volume)
-                }
+                    volume: get(volume),
+                },
             });
         } else {
             nextUpSong.set(null);
@@ -433,15 +436,15 @@ class AudioPlayer {
                     path: null,
                     seek: 0,
                     file_info: null,
-                    volume: get(volume)
-                }
+                    volume: get(volume),
+                },
             });
         }
     }
 
     async incrementPlayCounter(song: Song) {
         await db.songs.update(song, {
-            playCount: song.playCount ? song.playCount + 1 : 1
+            playCount: song.playCount ? song.playCount + 1 : 1,
         });
     }
 
@@ -482,8 +485,8 @@ class AudioPlayer {
                         path: this.currentSong.path,
                         seek: position,
                         file_info: this.currentSong.fileInfo,
-                        volume: get(volume)
-                    }
+                        volume: get(volume),
+                    },
                 });
                 this.incrementPlayCounter(song);
             }
@@ -525,8 +528,8 @@ class AudioPlayer {
                 paths: paths,
                 recursive: false,
                 process_albums: false,
-                is_async: false
-            }
+                is_async: false,
+            },
         });
         console.log("scan_paths response", response);
         if (response.songs) {
@@ -541,8 +544,8 @@ class AudioPlayer {
         if (isResume) {
             await invoke("decode_control", {
                 event: {
-                    decoding_active: true
-                }
+                    decoding_active: true,
+                },
             });
         }
 
@@ -552,8 +555,8 @@ class AudioPlayer {
     async pause() {
         invoke("decode_control", {
             event: {
-                decoding_active: false
-            }
+                decoding_active: false,
+            },
         });
         this.onPause();
     }
