@@ -51,7 +51,7 @@ export async function startWatchingLibraryFolders() {
                             }
                             const filehash = md5(path);
                             const song = await db.songs.get(filehash);
-                            
+
                             console.log(
                                 "[Folder watcher] File exists",
                                 fileExists

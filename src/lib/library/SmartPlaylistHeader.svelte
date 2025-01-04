@@ -14,7 +14,7 @@
         selectedSmartQuery,
         smartQuery,
         smartQueryInitiator,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
@@ -53,13 +53,16 @@
         // Close the builder UI and set the current selected query to the one we just saved
         $isSmartQueryBuilderOpen = false;
         $selectedSmartQuery = `~usq:${id}`;
-        $selectedPlaylistFile = null
+        $selectedPlaylistFile = null;
         $smartQuery.reset();
     }
 </script>
 
 {#if $isSmartQueryBuilderOpen}
-    <form on:submit|preventDefault={save} class:window-padding={!$isSidebarOpen && !$isQueueOpen}>
+    <form
+        on:submit|preventDefault={save}
+        class:window-padding={!$isSidebarOpen && !$isQueueOpen}
+    >
         <Input
             bind:value={$smartQuery.name}
             fullWidth

@@ -10,7 +10,7 @@ import type { Song } from "src/App";
 function instanceOfQueryPartStructWithValues(
     object: any
 ): object is QueryPartStructWithValues {
-    return typeof object === 'object' && "values" in object;
+    return typeof object === "object" && "values" in object;
 }
 
 export class UserQueryPart {
@@ -75,9 +75,11 @@ export class UserQueryPart {
                 ? Object.values(this.userInputs)[1].value
                 : null
         ).toLowerCase();
-        
-        const comparison = this.queryPartWithValues ? this.queryPartWithValues.comparison : this.queryPart.comparison
-        
+
+        const comparison = this.queryPartWithValues
+            ? this.queryPartWithValues.comparison
+            : this.queryPart.comparison;
+
         switch (comparison) {
             case "is-equal":
                 return lhs === rhs1;

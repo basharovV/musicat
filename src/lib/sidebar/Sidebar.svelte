@@ -18,7 +18,7 @@
         addSongsToPlaylists,
         createNewPlaylistFile,
         deletePlaylistFile,
-        renamePlaylist
+        renamePlaylist,
     } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
@@ -57,7 +57,7 @@
         userPlaylists,
         userSettings,
         toDeletePlaylist,
-        lastWrittenSongs
+        lastWrittenSongs,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -141,8 +141,8 @@
                 event: {
                     path: song.path,
                     isImport: false,
-                    includeFolderArtwork: true
-                }
+                    includeFolderArtwork: true,
+                },
             });
 
             if (!songWithArtwork) {
@@ -151,7 +151,7 @@
                 album = "in use by another program?";
                 toast.error(
                     `Error reading file ${song.path}. Check permissions, or if the file is used by another program.`,
-                    { className: "app-toast" }
+                    { className: "app-toast" },
                 );
                 return;
             }
@@ -171,7 +171,7 @@
                 if (songWithArtwork.artwork.data?.length) {
                     artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
@@ -183,8 +183,8 @@
                     format: artworkFormat,
                     size: {
                         width: 200,
-                        height: 200
-                    }
+                        height: 200,
+                    },
                 };
             } else {
                 artworkSrc = null;
@@ -239,7 +239,7 @@
         if (topContainer) {
             $sidebarTogglePos = {
                 x: topContainer.getBoundingClientRect().right,
-                y: topContainer.getBoundingClientRect().bottom
+                y: topContainer.getBoundingClientRect().bottom,
             };
         }
     }
@@ -302,8 +302,8 @@
                             monitor.position.y +
                                 monitor.size.height -
                                 windowSize.height -
-                                paddingPx
-                        )
+                                paddingPx,
+                        ),
                     );
                     break;
                 case "bottom-right":
@@ -316,8 +316,8 @@
                             monitor.position.y +
                                 monitor.size.height -
                                 windowSize.height -
-                                paddingPx
-                        )
+                                paddingPx,
+                        ),
                     );
                     break;
                 case "top-left":
@@ -325,8 +325,8 @@
                         new PhysicalPosition(
                             monitor.position.x + paddingPx,
                             monitor.position.y +
-                                ($os === "macos" ? paddingPx + 40 : paddingPx)
-                        )
+                                ($os === "macos" ? paddingPx + 40 : paddingPx),
+                        ),
                     );
                     break;
                 case "top-right":
@@ -337,8 +337,8 @@
                                 windowSize.width -
                                 paddingPx,
                             monitor.position.y +
-                                ($os === "macos" ? paddingPx + 40 : paddingPx)
-                        )
+                                ($os === "macos" ? paddingPx + 40 : paddingPx),
+                        ),
                     );
                     break;
             }
@@ -349,7 +349,7 @@
             await appWindow.hide();
             if (widthToRestore && heightToRestore) {
                 await appWindow.setSize(
-                    new LogicalSize(widthToRestore, heightToRestore)
+                    new LogicalSize(widthToRestore, heightToRestore),
                 );
             } else {
                 await appWindow.setSize(new LogicalSize(1100, 750));
@@ -384,7 +384,7 @@
             "scrollTop",
             menuInnerScrollArea.scrollTop,
             menuInnerScrollArea.clientHeight,
-            menuInnerScrollArea.scrollHeight
+            menuInnerScrollArea.scrollHeight,
         );
         // Check scroll area size, add shadows if necessary
         if (menuInnerScrollArea) {
@@ -546,8 +546,8 @@
                         : $draggedSongs[0].title
                 } added to ${playlist.path}`,
                 {
-                    position: "bottom-center"
-                }
+                    position: "bottom-center",
+                },
             );
             $draggedSongs = [];
             $draggedAlbum = null;
@@ -625,7 +625,7 @@
         if (topContainer) {
             $sidebarTogglePos = {
                 x: topContainer.getBoundingClientRect().right - 15,
-                y: topContainer.getBoundingClientRect().bottom - 10
+                y: topContainer.getBoundingClientRect().bottom - 10,
             };
         }
     }
@@ -708,7 +708,7 @@
                 context.fillText(
                     displayTitle,
                     (canvas.width - textWidth) / 2,
-                    yPos
+                    yPos,
                 );
             }
         }
@@ -737,7 +737,7 @@
                             0,
                             0,
                             artworkCanvas.width,
-                            artworkCanvas.height
+                            artworkCanvas.height,
                         );
                     };
                 } else {
@@ -750,14 +750,14 @@
                                 0,
                                 0,
                                 artworkCanvas.width,
-                                artworkCanvas.height
+                                artworkCanvas.height,
                             );
                             context.drawImage(
                                 placeholderArtwork,
                                 45,
                                 45,
                                 120,
-                                120
+                                120,
                             );
                         };
                     } else {
@@ -765,7 +765,7 @@
                             0,
                             0,
                             artworkCanvas.width,
-                            artworkCanvas.height
+                            artworkCanvas.height,
                         );
                         context.drawImage(placeholderArtwork, 45, 45, 120, 120);
                     }
@@ -778,7 +778,7 @@
                         artworkSrc,
                         artworkCanvas.width,
                         artworkCanvas.height,
-                        isPrevious ? "right" : "left"
+                        isPrevious ? "right" : "left",
                     );
                 }
             } else {
@@ -789,7 +789,7 @@
                         0,
                         0,
                         artworkCanvas.width,
-                        artworkCanvas.height
+                        artworkCanvas.height,
                     );
 
                     context.drawImage(img, 45, 45, 120, 120);
@@ -804,7 +804,7 @@
         src2,
         width,
         height,
-        direction = "left"
+        direction = "left",
     ) {
         const img1 = new Image();
         const img2 = new Image();
@@ -821,7 +821,7 @@
                 0,
                 0,
                 artworkCanvas.width,
-                artworkCanvas.height
+                artworkCanvas.height,
             );
             img2.onload = startAnimation;
         };
@@ -852,7 +852,7 @@
                     direction === "left" ? -x : x,
                     0,
                     width,
-                    height
+                    height,
                 );
 
                 // Draw the second image with fading in
@@ -862,7 +862,7 @@
                     direction === "left" ? width - x : -width + x,
                     0,
                     width,
-                    height
+                    height,
                 );
 
                 if (progress < 1) {
@@ -1063,7 +1063,7 @@
                                         <div
                                             animate:flip={{
                                                 duration: 300,
-                                                easing: cubicInOut
+                                                easing: cubicInOut,
                                             }}
                                             class="playlist"
                                             class:dragover={draggingOverPlaylist ===
@@ -1079,7 +1079,7 @@
                                                     ...$query,
                                                     orderBy: "none",
                                                     reverse: false,
-                                                    query: ""
+                                                    query: "",
                                                 };
                                                 $selectedPlaylistFile =
                                                     playlist;
@@ -1096,7 +1096,7 @@
                                                     bind:value={updatedPlaylistName}
                                                     onEnterPressed={() => {
                                                         onRenamePlaylist(
-                                                            playlist
+                                                            playlist,
                                                         );
                                                     }}
                                                     fullWidth
@@ -1180,7 +1180,7 @@
                                     <div
                                         animate:flip={{
                                             duration: 300,
-                                            easing: cubicInOut
+                                            easing: cubicInOut,
                                         }}
                                         class="playlist"
                                         class:hover={hoveringOverSmartPlaylistId ===
@@ -1198,7 +1198,7 @@
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseOverSmartPlaylist(
-                                                smartQuery.value
+                                                smartQuery.value,
                                             )}
                                     >
                                         <p>{smartQuery.name}</p>
@@ -1208,7 +1208,7 @@
                                     <div
                                         animate:flip={{
                                             duration: 300,
-                                            easing: cubicInOut
+                                            easing: cubicInOut,
                                         }}
                                         class="playlist"
                                         class:selected={$selectedSmartQuery ===
@@ -1228,7 +1228,7 @@
                                                 bind:value={updatedSmartPlaylistName}
                                                 onEnterPressed={() => {
                                                     onRenameSmartPlaylist(
-                                                        query
+                                                        query,
                                                     );
                                                 }}
                                                 fullWidth
@@ -1441,7 +1441,7 @@
                     class:visible={$isSidebarOpen}
                     use:tippy={{
                         content: "Toggle the sidebar.",
-                        placement: "right"
+                        placement: "right",
                     }}
                 >
                     <Icon
@@ -1466,7 +1466,7 @@
                 use:tippy={{
                     theme: $isMiniPlayer ? "hidden" : "",
                     content: "Toggle the mini player.",
-                    placement: "right"
+                    placement: "right",
                 }}
             >
                 <Icon
@@ -1506,9 +1506,9 @@
                             use:optionalTippy={{
                                 show: !$isMiniPlayer,
                                 content: $LL.sidebar.openWikiTooltip({
-                                    artist
+                                    artist,
                                 }),
-                                placement: "right"
+                                placement: "right",
                             }}
                         >
                             {artist}
@@ -1631,7 +1631,7 @@
                 class="visualizer-icon"
                 use:tippy={{
                     content: "waveform, loop region, marker editor",
-                    placement: "top"
+                    placement: "top",
                 }}
             >
                 <Icon

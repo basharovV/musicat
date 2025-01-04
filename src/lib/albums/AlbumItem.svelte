@@ -123,7 +123,8 @@
                     </div>
                 {/if}
                 {#if isHovered || isPlayingCurrentAlbum}
-                    <div class={$isPlaying && isPlayingCurrentAlbum
+                    <div
+                        class={$isPlaying && isPlayingCurrentAlbum
                             ? "play-button-container pause-button"
                             : "play-button-container play-button"}
                     >

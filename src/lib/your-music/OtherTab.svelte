@@ -58,7 +58,7 @@
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple files

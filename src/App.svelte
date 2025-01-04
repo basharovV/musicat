@@ -25,7 +25,7 @@
         selectedSmartQuery,
         sidebarManuallyOpened,
         sidebarTogglePos,
-        uiView
+        uiView,
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
@@ -79,7 +79,7 @@
 
     init({
         fallbackLocale: "en",
-        initialLocale: getLocaleFromNavigator()
+        initialLocale: getLocaleFromNavigator(),
     });
 
     loadLocale("en");
@@ -276,7 +276,7 @@
 
         $sidebarTogglePos = {
             x: 0,
-            y: window.innerHeight / 2 - 30
+            y: window.innerHeight / 2 - 30,
         };
     }
 </script>
@@ -379,7 +379,7 @@
                     transition:fly={{
                         y: -10,
                         duration: 200,
-                        easing: cubicInOut
+                        easing: cubicInOut,
                     }}
                 >
                     <TagCloud />
@@ -391,7 +391,7 @@
                         transition:fly={{
                             y: -10,
                             duration: 200,
-                            easing: cubicInOut
+                            easing: cubicInOut,
                         }}
                     >
                         <SmartQueryBuilder />

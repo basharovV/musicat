@@ -3,10 +3,7 @@
     import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
     import { db } from "../../data/db";
-    import {
-        isShuffleEnabled,
-        popupOpen,
-    } from "../../data/store";
+    import { isShuffleEnabled, popupOpen } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
@@ -38,9 +35,12 @@
     let song: Song | null = null;
     let isConfirmingDelete = false;
     let confirmingLength = -1;
-    let confirmingHash = '';
+    let confirmingHash = "";
 
-    $: if (songs.length !== confirmingLength || songs[0].id !== confirmingHash) {
+    $: if (
+        songs.length !== confirmingLength ||
+        songs[0].id !== confirmingHash
+    ) {
         isConfirmingDelete = false;
     }
 
@@ -69,7 +69,7 @@
         const indexes = songs.map((t) => t.viewModel.index);
 
         if ($isShuffleEnabled) {
-            const qIndexes = findQueueIndexes(songs)
+            const qIndexes = findQueueIndexes(songs);
 
             updateQueues(qIndexes, indexes, (queue, indexes) => {
                 for (const index of indexes.sort((a, b) => b - a)) {
@@ -105,35 +105,26 @@
     }
     function openInFinder() {
         closeMenu();
-        const query = song.path.replace(
-            song.file,
-            ""
-        );
+        const query = song.path.replace(song.file, "");
         open(query);
     }
     function lookUpChords() {
         closeMenu();
         const query = encodeURIComponent(
-            song.artist +
-                " " +
-                song.title +
-                " chords"
+            song.artist + " " + song.title + " chords",
         );
         open(`https://duckduckgo.com/?q=${query}`);
     }
     function lookUpLyrics() {
         closeMenu();
         const query = encodeURIComponent(
-            song.artist +
-                " " +
-                song.title +
-                " lyrics"
+            song.artist + " " + song.title + " lyrics",
         );
         open(`https://duckduckgo.com/?q=${query}`);
     }
     function openInfo() {
         closeMenu();
-        $popupOpen = 'track-info';
+        $popupOpen = "track-info";
     }
     // Enrichers
 
@@ -169,9 +160,7 @@
     <Menu {...pos} onClickOutside={closeMenu} fixed>
         <MenuOption
             isDisabled={true}
-            text={song
-                ? song.title
-                : songs.length + " tracks"}
+            text={song ? song.title : songs.length + " tracks"}
         />
         {#if songs.length > 1}
             <MenuOption onClick={unselect} text="Unselect all" />
@@ -180,9 +169,7 @@
             isDestructive={true}
             isConfirming={isConfirmingDelete}
             onClick={removeFromQueue}
-            text={song
-                ? "Remove track from queue"
-                : "Remove tracks from queue"}
+            text={song ? "Remove track from queue" : "Remove tracks from queue"}
             confirmText="Click again to confirm"
         />
         {#if song}

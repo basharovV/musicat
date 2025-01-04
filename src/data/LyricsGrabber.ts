@@ -19,14 +19,15 @@ export async function getLyrics(songTitle: string, artist: string) {
 
         const query = encodeURIComponent(`${songTitle} ${artist}`);
 
-        const geniusResult = await (
-            await fetch(`https://api.genius.com/search?q=${query}`, {
+        const geniusResult = await await fetch(
+            `https://api.genius.com/search?q=${query}`,
+            {
                 method: "GET",
                 headers: {
-                    "Accept": "application/json",
-                    "Authorization": `Bearer ${settings.geniusApiKey}`
+                    Accept: "application/json",
+                    Authorization: `Bearer ${settings.geniusApiKey}`
                 }
-            })
+            }
         );
         const geniusData = await geniusResult.json();
         console.log("result", geniusResult);
@@ -36,9 +37,8 @@ export async function getLyrics(songTitle: string, artist: string) {
         const hits = geniusData?.response?.hits;
         const hit = hits?.find(
             (h) =>
-                artist.toLowerCase() ===
-                h?.result?.artist_names?.toLowerCase()
-        )
+                artist.toLowerCase() === h?.result?.artist_names?.toLowerCase()
+        );
         if (hit) {
             geniusPage = hit.result?.url;
             let songId = hit.result?.id;
@@ -48,8 +48,8 @@ export async function getLyrics(songTitle: string, artist: string) {
                 {
                     method: "GET",
                     headers: {
-                        "Accept": "application/json",
-                        "Authorization": `Bearer ${settings.geniusApiKey}`
+                        Accept: "application/json",
+                        Authorization: `Bearer ${settings.geniusApiKey}`
                     }
                 }
             );

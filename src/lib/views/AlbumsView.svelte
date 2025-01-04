@@ -15,7 +15,7 @@
         rightClickedTrack,
         rightClickedTracks,
         uiPreferences,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
@@ -49,11 +49,11 @@
 
         if ($compressionSelected === "lossless") {
             albums = albums.filter(
-                ({ title, lossless }) => title.length && lossless
+                ({ title, lossless }) => title.length && lossless,
             );
         } else if ($compressionSelected === "lossy") {
             albums = albums.filter(
-                ({ title, lossless }) => title.length && !lossless
+                ({ title, lossless }) => title.length && !lossless,
             );
         } else {
             albums = albums.filter(({ title }) => title.length);
@@ -116,7 +116,7 @@
                     a.artist
                         .toLowerCase()
                         .includes($query.query.toLowerCase()) ||
-                    a.title.includes($query.query.toLowerCase())
+                    a.title.includes($query.query.toLowerCase()),
             );
 
             activeAlbums = queriedAlbums;
@@ -128,7 +128,6 @@
             activeAlbums = activeAlbums.filter((a) => a.tracksIds.length > 1);
         }
         rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
-
 
         onResize();
 
@@ -162,12 +161,12 @@
         const albumPath = await path.dirname($current?.song?.path);
         // Find the album currently playing
         currentAlbum = await db.albums.get(
-            md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase())
+            md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
         );
         if (!currentAlbum) return false;
 
         const index = activeAlbums.findIndex(
-            (album) => album.id === currentAlbum.id
+            (album) => album.id === currentAlbum.id,
         );
 
         currentAlbumOffset = Math.ceil(index / columnCount) * 225 + PADDING;
@@ -191,7 +190,7 @@
         height = container?.clientHeight;
         const contentWidth = getContentWidth(container) - PADDING - PADDING;
         const count = Math.floor(contentWidth / minWidth);
-        const remaining = contentWidth - (count * minWidth);
+        const remaining = contentWidth - count * minWidth;
         const perColumn = Math.floor(remaining / count);
         const max = Math.floor(contentWidth * 0.1);
 
@@ -213,7 +212,7 @@
         highlightedAlbum = album.id;
         $rightClickedAlbum = album;
         const tracks = (await db.songs.bulkGet(album.tracksIds)).sort(
-            (a, b) => a.trackNumber - b.trackNumber
+            (a, b) => a.trackNumber - b.trackNumber,
         );
         $rightClickedTrack = null;
         $rightClickedTracks = tracks;
@@ -225,7 +224,7 @@
         virtualList.scrollToIndex = null;
 
         const index = activeAlbums.findIndex(
-            (album) => album.id === currentAlbum.id
+            (album) => album.id === currentAlbum.id,
         );
 
         setTimeout(() => {

@@ -10,8 +10,8 @@
         console.log("albums to get", data);
         albums = await db.albums.bulkGet(
             data?.albums.map((a) =>
-                md5(`${a.artist} - ${a.album}`.toLowerCase())
-            )
+                md5(`${a.artist} - ${a.album}`.toLowerCase()),
+            ),
         );
         albums = albums.filter((a) => a?.artwork).slice(0, 5);
     }

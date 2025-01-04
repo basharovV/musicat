@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { GetFileSizeResponse } from "../../App";
 import { MPEGDecoderWebWorker } from "mpg123-decoder";
 import { create, ConverterType } from "@alexanderolsen/libsamplerate-js";
-import { WaveFile } from 'wavefile';
+import { WaveFile } from "wavefile";
 let wav = new WaveFile();
 
 // import { fetch } from '@tauri-apps/api/http'
@@ -29,7 +29,7 @@ export default class FileStreamSource {
     isFetchingChunk = false;
     decoder;
     samples: Float32Array[][];
-    
+
     constructor() {}
 
     async queueFile(src, path, mimeType, wholeFile = false) {
@@ -37,7 +37,7 @@ export default class FileStreamSource {
         this.src = src; // To fetch via asset protocol (converted to asset://[URL encoded file path])
         this.path = path; // To get file size from Rust backend
         if (mimeType === "audio/mpeg" && !this.decoder) {
-            this.decoder = new MPEGDecoderWebWorker({enableGapless: true});
+            this.decoder = new MPEGDecoderWebWorker({ enableGapless: true });
             // wait for the WASM to be compiled
             await this.decoder.ready;
         }
@@ -64,7 +64,7 @@ export default class FileStreamSource {
         return await this.getNextChunk(this.firstChunkSize);
     }
 
-    async getNextChunk(size?:number) {
+    async getNextChunk(size?: number) {
         if (!size) size = this.desiredSize;
         let decodedChunk;
         console.log("FileStreamSource::getNextChunk()", this.path);
@@ -78,7 +78,7 @@ export default class FileStreamSource {
             let chunkEndIdx = Math.min(this.fileSize, this.bytePos + size);
             let response = await fetch(this.src, {
                 headers: {
-                    "Range": `bytes=${this.bytePos}-${chunkEndIdx}`
+                    Range: `bytes=${this.bytePos}-${chunkEndIdx}`
                 }
             });
             console.log("chunk response", response);
@@ -93,8 +93,9 @@ export default class FileStreamSource {
                             console.log("currentChunk", currentChunk);
 
                             // Decode the chunk according to current codec
-                            decodedChunk =
-                                await this.decoder.decode(currentChunk);
+                            decodedChunk = await this.decoder.decode(
+                                currentChunk
+                            );
                             await this.decoder.reset();
 
                             // const src = await create(
@@ -131,7 +132,7 @@ export default class FileStreamSource {
             this.chunkIdx += 1;
             this.bytePos += this.prevChunkSize;
             this.timePos = this.samplesDecoded / this.sampleRate;
-            console.log('samplesDecoded', this.samplesDecoded);
+            console.log("samplesDecoded", this.samplesDecoded);
             this.isFetchingChunk = false;
             if (decodedChunk) {
                 return decodedChunk;

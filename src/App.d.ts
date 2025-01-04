@@ -208,7 +208,7 @@ type UiView =
     | "analytics"
     | "internet-archive"
     | "prune"
-    | "to-delete"
+    | "to-delete";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 

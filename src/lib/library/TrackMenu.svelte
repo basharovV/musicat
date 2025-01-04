@@ -17,7 +17,7 @@
         selectedTags,
         toDeletePlaylist,
         uiView,
-        wikiArtist
+        wikiArtist,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
@@ -81,7 +81,9 @@
             $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
         } else if ($uiView === "to-delete") {
             // Delete from internal playlist (currently only used for the "to-delete" playlist)
-            const toDelete = await db.internalPlaylists.get($toDeletePlaylist.id);
+            const toDelete = await db.internalPlaylists.get(
+                $toDeletePlaylist.id,
+            );
             tracks.forEach((t) => {
                 const trackIdx = toDelete.tracks.findIndex((pt) => pt === t.id);
                 toDelete.tracks.splice(trackIdx, 1);
@@ -100,8 +102,8 @@
         // Delete from file system (ie. move to trash)
         await invoke("delete_files", {
             event: {
-                files: tracks.map((t) => t.path)
-            }
+                files: tracks.map((t) => t.path),
+            },
         });
     }
 
@@ -218,7 +220,7 @@
         closeMenu();
         const query = $rightClickedTrack.path.replace(
             $rightClickedTrack.file,
-            ""
+            "",
         );
         open(query);
     }
@@ -228,7 +230,7 @@
             $rightClickedTrack.artist +
                 " " +
                 $rightClickedTrack.title +
-                " chords"
+                " chords",
         );
         open(`https://duckduckgo.com/?q=${query}`);
     }
@@ -238,7 +240,7 @@
             $rightClickedTrack.artist +
                 " " +
                 $rightClickedTrack.title +
-                " lyrics"
+                " lyrics",
         );
         open(`https://duckduckgo.com/?q=${query}`);
     }
@@ -276,7 +278,7 @@
         if (existingAlbum) {
             existingAlbum.tracksIds = [
                 ...existingAlbum.tracksIds,
-                ...album.tracksIds
+                ...album.tracksIds,
             ];
             await db.albums.put(existingAlbum);
         } else {
@@ -291,8 +293,8 @@
                 paths: $rightClickedTracks.map((t) => t.path),
                 recursive: false,
                 process_albums: true,
-                is_async: false
-            }
+                is_async: false,
+            },
         });
         console.log("response", response);
         await db.transaction("rw", db.songs, db.albums, async () => {
@@ -329,7 +331,7 @@
                         ? [...t.tags, tagUserInput.toLowerCase().trim()]
                         : [tagUserInput.toLowerCase().trim()];
                     await db.songs.put(t);
-                })
+                }),
             );
             $rightClickedTracks = $rightClickedTracks;
         } else {
@@ -337,9 +339,9 @@
                 tags: $rightClickedTrack.tags
                     ? [
                           ...$rightClickedTrack.tags,
-                          tagUserInput.toLowerCase().trim()
+                          tagUserInput.toLowerCase().trim(),
                       ]
-                    : [tagUserInput.toLowerCase().trim()]
+                    : [tagUserInput.toLowerCase().trim()],
             });
             $rightClickedTrack = await db.songs.get($rightClickedTrack.id);
         }
@@ -353,17 +355,17 @@
                 $rightClickedTracks.map(async (t) => {
                     t.tags = t.tags.filter((t) => t !== tag);
                     await db.songs.put(t);
-                })
+                }),
             );
             $rightClickedTracks = $rightClickedTracks;
         } else {
             $rightClickedTrack.tags.splice(
                 $rightClickedTrack.tags.findIndex((t) => t === tag),
-                1
+                1,
             );
             $rightClickedTrack = $rightClickedTrack;
             db.songs.update($rightClickedTrack.id, {
-                tags: $rightClickedTrack.tags
+                tags: $rightClickedTrack.tags,
             });
             $rightClickedTrack = await db.songs.get($rightClickedTrack.id);
         }
@@ -512,7 +514,7 @@
                 removeTrackFromLibrary();
             }}
             text={$LL.trackMenu.removeFromLibrary(
-                $rightClickedTracks.length ? $rightClickedTracks.length : 1
+                $rightClickedTracks.length ? $rightClickedTracks.length : 1,
             )}
             confirmText="Click again to confirm"
         />
@@ -524,7 +526,7 @@
             }}
             description={$LL.trackMenu.deleteFileHint()}
             text={$LL.trackMenu.deleteFile(
-                $rightClickedTracks.length ? $rightClickedTracks.length : 1
+                $rightClickedTracks.length ? $rightClickedTracks.length : 1,
             )}
             confirmText="Click again to confirm"
         />
