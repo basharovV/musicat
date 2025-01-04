@@ -25,7 +25,7 @@ import type {
     UIPreferences,
     UserSettings,
     WaveformPlayerState,
-    PlayingSong
+    PlayingSong,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
@@ -52,7 +52,7 @@ export const query: Writable<Query> = writable({
     orderBy: "artist",
     libraryOrderBy: "artist",
     reverse: false,
-    query: ""
+    query: "",
 });
 
 export const allSongs: Writable<Song[]> = writable([]);
@@ -72,7 +72,7 @@ async function restoreCurrentSong() {
             current.set({
                 song,
                 index: data.index,
-                position: data.position
+                position: data.position,
             });
 
             playerTime.set(data.position);
@@ -84,7 +84,7 @@ export const current: Writable<PlayingSong> = writable(
     { song: null, index: 0, position: 0 },
     () => {
         restoreCurrentSong();
-    }
+    },
 );
 current.subscribe(({ song, index, position }) => {
     const data = song
@@ -96,7 +96,7 @@ current.subscribe(({ song, index, position }) => {
 
 async function readQueueFromFile() {
     const queuePath = await path.join(await appConfigDir(), "queue.txt");
-    if (!await fs.exists(queuePath)) {
+    if (!(await fs.exists(queuePath))) {
         return;
     }
     let persistedQueue = await fs.readTextFile(queuePath);
@@ -142,7 +142,7 @@ export const seekTime = writable(0);
 export const volume: Writable<number> = writable(
     localStorage.getItem("volume")
         ? parseFloat(localStorage.getItem("volume"))
-        : 0.6
+        : 0.6,
 );
 export const isFullScreenVisualiser = writable(false);
 
@@ -164,17 +164,17 @@ export const arrowFocus: Writable<ArrowFocus> = writable("library");
 export const draggedColumnIdx: Writable<number | null> = writable(null);
 
 export const isWelcomeSeen: Writable<boolean> = writable(
-    Boolean(localStorage.getItem("isWelcomeSeen") || false)
+    Boolean(localStorage.getItem("isWelcomeSeen") || false),
 );
 isWelcomeSeen.subscribe((val) =>
-    localStorage.setItem("isWelcomeSeen", String(val))
+    localStorage.setItem("isWelcomeSeen", String(val)),
 );
 // File drop
 export const droppedFiles: Writable<string[]> = writable([]);
 export const hoveredFiles: Writable<string[]> = writable([]);
 export const isDraggingExternalFiles = writable(false);
 export const draggedScrapbookItems: Writable<ArtistContentItem[]> = writable(
-    []
+    [],
 );
 export const emptyDropEvent: Writable<{ x: number; y: number } | null> =
     writable(null);
@@ -184,7 +184,7 @@ export const fileDropHandler: Writable<string> = writable(null);
 export const songbookSelectedArtist: Writable<ArtistProject> = writable(
     localStorage.getItem("selectedArtist")
         ? JSON.parse(localStorage.getItem("selectedArtist"))
-        : null || null
+        : null || null,
 );
 songbookSelectedArtist.subscribe((val) => {
     if (val !== null && val !== undefined) {
@@ -239,7 +239,7 @@ const defaultSettings: UserSettings = {
     playlistsLocation: null,
     theme: "dark",
     outputDevice: null, // default system device,
-    followSystemOutput: true
+    followSystemOutput: true,
 };
 
 /**
@@ -272,13 +272,13 @@ const defaultUIPreferences: UIPreferences = {
     albumsViewShowSingles: false,
     albumsViewShowInfo: true,
     albumsViewSortBy: "title",
-    albumsViewGridSize: 197
+    albumsViewGridSize: 197,
 };
 
 // UI preferences
 export const uiPreferences: Writable<UIPreferences> = writable({
     ...defaultUIPreferences,
-    ...JSON.parse(localStorage.getItem("uiPreferences") || "{}")
+    ...JSON.parse(localStorage.getItem("uiPreferences") || "{}"),
 });
 
 uiPreferences.subscribe((val) => {
@@ -288,12 +288,12 @@ uiPreferences.subscribe((val) => {
 
 export const foldersToWatch = derived(
     userSettings,
-    (val) => val.foldersToWatch
+    (val) => val.foldersToWatch,
 );
 
 export const playlistLocation = derived(
     userSettings,
-    (val) => val.playlistsLocation
+    (val) => val.playlistsLocation,
 );
 
 playlistLocation.subscribe((pl) => {
@@ -306,7 +306,7 @@ playlistLocation.subscribe((pl) => {
 export const libraryScrollPos: Writable<number> = writable(
     localStorage.getItem("libraryScrollPos")
         ? parseFloat(localStorage.getItem("libraryScrollPos"))
-        : 0
+        : 0,
 );
 export const scrollToSong: Writable<Song> = writable(null);
 
@@ -324,7 +324,7 @@ export const importStatus: Writable<ImportStatus> = writable({
     backgroundImport: false,
     currentSong: null,
     status: null,
-    percent: 0
+    percent: 0,
 });
 export const isFolderWatchUpdate = writable(false);
 export const bottomBarNotification: Writable<BottomBarNotification> =
@@ -343,10 +343,10 @@ export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
 export const isQueueOpen: Writable<boolean> = writable(
-    Boolean(localStorage.getItem("isQueueOpen") || false)
+    /true/.test(localStorage.getItem("isQueueOpen")) || false,
 );
 isQueueOpen.subscribe((val) =>
-    localStorage.setItem("isQueueOpen", String(val))
+    localStorage.setItem("isQueueOpen", String(val)),
 );
 export const isQueueCleared = writable(false);
 
@@ -361,18 +361,18 @@ export const sidebarTogglePos = writable({ x: 0, y: 0 });
 export const isCmdOrCtrlPressed = writable(false);
 
 export const isWaveformOpen: Writable<boolean> = writable(
-    Boolean(localStorage.getItem("isWaveformOpen") || false)
+    /true/.test(localStorage.getItem("isWaveformOpen")) || false,
 );
-isWaveformOpen.subscribe((val) =>
-    localStorage.setItem("isWaveformOpen", String(val))
-);
+isWaveformOpen.subscribe((val) => {
+    localStorage.setItem("isWaveformOpen", String(val));
+});
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,
     data: [],
     markers: [],
     loopEnabled: false,
     loopEndPos: 0,
-    loopStartPos: 0
+    loopStartPos: 0,
 });
 
 /**
@@ -399,14 +399,14 @@ async function init() {
     if (typeof fileSettings.playlistsLocation != "string") {
         fileSettings.playlistsLocation = await path.join(
             await audioDir(),
-            "Musicat Playlists"
+            "Musicat Playlists",
         );
     }
 
     // Get user settings
     userSettings.set({
         ...defaultSettings,
-        ...fileSettings
+        ...fileSettings,
     });
 
     // Auto-persist settings
@@ -431,7 +431,7 @@ export const streamInfo: Writable<StreamInfo> = writable({
     bufferedSamples: 0,
     playedSamples: 0,
     timestamp: 0,
-    sampleIdx: 0
+    sampleIdx: 0,
 });
 
 let defaultColumnOrder = [
@@ -444,16 +444,16 @@ let defaultColumnOrder = [
     "genre",
     "originCountry",
     "duration",
-    "tags"
+    "tags",
 ];
 
 export const columnOrder = writable(
-    JSON.parse(localStorage.getItem("columnOrder")) || defaultColumnOrder
+    JSON.parse(localStorage.getItem("columnOrder")) || defaultColumnOrder,
 );
 
 // Auto-persist column order
 columnOrder.subscribe((val) =>
-    localStorage.setItem("columnOrder", JSON.stringify(val))
+    localStorage.setItem("columnOrder", JSON.stringify(val)),
 );
 
 // Internet Archive
