@@ -522,5 +522,5 @@ export const allThemes: { [key: string]: Theme } = {
         "icon-secondary": "#E5F6F7",
         "oscilloscope": "#07ea03",
     },
-    "zokugun obsidium": tmZokugunObsidium,
+    "zokugun obsidium": tmZokugunObsidium as Theme,
 };
