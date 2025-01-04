@@ -1,4 +1,5 @@
 type ThemeType = "dark" | "light";
+
 export interface Theme {
     type: ThemeType;
     /**  Primary text color */
@@ -19,9 +20,14 @@ export interface Theme {
     "accent-secondary": string;
     "icon-primary": string;
     "icon-secondary": string;
+    "icon-secondary-hover": string;
+    "icon-tertiary": string;
+    "icon-tertiary-hover": string;
     "button-bg": string;
     "button-text": string;
+    "input-alt-focus-outline": string;
     "input-bg": string;
+    "input-focus-outline": string;
     "header-opacity": number;
     "header-text": string;
     link: string;
@@ -32,6 +38,7 @@ export interface Theme {
     "menu-border": string;
     "menu-checkbox-off": string;
     "menu-checkbox-on": string;
+    "menu-divider": string;
     "menu-item-confirm-bg": string;
     "menu-item-destructive-hover-bg": string;
     "menu-item-destructive-hover-text": string;
@@ -50,8 +57,10 @@ export interface Theme {
     "transport-control": string;
     "transport-control-hover": string;
     "transport-favorite": string;
+    "transport-favorite-hover": string;
     "transport-seekbar-hoverhead": string;
     "transport-shuffle": string;
+    "transport-shuffle-hover": string;
     "transport-volume-thumb-bg": string;
     "transport-volume-thumb-icon": string;
     "transport-volume-thumb-secondary": string;
@@ -120,7 +129,11 @@ export interface Theme {
     /** Sidebar */
     "sidebar-item-drag-bg": string;
     "sidebar-item-hover-bg": string;
+    "sidebar-item-hover-text": string;
     "sidebar-item-selected-pipe-bg": string;
+    "sidebar-node-inactive-hover-bg": string;
+    "sidebar-node-inactive-hover-opacity": number;
+    "sidebar-node-inactive-hover-text": string;
     /** Map View */
     "mapview-region-bg": string;
     "mapview-region-border": string;
@@ -172,9 +185,14 @@ export const DEFAULT_THEME: Theme = {
     "accent-secondary": "#632fff",
     "icon-primary": "#ffffff",
     "icon-secondary": "#948f8f",
+    "icon-secondary-hover": "rgb(from var(--icon-secondary) r g b / 0.4)",
+    "icon-tertiary": "var(--accent-secondary)",
+    "icon-tertiary-hover": "rgb(from var(--icon-tertiary) r g b / 0.4)",
     "button-bg": "#1c1b1b",
     "button-text": "#ffffff",
+    "input-alt-focus-outline": "1px solid #c4c7c8",
     "input-bg": "#4d494966",
+    "input-focus-outline": "2px solid #7171bb",
     "header-opacity": 0.2,
     "header-text": "var(--text)",
     link: "#acafff",
@@ -184,6 +202,7 @@ export const DEFAULT_THEME: Theme = {
     "menu-border": "#ffffff3b",
     "menu-checkbox-off": "#808080",
     "menu-checkbox-on": "#ffffff",
+    "menu-divider": "#494949",
     "menu-item-confirm-bg": "#d2630e",
     "menu-item-destructive-hover-bg": "#d20e32",
     "menu-item-destructive-hover-text": "#ffffff",
@@ -201,8 +220,10 @@ export const DEFAULT_THEME: Theme = {
     "transport-control": "#ffffff",
     "transport-control-hover": "rgb(from var(--transport-control) r g b / 0.5)",
     "transport-favorite": "#59cd7a",
+    "transport-favorite-hover": "rgb(from var(--transport-favorite) r g b / 0.4)",
     "transport-seekbar-hoverhead": "#00C56C",
     "transport-shuffle": "#e1ff00",
+    "transport-shuffle-hover": "rgb(from var(--transport-shuffle) r g b / 0.4)",
     "transport-volume-thumb-bg": "#FDFDFD",
     "transport-volume-thumb-icon": "#5123DD",
     "transport-volume-thumb-secondary": "#04aa6d",
@@ -263,7 +284,11 @@ export const DEFAULT_THEME: Theme = {
     "waveform-hoverhead-line-bg": "#FFFFFF62",
     "sidebar-item-drag-bg": "#5123dd",
     "sidebar-item-hover-bg": "#392f5d3b",
+    "sidebar-item-hover-text": "var(--text-inactive)",
     "sidebar-item-selected-pipe-bg": "#5123dd",
+    "sidebar-node-inactive-hover-bg": "transparent",
+    "sidebar-node-inactive-hover-opacity": 0.5,
+    "sidebar-node-inactive-hover-text": "var(--text-inactive)",
     "mapview-region-bg": "#645479",
     "mapview-region-border": "#4F4464",
     "mapview-region-hover-bg": "#645479",
@@ -494,6 +519,6 @@ export const allThemes: { [key: string]: Theme } = {
         "text-inactive": "#aeafa8",
         "icon-primary": "#E5F6F7",
         "icon-secondary": "#E5F6F7",
-        oscilloscope: "#07ea03"
-    }
+        "oscilloscope": "#07ea03",
+    },
 };
