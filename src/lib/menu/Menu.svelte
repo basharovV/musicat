@@ -15,7 +15,7 @@
     export let maxHeight: number = null; // If this exists, we wrap the contents
     export let padding = 0;
     export let sections: MenuSection[] = null;
-    
+
     export let hoveredSection = sections !== null ? 0 : null;
 
     let hoveredItemIdx = 0;

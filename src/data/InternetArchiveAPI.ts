@@ -28,7 +28,7 @@ export async function getIACollection(collectionId, page) {
 }
 
 export async function getIAItem(itemId) {
-    console.log(`https://archive.org/metadata/${itemId}`)
+    console.log(`https://archive.org/metadata/${itemId}`);
     const response = await fetch(`https://archive.org/metadata/${itemId}`);
     const responseJson = await response.json();
     const originals = findOriginals(responseJson);
@@ -42,13 +42,15 @@ export async function getIAItem(itemId) {
         originals,
         // Match against types in IAFormat type
         files: responseJson.files
-            .filter((f) => !f.private && isValidFormat(f) && f.source !== "original")
+            .filter(
+                (f) => !f.private && isValidFormat(f) && f.source !== "original"
+            )
             .map((f) => mapFile(f, responseJson)),
         date: responseJson.metadata?.date,
         performer: responseJson.roles?.performer,
         writer: responseJson.roles?.writer
     };
-    console.log(JSON.stringify(item, null, '\t'))
+    console.log(JSON.stringify(item, null, "\t"));
     return item;
 }
 
@@ -60,7 +62,11 @@ function findOriginals(response): IAFile[] {
     const result = [];
 
     for (let file of response.files) {
-        if (!file.private && file.source === "original" && isValidFormat(file)) {
+        if (
+            !file.private &&
+            file.source === "original" &&
+            isValidFormat(file)
+        ) {
             result.push(mapFile(file, response));
         }
     }
@@ -69,14 +75,18 @@ function findOriginals(response): IAFile[] {
 }
 
 function joinUrlParts(...parts: string[]): string {
-    return parts.map(part => part.replace(/(^\/+|\/+$)/g, '')).join('/');
+    return parts.map((part) => part.replace(/(^\/+|\/+$)/g, "")).join("/");
 }
 
 function mapFile(f, responseJson) {
     let supportedFormat = mapFormat(f);
     f.format = supportedFormat ? supportedFormat : undefined;
     f.duration = timestampToSeconds(f["length"]);
-    f.previewSrc = `https://${joinUrlParts(responseJson.d1, responseJson.dir, f.name)}`;
+    f.previewSrc = `https://${joinUrlParts(
+        responseJson.d1,
+        responseJson.dir,
+        f.name
+    )}`;
     f.itemId = responseJson.metadata.identifier;
     return f;
 }

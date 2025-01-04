@@ -7,7 +7,7 @@
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
     export let fields;
-    $: columns = fields.map(f => {
+    $: columns = fields.map((f) => {
         f.show = $columnOrder.includes(f.value);
         return f;
     });
@@ -22,7 +22,7 @@
         const found = fields.find((f) => f.value === field.value);
         found.show = !found.show;
         fields = [...fields];
-        $columnOrder = fields.filter(f => f.show).map(f => f.value);
+        $columnOrder = fields.filter((f) => f.show).map((f) => f.value);
     }
     // Enrichers
 </script>

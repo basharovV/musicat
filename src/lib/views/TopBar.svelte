@@ -42,13 +42,11 @@
         .toString()
         .padStart(2, "0")}`;
 
-    current.subscribe(async ({song}) => {
+    current.subscribe(async ({ song }) => {
         if (song) {
             if (
                 song.path === currentSong?.path &&
-                !$lastWrittenSongs
-                    .map((s) => s.path)
-                    .includes(song.path)
+                !$lastWrittenSongs.map((s) => s.path).includes(song.path)
             ) {
                 // same song, no need to update
                 // (unless the metadata was just written to eg. updated artwork)
@@ -59,8 +57,8 @@
                 event: {
                     path: song.path,
                     isImport: false,
-                    includeFolderArtwork: true
-                }
+                    includeFolderArtwork: true,
+                },
             });
 
             currentSong = song.id;
@@ -69,11 +67,11 @@
             if (songWithArtwork.artwork) {
                 if (songWithArtwork.artwork.data.length) {
                     let artworkBuffer = Buffer.from(
-                        songWithArtwork.artwork.data
+                        songWithArtwork.artwork.data,
                     );
                     let artworkFormat = songWithArtwork.artwork.format;
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
@@ -179,7 +177,7 @@
                     onClick={() => {
                         $rightClickedTrack = $current.song;
                         $rightClickedTracks = [];
-                        $popupOpen = 'track-info';
+                        $popupOpen = "track-info";
                     }}
                     color={$currentThemeObject["icon-secondary"]}
                 />
@@ -193,7 +191,7 @@
             class="visualizer-icon"
             use:tippy={{
                 content: "waveform, loop region, marker editor",
-                placement: "top"
+                placement: "top",
             }}
         >
             <Icon
@@ -239,7 +237,6 @@
         @media screen and (max-width: 600px) {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto 40px;
-
         }
 
         &.sidebar-collapsed {

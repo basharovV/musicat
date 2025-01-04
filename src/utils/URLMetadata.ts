@@ -35,7 +35,7 @@ export async function getLinkItemWithData(url): Promise<ArtistLinkItem> {
                 title = url;
             } else {
                 title = response.title;
-                console.log('response', response);
+                console.log("response", response);
                 imageUrl = response.thumbnail;
             }
         }

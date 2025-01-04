@@ -358,7 +358,9 @@ export async function getArtistProfileImage(
                 filename.name.includes("profile")
             ) {
                 foundResult = {
-                    artworkSrc: convertFileSrc(await path.join(folder, filename.name)),
+                    artworkSrc: convertFileSrc(
+                        await path.join(folder, filename.name)
+                    ),
                     artworkFormat: format,
                     artworkFilenameMatch: filename.name
                 };

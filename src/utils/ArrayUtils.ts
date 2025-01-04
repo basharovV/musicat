@@ -32,11 +32,7 @@ export function moveArrayElement(array, fromIndex, toIndex) {
     console.log("moving element", fromIndex, toIndex);
     const newArray = [...array];
     const [removedElement] = newArray.splice(fromIndex, 1);
-    newArray.splice(
-        toIndex,
-        0,
-        removedElement
-    );
+    newArray.splice(toIndex, 0, removedElement);
     return newArray;
 }
 

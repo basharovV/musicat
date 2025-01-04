@@ -1,5 +1,4 @@
 <script lang="ts">
-
     // seconds
     export let percent = 0;
 

@@ -266,11 +266,11 @@
         .logo {
             width: 50px;
             top: 0;
-            right:15px;
+            right: 15px;
             position: absolute;
             filter: sepia(0.8) saturate(0) opacity(0.7);
         }
-        
+
         .stripe {
             display: block;
             position: absolute;

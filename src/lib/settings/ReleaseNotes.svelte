@@ -34,7 +34,6 @@
             z-index: 3;
             padding-bottom: 10px;
             border-bottom: 1px solid rgba(147, 147, 147, 0.336);
-
         }
         :global(strong) {
             color: rgb(187, 176, 240);

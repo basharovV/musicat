@@ -1,12 +1,7 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
-    import {
-        popupOpen,
-        query,
-        uiView,
-        userSettings
-    } from "../../data/store";
+    import { popupOpen, query, uiView, userSettings } from "../../data/store";
     import type { Album, Song } from "../../App";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { groupBy } from "../../utils/ArrayUtils";
@@ -31,7 +26,7 @@
                 ? "[artist+year+album+trackNumber]"
                 : $query.orderBy === "album"
                   ? "[album+trackNumber]"
-                  : $query.orderBy
+                  : $query.orderBy,
         );
 
         let resultsArray: Song[] = [];
@@ -57,7 +52,7 @@
                     case "duration":
                     case "genre":
                         return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
+                            b[$query.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie
@@ -88,13 +83,13 @@
         genres: {
             count: 0,
             mostPlayed: null,
-            playCount: 0
+            playCount: 0,
         },
         country: {
             count: 0,
             mostPlayed: null,
-            playCount: null
-        }
+            playCount: null,
+        },
     };
 
     let albumsByYear = {};
@@ -123,7 +118,7 @@
                         ? stats.distinctPlays
                         : stats.distinctPlays + 1;
                     stats.totalDurationMins += Number(
-                        song.duration.split(":")[0]
+                        song.duration.split(":")[0],
                     );
                     return stats;
                 },
@@ -136,14 +131,14 @@
                     genres: {
                         count: 0,
                         mostPlayed: null,
-                        playCount: 0
+                        playCount: 0,
                     },
                     country: {
                         count: 0,
                         mostPlayed: null,
-                        playCount: 0
-                    }
-                }
+                        playCount: 0,
+                    },
+                },
             );
 
             // Genre
@@ -208,7 +203,7 @@
                 </h2>
                 <p>
                     You have listened to {stats.percentageListened.toPrecision(
-                        2
+                        2,
                     )}% of your library ({stats.distinctPlays} / {$songs?.length}
                     songs)
                 </p>

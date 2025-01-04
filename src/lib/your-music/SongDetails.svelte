@@ -8,7 +8,7 @@
         ArtistProject,
         ContentFileType,
         Song,
-        SongProject
+        SongProject,
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { db } from "../../data/db";
@@ -16,7 +16,7 @@
         draggedScrapbookItems,
         emptyDropEvent,
         os,
-        songbookFileSavedTime
+        songbookFileSavedTime,
     } from "../../data/store";
     import { autoWidth } from "../../utils/AutoWidth";
     import LyricsTab from "./LyricsTab.svelte";
@@ -29,7 +29,7 @@
     import {
         droppedFiles,
         fileDropHandler,
-        hoveredFiles
+        hoveredFiles,
     } from "../../data/store";
     import { getContentFileType } from "../../utils/FileUtils";
     import Menu from "../menu/Menu.svelte";
@@ -41,7 +41,7 @@
     import {
         renameSongProject,
         saveFrontmatterToSongProject,
-        writeChordMarkToSongProject
+        writeChordMarkToSongProject,
     } from "../../data/ArtistsToolkitData";
 
     export let songProject: SongProject;
@@ -65,7 +65,7 @@
                         stopBpmTicker();
                     }
                 },
-                60000 / bpm / 2
+                60000 / bpm / 2,
             );
         }
     }
@@ -124,7 +124,7 @@
         await renameSongProject(
             songProject.artist,
             songProjectClone.title,
-            evt.target.value
+            evt.target.value,
         );
         songProjectClone.title = evt.target.value;
     }
@@ -187,7 +187,7 @@
         if (songProjectClone.musicComposedBy.length) {
             songProjectClone.musicComposedBy.splice(
                 songProjectClone.musicComposedBy.length - 1,
-                1
+                1,
             );
             songProjectClone.musicComposedBy = songProjectClone.musicComposedBy;
 
@@ -198,7 +198,7 @@
         if (songProjectClone.lyricsWrittenBy.length) {
             songProjectClone.lyricsWrittenBy.splice(
                 songProjectClone.lyricsWrittenBy.length - 1,
-                1
+                1,
             );
             songProjectClone.lyricsWrittenBy = songProjectClone.lyricsWrittenBy;
 
@@ -246,7 +246,7 @@
                 .includes(filePath)
         ) {
             toast.error(
-                `${filename} already exists in ${songProjectClone.title}'s recordings`
+                `${filename} already exists in ${songProjectClone.title}'s recordings`,
             );
             return;
         }
@@ -255,8 +255,8 @@
             event: {
                 path: filePath,
                 isImport: false,
-                includeFolderArtwork: false
-            }
+                includeFolderArtwork: false,
+            },
         });
         if (!song) return;
         console.log("song", song);
@@ -264,7 +264,7 @@
         if (!songProjectClone?.recordings) songProjectClone.recordings = [];
         songProjectClone.recordings.push({
             recordingType: "master",
-            song
+            song,
         });
         songProjectClone.recordings = songProjectClone.recordings;
         saveSongProject();
@@ -290,10 +290,10 @@
 
     function addContentItem(item: ArtistContentItem) {
         const files = songProjectClone?.otherContentItems.filter(
-            (i) => i.type === "file"
+            (i) => i.type === "file",
         ) as ArtistFileItem[];
         const links = songProjectClone?.otherContentItems.filter(
-            (i) => i.type === "link"
+            (i) => i.type === "link",
         ) as ArtistLinkItem[];
 
         if (
@@ -302,7 +302,7 @@
             (item.type == "link" && links.map((r) => r.url).includes(item.url))
         ) {
             toast.error(
-                `${item.name} already exists in ${songProjectClone.title}`
+                `${item.name} already exists in ${songProjectClone.title}`,
             );
             return;
         }
@@ -325,7 +325,7 @@
     const tabs: Array<Tab> = [
         { name: $LL.artistsToolkit.songDetails.tabs.lyrics(), value: "lyrics" },
         { name: $LL.artistsToolkit.songDetails.tabs.files(), value: "files" },
-        { name: $LL.artistsToolkit.songDetails.tabs.other(), value: "other" }
+        { name: $LL.artistsToolkit.songDetails.tabs.other(), value: "other" },
     ];
 
     let selectedTab: Tab = tabs[0];
@@ -348,7 +348,7 @@
             tags: [],
             type: "file",
             fileType: type,
-            path: filePath
+            path: filePath,
         };
         addContentItem(toAdd);
     }
@@ -456,7 +456,7 @@
     }
 
     async function getDropDataAsString(
-        item: DataTransferItem
+        item: DataTransferItem,
     ): Promise<string> {
         return new Promise((resolve, reject) => {
             try {
@@ -471,13 +471,13 @@
 
     async function onDrop(evt: DragEvent) {
         /*
-        Unfortunately this doesn't trigger when using system file drop in Tauri (fileDropEnabled). 
-        At the moment there is no support for both drag&drop and HTML drag&drop, we need to choose. 
-        If we disable the system event, then we won't get access to the full path 
+        Unfortunately this doesn't trigger when using system file drop in Tauri (fileDropEnabled).
+        At the moment there is no support for both drag&drop and HTML drag&drop, we need to choose.
+        If we disable the system event, then we won't get access to the full path
         because browsers don't expose this due to security reasons
 
-        So we use a hack (below this function) - we use the empty system event that's triggered to 
-        handle a drop, grabbing the dragged item from the store. 
+        So we use a hack (below this function) - we use the empty system event that's triggered to
+        handle a drop, grabbing the dragged item from the store.
         */
         console.log("drop", evt);
     }
@@ -497,7 +497,7 @@
             $draggedScrapbookItems.length > 0
         ) {
             const scrapbookItems = $draggedScrapbookItems.filter(
-                (i) => i.type === "file" || i.type === "link"
+                (i) => i.type === "file" || i.type === "link",
             ) as ArtistContentItem[];
             isDragging = false;
             // Only handle if global cursor position is in this component
@@ -511,10 +511,10 @@
                 $emptyDropEvent.y <= containerRect.top + container.clientHeight
             ) {
                 const files = scrapbookItems.filter(
-                    (i) => i.type === "file"
+                    (i) => i.type === "file",
                 ) as ArtistFileItem[];
                 const links = scrapbookItems.filter(
-                    (i) => i.type === "link"
+                    (i) => i.type === "link",
                 ) as ArtistLinkItem[];
 
                 files.length && handleFileDrop(files.map((f) => f.path));

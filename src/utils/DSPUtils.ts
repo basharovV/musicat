@@ -1,4 +1,3 @@
-
 /**
  * Take an array of bytes (Uint8array) and convert it to a Float32Array for processing
  * @param data The binary data

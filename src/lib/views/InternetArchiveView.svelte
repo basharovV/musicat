@@ -4,13 +4,13 @@
     import {
         getIACollection,
         getIACollections,
-        getIAItem
+        getIAItem,
     } from "../../data/InternetArchiveAPI";
     import IaItemPlayer from "../internet-archive/IAItemPlayer.svelte";
     import webAudioPlayer, {
         currentItem,
         currentSrc,
-        isIAPlaying
+        isIAPlaying,
     } from "../player/WebAudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
@@ -21,7 +21,7 @@
         iaSelectedCollection,
         iaSelectedCollectionItems,
         iaSelectedItem,
-        webPlayerVolume
+        webPlayerVolume,
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
@@ -75,7 +75,7 @@
         $iaSelectedCollection = collection;
         $iaSelectedCollectionItems = await getIACollection(
             collection.id,
-            collectionPage
+            collectionPage,
         );
         isLoadingCollection = false;
     }
@@ -91,7 +91,7 @@
                 isLoadingCollection = true;
                 const newPage = await getIACollection(
                     $iaSelectedCollection.id,
-                    ++collectionPage
+                    ++collectionPage,
                 );
                 $iaSelectedCollectionItems.push(...newPage);
                 $iaSelectedCollectionItems = $iaSelectedCollectionItems;
@@ -123,8 +123,7 @@
                 <small
                     >public domain music from <a
                         href="https://archive.org/details/audio_music"
-                        target="_blank"
-                        >archive.org</a
+                        target="_blank">archive.org</a
                     ></small
                 >
             </div>
@@ -212,7 +211,10 @@
                 <div class="header">
                     {#if $iaSelectedCollection}
                         <div class="top-row">
-                            <a href="https://archive.org/details/{$iaSelectedCollection.id}" target="_blank">
+                            <a
+                                href="https://archive.org/details/{$iaSelectedCollection.id}"
+                                target="_blank"
+                            >
                                 <img
                                     src="https://archive.org/services/img/{$iaSelectedCollection.id}"
                                 />
@@ -244,7 +246,7 @@
                                             rightClickedItem = item;
                                             pos = {
                                                 x: e.clientX,
-                                                y: e.clientY
+                                                y: e.clientY,
                                             };
                                             showMenu = true;
                                         }}
@@ -254,7 +256,7 @@
                                         on:dblclick={async () => {
                                             await selectItem(item);
                                             await webAudioPlayer.playFromUrl(
-                                                $iaSelectedItem.original
+                                                $iaSelectedItem.original,
                                             );
                                         }}
                                     >
@@ -284,7 +286,10 @@
             <div class="column-audio">
                 {#if isLoadingItem}
                     <div class="header">
-                        <a href="https://archive.org/details/{$iaSelectedItem?.id}" target="_blank">
+                        <a
+                            href="https://archive.org/details/{$iaSelectedItem?.id}"
+                            target="_blank"
+                        >
                             <h2>{$iaSelectedItem?.title}</h2>
                         </a>
                         <p>Loading</p>
@@ -294,7 +299,10 @@
                     </div>
                 {:else if $iaSelectedItem}
                     <div class="header">
-                        <a href="https://archive.org/details/{$iaSelectedItem?.id}" target="_blank">
+                        <a
+                            href="https://archive.org/details/{$iaSelectedItem?.id}"
+                            target="_blank"
+                        >
                             <h2>{$iaSelectedItem?.title}</h2>
                         </a>
                     </div>
@@ -410,7 +418,11 @@
                     -webkit-appearance: none;
                     width: 100%;
                     height: 5px;
-                    background: color-mix(in srgb, var(--inverse) 20%, transparent);
+                    background: color-mix(
+                        in srgb,
+                        var(--inverse) 20%,
+                        transparent
+                    );
                     outline: none;
                     opacity: 1;
                     margin: auto;

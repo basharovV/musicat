@@ -3,11 +3,11 @@
     import {
         currentIAFile,
         webPlayerBufferedRanges,
-        webPlayerIsLoading
+        webPlayerIsLoading,
     } from "../../data/store";
     import webAudioPlayer, {
         currentSrc,
-        isIAPlaying
+        isIAPlaying,
     } from "../player/WebAudioPlayer";
     import Seekbar from "../sidebar/Seekbar.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -92,7 +92,7 @@
             margin: 0;
             line-height: initial;
             position: absolute;
-            
+
             top: 5px;
         }
         .seekbar {

@@ -24,4 +24,3 @@ export function makeCSSVars(settings, prefix = "-") {
         })
         .join("\n");
 }
-

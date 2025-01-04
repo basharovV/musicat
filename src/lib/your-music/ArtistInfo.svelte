@@ -20,7 +20,7 @@
         members.push(newMember);
 
         db.artistProjects.update(artist.id, {
-            members: [...members]
+            members: [...members],
         });
         newMember = "";
     }
@@ -28,10 +28,10 @@
     function removeMember(memberName) {
         members.splice(
             members.findIndex((m) => m === memberName),
-            1
+            1,
         );
         db.artistProjects.update(artist.id, {
-            members
+            members,
         });
     }
 </script>

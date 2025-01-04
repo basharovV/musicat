@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onDestroy,onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import { smartQuery } from "../../data/store";
     import { autoWidth } from "../../utils/AutoWidth";
     import type { UserQueryPart } from "./UserQueryPart";
@@ -92,7 +92,7 @@
     }
 
     function onLostFocus() {
-        console.log('uncofusing', currentFocusedInputPart);
+        console.log("uncofusing", currentFocusedInputPart);
         currentFocusedInputIdx = 0;
         currentFocusedInputPart = null;
         isFocused = false;
@@ -136,7 +136,6 @@
                         part.slice(1, part.length - 1) // Remove { } around the key
                     ].type
                 }`}
-                
                 use:autoWidth
                 bind:value={userQueryPart.userInputs[
                     part.slice(1, part.length - 1)

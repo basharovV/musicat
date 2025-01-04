@@ -10,7 +10,7 @@ export enum QUERY_PARTS {
     RELEASED_IN = "released-in",
     FROM_COUNTRY = "from-country",
     BY_COMPOSER = "by-composer",
-    CONTAINS_TAG = "contains-tag",
+    CONTAINS_TAG = "contains-tag"
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
@@ -31,7 +31,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "by {artist}",
         name: QUERY_PARTS.BY_ARTIST,
         inputRequired: {
-            "artist": {
+            artist: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -48,7 +48,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "by composer: {composer}",
         name: QUERY_PARTS.BY_COMPOSER,
         inputRequired: {
-            "composer": {
+            composer: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -65,13 +65,13 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "released between {startYear} and {endYear}",
         name: QUERY_PARTS.RELEASED_BETWEEN,
         inputRequired: {
-            "startYear": {
+            startYear: {
                 defaultVal: 1940,
                 isFieldKey: false,
                 isRequired: true,
                 type: "number"
             },
-            "endYear": {
+            endYear: {
                 defaultVal: 1960,
                 isFieldKey: false,
                 isRequired: true,
@@ -88,7 +88,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "released after {startYear}",
         name: QUERY_PARTS.RELEASED_AFTER,
         inputRequired: {
-            "startYear": {
+            startYear: {
                 defaultVal: 1940,
                 isFieldKey: false,
                 isRequired: true,
@@ -105,7 +105,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "released in {year}",
         name: QUERY_PARTS.RELEASED_IN,
         inputRequired: {
-            "year": {
+            year: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -122,7 +122,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "title contains {text}",
         name: QUERY_PARTS.TITLE_CONTAINS,
         inputRequired: {
-            "text": {
+            text: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -139,7 +139,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "longer than {minutes}",
         name: QUERY_PARTS.LONGER_THAN,
         inputRequired: {
-            "minutes": {
+            minutes: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -156,7 +156,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "contains genre {genre}",
         name: QUERY_PARTS.CONTAINS_GENRE,
         inputRequired: {
-            "genre": {
+            genre: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -173,7 +173,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "from {originCountry}",
         name: QUERY_PARTS.FROM_COUNTRY,
         inputRequired: {
-            "originCountry": {
+            originCountry: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
@@ -190,12 +190,12 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         prompt: "contains tag {tags}",
         name: QUERY_PARTS.CONTAINS_TAG,
         inputRequired: {
-            "tags": {
+            tags: {
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
                 type: "string"
             }
         }
-    },
+    }
 ];

@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { queriedSongs, queue, smartQueryResults, uiView } from "../../data/store";
+    import {
+        queriedSongs,
+        queue,
+        smartQueryResults,
+        uiView,
+    } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { setQueue } from "../../data/storeHelper";
@@ -44,7 +49,10 @@
 {#if showMenu}
     <Menu {...pos} onClickOutside={closeMenu} fixed>
         <MenuOption onClick={clearQueue} text="Clear the queue" />
-        <MenuOption onClick={resetToLibrary} text="Reset queue to library order" />
+        <MenuOption
+            onClick={resetToLibrary}
+            text="Reset queue to library order"
+        />
         <MenuDivider />
         <MenuOption isDisabled={true} text="Save as playlist" />
         <MenuInput

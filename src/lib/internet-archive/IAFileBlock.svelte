@@ -4,7 +4,7 @@
     import { fileToDownload, userSettings } from "../../data/store";
     import webAudioPlayer, {
         currentSrc,
-        isIAPlaying
+        isIAPlaying,
     } from "../player/WebAudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -17,7 +17,10 @@
         console.log("download");
         downloadProgress = 0;
         try {
-            file.downloadLocation = await path.join($userSettings.downloadLocation, await path.basename(file.title ?? file.name));
+            file.downloadLocation = await path.join(
+                $userSettings.downloadLocation,
+                await path.basename(file.title ?? file.name),
+            );
             // Append extension if doesn't exist
             if (!file.downloadLocation.match(/\/[^\/]+\.[^\/]+$/)) {
                 file.downloadLocation += `.${file.format}`;
@@ -25,7 +28,7 @@
             $fileToDownload = file;
             await invoke("download_file", {
                 url: file.previewSrc,
-                path: file.downloadLocation
+                path: file.downloadLocation,
             });
         } catch (err) {
             console.error(err);

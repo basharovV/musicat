@@ -26,7 +26,7 @@
             yearSpan = 0;
 
             albums = Object.entries(albumsByYear).filter(
-                (a) => a[0] && Number(a[0]) > 1800
+                (a) => a[0] && Number(a[0]) > 1800,
             );
             if (albums.length) {
                 maxYear = Number(albums[albums.length - 1][0]);
@@ -120,7 +120,7 @@
                                         class="album"
                                         use:tippy={{
                                             content: `${album[0]} - ${a.title}`,
-                                            placement: "bottom"
+                                            placement: "bottom",
                                         }}
                                     />
                                 {:else}
@@ -128,7 +128,7 @@
                                         class="dot"
                                         use:tippy={{
                                             content: `${album[0]} - ${a.title}`,
-                                            placement: "bottom"
+                                            placement: "bottom",
                                         }}
                                     />
                                 {/if}
@@ -146,7 +146,7 @@
                             opacity: 0,
                             delay: 100,
                             y: -30,
-                            duration: 600
+                            duration: 600,
                         }}
                         class="item"
                         style="left: {getXPos(year)}px"

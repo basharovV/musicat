@@ -4,10 +4,7 @@
     export let item: ArtistContentItem;
 </script>
 
-<item>
-
-</item>
+<item> </item>
 
 <style lang="scss">
-    
 </style>

@@ -58,7 +58,10 @@ export async function scanScrapbook() {
             for (const entry of entries.filter(
                 (f) => !f.name.startsWith(".")
             )) {
-                const filePath = await path.join(settings.scrapbookLocation, entry.name);
+                const filePath = await path.join(
+                    settings.scrapbookLocation,
+                    entry.name
+                );
                 console.log("adding item", filePath);
                 const contentFileType = getContentFileType(filePath);
                 console.log("type", contentFileType);
@@ -139,7 +142,9 @@ export async function loadSongProjectsForArtist(artistName: string) {
     if (!songbookLocation) return;
 
     try {
-        const dirContents = await readDir(await path.join(songbookLocation, artistName));
+        const dirContents = await readDir(
+            await path.join(songbookLocation, artistName)
+        );
         const songFolders = dirContents.filter((item) => item.isDirectory);
         const songs: string[] = songFolders.map((folder) => folder.name);
         songs.sort();
@@ -247,8 +252,9 @@ export async function loadSongProject(artistName: string, songName: string) {
         };
 
         const songFileContents = await readSongbookFile(songFilePath);
-        const { frontmatter, chordmark } =
-            await extractFrontmatterAndChordmark(songFileContents);
+        const { frontmatter, chordmark } = await extractFrontmatterAndChordmark(
+            songFileContents
+        );
 
         console.log("frontmatter", frontmatter);
         if (frontmatter?.attributes) {
@@ -336,8 +342,9 @@ export async function saveFrontmatterToSongProject(songProject: SongProject) {
         .map(([key, value]) => `${key}: ${value}`)
         .join("\n")}\n---\n`;
 
-    const { chordmark } =
-        await extractFrontmatterAndChordmark(songFileContents);
+    const { chordmark } = await extractFrontmatterAndChordmark(
+        songFileContents
+    );
     const newContents = newFrontmatter + chordmark;
     await writeTextFile(songProject.songFilepath, newContents);
 }

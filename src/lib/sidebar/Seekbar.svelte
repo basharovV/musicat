@@ -16,7 +16,7 @@
         for (let i = 0; i < buffered.length; i++) {
             ranges.push({
                 start: buffered.start(i),
-                end: buffered.end(i)
+                end: buffered.end(i),
             });
         }
         bufferedRanges = ranges;
@@ -201,7 +201,11 @@
             top: 0;
             left: 0;
             bottom: 0;
-            background-color: color-mix(in srgb, var(--type-bw-inverse) 36%, black);
+            background-color: color-mix(
+                in srgb,
+                var(--type-bw-inverse) 36%,
+                black
+            );
             z-index: 1;
             transition: all 0.2s ease-in-out;
         }

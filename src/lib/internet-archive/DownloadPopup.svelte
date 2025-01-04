@@ -9,12 +9,12 @@
         fileToDownload,
         scrollToSong,
         uiView,
-        userSettings
+        userSettings,
     } from "../../data/store";
     import { fly } from "svelte/transition";
     import Icon from "../ui/Icon.svelte";
     import ProgressBar from "../ui/ProgressBar.svelte";
-const appWindow = getCurrentWebviewWindow()
+    const appWindow = getCurrentWebviewWindow();
 
     let unlistenFn;
 
@@ -49,7 +49,7 @@ const appWindow = getCurrentWebviewWindow()
                     checkSongAddedToLibrary();
                 }
                 downloadProgress = event.payload;
-            }
+            },
         );
     });
 

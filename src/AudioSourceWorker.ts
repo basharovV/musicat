@@ -196,9 +196,10 @@ class AudioSourceNode extends AudioWorkletProcessor {
                             this.log(
                                 "[AudioSourceNode] Playing samples2 from ",
                                 absoluteSampleIndex - this.sample2Offset + smpl,
-                                absoluteSampleIndex + smpl >= this.sample2Offset,
+                                absoluteSampleIndex + smpl >=
+                                    this.sample2Offset,
                                 absoluteSampleIndex + smpl,
-                                this.samples[0].length,
+                                this.samples[0].length
                             );
                             this.logOnce = true;
                         }

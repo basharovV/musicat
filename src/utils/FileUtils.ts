@@ -10,8 +10,10 @@ export function isFileOrDirectory(path) {
 
     // If there's a dot in the last part of the path, assume it's a file
     if (
-        (path.split("/").pop() !== path && path.split("/").pop().includes(".")) ||
-        (path.split(/\\/).pop()  !== path && path.split(/\\/).pop().includes("."))
+        (path.split("/").pop() !== path &&
+            path.split("/").pop().includes(".")) ||
+        (path.split(/\\/).pop() !== path &&
+            path.split(/\\/).pop().includes("."))
     ) {
         return "file";
     }

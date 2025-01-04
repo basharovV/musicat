@@ -2,7 +2,7 @@
     import {
         importStatus,
         popupOpen,
-        selectedPlaylistFile
+        selectedPlaylistFile,
     } from "../../data/store";
 
     import { openTauriImportDialog } from "../../data/LibraryImporter";
@@ -37,7 +37,7 @@
         <small>Supports MP3, FLAC, OGG, AAC and WAV</small>
         <small>or</small>
         <p>add folders to watch</p>
-        <button on:click={() => ($popupOpen = 'settings')}>Add folders</button>
+        <button on:click={() => ($popupOpen = "settings")}>Add folders</button>
     {/if}
 </div>
 

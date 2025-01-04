@@ -16,7 +16,7 @@
         isSidebarOpen,
         nextUpSong,
         uiView,
-        userSettings
+        userSettings,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import Oscilloscope from "../player/Oscilloscope.svelte";
@@ -67,7 +67,6 @@
             showVisualiser = window.innerWidth > 900 && diff > 150;
         }
     }
-
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
@@ -126,7 +125,7 @@
                     $isFolderWatchUpdate}
                 use:tippy={{
                     content: scanningStatusText,
-                    placement: "top"
+                    placement: "top",
                 }}
             >
                 <Icon
@@ -144,7 +143,7 @@
                 in:fly={{
                     y: 30,
                     duration: 150,
-                    easing: cubicInOut
+                    easing: cubicInOut,
                 }}
             >
                 <p class="songs">
@@ -170,7 +169,7 @@
                 transition:fly={{
                     y: 30,
                     duration: 150,
-                    easing: cubicInOut
+                    easing: cubicInOut,
                 }}
             >
                 <p>

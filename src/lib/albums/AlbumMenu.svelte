@@ -6,7 +6,7 @@
     import {
         popupOpen,
         rightClickedAlbum,
-        rightClickedTracks
+        rightClickedTracks,
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
@@ -77,7 +77,7 @@
     function searchSongOnYouTube() {
         closeMenu();
         const query = encodeURIComponent(
-            $rightClickedAlbum.displayTitle ?? $rightClickedAlbum.title
+            $rightClickedAlbum.displayTitle ?? $rightClickedAlbum.title,
         );
         open(`https://www.youtube.com/results?search_query=${query}`);
     }
@@ -92,7 +92,7 @@
     }
     function openInfo() {
         closeMenu();
-        $popupOpen = 'track-info';
+        $popupOpen = "track-info";
     }
 
     // Enrichers
@@ -117,8 +117,8 @@
                 paths: [$rightClickedAlbum.path],
                 recursive: false,
                 process_albums: true,
-                is_async: false
-            }
+                is_async: false,
+            },
         });
         console.log("response", response);
         await db.transaction("rw", db.songs, db.albums, async () => {

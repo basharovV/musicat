@@ -11,7 +11,7 @@
     import {
         isFullScreenLyrics,
         os,
-        songbookFileSavedTime
+        songbookFileSavedTime,
     } from "../../data/store";
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
@@ -99,7 +99,7 @@
             customRenderer: (
                 allLines,
                 allRenderedLines,
-                { alignChordsWithLyrics, alignBars }
+                { alignChordsWithLyrics, alignBars },
             ) => {
                 // console.log("allLines", allLines);
                 // console.log("allRenderedLines", allRenderedLines);
@@ -113,14 +113,14 @@
                     numLines: 0,
                     viewProps: {
                         maxBarsPerLine: 0,
-                        longestLine: 0
-                    }
+                        longestLine: 0,
+                    },
                 };
 
                 maxOffset = Math.max(
                     ...allLines
                         .filter((line) => line.type === "chord")
-                        .map((line) => line.model.offset | 0)
+                        .map((line) => line.model.offset | 0),
                 );
 
                 let sectionBarIdx = 0;
@@ -155,9 +155,9 @@
                                         getTotalSpaces(line) +
                                         Math.max(
                                             maxOffset,
-                                            line.model.offset | 0
-                                        )
-                                )
+                                            line.model.offset | 0,
+                                        ),
+                                ),
                         );
 
                         section.viewProps.maxBarsPerLine = Math.max(
@@ -165,7 +165,7 @@
                                 .filter((line) => line.type === "chord")
                                 .map((line) => {
                                     return line.model.allBars.length;
-                                })
+                                }),
                         );
                         section.numBars += line.model?.allBars?.length || 0;
                     }
@@ -190,8 +190,8 @@
                                 numLines: 0,
                                 viewProps: {
                                     longestLine: 0,
-                                    maxBarsPerLine: 0
-                                }
+                                    maxBarsPerLine: 0,
+                                },
                             };
                             sectionBarIdx = 0;
                             sectionLineIdx = 0;
@@ -207,7 +207,7 @@
                 // console.log("sections", sections);
                 parsedLyrics = sections;
                 return "";
-            }
+            },
         });
         // console.log("rendered", rendered);
         return rendered;
@@ -231,7 +231,7 @@
         "font-20",
         "font-24",
         "font-32",
-        "font-48"
+        "font-48",
     ];
 
     let currentFontSizeIdx = 2;
@@ -286,7 +286,7 @@
         { label: "Lyrics only", value: "lyrics" },
         { label: "Chords only", value: "chords" },
         { label: "Chords with first line", value: "chordsFirstLyricLine" },
-        { label: "Structure", value: "structure" }
+        { label: "Structure", value: "structure" },
     ];
     let view = viewOptions[0];
 
@@ -330,7 +330,7 @@
             tooltip={{
                 content: `The lyrics editor uses the ChordMark format. To learn more, visit <a target="_blank" href="https://chordmark.netlify.app/">https://chordmark.netlify.app/</a>.`,
                 interactive: true,
-                allowHTML: true
+                allowHTML: true,
             }}
         />
     </div>
@@ -378,7 +378,9 @@
                                 {:else if line.type === "chord"}
                                     {@const chordLineOffset = Math.max(
                                         line.model.offset | 0,
-                                        isFirstChordAlignEnabled ? maxOffset : 0
+                                        isFirstChordAlignEnabled
+                                            ? maxOffset
+                                            : 0,
                                     )}
                                     {@const remainingSpaces = Math.max(
                                         0,
@@ -387,7 +389,7 @@
                                             getTotalSpaces(line) +
                                             (section.viewProps.maxBarsPerLine -
                                                 line.model.allBars.length) *
-                                                2
+                                                2,
                                     )}
 
                                     <span class="chords">
@@ -408,7 +410,7 @@
                                                     {bar.shouldPrintChordsDuration
                                                         ? chord.symbol +
                                                           ".".repeat(
-                                                              chord.duration
+                                                              chord.duration,
                                                           )
                                                         : chord.symbol}{#each [...Array(Math.max(0, chord.spacesAfter)).keys()] as space}&nbsp;{/each}
                                                 {/each}

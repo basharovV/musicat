@@ -10,7 +10,7 @@
         MetadataEntry,
         Song,
         TagType,
-        ToImport
+        ToImport,
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
@@ -26,7 +26,7 @@
         playerTime,
         popupOpen,
         rightClickedTrack,
-        rightClickedTracks
+        rightClickedTracks,
     } from "../../data/store";
     import { focusTrap } from "../../utils/FocusTrap";
     import "../tippy.css";
@@ -37,11 +37,11 @@
     import {
         ENCODINGS,
         decodeLegacy,
-        encodeUtf8
+        encodeUtf8,
     } from "../../utils/EncodingUtils";
     import {
         fetchAlbumArt,
-        findCountryByArtist
+        findCountryByArtist,
     } from "../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -59,7 +59,7 @@
         "artist",
         "date",
         "genre",
-        "compilation"
+        "compilation",
     ];
 
     function onClose() {
@@ -77,25 +77,25 @@
         for (const field of Object.entries(map)) {
             // Check if this default field already exists in the file
             const existingField = metadata?.find(
-                (m) => field[1] === m.genericId
+                (m) => field[1] === m.genericId,
             );
 
             defaults.push({
                 id: field[0],
                 genericId: field[1],
-                value: existingField ? existingField.value : null
+                value: existingField ? existingField.value : null,
             });
         }
 
         for (const field of metadata) {
             const inDefaults = defaults.find(
-                (t) => t.genericId === field.genericId
+                (t) => t.genericId === field.genericId,
             );
             if (!inDefaults) {
                 others.push({
                     id: field.id,
                     genericId: field.genericId,
-                    value: field.value
+                    value: field.value,
                 });
             }
         }
@@ -106,7 +106,7 @@
 
     function mergeDefault(
         metadata: MetadataEntry[],
-        format: TagType
+        format: TagType,
     ): MetadataEntry[] {
         if (
             ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
@@ -124,14 +124,14 @@
         const { defaults, others } = addDefaults(cloned, format);
         return uniqBy(
             [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
-            "id"
+            "id",
         );
     }
 
     // console.log("track", ($rightClickedTrack || $rightClickedTracks[0]));
     let metadata: { mappedMetadata: MetadataEntry[]; tagType: TagType } = {
         mappedMetadata: [],
-        tagType: null
+        tagType: null,
     };
     let metadataFromFile: MetadataEntry[] = [];
     // let metadata: MetadataEntry[] = cloneDeep(($rightClickedTrack || $rightClickedTracks[0]).metadata);
@@ -182,13 +182,13 @@
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path, isImport: false, includeFolderArtwork: true }
+                event: { path, isImport: false, includeFolderArtwork: true },
             });
 
             if (!songWithArtwork) {
                 toast.error(
                     `Error reading file ${path}. Check permissions, or if the file is used by another program.`,
-                    { className: "app-toast" }
+                    { className: "app-toast" },
                 );
                 metadata = { mappedMetadata: [], tagType: null };
             }
@@ -199,7 +199,7 @@
                 if (songWithArtwork.artwork.data.length) {
                     artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
@@ -249,9 +249,9 @@
                         artwork_file: artworkFileToSet ? artworkFileToSet : "",
                         artwork_data: artworkToSetData ?? [],
                         artwork_data_mime_type: artworkToSetFormat,
-                        delete_artwork: isArtworkSet === "delete"
-                    }
-                ]
+                        delete_artwork: isArtworkSet === "delete",
+                    },
+                ],
             };
             // console.log("event: ", event);
 
@@ -273,13 +273,13 @@
                                             (m) =>
                                                 m.value !== null &&
                                                 ALBUM_FIELDS.includes(
-                                                    m.genericId
-                                                )
+                                                    m.genericId,
+                                                ),
                                         )
                                         .map((t) => ({
                                             id: t.id,
-                                            value: t.value
-                                        }))
+                                            value: t.value,
+                                        })),
                                 ],
                                 tag_type: fileMetadata.tagType,
                                 file_path: track.path,
@@ -288,11 +288,11 @@
                                     : "",
                                 artwork_data: artworkToSetData ?? [],
                                 artwork_data_mime_type: artworkToSetFormat,
-                                delete_artwork: isArtworkSet === "delete"
+                                delete_artwork: isArtworkSet === "delete",
                             };
-                        })
-                    )
-                }
+                        }),
+                    ),
+                },
             });
         }
         console.log($rightClickedTrack || $rightClickedTracks[0]);
@@ -317,7 +317,7 @@
         }
 
         toast.success("Successfully written metadata!", {
-            position: "top-right"
+            position: "top-right",
         });
 
         $lastWrittenSongs = $rightClickedTrack
@@ -345,7 +345,7 @@
         if (existingAlbum) {
             existingAlbum.tracksIds = [
                 ...existingAlbum.tracksIds,
-                ...album.tracksIds
+                ...album.tracksIds,
             ];
             await db.albums.put(existingAlbum);
         }
@@ -368,7 +368,7 @@
             height: 500,
             indexed_color: 0,
             type: "Cover (front)",
-            width: 500
+            width: 500,
         };
         // metadata.push({
         //     id: "METADATA_BLOCK_PICTURE",
@@ -414,7 +414,7 @@
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await pictureDir()
+            defaultPath: await pictureDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -470,11 +470,11 @@
         containsError = null;
         previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
         const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
-            $rightClickedTrack || $rightClickedTracks[0]
+            $rightClickedTrack || $rightClickedTracks[0],
         );
         metadata = {
             mappedMetadata: mergeDefault(mappedMetadata, tagType),
-            tagType
+            tagType,
         };
         metadataFromFile = cloneDeep(metadata.mappedMetadata);
         originCountry =
@@ -519,8 +519,8 @@
         metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")
             ?.value
             ? ""
-            : metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
-                  ?.value ?? "";
+            : (metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
+                  ?.value ?? "");
 
     let artistInputField: HTMLInputElement;
 
@@ -529,7 +529,7 @@
             console.log("firstMatch", firstMatch);
             console.log("artistInput", artistInput);
             const artistField = metadata?.mappedMetadata?.find(
-                (m) => m.genericId === "artist"
+                (m) => m.genericId === "artist",
             );
             if (artistField) {
                 artistField.value = firstMatch;
@@ -544,7 +544,7 @@
         console.log("artist updated");
         artistInput = value;
         const artistField = metadata?.mappedMetadata?.find(
-            (m) => m.genericId === "artist"
+            (m) => m.genericId === "artist",
         );
         if (artistField) {
             artistField.value = artistInput;
@@ -573,7 +573,7 @@
             "Invalid characters in metadata tag (hidden/unicode characters?)",
         "err:null-chars": "Hidden null characer",
         "warn:custom-tag":
-            "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead."
+            "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead.",
     };
 
     type ValidationErrors = "err:invalid-chars" | "err:null-chars";
@@ -596,7 +596,7 @@
     function stripNonAsciiChars() {
         metadata.mappedMetadata = metadata?.mappedMetadata.map((entry) => ({
             ...entry,
-            id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id
+            id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id,
         }));
         console.log("stripped ascii: ", metadata);
         writeMetadata();
@@ -625,7 +625,7 @@
             if (!errors[currentTag.id]) {
                 errors[currentTag.id] = {
                     errors: [],
-                    warnings: []
+                    warnings: [],
                 };
             }
             if (!errors[currentTag.id].errors) {
@@ -675,7 +675,7 @@
         return (
             errors &&
             Object.values(errors).filter((err) =>
-                err.errors.includes(errorType)
+                err.errors.includes(errorType),
             ).length > 0
         );
     }
@@ -707,7 +707,7 @@
         originCountryEdited = null;
         isFetchingOriginCountry = true;
         const country = await findCountryByArtist(
-            ($rightClickedTrack || $rightClickedTracks[0]).artist
+            ($rightClickedTrack || $rightClickedTracks[0]).artist,
         );
         console.log("country", country);
         if (country) {
@@ -820,16 +820,16 @@
         isFetchingArtwork = true;
         artworkResult = await fetchAlbumArt(
             null,
-            $rightClickedTrack || $rightClickedTracks[0]
+            $rightClickedTrack || $rightClickedTracks[0],
         );
         if (artworkResult.success) {
             toast.success("Found album art and written to album!", {
-                position: "top-right"
+                position: "top-right",
             });
             updateArtwork();
         } else if (artworkResult.error) {
             toast.error("Couldn't find album art", {
-                position: "top-right"
+                position: "top-right",
             });
         }
         isFetchingArtwork = false;
@@ -843,7 +843,7 @@
             const extension = filename.split(".").pop();
             const filenameWithoutExtension = filename.replace(
                 "." + extension,
-                ""
+                "",
             );
             tag.value = filenameWithoutExtension;
 
@@ -917,8 +917,8 @@
                                                 fileOpen(
                                                     track.path.replace(
                                                         track.file,
-                                                        ""
-                                                    )
+                                                        "",
+                                                    ),
                                                 )}
                                         >
                                             <span
@@ -943,7 +943,7 @@
                                     <td>
                                         <p>
                                             {getDurationText(
-                                                track.fileInfo.duration
+                                                track.fileInfo.duration,
                                             )}
                                         </p>
                                     </td>
@@ -981,7 +981,7 @@
                     <div
                         use:tippy={{
                             content: $LL.trackInfo.countryOfOriginTooltip(),
-                            placement: "right"
+                            placement: "right",
                         }}
                     >
                         <Icon icon="mdi:information" />
@@ -1031,7 +1031,7 @@
                 use:tippy={{
                     content: $LL.trackInfo.artworkTooltip(),
                     placement: "bottom",
-                    trigger: "focusin"
+                    trigger: "focusin",
                 }}
             >
                 <div class="artwork-frame">
@@ -1077,9 +1077,7 @@
             {#if isArtworkSet}
                 <small>{$LL.trackInfo.artworkReadyToSave()}</small>
             {:else if foundArtwork}
-                <small
-                    >{$LL.trackInfo.artworkFound()}</small
-                >
+                <small>{$LL.trackInfo.artworkFound()}</small>
             {:else if artworkSrc}
                 <small>{$LL.trackInfo.encodedInFile()}</small>
             {:else}
@@ -1089,7 +1087,7 @@
                 use:tippy={{
                     allowHTML: true,
                     content: $LL.trackInfo.artworkTooltipBody(),
-                    placement: "left"
+                    placement: "left",
                 }}
                 ><Icon icon="ic:round-info" /><small
                     >{$LL.trackInfo.aboutArtwork()}</small
@@ -1150,7 +1148,7 @@
                                                     artistInput?.toLowerCase() &&
                                                 artistInput?.length > 0,
                                             showOnCreate: true,
-                                            trigger: "manual"
+                                            trigger: "manual",
                                         }}
                                     >
                                         <Input
@@ -1171,15 +1169,16 @@
                                             .map((e) => VALIDATION_STRINGS[e])
                                             .concat(
                                                 errors[tag.id]?.warnings.map(
-                                                    (e) => VALIDATION_STRINGS[e]
-                                                )
+                                                    (e) =>
+                                                        VALIDATION_STRINGS[e],
+                                                ),
                                             )
                                             .join(","),
                                         placement: "bottom",
                                         theme: "error",
                                         show:
                                             errors[tag.id]?.errors.length > 0 ||
-                                            errors[tag.id]?.warnings.length > 0
+                                            errors[tag.id]?.warnings.length > 0,
                                     }}
                                     class="tag
                                         {errors[tag.id]?.warnings.length > 0
@@ -1200,7 +1199,7 @@
                                             content:
                                                 $LL.trackInfo.setTitleFromFileNameHint(),
                                             show: tag.genericId === "title",
-                                            placement: "bottom"
+                                            placement: "bottom",
                                         }}
                                     >
                                         {tag.genericId ? tag.genericId : tag.id}

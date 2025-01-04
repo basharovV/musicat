@@ -16,7 +16,7 @@
     $: correctedTextInputColor =
         textInputColor !== null && isDarkColor(textInputColor)
             ? $currentThemeObject.text
-            : textInputColor ?? $currentThemeObject.text;
+            : (textInputColor ?? $currentThemeObject.text);
     let options: { name: string; color: string }[] = [
         // Major#
         { name: "C", color: "#FFFFFF" },
@@ -43,7 +43,7 @@
         { name: "G#m", color: "#1C4128" },
         { name: "Am", color: "#3C1C41" },
         { name: "A#m", color: "#422210" },
-        { name: "Bm", color: "#723DEE" }
+        { name: "Bm", color: "#723DEE" },
     ];
 
     $: sections = matches.reduce(
@@ -53,14 +53,14 @@
                     .find((s) => s.title === "Major")
                     .items.push({
                         text: currentKey.name,
-                        color: currentKey.color
+                        color: currentKey.color,
                     });
             } else {
                 sections
                     .find((s) => s.title === "Minor")
                     .items.push({
                         text: currentKey.name,
-                        color: currentKey.color
+                        color: currentKey.color,
                     });
             }
             return sections;
@@ -68,13 +68,13 @@
         [
             {
                 title: "Major",
-                items: []
+                items: [],
             },
             {
                 title: "Minor",
-                items: []
-            }
-        ]
+                items: [],
+            },
+        ],
     );
 
     $: {
