@@ -16,7 +16,7 @@
     import type { Album, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api/core";
 
-    export let pos = { x: 0, y: 0 };
+    export let position = { x: 0, y: 0 };
     export let showMenu = false;
     export let onClose;
 
@@ -138,7 +138,7 @@
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu}>
+    <Menu {...position} onClickOutside={closeMenu}>
         <MenuOption
             isDisabled={true}
             text="{$rightClickedAlbum.displayTitle ??

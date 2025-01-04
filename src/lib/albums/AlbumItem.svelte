@@ -142,17 +142,19 @@
         </div>
     </div>
     {#if showInfo}
-        <p class="title">{album.displayTitle ?? album.title}</p>
-        <p class="artist">{album?.artist}</p>
-        <div class="info">
-            {#if album?.year > 0}
-                <small>{album.year}</small>
-                <small>•</small>
-            {/if}
-            <small
-                >{album?.tracksIds.length}
-                {$LL.albums.item.tracksLabel()}</small
-            >
+        <div class="info-container">
+            <p class="title">{album.displayTitle ?? album.title}</p>
+            <p class="artist">{album?.artist}</p>
+            <div class="info">
+                {#if album?.year > 0}
+                    <small>{album.year}</small>
+                    <small>•</small>
+                {/if}
+                <small
+                    >{album?.tracksIds.length}
+                    {$LL.albums.item.tracksLabel()}</small
+                >
+            </div>
         </div>
     {/if}
 </div>
@@ -206,7 +208,7 @@
         }
         .title {
             background-color: var(--album-playing-title-bg);
-            border-radius: 4px;
+            border-radius: 0 0 8px 8px;
             color: var(--text);
             z-index: 20;
             margin-top: 3px !important;
@@ -279,7 +281,11 @@
             cursor: default;
             user-select: none;
         }
-
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
         .info {
             display: flex;
             flex-direction: row;
@@ -288,12 +294,14 @@
             gap: 4px;
             justify-content: center;
             align-items: center;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
 
         .title {
             margin-top: 10px;
             padding: 0.1em 0.5em;
-            border-radius: 20px;
         }
         .artist {
             opacity: 0.7;
@@ -306,7 +314,9 @@
             margin: 0;
             line-height: 1em;
             color: var(--text);
-            max-lines: 2;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
 
         small {
