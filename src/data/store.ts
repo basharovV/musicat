@@ -342,7 +342,12 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
-export const isQueueOpen = writable(false);
+export const isQueueOpen: Writable<boolean> = writable(
+    Boolean(localStorage.getItem("isQueueOpen") || false)
+);
+isQueueOpen.subscribe((val) =>
+    localStorage.setItem("isQueueOpen", String(val))
+);
 export const isQueueCleared = writable(false);
 
 // Wiki
@@ -355,7 +360,12 @@ export const sidebarManuallyOpened = writable(false);
 export const sidebarTogglePos = writable({ x: 0, y: 0 });
 export const isCmdOrCtrlPressed = writable(false);
 
-export const isWaveformOpen = writable(false);
+export const isWaveformOpen: Writable<boolean> = writable(
+    Boolean(localStorage.getItem("isWaveformOpen") || false)
+);
+isWaveformOpen.subscribe((val) =>
+    localStorage.setItem("isWaveformOpen", String(val))
+);
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,
     data: [],
