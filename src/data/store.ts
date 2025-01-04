@@ -371,7 +371,7 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
  * Currently this is used to bypass the "same song check" in the sidebar, so that song
  * info is updated even if the same song is played.
  */
-export const lastWrittenSongs: Writable<Song[]> = writable(null);
+export const lastWrittenSongs: Writable<Song[]> = writable([]);
 
 async function init() {
     // Set OS
