@@ -1,5 +1,7 @@
 type ThemeType = "dark" | "light";
 
+import tmZokugunObsidium from "./themes/zokugun-obsidium.json";
+
 export interface Theme {
     "type": ThemeType;
     /**  Primary text color */
@@ -520,4 +522,5 @@ export const allThemes: { [key: string]: Theme } = {
         "icon-secondary": "#E5F6F7",
         "oscilloscope": "#07ea03",
     },
+    "zokugun obsidium": tmZokugunObsidium,
 };
