@@ -17,24 +17,20 @@ import type {
     IAFile,
     IAItem,
     ImportStatus,
-    LastPlayedInfo,
     PlaylistFile,
-    PlaylistType,
-    Popup,
     PopupType,
-    QueueMode,
     UiView,
     Song,
     StreamInfo,
     UIPreferences,
     UserSettings,
-    WaveformPlayerState
+    WaveformPlayerState,
+    PlayingSong
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
-import Query from "./SmartQueries";
 import { scanPlaylists } from "./M3UUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
@@ -50,8 +46,6 @@ interface Query {
     query: string;
 }
 
-type UIView = "library" | "albums";
-
 export const isInit = writable(true);
 export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
@@ -61,38 +55,82 @@ export const query: Writable<Query> = writable({
     query: ""
 });
 
-export const isPlaying = writable(false);
-export const currentSong: Writable<Song> = writable(null);
-export const currentSongIdx = writable(0);
-
-const defaultLastPlayedInfo: LastPlayedInfo = {
-    songId: null,
-    position: 0
-};
-
-export const lastPlayedInfo: Writable<LastPlayedInfo> = writable(
-    {
-        ...defaultLastPlayedInfo,
-        ...JSON.parse(localStorage.getItem("lastPlayedInfo"))
-    } || defaultLastPlayedInfo
-);
-// Auto-persist settings
-lastPlayedInfo.subscribe((val) =>
-    localStorage.setItem("lastPlayedInfo", JSON.stringify(val))
-);
-
-export const nextUpSong: Writable<Song> = writable(null);
+export const allSongs: Writable<Song[]> = writable([]);
 export const queriedSongs: Writable<Song[]> = writable([]);
 
-export const allSongs: Writable<Song[]> = writable([]);
-export const playlist: Writable<Song[]> = writable([]);
-export const shuffledPlaylist: Writable<Song[]> = writable([]);
-export const albumPlaylist: Writable<Song[]> = writable([]);
-export const playlistIsAlbum = writable(false);
-export const playlistCountry = writable(null); // ISO Country code
-export const playlistType: Writable<PlaylistType> = writable("library");
-export const playlistDuration: Writable<number> = writable(0);
+export const isPlaying = writable(false);
+
+async function restoreCurrentSong() {
+    const item = localStorage.getItem("current");
+
+    if (item) {
+        const data = JSON.parse(item);
+
+        if (data.song) {
+            const song = await db.songs.get(data.song);
+
+            current.set({
+                song,
+                index: data.index,
+                position: data.position
+            });
+
+            playerTime.set(data.position);
+        }
+    }
+}
+
+export const current: Writable<PlayingSong> = writable(
+    { song: null, index: 0, position: 0 },
+    () => {
+        restoreCurrentSong();
+    }
+);
+current.subscribe(({ song, index, position }) => {
+    const data = song
+        ? { song: song.id, index, position }
+        : { song: null, index: 0, position: 0 };
+
+    localStorage.setItem("current", JSON.stringify(data));
+});
+
+async function readQueueFromFile() {
+    const queuePath = await path.join(await appConfigDir(), "queue.txt");
+    if (!fs.exists(queuePath)) {
+        return;
+    }
+    let persistedQueue = await fs.readTextFile(queuePath);
+    if (!persistedQueue) {
+        return;
+    }
+    const songs = await db.songs.bulkGet(persistedQueue.split(","));
+    queue.set(songs);
+}
+
+async function writeQueueToFile(queue: Song[]) {
+    const queuePath = await path.join(await appConfigDir(), "queue.txt");
+    await fs.writeTextFile(queuePath, queue.map((song) => song.id).join(","));
+}
+
+export const queue: Writable<Song[]> = writable([]);
+
+/**
+ * Flag used to let the queue automatically mirror the search results
+ * (only after explicitly playing a track from results)
+ *
+ * - Set to `true` typing in a search query -> playing song. Queue will be replaced with search results.
+ * Updating the query will continue to replace the queue. If current track is no longer in results,
+ * playback will continue from the beginning of the new queue.
+ * - Clearing the query will reset queue back to library and set the flag to `false`
+ *  */
+export const queueMirrorsSearch = writable(false);
+
+export const queueCountry = writable(null); // ISO Country code
+export const queueDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
+export const shuffledQueue: Writable<Song[]> = writable([]);
+
+export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
@@ -306,7 +344,6 @@ export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 // Queue
 export const isQueueOpen = writable(false);
 export const isQueueCleared = writable(false);
-export const queueMode: Writable<QueueMode> = writable("library");
 
 // Wiki
 export const isWikiOpen = writable(false);
@@ -327,6 +364,14 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     loopEndPos: 0,
     loopStartPos: 0
 });
+
+/**
+ * Keep track of the song(s) that were last written to from the tag editor. 
+ * 
+ * Currently this is used to bypass the "same song check" in the sidebar, so that song
+ * info is updated even if the same song is played.
+ */
+export const lastWrittenSongs: Writable<Song[]> = writable(null);
 
 async function init() {
     // Set OS
@@ -359,6 +404,14 @@ async function init() {
         console.log("[store] userSettings", val);
         // Write settings to file
         await setSettings(val);
+    });
+
+    // Get queue
+    await readQueueFromFile();
+
+    // Auto-persist queue
+    queue.subscribe(async (songs) => {
+        await writeQueueToFile(songs);
     });
 }
 

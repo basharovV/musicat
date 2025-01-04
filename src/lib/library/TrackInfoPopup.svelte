@@ -20,7 +20,10 @@
     import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
     import { db } from "../../data/db";
     import {
+        current,
+        lastWrittenSongs,
         os,
+        playerTime,
         popupOpen,
         rightClickedTrack,
         rightClickedTracks,
@@ -46,6 +49,8 @@
     import { Image } from "@tauri-apps/api/image";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import { get } from "svelte/store";
     // optional
 
     const ALBUM_FIELDS = [
@@ -158,7 +163,7 @@
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
     let artworkToSetData: Uint8Array = null;
-    let isArtworkSet = false;
+    let isArtworkSet: "delete" | "replace" | false = false;
     let artworkFileToSet = null;
 
     let foundArtwork;
@@ -198,6 +203,7 @@
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                    foundArtwork = true;
                 }
 
                 previousArtworkFormat = artworkFormat;
@@ -242,6 +248,8 @@
                         file_path: $rightClickedTrack.path,
                         artwork_file: artworkFileToSet ? artworkFileToSet : "",
                         artwork_data: artworkToSetData ?? [],
+                        artwork_data_mime_type: artworkToSetFormat,
+                        delete_artwork: isArtworkSet === "delete",
                     },
                 ],
             };
@@ -279,6 +287,8 @@
                                     ? artworkFileToSet
                                     : "",
                                 artwork_data: artworkToSetData ?? [],
+                                artwork_data_mime_type: artworkToSetFormat,
+                                delete_artwork: isArtworkSet === "delete",
                             };
                         }),
                     ),
@@ -300,9 +310,6 @@
             }
         }
 
-        artworkFileToSet = null;
-        isArtworkSet = false;
-
         if (toImport.albums.length) {
             for (const album of toImport.albums) {
                 await reImportAlbum(album);
@@ -312,6 +319,23 @@
         toast.success("Successfully written metadata!", {
             position: "top-right",
         });
+
+        $lastWrittenSongs = $rightClickedTrack
+            ? [$rightClickedTrack]
+            : $rightClickedTracks;
+
+        // If we changed the artwork tag, this offsets the audio data in the file,
+        // so we need to reload the song and seek to the current position
+        // (will cause audible gap)
+        const writtenTracks = $rightClickedTrack
+            ? [$rightClickedTrack]
+            : $rightClickedTracks;
+        if (
+            (artworkFileToSet || artworkToSetData) &&
+            writtenTracks.map((t) => t.id).includes($current.song.id)
+        ) {
+            audioPlayer.playCurrent(get(playerTime));
+        }
 
         await reset();
     }
@@ -376,6 +400,16 @@
             artworkFocused = true;
             return;
         }
+
+        if (artworkSrc && artworkFormat) {
+            // Let options for existing artwork (delete, replace) handle this
+            return;
+        }
+
+        await openArtworkFilePicker();
+    }
+
+    async function openArtworkFilePicker() {
         // Open a selection dialog for directories
         const selected = await open({
             directory: false,
@@ -394,7 +428,7 @@
             if (response.status === 200) {
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
-                isArtworkSet = true;
+                isArtworkSet = "replace";
                 artworkFileToSet = selected;
                 artworkToSetData = null;
                 artworkToSetSrc = src;
@@ -754,7 +788,7 @@
             artworkToSetFormat = mimeType;
             artworkToSetData = new Uint8Array(arrayBuffer);
             artworkFileToSet = null;
-            isArtworkSet = true;
+            isArtworkSet = "replace";
         }
         // const src = "asset://localhost/" + folder + artworkFilename;
     }
@@ -1001,7 +1035,7 @@
                 }}
             >
                 <div class="artwork-frame">
-                    {#if (artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
+                    {#if isArtworkSet !== "delete" && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
                         <img
                             alt="Artwork"
                             class="artwork"
@@ -1009,6 +1043,29 @@
                                 previousArtworkSrc ||
                                 artworkSrc}
                         />
+                        {#if artworkFocused && artworkSrc && artworkFormat && !foundArtwork}
+                            <div class="artwork-options">
+                                <Icon
+                                    icon={artworkToSetSrc
+                                        ? "mingcute:close-circle-fill"
+                                        : "ant-design:delete-outlined"}
+                                    onClick={() => {
+                                        if (artworkToSetSrc) {
+                                            artworkToSetSrc = null;
+                                            artworkToSetFormat = null;
+                                        } else {
+                                            isArtworkSet = "delete";
+                                        }
+                                    }}
+                                />
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openArtworkFilePicker();
+                                    }}
+                                />
+                            </div>
+                        {/if}
                     {:else}
                         <div class="artwork-placeholder">
                             <Icon icon="mdi:music-clef-treble" />
@@ -1020,10 +1077,7 @@
             {#if isArtworkSet}
                 <small>{$LL.trackInfo.artworkReadyToSave()}</small>
             {:else if foundArtwork}
-                <small
-                    >{$LL.trackInfo.artworkFound()}
-                    {foundArtwork.artworkFilenameMatch}</small
-                >
+                <small>{$LL.trackInfo.artworkFound()}</small>
             {:else if artworkSrc}
                 <small>{$LL.trackInfo.encodedInFile()}</small>
             {:else}
@@ -1391,9 +1445,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
             img {
                 height: 100%;
                 width: 100%;
+            }
+
+            .artwork-options {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 2em;
+                background-color: var(--background);
             }
 
             .artwork-placeholder {

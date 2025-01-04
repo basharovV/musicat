@@ -4,8 +4,8 @@
     import {
         bottomBarNotification,
         isSmartQueryBuilderOpen,
-        playlistDuration,
         query,
+        queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
@@ -18,8 +18,8 @@
     let playlist = $toDeletePlaylist;
     let isDeleting = false;
     let durationText;
-    $: if ($playlistDuration) {
-        durationText = secondsToFriendlyTime($playlistDuration);
+    $: if ($queueDuration) {
+        durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }

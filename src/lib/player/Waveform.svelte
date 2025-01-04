@@ -5,7 +5,7 @@
     import ZoomPlugin from "wavesurfer.js/dist/plugins/zoom.esm.js";
 
     import {
-        currentSong,
+        current,
         isCmdOrCtrlPressed,
         os,
         playerTime,
@@ -122,11 +122,11 @@
             ev.stopPropagation();
             console.log("region-clicked");
             region.remove();
-            $currentSong.markers?.splice(
-                $currentSong.markers.findIndex((m) => m.pos === region.start),
+            $current.song.markers?.splice(
+                $current.song.markers.findIndex((m) => m.pos === region.start),
                 1,
             );
-            db.songs.put($currentSong);
+            db.songs.put($current.song);
             if (region.start !== region.end) {
                 $waveformPeaks.loopStartPos = null;
                 $waveformPeaks.loopEndPos = null;
@@ -169,19 +169,19 @@
 
         wavesurfer.on("click", (pos) => {
             console.log("interaction", pos);
-            let posSeconds = $currentSong.fileInfo.duration * pos;
+            let posSeconds = $current.song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
-                if ($currentSong) {
+                if ($curcurrent.songrentSong) {
                     const marker: Marker = {
                         pos: posSeconds,
                         title: "👂",
                     };
-                    if ($currentSong.markers) {
-                        $currentSong.markers.push(marker);
+                    if ($current.song.markers) {
+                        $current.song.markers.push(marker);
                     } else {
-                        $currentSong.markers = [marker];
+                        $current.song.markers = [marker];
                     }
-                    db.songs.put($currentSong);
+                    db.songs.put($current.song);
                     wsRegions.addRegion({
                         start: posSeconds,
                         content: marker.title,
@@ -189,7 +189,7 @@
                     });
                 }
             } else {
-                seekTime.set($currentSong.fileInfo.duration * pos);
+                seekTime.set($current.song.fileInfo.duration * pos);
             }
         });
 
@@ -203,13 +203,13 @@
             await wavesurfer.load(
                 null,
                 event.payload.data,
-                $currentSong.fileInfo.duration,
+                $current.song.fileInfo.duration,
             );
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
-                    songId: $currentSong.id,
+                    songId: $current.song.id,
                     data: event.payload.data,
                 };
             } else {
@@ -219,9 +219,9 @@
     });
 
     playerTime.subscribe((playerTime) => {
-        if (wavesurfer && $currentSong) {
+        if (wavesurfer && $current.song) {
             wavesurfer.seekTo(
-                Math.min(playerTime / $currentSong.fileInfo.duration),
+                Math.min(playerTime / $current.song.fileInfo.duration),
             );
         }
     });
@@ -230,12 +230,12 @@
         await wavesurfer.load(
             null,
             $waveformPeaks.data,
-            $currentSong.fileInfo.duration,
+            $current.song.fileInfo.duration,
         );
         pxPerSec = wavesurfer.options.minPxPerSec;
 
-        if ($currentSong) {
-            wavesurfer.seekTo($playerTime / $currentSong.fileInfo.duration);
+        if ($current.song) {
+            wavesurfer.seekTo($playerTime / $current.song.fileInfo.duration);
         }
 
         // Restore loop point
@@ -248,7 +248,7 @@
             });
         }
 
-        $currentSong.markers?.forEach((m) => {
+        $current.song.markers?.forEach((m) => {
             wsRegions.addRegion({
                 start: m.pos,
                 content: m.title,
@@ -260,20 +260,20 @@
     async function getWaveform() {
         if (
             $waveformPeaks?.data &&
-            $currentSong?.id === $waveformPeaks.songId
+            $current.song?.id === $waveformPeaks.songId
         ) {
             restoreState();
-        } else if ($currentSong?.id !== $waveformPeaks?.songId) {
+        } else if ($current.song?.id !== $waveformPeaks?.songId) {
             // Changing songs, reset and get new waveform
             wsRegions.clearRegions();
             const result = await invoke("get_waveform", {
                 event: {
-                    path: $currentSong.path,
+                    path: $current.song.path,
                 },
             });
-            $waveformPeaks.songId = $currentSong.id;
+            $waveformPeaks.songId = $current.song.id;
 
-            $currentSong.markers?.forEach((m) => {
+            $current.song.markers?.forEach((m) => {
                 wsRegions.addRegion({
                     start: m.pos,
                     content: m.title,
@@ -281,17 +281,17 @@
                 });
             });
         }
-        song = $currentSong;
+        song = $current.song;
         // console.log("result", result);
     }
 
-    $: if (isMounted && $currentSong?.path !== song?.path && wavesurfer) {
+    $: if (isMounted && $current.song?.path !== song?.path && wavesurfer) {
         getWaveform();
         console.log(
-            "$currentSong.fileInfo.duration",
-            $currentSong.fileInfo.duration,
+            "$current.song.fileInfo.duration",
+            $current.song.fileInfo.duration,
         );
-        wavesurfer.setOptions({ duration: $currentSong.fileInfo.duration });
+        wavesurfer.setOptions({ duration: $current.song.fileInfo.duration });
 
         if (wavesurfer.getDecodedData()) {
             wavesurfer.zoom(false);

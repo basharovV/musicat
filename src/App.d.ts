@@ -212,6 +212,12 @@ type UiView =
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 
+interface PlayingSong {
+    song?: Song;
+    index: number;
+    position: number; //seconds;
+}
+
 interface ContentFileType {
     type: "audio" | "video" | "txt" | "image" | "unsupported";
     extension: string;
@@ -293,11 +299,6 @@ type LLM = "gpt-3.5-turbo" | "gpt-4" | "ollama";
 
 type Compression = "lossy" | "lossless" | "both";
 
-interface LastPlayedInfo {
-    songId?: string;
-    position: number; //seconds;
-}
-
 interface AddOriginCountryStatus {
     percent: number;
 }
@@ -370,11 +371,7 @@ interface Marker {
     title: string;
 }
 
-type PlaylistType = "library" | "album" | "playlist" | "country";
-
 type ArrowFocus = "library" | "queue";
-
-type QueueMode = "library" | "custom";
 
 interface IACollection {
     id: string;

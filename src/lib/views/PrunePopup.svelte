@@ -1,13 +1,11 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import {
-        currentSong,
-        currentSongIdx,
+        current,
         isPlaying,
         isSmartQueryBuilderOpen,
-        playlist,
-        popupOpen,
         query,
+        queue,
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
@@ -47,12 +45,12 @@
     async function addToDelete() {
         const toDelete = await getOrCreatePlaylist();
 
-        if (!atEnd || !toDelete.tracks.includes($currentSong.id)) {
-            toDelete.tracks.push($currentSong.id);
+        if (!atEnd || !toDelete.tracks.includes($current.song.id)) {
+            toDelete.tracks.push($current.song.id);
             db.internalPlaylists.put(toDelete);
         }
 
-        if ($playlist.length !== 0 && !atEnd) {
+        if ($queue.length !== 0 && !atEnd) {
             audioPlayer.playNext();
             pressedD = true;
             setTimeout(() => (pressedD = false), 300);
@@ -82,7 +80,7 @@
     });
 
     hotkeys("k", "prune", () => {
-        if ($playlist.length !== 0 && !atEnd) {
+        if ($queue.length !== 0 && !atEnd) {
             audioPlayer.playNext();
             pressedK = true;
             setTimeout(() => (pressedK = false), 300);
@@ -103,7 +101,7 @@
         hotkeys.deleteScope("prune");
     });
 
-    $: atEnd = $currentSongIdx === $playlist?.length - 1;
+    $: atEnd = $current.index === $queue?.length - 1;
 </script>
 
 <div class="container">
@@ -113,9 +111,9 @@
             Listen to tracks and quickly mark them for deletion
         </p>
         <div class="track-info">
-            <h3>{$currentSong?.title}</h3>
-            <h4>{$currentSong?.artist}</h4>
-            <small>{$currentSong?.album}</small>
+            <h3>{$current.song?.title}</h3>
+            <h4>{$current.song?.artist}</h4>
+            <small>{$current.song?.album}</small>
         </div>
         <div class="shortcuts">
             <div class="delete" class:pressed={pressedD}>

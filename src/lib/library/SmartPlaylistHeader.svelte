@@ -9,7 +9,7 @@
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
-        playlistDuration,
+        queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
@@ -24,8 +24,8 @@
     export let selectedQuery;
 
     let durationText;
-    $: if ($playlistDuration) {
-        durationText = secondsToFriendlyTime($playlistDuration);
+    $: if ($queueDuration) {
+        durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }
