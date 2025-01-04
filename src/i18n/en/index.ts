@@ -141,7 +141,7 @@ const en = {
     save: "Save",
     fetchFromWikipedia: "Fetch from Wikipedia",
     artworkReadyToSave: "Ready to save",
-    artworkFound: "Found",
+    artworkFound: "Found in folder",
     noArtwork: "No artwork",
     artworkTooltip: "Paste image or click to select file",
     fetchArt: "Fetch Art",

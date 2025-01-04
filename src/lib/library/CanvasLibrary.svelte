@@ -1,7 +1,7 @@
 <!-- SongDataGrid.svelte -->
 
 <script lang="ts">
-    import { liveQuery } from "dexie";
+    import { liveQuery, type Observable } from "dexie";
     import hotkeys from "hotkeys-js";
     import { Layer as Lyr } from "konva/lib/Layer";
     import { Stage as Stg } from "konva/lib/Stage";
@@ -30,10 +30,9 @@
     import { reorderSongsInPlaylist } from "../../data/M3UUtils";
     import {
         arrowFocus,
+        current,
         columnOrder,
         compressionSelected,
-        currentSong,
-        currentSongIdx,
         draggedColumnIdx,
         draggedSongs,
         emptyDropEvent,
@@ -49,12 +48,10 @@
         isTagCloudOpen,
         libraryScrollPos,
         os,
-        playlist,
-        playlistType,
         popupOpen,
         queriedSongs,
         query,
-        queueMode,
+        queueMirrorsSearch,
         rightClickedTrack,
         rightClickedTracks,
         scrollToSong,
@@ -83,9 +80,10 @@
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
     import Scrollbar from "../ui/Scrollbar.svelte";
+    import { setQueue } from "../../data/storeHelper";
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
 
-    export let allSongs = null;
+    export let allSongs: Observable<Song[]> = null;
     export let dim = false;
     export let isLoading = false;
     export let theme = "default";
@@ -129,14 +127,13 @@
                                 song.viewModel.isFirstAlbum = true;
                             } else {
                                 song.viewModel = {
+                                    ...song.viewModel,
                                     isFirstAlbum: true,
                                     isFirstArtist: false
                                 };
                             }
                         }
                         status.state.firstSongInPreviousAlbum = idx;
-                    } else {
-                        status.state.tracksInAlbum++;
                     }
                     if (s?.artist !== status.state.previousArtist) {
                         if (status.state.firstSongInPreviousArtist) {
@@ -149,31 +146,38 @@
                                 song.viewModel.isFirstArtist = true;
                             } else {
                                 song.viewModel = {
+                                    ...song.viewModel,
                                     isFirstAlbum: false,
                                     isFirstArtist: true
                                 };
                             }
                         }
                         status.state.firstSongInPreviousArtist = idx;
-                    } else {
-                        status.state.albumsInArtist++;
                     }
                     status.state.previousAlbum = s?.album;
                     status.state.previousArtist = s?.artist;
 
                     // If currently in album/shuffle/custom queue mode, then the current song index doesn't match the library index,
                     // and we need to find it
-                    if (
-                        ($playlistType === "album" ||
-                            $queueMode === "custom" ||
-                            $isShuffleEnabled) &&
-                        s.id === $currentSong?.id
-                    ) {
+                    if (s.id === $current.song?.id) {
                         console.log("found song:", idx);
                         currentSongY = idx * ROW_HEIGHT;
                         currentSongScrollIdx = idx;
                     } else {
                         currentSongScrollIdx = null;
+                    }
+
+                    // Highlighted songs indexes might need to be updated
+                    if (idx === songsArray.length - 1) {
+                        if (songsHighlighted.length > 0) {
+                            songsHighlighted = songsHighlighted.map((s) => {
+                                s.viewModel.index = songsArray?.find(
+                                    (song) => song.id === s.id
+                                )?.viewModel?.index;
+                                highlightedSongIdx = s.viewModel.index;
+                                return s;
+                            });
+                        }
                     }
 
                     return {
@@ -187,7 +191,8 @@
                         previousArtist: null,
                         firstSongInPreviousAlbum: null,
                         firstSongInPreviousArtist: null
-                    }
+                    },
+                    songs: []
                 }
             )?.songs ?? [];
 
@@ -858,7 +863,7 @@
             let idx =
                 currentSongScrollIdx !== null
                     ? currentSongScrollIdx
-                    : $currentSongIdx;
+                    : $current.index;
             currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         }
 
@@ -884,17 +889,16 @@
 
     function currentSongIdxMatches() {
         return (
-            $currentSongIdx !== null &&
-            $currentSongIdx < $allSongs?.length &&
-            $allSongs[$currentSongIdx]?.id === $currentSong?.id
+            $current.index < $allSongs?.length &&
+            $allSongs[$current.index]?.id === $current.song?.id
         );
     }
 
     let currentSongY = 0;
-    $: if ($playlistType !== "album" && !$isShuffleEnabled) {
+    $: if (!$isShuffleEnabled) {
         let idx = currentSongIdxMatches()
-            ? $currentSongIdx
-            : $allSongs?.findIndex((s) => s.id === $currentSong?.id);
+            ? $current.index
+            : $allSongs?.findIndex((s) => s.id === $current.song?.id);
         if (idx !== undefined) {
             currentSongY = idx * ROW_HEIGHT;
             currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
@@ -908,7 +912,7 @@
         if (currentSongY > viewportHeight / 2.3) {
             adjustedPos -= viewportHeight / 2.3;
         }
-        if ($isPlaying && $currentSong) {
+        if ($isPlaying && $current.song) {
             onScroll(null, null, adjustedPos, false, true);
         }
     }
@@ -949,17 +953,14 @@
     let currentSongScrollIdx = null;
 
     function onDoubleClickSong(song, idx) {
-        AudioPlayer.shouldPlay = false;
-        if ($queueMode === "library") {
-            $currentSongIdx = idx;
-            if ($uiView === "smart-query") {
-                $playlist = $smartQueryResults;
-            } else {
-                $playlist = $queriedSongs;
-            }
+        if ($uiView === "smart-query") {
+            setQueue($smartQueryResults, song.viewModel.index);
+        } else {
+            setQueue($queriedSongs, song.viewModel.index);
         }
-        $playlistType = $uiView === "playlists" ? "playlist" : "library";
-        AudioPlayer.playSong(song);
+        if ($query.query.length) {
+            $queueMirrorsSearch = true;
+        }
     }
 
     function onRightClick(e, song, idx) {
@@ -1097,9 +1098,10 @@
     function highlightFirst() {
         // Only highlight first if previous highlight no longer exists after query update
         if (
-            songsHighlighted.length > 1 ||
+            songsHighlighted.length === 0 ||
             (songsHighlighted.length === 1 &&
-                !songs?.find((s) => s?.id === songsHighlighted[0]?.id))
+                !songs?.find((s) => s?.id === songsHighlighted[0]?.id)) ||
+            songsHighlighted.length > 1
         ) {
             highlightSong(songs[0], 0, false, true);
         }
@@ -1274,15 +1276,11 @@
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
-            if ($popupOpen !== "track-info") {
-                AudioPlayer.shouldPlay = false;
-                if ($queueMode === "library") {
-                    $currentSongIdx = highlightedSongIdx;
-                    $playlist = $queriedSongs;
-                }
-                $playlistType =
-                    $uiView === "playlists" ? "playlist" : "library";
-                AudioPlayer.playSong(songsHighlighted[0]);
+            AudioPlayer.shouldPlay = true;
+            setQueue($queriedSongs, highlightedSongIdx);
+
+            if ($query.query.length) {
+                $queueMirrorsSearch = true;
             }
         }
     }
@@ -1459,8 +1457,8 @@
             isFavourite: true
         });
 
-        if ($currentSong?.id === song.id) {
-            $currentSong.isFavourite = true;
+        if ($current.song?.id === song.id) {
+            $current.song.isFavourite = true;
         }
     }
 
@@ -1468,8 +1466,8 @@
         await db.songs.update(song, {
             isFavourite: false
         });
-        if ($currentSong?.id === song.id) {
-            $currentSong.isFavourite = false;
+        if ($current.song?.id === song.id) {
+            $current.song.isFavourite = false;
         }
     }
 
@@ -1759,7 +1757,7 @@
                                                     draggingSongIdx ===
                                                     song.viewModel?.index
                                                         ? DRAGGING_SOURCE_COLOR
-                                                        : $currentSong?.id ===
+                                                        : $current.song?.id ===
                                                             song?.id
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
@@ -1836,7 +1834,8 @@
                                                             verticalAlign:
                                                                 "middle",
                                                             fill:
-                                                                $currentSong?.id ===
+                                                                $current.song
+                                                                    ?.id ===
                                                                 song.id
                                                                     ? PLAYING_TEXT_COLOR
                                                                     : TEXT_COLOR,
@@ -1926,7 +1925,9 @@
                                                                         verticalAlign:
                                                                             "middle",
                                                                         fill:
-                                                                            $currentSong?.id ===
+                                                                            $current
+                                                                                .song
+                                                                                ?.id ===
                                                                             song.id
                                                                                 ? PLAYING_TEXT_COLOR
                                                                                 : TEXT_COLOR,
@@ -2019,7 +2020,9 @@
                                                                         verticalAlign:
                                                                             "middle",
                                                                         fill:
-                                                                            $currentSong?.id ===
+                                                                            $current
+                                                                                .song
+                                                                                ?.id ===
                                                                             song.id
                                                                                 ? PLAYING_TEXT_COLOR
                                                                                 : TEXT_COLOR,
@@ -2071,7 +2074,9 @@
                                                                     ) !== null
                                                                   ? f.value ===
                                                                         "title" &&
-                                                                    $currentSong?.id ===
+                                                                    $current
+                                                                        .song
+                                                                        ?.id ===
                                                                         song.id
                                                                       ? f
                                                                             .viewProps
@@ -2093,8 +2098,8 @@
                                                         fontSize: 13.5,
                                                         verticalAlign: "middle",
                                                         fill:
-                                                            $currentSong?.id ===
-                                                            song.id
+                                                            $current.song
+                                                                ?.id === song.id
                                                                 ? PLAYING_TEXT_COLOR
                                                                 : f.name ===
                                                                     "none"
@@ -2127,7 +2132,7 @@
                                             {/if}
                                             {#if f.value === "title"}
                                                 <!-- Now playing icon -->
-                                                {#if $currentSong?.id === song.id}
+                                                {#if $current.song?.id === song.id}
                                                     <Path
                                                         config={{
                                                             x:
@@ -2175,7 +2180,8 @@
                                                             scaleY: 0.36,
                                                             data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                             fill:
-                                                                $currentSong?.id ===
+                                                                $current.song
+                                                                    ?.id ===
                                                                 song.id
                                                                     ? $currentThemeObject[
                                                                           "library-playing-icon"
@@ -2206,7 +2212,8 @@
                                                             data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                             fill: "transparent",
                                                             stroke:
-                                                                $currentSong?.id ===
+                                                                $current.song
+                                                                    ?.id ===
                                                                 song.id
                                                                     ? $currentThemeObject[
                                                                           "library-playing-icon"
@@ -2483,7 +2490,7 @@
     {/if}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    {#if $uiView === "library" && $isPlaying && $currentSong && !currentSongInView}
+    {#if $uiView === "library" && $isPlaying && $current.song && !currentSongInView}
         <div
             in:fly={{ duration: 150, y: 30 }}
             out:fly={{ duration: 150, y: 30 }}

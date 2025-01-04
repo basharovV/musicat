@@ -38,6 +38,7 @@ pub struct WriteMetatadaEvent {
     artwork_file: String,
     artwork_data: Vec<u8>,
     artwork_data_mime_type: Option<String>,
+    delete_artwork: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -456,7 +457,7 @@ fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
     if !artwork_src.is_empty() {
         artwork_src = convert_file_src(artwork_src);
     }
-    
+
     return Some(Album {
         id: album_id,
         title: song.album.clone().to_lowercase(),
@@ -636,9 +637,7 @@ pub fn extract_metadata(
                                     TagType::Id3v1 => Some("ID3v1".to_string()),
                                     TagType::Id3v2 => Some("ID3v2".to_string()),
                                     TagType::Mp4Ilst => Some("MP4".to_string()),
-                                    TagType::Ape
-                                    | TagType::RiffInfo
-                                    | TagType::AiffText => None,
+                                    TagType::Ape | TagType::RiffInfo | TagType::AiffText => None,
                                     _ => todo!(),
                                 }
                             } else {
@@ -689,10 +688,16 @@ pub fn extract_metadata(
                             }
                             if album_artist.is_none() {
                                 // album_artist = Some(tag.get_string(&ItemKey::AlbumArtist).unwrap_or_default().to_string());
-                                album_artist = tag.get_string(&ItemKey::AlbumArtist).map(|s| s.to_string());
+                                album_artist =
+                                    tag.get_string(&ItemKey::AlbumArtist).map(|s| s.to_string());
                             }
                             if compilation == 0 {
-                                compilation = tag.get_string(&ItemKey::FlagCompilation).unwrap_or_default().parse::<u32>().ok().unwrap_or(0) as i32;
+                                compilation =
+                                    tag.get_string(&ItemKey::FlagCompilation)
+                                        .unwrap_or_default()
+                                        .parse::<u32>()
+                                        .ok()
+                                        .unwrap_or(0) as i32;
                             }
                             if genre.is_empty() {
                                 genre = tag.genre().map_or_else(Vec::new, |g| {
@@ -892,8 +897,13 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 }
             }
 
-            // Set image if provided
-            if !v.artwork_file.is_empty() {
+            // Delete artwork if requested
+            if v.delete_artwork && to_write.pictures().len() > 0 {
+                while to_write.pictures().len() > 0 {
+                    to_write.remove_picture(0);
+                }
+            } // Set artwork if provided
+            else if !v.artwork_file.is_empty() {
                 let picture_file = File::options()
                     .read(true)
                     .write(true)

@@ -18,17 +18,14 @@
         addSongsToPlaylists,
         createNewPlaylistFile,
         deletePlaylistFile,
-        renamePlaylist,
-        scanPlaylists,
-        writePlaylist
+        renamePlaylist
     } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
         currentIAFile,
-        currentSong,
+        current,
         currentSongArtworkSrc,
-        currentSongIdx,
         draggedAlbum,
         draggedSongs,
         isDraggingFromQueue,
@@ -44,9 +41,9 @@
         isWikiOpen,
         os,
         playerTime,
-        playlist,
         queriedSongs,
         query,
+        queue,
         rightClickedTrack,
         seekTime,
         selectedPlaylistFile,
@@ -59,7 +56,8 @@
         uiView,
         userPlaylists,
         userSettings,
-        toDeletePlaylist
+        toDeletePlaylist,
+        lastWrittenSongs
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -74,10 +72,13 @@
     import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import { setQueue } from "../../data/storeHelper";
+    import { get } from "svelte/store";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
     // What to show in the sidebar
+    let song: Song;
     let title;
     let fileName;
     $: displayTitle = title ?? fileName;
@@ -123,8 +124,21 @@
 
     let placeholderArtwork: HTMLImageElement;
 
-    currentSong.subscribe(async (song) => {
-        if (song) {
+    current.subscribe(async (current) => {
+        if (current.song) {
+            if (
+                current.song.path === song?.path &&
+                !$lastWrittenSongs
+                    .map((s) => s.path)
+                    .includes(current.song.path)
+            ) {
+                // same song, no need to update
+                // (unless the metadata was just written to eg. updated artwork)
+                return;
+            }
+
+            song = current.song;
+
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: {
                     path: song.path,
@@ -177,23 +191,15 @@
             } else {
                 artworkSrc = null;
             }
+
+            drawArtwork(previousSongIdx > current.index);
+            previousSongIdx = current.index;
         }
-        drawArtwork(previousSongIdx > $currentSongIdx);
-        previousSongIdx = $currentSongIdx;
     });
 
-    function togglePlayPause() {
-        if (!audioPlayer.currentSong) {
-            audioPlayer.shouldPlay = true;
-            $playlist = $queriedSongs;
-        } else {
-            audioPlayer.togglePlay();
-        }
-    }
-
     function openTrackInfo() {
-        if ($currentSong) {
-            $rightClickedTrack = $currentSong;
+        if (song) {
+            $rightClickedTrack = song;
             $popupOpen = "track-info";
         }
     }
@@ -552,10 +558,10 @@
     }
 
     async function favouriteCurrentSong() {
-        if (!$currentSong) return;
-        $currentSong.isFavourite = !$currentSong.isFavourite;
-        await db.songs.put($currentSong);
-        $currentSong = $currentSong;
+        if (!$current.song) return;
+        $current.song.isFavourite = !$current.song.isFavourite;
+        await db.songs.put($current.song);
+        $current = $current;
     }
     let sidebar;
     let sidebarWidth = 210;
@@ -602,7 +608,7 @@
     let canvas: HTMLCanvasElement;
 
     $: if (
-        $currentSong &&
+        song &&
         canvas &&
         sidebarWidth &&
         displayTitle &&
@@ -721,7 +727,7 @@
             if (!context) return;
 
             context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
-            if ($currentSong) {
+            if (song) {
                 const artwork = artworkSrc;
                 console.log("artwork", artwork);
                 if (artwork) {
@@ -877,8 +883,8 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <sidebar
-    class:has-current-song={$currentSong}
-    class:empty={!$currentSong}
+    class:has-current-song={song}
+    class:empty={!song}
     class:hovered={isMiniPlayerHovered}
     class:visible={$isSidebarOpen}
     transition:fly={{ duration: 200, x: -200 }}
@@ -1070,8 +1076,13 @@
                                                 playlist.path}
                                             on:click={() => {
                                                 $uiView = "playlists";
-                                                $query.orderBy = "none";
-                                                $query.reverse = false;
+                                                // Opening a playlist will reset the query
+                                                $query = {
+                                                    ...$query,
+                                                    orderBy: "none",
+                                                    reverse: false,
+                                                    query: ""
+                                                };
                                                 $selectedPlaylistFile =
                                                     playlist;
                                                 $selectedSmartQuery = null;
@@ -1473,12 +1484,12 @@
             <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
 
             <div class="info">
-                {#if $currentSong}
+                {#if song}
                     {#if sidebarWidth && displayTitle}
                         <div
                             class="marquee-container"
                             on:mousedown={() => {
-                                $draggedSongs = [$currentSong];
+                                $draggedSongs = [song];
                             }}
                         >
                             <canvas
@@ -1540,7 +1551,7 @@
         </div>
     </div>
 
-    {#if $currentSong}
+    {#if song}
         <div class="artwork-container">
             <div class="artwork-frame">
                 <canvas
@@ -1578,31 +1589,31 @@
                 class="transport-middle"
                 icon="fe:backward"
                 size={36}
-                disabled={$currentSongIdx === 0}
+                disabled={$current.index <= 0}
                 onClick={() => audioPlayer.playPrevious()}
             />
             <Icon
                 class="transport-middle"
                 size={42}
-                onClick={togglePlayPause}
+                onClick={() => audioPlayer.togglePlay()}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
             />
             <Icon
                 class="transport-middle"
                 size={36}
                 icon="fe:forward"
-                disabled={$playlist.length === 0 ||
-                    $currentSongIdx === $playlist?.length - 1}
+                disabled={$queue.length === 0 ||
+                    $current.index === $queue?.length - 1}
                 onClick={() => audioPlayer.playNext()}
             />
             <Icon
-                class="transport-side favourite {$currentSong?.isFavourite
+                class="transport-side favourite {$current.song?.isFavourite
                     ? 'active'
                     : 'inactive'}"
-                color={$currentSong?.isFavourite
+                color={$current.song?.isFavourite
                     ? $currentThemeObject["transport-favorite"]
                     : $currentThemeObject["icon-secondary"]}
-                icon={$currentSong?.isFavourite
+                icon={$current.song?.isFavourite
                     ? "clarity:heart-solid"
                     : "clarity:heart-line"}
                 onClick={() => {
@@ -1616,7 +1627,7 @@
                 <Icon
                     icon="mdi:information"
                     onClick={() => {
-                        $rightClickedTrack = $currentSong;
+                        $rightClickedTrack = song;
                         $popupOpen = "track-info";
                     }}
                     color={$currentThemeObject["icon-secondary"]}
@@ -2052,7 +2063,7 @@
                 white 85%,
                 transparent 100%
             );
-            
+
             &:hover {
                 background-color: color-mix(
                     in srgb,
