@@ -171,7 +171,7 @@
             console.log("interaction", pos);
             let posSeconds = $current.song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
-                if ($curcurrent.songrentSong) {
+                if ($current.song) {
                     const marker: Marker = {
                         pos: posSeconds,
                         title: "👂"
