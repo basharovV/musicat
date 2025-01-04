@@ -90,6 +90,7 @@
         z-index: 1;
         color: var(--text);
         &:focus {
+            outline: var(--input-focus-outline);
             background-color: color-mix(
                 in srgb,
                 vvar(--input-bg) 60%,
@@ -105,10 +106,8 @@
             border-radius: 5px;
             padding: 0.1em 0.3em;
             &:focus {
-                outline-style: solid;
-                outline-width: 1px;
+                outline: var(--input-alt-focus-outline);
                 outline-offset: 0.5px;
-                outline-color: rgb(196, 199, 200);
             }
         }
 
