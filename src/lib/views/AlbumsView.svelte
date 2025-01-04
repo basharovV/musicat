@@ -25,7 +25,6 @@
     import VirtualList from "svelte-tiny-virtual-list";
     import { debounce } from "lodash-es";
 
-    const GAP = 0;
     const PADDING = 14;
 
     let activeAlbums: Album[] = [];
@@ -191,10 +190,10 @@
         }
         height = container?.clientHeight;
         const contentWidth = getContentWidth(container) - PADDING - PADDING;
-        const count = Math.floor((contentWidth - GAP) / (minWidth + GAP));
-        const remaining = contentWidth - count * (minWidth + GAP) + GAP;
+        const count = Math.floor(contentWidth / minWidth);
+        const remaining = contentWidth - (count * minWidth);
         const perColumn = Math.floor(remaining / count);
-        const max = Math.floor((contentWidth - 10 * GAP) * 0.1);
+        const max = Math.floor(contentWidth * 0.1);
 
         if (minWidth + perColumn > max) {
             columnWidth = Math.max(max, minWidth + Math.floor(perColumn / 2));
