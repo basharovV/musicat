@@ -96,7 +96,7 @@ current.subscribe(({ song, index, position }) => {
 
 async function readQueueFromFile() {
     const queuePath = await path.join(await appConfigDir(), "queue.txt");
-    if (!fs.exists(queuePath)) {
+    if (!await fs.exists(queuePath)) {
         return;
     }
     let persistedQueue = await fs.readTextFile(queuePath);
@@ -342,7 +342,12 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
-export const isQueueOpen = writable(false);
+export const isQueueOpen: Writable<boolean> = writable(
+    Boolean(localStorage.getItem("isQueueOpen") || false)
+);
+isQueueOpen.subscribe((val) =>
+    localStorage.setItem("isQueueOpen", String(val))
+);
 export const isQueueCleared = writable(false);
 
 // Wiki
@@ -355,7 +360,12 @@ export const sidebarManuallyOpened = writable(false);
 export const sidebarTogglePos = writable({ x: 0, y: 0 });
 export const isCmdOrCtrlPressed = writable(false);
 
-export const isWaveformOpen = writable(false);
+export const isWaveformOpen: Writable<boolean> = writable(
+    Boolean(localStorage.getItem("isWaveformOpen") || false)
+);
+isWaveformOpen.subscribe((val) =>
+    localStorage.setItem("isWaveformOpen", String(val))
+);
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,
     data: [],
@@ -366,12 +376,12 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
 });
 
 /**
- * Keep track of the song(s) that were last written to from the tag editor. 
- * 
+ * Keep track of the song(s) that were last written to from the tag editor.
+ *
  * Currently this is used to bypass the "same song check" in the sidebar, so that song
  * info is updated even if the same song is played.
  */
-export const lastWrittenSongs: Writable<Song[]> = writable(null);
+export const lastWrittenSongs: Writable<Song[]> = writable([]);
 
 async function init() {
     // Set OS

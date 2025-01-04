@@ -128,9 +128,7 @@
         if (current.song) {
             if (
                 current.song.path === song?.path &&
-                !$lastWrittenSongs
-                    .map((s) => s.path)
-                    .includes(current.song.path)
+                !$lastWrittenSongs.some(({path}) => path === current.song.path)
             ) {
                 // same song, no need to update
                 // (unless the metadata was just written to eg. updated artwork)
@@ -1449,7 +1447,6 @@
                     <Icon
                         icon="tabler:layout-sidebar-left-collapse"
                         size={22}
-                        color={$currentThemeObject["icon-secondary"]}
                         onClick={(e) => {
                             $isSidebarOpen = false;
                             $sidebarManuallyOpened = false;
@@ -1476,7 +1473,6 @@
                     icon={$isMiniPlayer
                         ? "gg:arrows-expand-up-right"
                         : "gg:arrows-expand-down-left"}
-                    color={$currentThemeObject["icon-secondary"]}
                     onClick={() => toggleMiniPlayer()}
                     boxed
                 />
@@ -1576,11 +1572,10 @@
         </div>
         <transport>
             <Icon
-                class="transport-side"
+                class="transport-side shuffle {$isShuffleEnabled
+                    ? 'active'
+                    : 'inactive'}"
                 icon="ph:shuffle-bold"
-                color={!$isShuffleEnabled
-                    ? $currentThemeObject["icon-secondary"]
-                    : $currentThemeObject["transport-shuffle"]}
                 onClick={() => {
                     $isShuffleEnabled = !$isShuffleEnabled;
                 }}
@@ -1610,9 +1605,6 @@
                 class="transport-side favourite {$current.song?.isFavourite
                     ? 'active'
                     : 'inactive'}"
-                color={$current.song?.isFavourite
-                    ? $currentThemeObject["transport-favorite"]
-                    : $currentThemeObject["icon-secondary"]}
                 icon={$current.song?.isFavourite
                     ? "clarity:heart-solid"
                     : "clarity:heart-line"}
@@ -1630,7 +1622,6 @@
                         $rightClickedTrack = song;
                         $popupOpen = "track-info";
                     }}
-                    color={$currentThemeObject["icon-secondary"]}
                 />
             </div>
 
@@ -1644,11 +1635,11 @@
                 }}
             >
                 <Icon
+                    class="{$isWaveformOpen
+                        ? 'active'
+                        : 'inactive'}"
                     icon="ph:wave-sine-duotone"
                     onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                    color={$isWaveformOpen
-                        ? $currentThemeObject["accent-secondary"]
-                        : $currentThemeObject["icon-secondary"]}
                 />
             </div>
         </div>
@@ -1662,15 +1653,41 @@
     $sidebar_secondary_color: transparent;
 
     :global {
-        sidebar .transport-middle {
-            color: var(--transport-control);
+        sidebar {
+            .transport-middle {
+                color: var(--transport-control) !important;
 
-            &:hover {
-                color: var(--transport-control-hover);
-                opacity: 1 !important;
+                &:hover {
+                    color: var(--transport-control-hover) !important;
+                }
             }
-            &:active {
-                opacity: 0.9 !important;
+
+            .transport-side {
+                &.favourite.active {
+                    color: var(--transport-favorite);
+
+                    &:hover {
+                        color: var(--transport-favorite-hover);
+                    }
+                }
+
+                 &.shuffle.active {
+                    color: var(--transport-shuffle);
+
+                    &:hover {
+                        color: var(--transport-shuffle-hover);
+                    }
+                }
+            }
+
+            .visualizer-icon {
+                 .active {
+                    color: var(--icon-tertiary);
+
+                    &:hover {
+                        color: var(--icon-tertiary-hover);
+                    }
+                }
             }
         }
     }
@@ -1830,7 +1847,7 @@
         margin: 0;
         position: relative;
         user-select: none;
-        padding: 0 1em 0.5em 1em;
+        padding: 0 0.5em 0.5em 0.5em;
         margin-block-start: 0;
         &::-webkit-scrollbar {
             /* hide scrollbar */
@@ -1851,12 +1868,12 @@
             text-transform: uppercase;
             text-align: left;
             width: max-content;
-            padding: 0.17em 0.5em 0.17em 0;
+            padding: 0.17em 0.5em 0.17em 0.5em;
             font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.4px;
             color: var(--text-inactive, initial);
-            /* width: 100%; */
+            width: 100%;
             border-radius: 3px;
             box-sizing: border-box;
             border: 1px solid transparent;
@@ -1871,7 +1888,9 @@
             }
 
             &:hover:not(.selected) {
-                opacity: 0.5;
+                background-color: var(--sidebar-node-inactive-hover-bg);
+                color: var(--sidebar-node-inactive-hover-text);
+                opacity: var(--sidebar-node-inactive-hover-opacity);
 
                 .chevron {
                     visibility: visible;
@@ -1959,7 +1978,7 @@
                 color: var(--text-inactive, initial);
             }
             &:focus {
-                /* outline: 1px solid #5123dd; */
+                outline: var(--input-focus-outline);
                 background-color: color-mix(
                     in srgb,
                     var(--inverse) 80%,
@@ -2359,6 +2378,9 @@
             &.hover {
                 border-radius: 5px;
                 background-color: var(--sidebar-item-hover-bg);
+                p {
+                    color: var(--sidebar-item-hover-text);
+                }
                 .playlist-options {
                     display: flex;
                 }
