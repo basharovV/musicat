@@ -806,6 +806,12 @@ type RootTranslation = {
 			deleted: string
 		}
 	}
+	lyrics: {
+		/**
+		 * A​u​t​o​ ​s​c​r​o​l​l
+		 */
+		autoScroll: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -1596,6 +1602,12 @@ export type TranslationFunctions = {
 			 */
 			deleted: (arg0: number | string | boolean) => LocalizedString
 		}
+	}
+	lyrics: {
+		/**
+		 * Auto scroll
+		 */
+		autoScroll: () => LocalizedString
 	}
 }
 

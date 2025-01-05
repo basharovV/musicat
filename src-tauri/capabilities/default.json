@@ -94,6 +94,9 @@
                 },
                 {
                     "url": "https://*.discogs.com"
+                },
+                {
+                    "url": "https://lrclib.net"
                 }
             ]
         }

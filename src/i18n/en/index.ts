@@ -270,6 +270,9 @@ const en = {
             deleted: "Deleted {{track | ?? tracks}}",
         },
     },
+    lyrics: {
+        autoScroll: "Auto scroll",
+    },
 } satisfies BaseTranslation;
 
 export default en;
