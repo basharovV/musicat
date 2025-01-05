@@ -4,7 +4,7 @@ import {
     isShuffleEnabled,
     queue,
     queueDuration,
-    shuffledQueue
+    shuffledQueue,
 } from "./store";
 import AudioPlayer from "../lib/player/AudioPlayer";
 import { get } from "svelte/store";
@@ -21,7 +21,7 @@ export function findQueueIndexes(songs: Song[]): number[] {
 
 export function setQueue(
     newQueue: Song[],
-    nextSong: Song | number | boolean = null
+    nextSong: Song | number | boolean = null,
 ): void {
     const newDuration = newQueue.reduce((total, song) => {
         return total + song.fileInfo.duration;
@@ -79,7 +79,7 @@ export function updateQueues(queueValues, shuffledQueueValues, doAction): void {
         const oldShuffledQueue = get(shuffledQueue);
         const newShuffledQueue = doAction(
             oldShuffledQueue,
-            shuffledQueueValues
+            shuffledQueueValues,
         );
         shuffledQueue.set(newShuffledQueue || oldShuffledQueue);
     }
