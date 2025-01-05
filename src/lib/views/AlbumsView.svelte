@@ -183,11 +183,14 @@
     }
 
     let height = 0;
+    let width = 0;
+
     function onResize() {
         if (!container) {
             return;
         }
         height = container?.clientHeight;
+        width = container?.clientWidth;
         const contentWidth = getContentWidth(container) - PADDING - PADDING;
         const count = Math.floor(contentWidth / minWidth);
         const remaining = contentWidth - count * minWidth;
@@ -206,6 +209,7 @@
         itemSizes = Array(rowCount).fill(size);
         itemSizes[0] = PADDING;
         itemSizes[itemSizes.length - 1] = PADDING;
+        if (virtualList?.scrollToIndex) virtualList.scrollToIndex = null;
     }
 
     async function onRightClick(e, album) {
@@ -234,7 +238,6 @@
 
     function updateInView(offset = lastOffset) {
         const { clientHeight } = container;
-
         lastOffset = offset;
         isCurrentAlbumInView =
             offset < currentAlbumOffset &&
@@ -247,6 +250,15 @@
         albums.subscribe(() => {
             onResize();
         });
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            onResize();
+        });
+
+        resizeObserver.observe(container);
+
+        // This callback cleans up the observer
+        return () => resizeObserver.unobserve(container);
     });
 </script>
 
@@ -258,8 +270,8 @@
     }}
 />
 
-<svelte:window on:resize={debounce(onResize, 30)} />
-<div class="albums-container">
+<!-- <svelte:window on:resize={debounce(onResize, 30)} /> -->
+<div class="albums-container" bind:this={container}>
     {#if isLoading}
         <!-- <div
             class="loading"
@@ -268,14 +280,14 @@
             <p>💿 one sec...</p>
         </div> -->
     {:else}
-        <div class="grid-container" bind:this={container}>
+        <div class="grid-container">
             <VirtualList
                 bind:this={virtualList}
-                width="100%"
+                width={width || "100%"}
                 height={height || "100%"}
                 itemCount={rowCount}
                 itemSize={itemSizes}
-                scrollToAlignment="center"
+                scrollToAlignment="start"
                 scrollToBehaviour="smooth"
                 on:afterScroll={debounce(onAfterScroll, 20)}
             >
