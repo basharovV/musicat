@@ -13,7 +13,7 @@
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
     import tippy from "svelte-tippy";
-    import { importPaths } from "../../data/LibraryImporter";
+    import { importPaths } from "../../data/LibraryUtils";
     import { importStatus, popupOpen, userSettings } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { darkThemes, lightThemes } from "../../theming/themes";

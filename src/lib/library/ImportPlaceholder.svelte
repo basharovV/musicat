@@ -5,7 +5,7 @@
         selectedPlaylistFile,
     } from "../../data/store";
 
-    import { openTauriImportDialog } from "../../data/LibraryImporter";
+    import { openTauriImportDialog } from "../../data/LibraryUtils";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
     import CassetteLoading from "./CassetteLoading.svelte";

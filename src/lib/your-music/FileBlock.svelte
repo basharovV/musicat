@@ -2,7 +2,7 @@
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { open } from "@tauri-apps/plugin-shell";
     import type { ArtistFileItem, Song } from "src/App";
-    import { getMetadataFromFile } from "../../data/LibraryImporter";
+    import { getMetadataFromFile } from "../../data/LibraryUtils";
     import { draggedScrapbookItems } from "../../data/store";
     import Icon from "../ui/Icon.svelte";
     import { setQueue } from "../../data/storeHelper";

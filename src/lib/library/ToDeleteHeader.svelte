@@ -14,6 +14,7 @@
     import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import type { Song } from "../../App";
+    import { deleteFromLibrary } from "../../data/LibraryUtils";
 
     let playlist = $toDeletePlaylist;
     let isDeleting = false;
@@ -56,12 +57,6 @@
         await db.internalPlaylists.put(toDelete);
     }
 
-    async function deleteTracksFromDB(tracks: Song[]) {
-        tracks.forEach((t) => {
-            db.songs.delete(t.id);
-        });
-    }
-
     async function deleteTracksFromFileSystem(tracks: Song[]) {
         // Delete from file system (ie. move to trash)
         await invoke("delete_files", {
@@ -84,7 +79,7 @@
 
         await deleteTracksFromFileSystem(songs);
         await deleteTracksFromPlaylist(songs);
-        await deleteTracksFromDB(songs);
+        await deleteFromLibrary(songs);
         db.internalPlaylists.delete($toDeletePlaylist.id);
 
         $bottomBarNotification = {

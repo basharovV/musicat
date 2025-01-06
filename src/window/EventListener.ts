@@ -9,14 +9,14 @@ import {
     isLyricsOpen,
     isQueueOpen,
     shouldFocusFind,
-    uiView
+    uiView,
 } from "../data/store";
 import { db } from "../data/db";
 import type { ToImport } from "../App";
 import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
 import { open } from "@tauri-apps/plugin-shell";
 import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
-import { openTauriImportDialog } from "../data/LibraryImporter";
+import { openTauriImportDialog } from "../data/LibraryUtils";
 import { path } from "@tauri-apps/api";
 const appWindow = getCurrentWebviewWindow();
 
@@ -36,7 +36,7 @@ export function startMenuListener() {
                 console.log("find");
                 shouldFocusFind.set({
                     target: "search",
-                    action: get(isFindFocused) ? "unfocus" : "focus"
+                    action: get(isFindFocused) ? "unfocus" : "focus",
                 });
                 break;
             case "import":
@@ -100,7 +100,7 @@ export async function listenForFileDrop(): Promise<Event<any>> {
                     console.log("event", event);
                     resolve(event);
                     unlisten();
-                }
+                },
             );
         } catch (e) {
             console.error(e);

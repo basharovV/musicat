@@ -12,7 +12,7 @@
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import { rescanAlbumArtwork } from "../../data/LibraryImporter";
+    import { rescanAlbumArtwork } from "../../data/LibraryUtils";
     import type { Album, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api/core";
 
@@ -88,7 +88,9 @@
     }
     function searchArtworkOnBrave() {
         closeMenu();
-        const query = encodeURIComponent(`${$rightClickedAlbum.artist} - ${$rightClickedAlbum.title}`);
+        const query = encodeURIComponent(
+            `${$rightClickedAlbum.artist} - ${$rightClickedAlbum.title}`,
+        );
         open(`https://search.brave.com/images?q=${query}`);
     }
     function openInFinder() {

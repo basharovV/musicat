@@ -3,7 +3,7 @@
     import tippy from "svelte-tippy";
     import { cubicInOut } from "svelte/easing";
     import { fly } from "svelte/transition";
-    import { runScan } from "../../data/LibraryImporter";
+    import { runScan } from "../../data/LibraryUtils";
 
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";

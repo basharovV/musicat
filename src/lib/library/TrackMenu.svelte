@@ -27,6 +27,8 @@
     import MenuInput from "../menu/MenuInput.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
+    import { deleteFromLibrary } from "../../data/LibraryUtils";
+    import { liveQuery } from "dexie";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -45,7 +47,6 @@
                 explorerName = "File manager";
                 break;
         }
-        getAllTags();
     });
 
     let songId;
@@ -92,12 +93,6 @@
         }
     }
 
-    async function deleteTracksFromDB(tracks: Song[]) {
-        tracks.forEach((t) => {
-            db.songs.delete(t.id);
-        });
-    }
-
     async function deleteTracksFromFileSystem(tracks: Song[]) {
         // Delete from file system (ie. move to trash)
         await invoke("delete_files", {
@@ -130,7 +125,7 @@
 
         // Delete
         await deleteTracksFromPlaylists(tracksToRemove);
-        await deleteTracksFromDB(tracksToRemove);
+        await deleteFromLibrary(tracksToRemove);
 
         // Reset
         if ($rightClickedTracks.length) {
@@ -190,7 +185,7 @@
         closeMenu();
         await deleteTracksFromFileSystem(tracksToRemove);
         await deleteTracksFromPlaylists(tracksToRemove);
-        await deleteTracksFromDB(tracksToRemove);
+        await deleteFromLibrary(tracksToRemove);
 
         // Reset
         if ($rightClickedTracks.length) {
@@ -308,13 +303,11 @@
 
     let tagUserInput = "";
 
-    let allTags = []; // Used for autocomplete
+    let allTags = liveQuery(() => {
+        return db.songs.orderBy("tags").uniqueKeys();
+    }); // Used for autocomplete
 
-    async function getAllTags() {
-        allTags = await db.songs.orderBy("tags").uniqueKeys();
-    }
-
-    $: splitTags = dedupe(allTags?.flatMap((t) => t));
+    $: splitTags = dedupe($allTags?.flatMap((t) => t as string));
 
     $: tagAutoCompleteValue =
         tagUserInput.length &&

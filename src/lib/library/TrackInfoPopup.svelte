@@ -17,7 +17,7 @@
     import tippy from "svelte-tippy";
     import { fade, fly } from "svelte/transition";
     import { getMapForTagType } from "../../data/LabelMap";
-    import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
+    import { readMappedMetadataFromSong } from "../../data/LibraryUtils";
     import { db } from "../../data/db";
     import {
         current,
@@ -519,8 +519,8 @@
         metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")
             ?.value
             ? ""
-            : (metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
-                  ?.value ?? "");
+            : metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
+                  ?.value ?? "";
 
     let artistInputField: HTMLInputElement;
 

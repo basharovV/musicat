@@ -30,7 +30,7 @@
         rename,
         mkdir,
     } from "@tauri-apps/plugin-fs";
-    import { getArtistProfileImage } from "../../data/LibraryImporter";
+    import { getArtistProfileImage } from "../../data/LibraryUtils";
     import { createTippy, optionalTippy } from "../ui/TippyAction";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 

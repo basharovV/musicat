@@ -14,7 +14,7 @@ import type {
     MetadataEntry,
     Song,
     TagType,
-    ToImport
+    ToImport,
 } from "../App";
 import { get } from "svelte/store";
 import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
@@ -25,7 +25,7 @@ import {
     importStatus,
     shouldShowToast,
     songsJustAdded,
-    userSettings
+    userSettings,
 } from "./store";
 import { path } from "@tauri-apps/api";
 const appWindow = getCurrentWebviewWindow();
@@ -40,7 +40,7 @@ export async function getMetadataFromFile(filePath: string, fileName: string) {
         duration: false,
         skipCovers: false,
         skipPostHeaders: true,
-        includeChapters: false
+        includeChapters: false,
     });
 }
 
@@ -50,7 +50,7 @@ export async function getMetadataFromFile(filePath: string, fileName: string) {
  * @returns
  */
 export async function readMappedMetadataFromSong(
-    song: Song
+    song: Song,
 ): Promise<{ mappedMetadata: MetadataEntry[]; tagType: TagType }> {
     console.log("song read", song);
     const metadata = await getMetadataFromFile(song.path, song.file);
@@ -64,7 +64,7 @@ export async function readMappedMetadataFromSong(
               ?.map((tag) => ({
                   genericId: map && tag ? map[tag.id] : "unknown",
                   id: tag.id,
-                  value: tag.value
+                  value: tag.value,
               }))
               .filter((tag) => typeof tag.value === "string") ?? []
         : [];
@@ -74,7 +74,7 @@ export async function readMappedMetadataFromSong(
 export async function importPaths(
     selected: string[],
     background = true,
-    percent = 0
+    percent = 0,
 ) {
     importStatus.update((importStatus) => ({
         ...importStatus,
@@ -82,11 +82,11 @@ export async function importPaths(
         status: "Reading metadata",
         isImporting: true,
         backgroundImport: background,
-        percent
+        percent,
     }));
     if (background) {
         bottomBarNotification.set({
-            text: `Reading metadata`
+            text: `Reading metadata`,
         });
     }
     console.log("toImport called");
@@ -96,14 +96,14 @@ export async function importPaths(
             paths: selected,
             recursive: true,
             process_albums: true,
-            is_async: true
-        }
+            is_async: true,
+        },
     });
 
     if (background) {
         bottomBarNotification.set({
             text: "Adding to library",
-            timeout: 2000
+            timeout: 2000,
         });
     }
 }
@@ -132,18 +132,18 @@ export async function startImportListener() {
                 return {
                     ...importStatus,
                     status: "Processing albums",
-                    percent: chunk.progress
+                    percent: chunk.progress,
                 };
             });
             if (isBackground && albumCount) {
                 bottomBarNotification.set({
-                    text: `Updating library (${albumCount} albums imported)`
+                    text: `Updating library (${albumCount} albums imported)`,
                 });
             }
             console.log("importing album chunk", chunk);
             worker.postMessage({
                 function: "bulkAlbumPut",
-                toImport: chunk
+                toImport: chunk,
             });
         }
     };
@@ -152,7 +152,7 @@ export async function startImportListener() {
         console.log("bulkAlbumPutDone", ev.data, albumChunksToProcess);
         // Import chunk completed
         let idx = albumChunksToProcess.findIndex(
-            (c) => c.progress === ev.data.progress
+            (c) => c.progress === ev.data.progress,
         );
         console.log("idx", idx);
         if (idx !== -1) {
@@ -184,7 +184,7 @@ export async function startImportListener() {
                 ...importStatus,
                 status: "Done",
                 isImporting: false,
-                backgroundImport: false
+                backgroundImport: false,
             }));
             bottomBarNotification.set(null);
         }
@@ -201,9 +201,9 @@ export async function startImportListener() {
                     // Import chunk completed
                     chunksToProcess.splice(
                         chunksToProcess.findIndex(
-                            (c) => c.progress === ev.data.progress
+                            (c) => c.progress === ev.data.progress,
                         ),
-                        1
+                        1,
                     );
 
                     console.log("handleImportDone");
@@ -241,7 +241,7 @@ export async function startImportListener() {
                             ...importStatus,
                             status: "Done",
                             isImporting: false,
-                            backgroundImport: false
+                            backgroundImport: false,
                         }));
 
                         bottomBarNotification.set(null);
@@ -259,12 +259,12 @@ export async function startImportListener() {
             return {
                 ...importStatus,
                 status: "Writing to library",
-                percent: event.payload.progress
+                percent: event.payload.progress,
             };
         });
         if (isBackground && songCount) {
             bottomBarNotification.set({
-                text: `Updating library (${songCount} imported)`
+                text: `Updating library (${songCount} imported)`,
             });
         }
         const toImport = event.payload;
@@ -274,7 +274,7 @@ export async function startImportListener() {
             chunksToProcess.push(toImport);
             worker.postMessage({
                 function: "handleImport",
-                toImport: toImport
+                toImport: toImport,
             });
         }
     });
@@ -300,7 +300,7 @@ export async function openTauriImportDialog() {
     const selected = await open({
         directory: true,
         multiple: false,
-        defaultPath: await audioDir()
+        defaultPath: await audioDir(),
     });
     if (Array.isArray(selected)) {
         // user selected multiple directories
@@ -324,8 +324,8 @@ export async function rescanAlbumArtwork(album: Album) {
             paths: [album.path],
             recursive: false,
             process_albums: true,
-            is_async: false
-        }
+            is_async: false,
+        },
     });
 
     // TODO: Write updated album with updated artwork to DB
@@ -337,14 +337,14 @@ export async function runScan() {
     for (const folder of settings.foldersToWatch) {
         bottomBarNotification.set({
             text: `Scanning ${folder} ...`,
-            timeout: 2000
+            timeout: 2000,
         });
         await importPaths([folder], true);
     }
 }
 
 export async function getArtistProfileImage(
-    folder: string
+    folder: string,
 ): Promise<LookForArtResult> {
     let foundResult: LookForArtResult = null;
     try {
@@ -359,10 +359,10 @@ export async function getArtistProfileImage(
             ) {
                 foundResult = {
                     artworkSrc: convertFileSrc(
-                        await path.join(folder, filename.name)
+                        await path.join(folder, filename.name),
                     ),
                     artworkFormat: format,
-                    artworkFilenameMatch: filename.name
+                    artworkFilenameMatch: filename.name,
                 };
             }
         }
@@ -372,4 +372,37 @@ export async function getArtistProfileImage(
         console.error("Couldn't find artwork " + err);
         return null;
     }
+}
+
+/**
+ * Deletes tracks and associated albums from the library
+ * @param tracks list of tracks
+ */
+export async function deleteFromLibrary(tracks: Song[]) {
+    const albumsToDelete = new Set<string>();
+
+    for (const track of tracks) {
+        const albumId = getAlbumId(track);
+        const album = await db.albums.get(albumId);
+        console.log("checking album", albumId);
+        if (
+            album &&
+            album.tracksIds.every((id) => tracks.map((t) => t.id).includes(id))
+        ) {
+            albumsToDelete.add(album.id);
+        }
+    }
+    console.log("albumsToDelete", albumsToDelete);
+    await db.transaction("rw", db.songs, db.albums, async () => {
+        await db.songs.bulkDelete(tracks.map((t) => t.id));
+        if (albumsToDelete.size) {
+            await db.albums.bulkDelete(Array.from(albumsToDelete));
+        }
+    });
+}
+
+function getAlbumId(track: Song) {
+    return md5(
+        `${track.path.replace(`/${track.file}`, "")} - ${track.album}`.toLowerCase(),
+    );
 }

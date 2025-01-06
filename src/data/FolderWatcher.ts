@@ -2,7 +2,7 @@ import { exists, watchImmediate } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
 import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
-import { importPaths } from "./LibraryImporter";
+import { importPaths } from "./LibraryUtils";
 import { db } from "./db";
 import {
     bottomBarNotification,
@@ -10,12 +10,12 @@ import {
     isFolderWatchUpdate,
     songbookArtists,
     songbookSelectedArtist,
-    userSettings
+    userSettings,
 } from "./store";
 import {
     addScrapbookFile,
     loadArtistsFromSongbook,
-    loadSongProjectsForArtist
+    loadSongProjectsForArtist,
 } from "./ArtistsToolkitData";
 import { scanPlaylists } from "./M3UUtils";
 
@@ -54,7 +54,7 @@ export async function startWatchingLibraryFolders() {
 
                             console.log(
                                 "[Folder watcher] File exists",
-                                fileExists
+                                fileExists,
                             );
 
                             // New file
@@ -62,7 +62,7 @@ export async function startWatchingLibraryFolders() {
                                 console.log("[Folder watcher] File added");
                                 bottomBarNotification.set({
                                     text: "Folder watcher: File added - updating library...",
-                                    timeout: 2000
+                                    timeout: 2000,
                                 });
                                 await importPaths([path], true);
                             }
@@ -71,7 +71,7 @@ export async function startWatchingLibraryFolders() {
                                 console.log("[Folder watcher] File deleted");
                                 bottomBarNotification.set({
                                     text: "Folder watcher: File deleted - updating library...",
-                                    timeout: 2000
+                                    timeout: 2000,
                                 });
                                 await db.songs.delete(filehash);
                             }
@@ -82,7 +82,7 @@ export async function startWatchingLibraryFolders() {
                             console.log("[Folder watcher] Folder deleted");
                             bottomBarNotification.set({
                                 text: "Folder watcher: Folder deleted - updating library...",
-                                timeout: 2000
+                                timeout: 2000,
                             });
                             // Deleted folder - delete all songs from db
                             const songsToDelete = await db.songs
@@ -94,17 +94,17 @@ export async function startWatchingLibraryFolders() {
                             await db.songs.bulkDelete(keys);
                             if (
                                 songsToCheck.every(
-                                    (s) => s.album === songsToCheck[0].album
+                                    (s) => s.album === songsToCheck[0].album,
                                 )
                             ) {
                                 const song = songsToCheck[0];
                                 const albumPath = song.path.replace(
                                     `/${song.file}`,
-                                    ""
+                                    "",
                                 );
 
                                 let id = md5(
-                                    `${albumPath} - ${song.album}`.toLowerCase()
+                                    `${albumPath} - ${song.album}`.toLowerCase(),
                                 );
                                 await db.albums.delete(id);
                             }
@@ -112,7 +112,7 @@ export async function startWatchingLibraryFolders() {
                             console.log("[Folder watcher] Folder added");
                             bottomBarNotification.set({
                                 text: "Folder watcher: Folder added - updating library...",
-                                timeout: 2000
+                                timeout: 2000,
                             });
                             // await importPaths([path], true);
                         }
@@ -121,7 +121,7 @@ export async function startWatchingLibraryFolders() {
             }
             isFolderWatchUpdate.set(false);
         },
-        { recursive: true }
+        { recursive: true },
     );
 
     return startWatching;
@@ -157,7 +157,7 @@ export async function startWatchingScrapbookFolder() {
                         if (fileExists && !song) {
                             bottomBarNotification.set({
                                 text: "Folder watcher: File added - updating library...",
-                                timeout: 2000
+                                timeout: 2000,
                             });
                             await addScrapbookFile(path);
                         }
@@ -165,7 +165,7 @@ export async function startWatchingScrapbookFolder() {
                         else if (!fileExists && song) {
                             bottomBarNotification.set({
                                 text: "Folder watcher: File deleted - updating library...",
-                                timeout: 2000
+                                timeout: 2000,
                             });
                             await db.scrapbook.delete(filehash);
                         }
@@ -173,7 +173,7 @@ export async function startWatchingScrapbookFolder() {
                 }
             }
         },
-        { recursive: true }
+        { recursive: true },
     );
 
     return startWatching;
@@ -225,7 +225,7 @@ export async function startWatchingSongbookFolder() {
                         if (depth === 2) {
                             // Check if artist folder exists
                             songbookArtists.set(
-                                await loadArtistsFromSongbook()
+                                await loadArtistsFromSongbook(),
                             );
                         } else if (depth === 3) {
                             // Only update if matches currently selected artist
@@ -233,7 +233,7 @@ export async function startWatchingSongbookFolder() {
                                 artistName === get(songbookSelectedArtist).name
                             ) {
                                 currentSongProjects.set(
-                                    await loadSongProjectsForArtist(artistName)
+                                    await loadSongProjectsForArtist(artistName),
                                 );
                             }
                         }
@@ -241,7 +241,7 @@ export async function startWatchingSongbookFolder() {
                 }
             }
         },
-        { recursive: true }
+        { recursive: true },
     );
 
     return startWatching;
@@ -268,7 +268,7 @@ export async function startWatchingPlaylistsFolder() {
                         const playlistFileName = path.split("/").pop();
                         console.log(
                             "[watcher] playlistName: ",
-                            playlistFileName
+                            playlistFileName,
                         );
 
                         // We can't quite rely on the WatchEventKind to distinguish access/modify/remove,
@@ -278,7 +278,7 @@ export async function startWatchingPlaylistsFolder() {
                 }
             }
         },
-        { recursive: true }
+        { recursive: true },
     );
 
     return startWatching;

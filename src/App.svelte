@@ -35,7 +35,7 @@
     import { cubicInOut } from "svelte/easing";
     import { blur, fade, fly } from "svelte/transition";
     import { startWatchingLibraryFolders } from "./data/FolderWatcher";
-    import { importPaths, startImportListener } from "./data/LibraryImporter";
+    import { importPaths, startImportListener } from "./data/LibraryUtils";
     import { findQuery } from "./data/SmartQueries";
     import { setLocale } from "./i18n/i18n-svelte";
     import { loadLocale } from "./i18n/i18n-util.sync";
