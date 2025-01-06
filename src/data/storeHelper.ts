@@ -43,25 +43,26 @@ export function setQueue(
             queue.set(newQueue);
             queueDuration.set(newDuration);
         } else {
-            current.set({ song: null, index: 0, position: 0 });
+            const $current = get(current);
+            if ($current.song) {
+                // the current song isn't in the queue, set index to -1
+                current.set({ ...$current, index: -1 });
+            }
             queue.set(newQueue);
             queueDuration.set(newDuration);
         }
     } else if (nextSong) {
         const nextIndex = get(queue).indexOf(nextSong);
 
-        if (nextIndex !== -1) {
-            current.set({ song: nextSong, index: nextIndex, position: 0 });
-            queue.set(newQueue);
-        } else {
-            current.set({ song: null, index: 0, position: 0 });
-            queue.set(newQueue);
-            queueDuration.set(newDuration);
-
-            nextSong = null;
-        }
+        current.set({ song: nextSong, index: nextIndex, position: 0 });
+        queue.set(newQueue);
+        queueDuration.set(newDuration);
     } else {
-        current.set({ song: null, index: 0, position: 0 });
+        const $current = get(current);
+        if ($current.song) {
+            // the current song isn't in the queue, set index to -1
+            current.set({ ...$current, index: -1 });
+        }
         queue.set(newQueue);
         queueDuration.set(newDuration);
     }
