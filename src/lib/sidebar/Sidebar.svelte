@@ -128,7 +128,9 @@
         if (current.song) {
             if (
                 current.song.path === song?.path &&
-                !$lastWrittenSongs.some(({path}) => path === current.song.path)
+                !$lastWrittenSongs.some(
+                    ({ path }) => path === current.song.path,
+                )
             ) {
                 // same song, no need to update
                 // (unless the metadata was just written to eg. updated artwork)
@@ -1635,9 +1637,7 @@
                 }}
             >
                 <Icon
-                    class="{$isWaveformOpen
-                        ? 'active'
-                        : 'inactive'}"
+                    class={$isWaveformOpen ? "active" : "inactive"}
                     icon="ph:wave-sine-duotone"
                     onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
                 />
@@ -1671,7 +1671,7 @@
                     }
                 }
 
-                 &.shuffle.active {
+                &.shuffle.active {
                     color: var(--transport-shuffle);
 
                     &:hover {
@@ -1681,11 +1681,11 @@
             }
 
             .visualizer-icon {
-                 .active {
-                    color: var(--icon-tertiary);
+                .active {
+                    color: var(--icon-tertiary) !important;
 
                     &:hover {
-                        color: var(--icon-tertiary-hover);
+                        color: var(--icon-tertiary-hover) !important;
                     }
                 }
             }
@@ -1927,7 +1927,7 @@
         top: 0;
         z-index: 3;
         transition: height 1s ease-in-out;
-        border-bottom: 0.7px solid #ffffff17;
+        border-bottom: 0.7px solid var(--panel-separator);
 
         .top-header {
             /* height: 80px; */
@@ -1979,11 +1979,7 @@
             }
             &:focus {
                 outline: var(--input-focus-outline);
-                background-color: color-mix(
-                    in srgb,
-                    var(--inverse) 80%,
-                    transparent
-                );
+                background-color: var(--sidebar-search-focus-bg);
                 &::placeholder {
                     color: var(--text-inactive, initial);
                 }
@@ -2012,7 +2008,6 @@
         cursor: default;
         user-select: none;
         pointer-events: none;
-        /* border-top: 0.7px solid #ffffff23; */
         z-index: 2;
         overflow: hidden;
     }
@@ -2022,9 +2017,9 @@
         right: 0;
         bottom: 0;
         height: 520px;
-        background-color: #312d3ec0;
+        background-color: var(--sidebar-player-disabled-bg);
         backdrop-filter: blur(8px);
-        color: var(--text, initial);
+        color: var(--sidebar-player-disabled-text);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2084,14 +2079,10 @@
             );
 
             &:hover {
-                background-color: color-mix(
-                    in srgb,
-                    var(--inverse) 40%,
-                    transparent
-                );
+                background-color: var(--sidebar-info-title-hover-bg);
                 border-radius: 5px;
                 mask-image: none;
-                border: 1px dashed var(--inverse);
+                border: 1px dashed var(--sidebar-info-title-hover-border);
             }
 
             canvas {
@@ -2119,19 +2110,11 @@
             pointer-events: all;
             @media screen and (min-width: 211px) and (min-height: 211px) {
                 &:hover {
-                    background-color: color-mix(
-                        in srgb,
-                        var(--inverse) 80%,
-                        transparent
-                    );
+                    background-color: var(--sidebar-info-artist-hover-bg);
                     border-radius: 5px;
                 }
                 &:active {
-                    background-color: color-mix(
-                        in srgb,
-                        var(--inverse) 90%,
-                        transparent
-                    );
+                    background-color: var(--sidebar-info-artist-active-bg);
                 }
             }
         }
@@ -2242,16 +2225,12 @@
         pointer-events: none;
         opacity: 1;
         box-sizing: content-box;
-        /* border-top: 0.7px solid #ffffff23; */
-        /* border-bottom: 0.7px solid #ffffff23; */
         z-index: 1;
 
         .artwork-frame {
             width: 100%;
             height: 100%;
             box-sizing: border-box;
-            /* border-radius: 3px; */
-            /* border: 1px solid rgb(94, 94, 94); */
             display: flex;
             align-items: center;
             justify-content: center;

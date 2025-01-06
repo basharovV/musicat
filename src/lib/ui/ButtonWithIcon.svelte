@@ -112,8 +112,17 @@
             }
         }
         &.theme-transparent {
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid
+                color-mix(in srgb, var(--inverse) 10%, transparent);
             color: var(--text);
+
+            &:hover {
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 5%,
+                    transparent
+                );
+            }
         }
 
         // Sizes

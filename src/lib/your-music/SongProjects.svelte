@@ -88,7 +88,6 @@
                         transparent
                     );
                 }
-                /* border-top: 1px solid rgba(255, 255, 255, 0.093); */
                 p {
                     margin: 0;
                     line-height: 2em;

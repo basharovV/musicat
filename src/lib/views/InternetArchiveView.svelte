@@ -395,12 +395,9 @@
             align-items: center;
             height: 60px;
             background-color: var(--panel-background);
-            border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
-            border-left: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-top: 0.7px solid var(--panel-primary-border-accent1);
+            border-left: 0.7px solid var(--panel-primary-border-accent1);
+            border-bottom: 0.7px solid var(--panel-primary-border-accent1);
             border-radius: 5px;
             margin-bottom: 5px;
 
@@ -411,8 +408,7 @@
                 align-items: center;
                 justify-self: flex-end;
                 padding: 0.5em 1em;
-                border-left: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-left: 0.7px solid var(--panel-primary-border-accent1);
 
                 input {
                     -webkit-appearance: none;
@@ -453,8 +449,7 @@
                 padding: 0.5em 1em;
 
                 height: 100%;
-                border-right: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-right: 0.7px solid var(--panel-primary-border-accent1);
                 h3 {
                     white-space: nowrap;
                 }
@@ -491,22 +486,19 @@
         overflow: hidden;
         > div {
             height: 100%;
-            border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-top: 0.7px solid var(--panel-primary-border-accent1);
             border-bottom-left-radius: 5px;
             border-bottom-right-radius: 5px;
-            border-left: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-left: 0.7px solid var(--panel-primary-border-accent1);
+            border-bottom: 0.7px solid var(--panel-primary-border-accent1);
             background-color: var(--panel-background);
             border-radius: 4px;
             overflow: auto;
             &:not(:nth-child(1)) {
-                border-left: 0.7px solid #ffffff2a;
+                border-left: 0.7px solid var(--panel-secondary-border-main);
             }
             &:not(:last-child) {
-                border-right: 0.7px solid #ffffff2a;
+                border-right: 0.7px solid var(--panel-secondary-border-main);
             }
         }
         .column-collections {
@@ -526,8 +518,7 @@
                 height: auto;
                 gap: 10px;
                 padding: 1em 2em;
-                border-top: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-top: 0.7px solid var(--panel-primary-border-accent1);
                 opacity: 0.8;
                 &.selected {
                     background-color: color-mix(
@@ -607,8 +598,7 @@
                 background-color: var(--panel-background);
                 backdrop-filter: blur(8px);
                 flex-wrap: wrap;
-                border-bottom: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-bottom: 0.7px solid var(--panel-primary-border-accent1);
                 z-index: 2;
                 .top-row a {
                     display: flex;
@@ -649,7 +639,6 @@
                 li {
                     text-align: left;
                     padding: 0 1em;
-                    /* border-bottom: 0.7px solid #ffffff2a; */
                     height: 26px;
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -711,8 +700,7 @@
                 flex-direction: column;
                 background-color: var(--panel-background);
                 padding: 0.5em;
-                border-bottom: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-bottom: 0.7px solid var(--panel-primary-border-accent1);
                 h2 {
                     padding: 1em;
                     margin: 0;
@@ -751,8 +739,7 @@
 
             .hint {
                 padding-bottom: 1em;
-                border-bottom: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-bottom: 0.7px solid var(--panel-primary-border-accent1);
             }
         }
     }

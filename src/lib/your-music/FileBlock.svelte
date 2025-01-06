@@ -66,13 +66,22 @@
         {/if}
         <div class="item-info">
             {#if item.fileType.type === "audio"}
-                <Icon icon="bi:file-earmark-play" color="#c745c7" />
+                <Icon
+                    icon="bi:file-earmark-play"
+                    color="var(--atk-icon-audio)"
+                />
             {:else if item.fileType.type === "video"}
-                <Icon icon="dashicons:editor-video" color="#e04848" />
+                <Icon
+                    icon="dashicons:editor-video"
+                    color="var(--atk-icon-video)"
+                />
             {:else if item.fileType.type === "image"}
                 <Icon icon="dashicons:editor-video" />
             {:else if item.fileType.type === "txt"}
-                <Icon icon="dashicons:editor-video" color="#d4d442" />
+                <Icon
+                    icon="dashicons:editor-video"
+                    color="var(--atk-icon-lyric)"
+                />
             {/if}
             <p>{item.name}</p>
         </div>

@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { currentThemeObject } from "../../theming/store";
-
     // seconds
     export let duration = 0;
     export let playerTime = 0;
@@ -69,12 +67,7 @@
             onSeek && onSeek(duration * percent);
         }}
     >
-        <div
-            class="seekbar"
-            bind:this={seekBar}
-            class:hovered={showHoverHead}
-            class:light={$currentThemeObject.type === "light"}
-        >
+        <div class="seekbar" bind:this={seekBar} class:hovered={showHoverHead}>
             <svg
                 class="playhead"
                 style="left:{playheadPos}%;"
@@ -93,7 +86,6 @@
                             height="8"
                             cy="9"
                             r="10"
-                            stroke="white"
                             stroke-width="2"
                         />
                     </svg>
@@ -131,11 +123,8 @@
         width: 100%;
         align-items: center;
         justify-content: space-between;
-
-        /* background: rgba(0, 0, 0, 0.954); */
-        color: white;
-        /* box-shadow: -5px -10px 5px rgba(0, 0, 0, 0.071); */
         z-index: 4;
+
         * {
             user-select: none;
         }
@@ -147,17 +136,9 @@
             background: linear-gradient(
                 to right,
                 transparent,
-                color-mix(in srgb, var(--background) 76%, white) 50%,
+                var(--seekbar-line-bg) 50%,
                 transparent
             );
-            &.light {
-                background: linear-gradient(
-                    to right,
-                    transparent,
-                    color-mix(in srgb, var(--background) 56%, black) 50%,
-                    transparent
-                );
-            }
         }
     }
 
@@ -183,7 +164,7 @@
     }
 
     .seekbar {
-        background-color: color-mix(in srgb, var(--background) 76%, white);
+        background-color: var(--seekbar-line-bg);
         height: 2px;
         width: 100%;
         overflow: visible;
@@ -191,10 +172,6 @@
         display: flex;
         position: relative;
         z-index: 0;
-
-        &.light {
-            background-color: color-mix(in srgb, var(--background) 56%, black);
-        }
 
         .buffered {
             position: absolute;
@@ -238,7 +215,7 @@
                 top: -25px;
                 left: -10px;
                 font-size: 0.7em;
-                background: black;
+                background: var(--overlay-bg);
                 padding: 0 0.3em;
                 border-radius: 3px;
             }
@@ -247,7 +224,7 @@
         svg {
             height: 10px;
             width: 10px;
-            fill: var(--transport-seekbar-hoverhead);
+            fill: var(--seekbar-thumb);
             position: absolute;
             overflow: visible;
             pointer-events: none;
@@ -259,12 +236,8 @@
                 fill: none;
                 pointer-events: none;
                 cursor: pointer;
-
                 top: 2px;
-                > rect {
-                    stroke: white;
-                    stroke-width: 2px;
-                }
+                stroke: var(--seekbar-hoverhead);
             }
         }
     }

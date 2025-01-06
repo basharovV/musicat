@@ -272,9 +272,7 @@
         border-radius: 5px;
         box-sizing: content-box;
         overflow: hidden;
-        border-top: 0.7px solid
-            color-mix(in srgb, var(--inverse) 40%, transparent);
-        border-bottom: 0.7px solid
-            color-mix(in srgb, var(--inverse) 30%, transparent);
+        border-top: 0.7px solid var(--panel-primary-border-main);
+        border-bottom: 0.7px solid var(--panel-primary-border-accent1);
     }
 </style>

@@ -1567,9 +1567,9 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
-        border-left: 0.7px solid #ffffff2a;
-        border-bottom: 0.7px solid #ffffff2a;
-        border-right: 0.7px solid #ffffff2a;
+        border-left: 0.7px solid var(--panel-secondary-border-main);
+        border-bottom: 0.7px solid var(--panel-secondary-border-main);
+        border-right: 0.7px solid var(--panel-secondary-border-main);
         overflow: hidden;
         margin: 4px 0 0 0;
         &.dragover {

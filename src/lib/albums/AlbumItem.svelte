@@ -78,8 +78,7 @@
                 if (cancel) {
                     $draggedSongs = [];
                     $draggedAlbum = null;
-                }
-                else {
+                } else {
                     $draggedSongs = tracks;
                     $draggedAlbum = album;
                 }
@@ -101,7 +100,7 @@
             <div class="artwork-frame">
                 {#if album.artwork}
                     <img
-                        alt="Artwork"
+                        alt=""
                         type={album.artwork.format}
                         class="artwork"
                         src={album.artwork.src}

@@ -1,6 +1,23 @@
 {
     "editor.formatOnSave": true,
+    "svelte.enable-ts-plugin": true,
+    "svelte.plugin.svelte.compilerWarnings": {
+        "a11y-no-static-element-interactions": "ignore",
+        "a11y-click-events-have-key-events": "ignore"
+    },
+    "yaml.schemas": {
+        "src/theming/theme.schema.json": "src/theming/themes/*.yaml"
+    },
     "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[jsonc]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[svelte]": {
@@ -9,4 +26,5 @@
     "[typescript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
+    "vscode-color-picker.languages": ["javascript", "typescript", "yaml"],
 }

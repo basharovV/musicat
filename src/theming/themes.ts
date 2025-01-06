@@ -1,180 +1,16 @@
-type ThemeType = "dark" | "light";
+import type { Theme } from "../types/theme.d.ts";
 
-import tmZokugunObsidium from "./themes/zokugun-obsidium.json";
+import tmLight from "./themes/light.yaml";
+import tmZokugunObsidium from "./themes/zokugun-obsidium.yaml";
 
-export interface Theme {
-    type: ThemeType;
-    /**  Primary text color */
-    text: string;
-    /**  Secondary text color, for dimmed text */
-    "text-secondary": string;
-    /**  Text color for active items */
-    "text-active": string;
-    /**  Text color for inactive items */
-    "text-inactive": string;
-    /**  Window background (will be made more translucent on macOS) */
-    background: string;
-    /**  Overlays, popups */
-    "overlay-bg": string;
-    "overlay-shadow": string;
-    /**  Primary accent color used for active items that need to stand out */
-    accent: string;
-    "accent-secondary": string;
-    "icon-primary": string;
-    "icon-secondary": string;
-    "icon-secondary-hover": string;
-    "icon-tertiary": string;
-    "icon-tertiary-hover": string;
-    "button-bg": string;
-    "button-text": string;
-    "input-alt-focus-outline": string;
-    "input-bg": string;
-    "input-focus-outline": string;
-    "header-opacity": number;
-    "header-text": string;
-    link: string;
-    "link-hover": string;
-    title: string;
-    /** Menus */
-    "menu-bg": string;
-    "menu-border": string;
-    "menu-checkbox-off": string;
-    "menu-checkbox-on": string;
-    "menu-divider": string;
-    "menu-item-confirm-bg": string;
-    "menu-item-destructive-hover-bg": string;
-    "menu-item-destructive-hover-text": string;
-    "menu-item-disabled": string;
-    "menu-item-highlight-bg": string;
-    "menu-item-highlight-border": string;
-    "menu-item-highlight-text": string;
-    "menu-item-highlight-secondary-bg": string;
-    "menu-item-highlight-secondary-border": string;
-    "menu-item-highlight-secondary-text": string;
-    "menu-item-loading-from": string;
-    "menu-item-loading-to": string;
-    "menu-item-text": string;
-    "menu-shadow": string;
-    /** Play, pause, next, previous */
-    "transport-control": string;
-    "transport-control-hover": string;
-    "transport-favorite": string;
-    "transport-favorite-hover": string;
-    "transport-seekbar-hoverhead": string;
-    "transport-shuffle": string;
-    "transport-shuffle-hover": string;
-    "transport-volume-thumb-bg": string;
-    "transport-volume-thumb-icon": string;
-    "transport-volume-thumb-secondary": string;
-    /** Main panel background */
-    "panel-background": string;
-    /** Library */
-    "library-text-color": string;
-    "library-playing-bg": string;
-    "library-playing-text": string;
-    "library-playing-icon": string;
-    "library-highlight-bg": string;
-    "library-hover-bg": string;
-    "library-header-bg": string;
-    "library-header-text": string;
-    "library-header-active-bg": string;
-    "library-clickable-cell-bg": string;
-    "library-clickable-cell-hover-bg": string;
-    "library-favourite-icon": string;
-    "library-favourite-hover-icon": string;
-    /** Smart playlist */
-    "smart-playlist-builder-bg": string;
-    "smart-playlist-builder-text": string;
-    "smart-playlist-builder-block-bg": string;
-    "smart-playlist-builder-block-focused-bg": string;
-    "smart-playlist-builder-block-input-bg": string;
-    "smart-playlist-builder-block-input-text": string;
-    "smart-playlist-button-bg": string;
-    "smart-playlist-button-disabled": string;
-    "smart-playlist-button-disabled-bg": string;
-    /** Album */
-    "album-playing-pause-bg": string;
-    "album-playing-pause-border": string;
-    "album-playing-pause-icon": string;
-    "album-playing-pause-hover-bg": string;
-    "album-playing-pause-hover-icon": string;
-    "album-playing-play-bg": string;
-    "album-playing-play-border": string;
-    "album-playing-play-icon": string;
-    "album-playing-play-hover-bg": string;
-    "album-playing-play-hover-icon": string;
-    "album-playing-shadow": string;
-    "album-playing-title-bg": string;
-    /** Popups */
-    "popup-data-field-bg": string;
-    "popup-song-artwork-about": string;
-    "popup-song-artwork-found": string;
-    "popup-song-artwork-notfound": string;
-    "popup-song-metadata-prompt-error": string;
-    "popup-song-metadata-title": string;
-    "popup-song-metadata-validation-error": string;
-    "popup-song-metadata-validation-warning": string;
-    /** Oscilloscope line color */
-    oscilloscope: string;
-    /** Waveform */
-    "waveform-bg": string;
-    "waveform-bg-hover": string;
-    "waveform-cursor": string;
-    "waveform-region-loop": string;
-    "waveform-progress": string;
-    "waveform-region-current": string;
-    "waveform-wave": string;
-    "waveform-hover-label-bg": string;
-    "waveform-hover-label-text": string;
-    "waveform-hover-line": string;
-    "waveform-hoverhead-line-bg": string;
-    /** Sidebar */
-    "sidebar-item-drag-bg": string;
-    "sidebar-item-hover-bg": string;
-    "sidebar-item-hover-text": string;
-    "sidebar-item-selected-pipe-bg": string;
-    "sidebar-node-inactive-hover-bg": string;
-    "sidebar-node-inactive-hover-opacity": number;
-    "sidebar-node-inactive-hover-text": string;
-    /** Map View */
-    "mapview-region-bg": string;
-    "mapview-region-border": string;
-    "mapview-region-hover-bg": string;
-    "mapview-region-hover-border": string;
-    "mapview-region-selected-bg": string;
-    "mapview-region-selected-border": string;
-    "mapview-region-selected-hover-bg": string;
-    "mapview-region-selected-hover-border": string;
-    "mapview-scale-1": string;
-    "mapview-scale-2": string;
-    /** Progress bar */
-    "progressbar-track-bg": string;
-    "progressbar-value-bg": string;
-    /** Analytics/Stats */
-    "analytics-primary": string;
-    "analytics-secondary": string;
-    /** Prune */
-    "prune-button-delete-bg": string;
-    "prune-button-delete-pressed-shadow": string;
-    "prune-button-keep-bg": string;
-    "prune-button-keep-pressed-shadow": string;
-    "prune-fordelete": string;
-    /** Wiki */
-    "wiki-bg": string;
-    "wiki-header-bg": string;
-    "wiki-inarticle-bg": string;
-    "wiki-pill-bg": string;
-    "wiki-pill-text": string;
-    "wiki-pill-hover-bg": string;
-    "wiki-pill-hover-text": string;
-}
 export const allFonts = {
     "2Peas": {
-        "--font": "2Peas"
-    }
+        "--font": "2Peas",
+    },
 };
 
 export const DEFAULT_THEME: Theme = {
+    "display-name": "Dark",
     type: "dark",
     text: "#ffffffde",
     "text-secondary": "#9fa0a2",
@@ -185,6 +21,8 @@ export const DEFAULT_THEME: Theme = {
     "overlay-shadow": "#00000042",
     accent: "#45fffcf3",
     "accent-secondary": "#632fff",
+    "icon-boxed-hover-bg": "#rgba(0, 0, 0, 0.187)",
+    "icon-disabled": "#474747",
     "icon-primary": "#ffffff",
     "icon-secondary": "#948f8f",
     "icon-secondary-hover": "rgb(from var(--icon-secondary) r g b / 0.4)",
@@ -200,6 +38,10 @@ export const DEFAULT_THEME: Theme = {
     link: "#acafff",
     "link-hover": "#8086ff",
     title: "#7dffee",
+    "atk-icon-audio": "#c745c7",
+    "atk-icon-link": "#46e3e3",
+    "atk-icon-lyric": "#d4d442",
+    "atk-icon-video": "#e04848",
     "menu-bg": "#20202296",
     "menu-border": "#ffffff3b",
     "menu-checkbox-off": "#808080",
@@ -222,14 +64,25 @@ export const DEFAULT_THEME: Theme = {
     "transport-control": "#ffffff",
     "transport-control-hover": "rgb(from var(--transport-control) r g b / 0.5)",
     "transport-favorite": "#59cd7a",
-    "transport-favorite-hover": "rgb(from var(--transport-favorite) r g b / 0.4)",
-    "transport-seekbar-hoverhead": "#00C56C",
+    "transport-favorite-hover":
+        "rgb(from var(--transport-favorite) r g b / 0.4)",
     "transport-shuffle": "#e1ff00",
     "transport-shuffle-hover": "rgb(from var(--transport-shuffle) r g b / 0.4)",
+    "transport-volume-line-bg":
+        "color-mix(in srgb, var(--inverse) 20%, transparent)",
     "transport-volume-thumb-bg": "#FDFDFD",
     "transport-volume-thumb-icon": "#5123DD",
     "transport-volume-thumb-secondary": "#04aa6d",
     "panel-background": "#242026b3",
+    "panel-primary-border-main":
+        "color-mix(in srgb, var(--inverse) 40%, transparent)",
+    "panel-primary-border-accent1":
+        "color-mix(in srgb, var(--inverse) 30%, transparent)",
+    "panel-primary-border-accent2":
+        "color-mix(in srgb, var(--inverse) 10%, transparent)",
+    "panel-secondary-border-main": "#ffffff2a",
+    "panel-secondary-border-accent": "#ffffff19",
+    "panel-separator": "#ffffff17",
     "library-text-color": "#d3d3d3",
     "library-playing-bg": "#5123dd",
     "library-playing-text": "#00ddff",
@@ -264,14 +117,25 @@ export const DEFAULT_THEME: Theme = {
     "album-playing-play-hover-icon": "#ffffff",
     "album-playing-shadow": "#5123dd",
     "album-playing-title-bg": "#632fff",
-    "popup-data-field-bg": "#0000001e",
-    "popup-song-artwork-about": "#82c9df",
-    "popup-song-artwork-found": "#44a15e",
-    "popup-song-artwork-notfound": "#808080",
-    "popup-song-metadata-prompt-error": "#6f5757",
-    "popup-song-metadata-title": "#ffe6ac",
-    "popup-song-metadata-validation-error": "#a12e2e",
-    "popup-song-metadata-validation-warning": "#e19a00",
+    "popup-track-artwork-about": "#82c9df",
+    "popup-track-artwork-found": "#44a15e",
+    "popup-track-artwork-notfound": "#808080",
+    "popup-track-data-field-bg": "#0000001e",
+    "popup-track-header-bg":
+        "color-mix(in srgb, var(--background) 1%, transparent)",
+    "popup-track-header-border":
+        "color-mix(in srgb, var(--background) 60%, var(--inverse))",
+    "popup-track-metadata-prompt-error": "#6f5757",
+    "popup-track-metadata-title": "#ffe6ac",
+    "popup-track-metadata-validation-error": "#a12e2e",
+    "popup-track-metadata-validation-warning": "#e19a00",
+    "popup-track-section-bg":
+        "color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))",
+    "popup-track-section-border":
+        "color-mix(in srgb, var(--background) 70%, var(--inverse))",
+    "popup-track-section-title-bg":
+        "color-mix(in srgb, var(--background) 50%, var(--inverse))",
+    "popup-track-section-title-text": "var(--title)",
     oscilloscope: "#14D8BD",
     "waveform-bg": "#9c86b10f",
     "waveform-bg-hover": "#9c86b11c",
@@ -284,6 +148,13 @@ export const DEFAULT_THEME: Theme = {
     "waveform-hover-label-text": "#ffffff",
     "waveform-hover-line": "#f8f8f882",
     "waveform-hoverhead-line-bg": "#FFFFFF62",
+    "sidebar-info-artist-active-bg":
+        "color-mix(in srgb, var(--inverse) 90%, transparent)",
+    "sidebar-info-artist-hover-bg":
+        "color-mix(in srgb, var(--inverse) 80%, transparent)",
+    "sidebar-info-title-hover-bg":
+        "color-mix(in srgb, var(--inverse) 40%, transparent)",
+    "sidebar-info-title-hover-border": "var(--inverse)",
     "sidebar-item-drag-bg": "#5123dd",
     "sidebar-item-hover-bg": "#392f5d3b",
     "sidebar-item-hover-text": "var(--text-inactive)",
@@ -291,6 +162,10 @@ export const DEFAULT_THEME: Theme = {
     "sidebar-node-inactive-hover-bg": "transparent",
     "sidebar-node-inactive-hover-opacity": 0.5,
     "sidebar-node-inactive-hover-text": "var(--text-inactive)",
+    "sidebar-player-disabled-bg": "#312d3ec0",
+    "sidebar-player-disabled-text": "var(--text)",
+    "sidebar-search-focus-bg":
+        "color-mix(in srgb, var(--inverse) 80%, transparent);",
     "mapview-region-bg": "#645479",
     "mapview-region-border": "#4F4464",
     "mapview-region-hover-bg": "#645479",
@@ -301,68 +176,43 @@ export const DEFAULT_THEME: Theme = {
     "mapview-region-selected-hover-border": "#4F4464",
     "mapview-scale-1": "#eeeeee",
     "mapview-scale-2": "#999999",
+    "mapview-tooltip-artist": "#ffffff95",
+    "mapview-tooltip-bg": "#232325cc",
+    "mapview-tooltip-border": "#ffffff2d",
+    "mapview-tooltip-text": "#808080",
     "progressbar-track-bg": "#ffffff43",
     "progressbar-value-bg": "#23DD7F",
-    "analytics-primary": "#23dd7f",
-    "analytics-secondary": "#855dff",
+    "analytics-border": "rgba(255, 255, 255, 0.11)",
+    "analytics-text-primary": "#23dd7f",
+    "analytics-text-secondary": "#855dff",
+    "analytics-timeline-track-bg": "#ece5e54f",
+    "analytics-timeline-vline-bg": "#ece5e54f",
+    "prune-button-border": "var(--inverse)",
     "prune-button-delete-bg": "#ff00007d",
     "prune-button-delete-pressed-shadow": "#ff4747aa",
     "prune-button-keep-bg": "#00800073",
     "prune-button-keep-pressed-shadow": "#00ff00aa",
     "prune-fordelete": "#ff5a5a",
     "wiki-bg": "#ffffff18",
+    "wiki-close-prompt-bg": "#33303ce2",
+    "wiki-close-prompt-text": "#ffffff",
     "wiki-header-bg": "var(--wiki-bg)",
     "wiki-inarticle-bg": "var(--wiki-bg)",
     "wiki-pill-bg": "var(--wiki-bg)",
+    "wiki-pill-border": "var(--panel-primary-border-main)",
     "wiki-pill-text": "var(--text-secondary)",
     "wiki-pill-hover-bg":
         "color-mix(in srgb, var(--button-bg) 20%, transparent)",
-    "wiki-pill-hover-text": "var(--text-secondary)"
+    "wiki-pill-hover-text": "var(--text-secondary)",
+    "seekbar-hoverhead": "#ffffff",
+    "seekbar-line-bg": "color-mix(in srgb, var(--background) 76%, white)",
+    "seekbar-thumb": "#00C56C",
 };
 
 export const allThemes: { [key: string]: Theme } = {
-    light: {
-        ...DEFAULT_THEME,
-        type: "light",
-        text: "#282230",
-        "text-secondary": "#56575b",
-        "text-active": "#38353b",
-        "text-inactive": "#707879",
-        background: "#e8e1e1",
-        "overlay-bg": "#f1f1f1c0",
-        accent: "#5d00fff3",
-        "accent-secondary": "#da69ff",
-        "button-bg": "#282b2c",
-        "button-text": "#ede8f0",
-        "input-bg": "#86808066",
-        "icon-primary": "#2c0b3e",
-        "icon-secondary": "#716a6a",
-        "transport-control": "#333135",
-        "transport-favorite": "#49ab65",
-        "transport-shuffle": "#9804d3",
-        "panel-background": "#dfd8d8",
-        "library-text-color": "#3e4040",
-        "library-playing-bg": "#36a4b5",
-        "library-playing-text": "#ffffff",
-        "library-playing-icon": "#1a1718",
-        "library-highlight-bg": "#9fb0b4",
-        "library-hover-bg": "#c2cfd2",
-        "library-header-bg": "#95afb37e",
-        "library-header-active-bg": "#7bb1b7",
-        "library-clickable-cell-bg": "#8ebac546",
-        "library-clickable-cell-hover-bg": "#6fb1beae",
-        "library-favourite-icon": "#5123dd",
-        "smart-playlist-builder-bg": "#347c75",
-        "smart-playlist-builder-block-bg": "#56beb556",
-        "smart-playlist-builder-block-focused-bg": "#569abe99",
-        "smart-playlist-builder-block-input-bg": "#1b474d6f",
-        "album-playing-play-hover-bg": "#36a4b5",
-        "album-playing-shadow": "#36a4b5",
-        "album-playing-title-bg": "#da69ff",
-        oscilloscope: "#017b94"
-    },
     light2: {
         ...DEFAULT_THEME,
+        "display-name": "Light2",
         type: "light",
         text: "#282230",
         "text-secondary": "#56575b",
@@ -401,11 +251,12 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#5123dd",
         "album-playing-shadow": "#5123dd",
         "album-playing-title-bg": "#da69ff",
-        oscilloscope: "#590194"
+        oscilloscope: "#590194",
     },
     dark: DEFAULT_THEME,
     amphibian: {
         ...DEFAULT_THEME,
+        "display-name": "Amphibian",
         type: "dark",
         text: "#b6e1e3de",
         "text-secondary": "#819be8",
@@ -440,10 +291,11 @@ export const allThemes: { [key: string]: Theme } = {
         "smart-playlist-builder-block-input-bg": "#1b474d6f",
         "album-playing-play-hover-bg": "#23cedd",
         "album-playing-shadow": "#23cedd",
-        "album-playing-title-bg": "#4453bbf3"
+        "album-playing-title-bg": "#4453bbf3",
     },
     turquoise: {
         ...DEFAULT_THEME,
+        "display-name": "Turquoise",
         type: "dark",
         background: "#01796fda",
         text: "#eef4f1",
@@ -480,10 +332,11 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-play-hover-bg": "#f3d2ba",
         "album-playing-shadow": "#f3d2ba",
         "album-playing-title-bg": "#32ceb5f3",
-        oscilloscope: "#d2ff2e"
+        oscilloscope: "#d2ff2e",
     },
     red: {
         ...DEFAULT_THEME,
+        "display-name": "Red",
         text: "#f1f1f1",
         background: "#562931",
         "accent-secondary": "#be3153f3",
@@ -497,10 +350,11 @@ export const allThemes: { [key: string]: Theme } = {
         "album-playing-title-bg": "#be3153f3",
         "transport-control": "#be3153",
         "transport-favorite": "#ff386a",
-        "transport-shuffle": "#be3153"
+        "transport-shuffle": "#be3153",
     },
     winamp: {
         ...DEFAULT_THEME,
+        "display-name": "Winamp",
         type: "dark",
         background: "#25253e",
         "panel-background": "black",
@@ -521,7 +375,22 @@ export const allThemes: { [key: string]: Theme } = {
         "text-inactive": "#aeafa8",
         "icon-primary": "#E5F6F7",
         "icon-secondary": "#E5F6F7",
-        "oscilloscope": "#07ea03",
+        oscilloscope: "#07ea03",
     },
-    "zokugun obsidium": tmZokugunObsidium as Theme,
+    light: tmLight,
+    "zokugun-obsidium": tmZokugunObsidium,
+};
+
+export const lightThemes = {
+    light: tmLight,
+    light2: allThemes.light2,
+};
+
+export const darkThemes = {
+    amphibian: allThemes.amphibian,
+    dark: allThemes.dark,
+    turquoise: allThemes.turquoise,
+    red: allThemes.red,
+    winamp: allThemes.winamp,
+    "zokugun-obsidium": tmZokugunObsidium,
 };

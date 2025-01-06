@@ -901,7 +901,6 @@
                 }
                 &:hover {
                     opacity: 0.5;
-                    /* border-bottom: 2px solid rgba(255, 255, 255, 0.487); */
                 }
                 &:active {
                     opacity: 0.4;

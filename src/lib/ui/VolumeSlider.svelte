@@ -47,7 +47,7 @@
             -webkit-appearance: none;
             width: 100%;
             height: 5px;
-            background: color-mix(in srgb, var(--inverse) 20%, transparent);
+            background: var(--transport-volume-line-bg);
             outline: none;
             opacity: 1;
             border-radius: 3px;

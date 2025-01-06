@@ -430,11 +430,9 @@
         padding: 4px;
         background-color: var(--panel-background);
         border-radius: 5px;
-        border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
+        border: 0.7px solid var(--panel-primary-border-accent2);
     }
     h3 {
-        /* color: rgb(137, 130, 130); */
         font-family: Snake;
         font-size: 3em;
         margin: 0;
@@ -477,7 +475,6 @@
         display: flex;
         margin-left: 2px;
         flex-direction: row;
-        /* background-color: #7c7b8023; */
         border-radius: 5px;
         text-shadow: 0px 2px 20px rgba(0, 0, 0, 0.2);
         color: rgba(255, 255, 255, 0.303);
@@ -487,7 +484,6 @@
 
         .active {
             color: white;
-            /* border: 1px solid #5123dd; */
         }
 
         p {

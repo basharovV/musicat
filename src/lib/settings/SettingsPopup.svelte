@@ -16,7 +16,7 @@
     import { importPaths } from "../../data/LibraryImporter";
     import { importStatus, popupOpen, userSettings } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
-    import { allThemes } from "../../theming/themes";
+    import { darkThemes, lightThemes } from "../../theming/themes";
     import { clickOutside } from "../../utils/ClickOutside";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -369,9 +369,20 @@
                         <td>Theme</td>
                         <td>
                             <select bind:value={$userSettings.theme}>
-                                {#each Object.keys(allThemes) as theme}
-                                    <option value={theme}>{theme}</option>
-                                {/each}
+                                <optgroup label="light themes">
+                                    {#each Object.entries(lightThemes) as [name, theme]}
+                                        <option value={name}
+                                            >{theme["display-name"]}</option
+                                        >
+                                    {/each}
+                                </optgroup>
+                                <optgroup label="dark themes">
+                                    {#each Object.entries(darkThemes) as [name, theme]}
+                                        <option value={name}
+                                            >{theme["display-name"]}</option
+                                        >
+                                    {/each}
+                                </optgroup>
                             </select></td
                         >
                     </tr>

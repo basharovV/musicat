@@ -4,11 +4,12 @@ import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfil
 // yarn add --dev @esbuild-plugins/node-modules-polyfill
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import rollupNodePolyFill from "rollup-plugin-node-polyfills";
-import { analyzer } from 'vite-bundle-analyzer'
+import { analyzer } from "vite-bundle-analyzer";
+import yaml from "@modyfi/vite-plugin-yaml";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [svelte()],
+    plugins: [svelte(), yaml()],
     resolve: {
         alias: {
             // This Rollup aliases are extracted from @esbuild-plugins/node-modules-polyfill,
@@ -46,36 +47,36 @@ export default defineConfig({
             // tty: "rollup-plugin-node-polyfills/polyfills/tty",
             // domain: "rollup-plugin-node-polyfills/polyfills/domain",
             buffer: "rollup-plugin-node-polyfills/polyfills/buffer-es6",
-            process: "rollup-plugin-node-polyfills/polyfills/process-es6"
-        }
+            process: "rollup-plugin-node-polyfills/polyfills/process-es6",
+        },
     },
     optimizeDeps: {
         esbuildOptions: {
             target: "esnext",
             // Node.js global to browser globalThis
             define: {
-                global: "globalThis"
+                global: "globalThis",
             },
             // Enable esbuild polyfill plugins
             plugins: [
                 NodeGlobalsPolyfillPlugin({
                     process: true,
-                    buffer: true
+                    buffer: true,
                 }),
-                NodeModulesPolyfillPlugin()
-            ]
-        }
+                NodeModulesPolyfillPlugin(),
+            ],
+        },
     },
     worker: {
-        format: "es"
+        format: "es",
     },
     build: {
         rollupOptions: {
             plugins: [
                 // Enable rollup polyfills plugin
                 // used during production bundling
-                rollupNodePolyFill()
-            ]
-        }
-    }
+                rollupNodePolyFill(),
+            ],
+        },
+    },
 });

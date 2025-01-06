@@ -115,8 +115,7 @@
         grid-column: 1;
         background-color: var(--panel-background);
         border-radius: 5px;
-        border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        border: 0.7px solid var(--panel-primary-border-accent1);
         div {
             padding: 2em;
         }
@@ -159,8 +158,7 @@
         height: 100%;
         background-color: var(--panel-background);
         border-radius: 5px;
-        border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        border: 0.7px solid var(--panel-primary-border-accent1);
         div {
             padding: 2em;
         }
