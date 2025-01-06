@@ -87,9 +87,11 @@ export const current: Writable<PlayingSong> = writable(
     },
 );
 current.subscribe(({ song, index, position }) => {
-    const data = song
-        ? { song: song.id, index, position }
-        : { song: null, index: 0, position: 0 };
+    // don't store song that isn't in the queue
+    const data =
+        song && index >= 0
+            ? { song: song.id, index, position }
+            : { song: null, index: 0, position: 0 };
 
     localStorage.setItem("current", JSON.stringify(data));
 });
