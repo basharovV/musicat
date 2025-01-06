@@ -40,6 +40,16 @@
 
     const emptyAudio =
         "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV";
+
+    // Update colors when theme changes
+    $: if ($currentThemeObject && wavesurfer) {
+        wavesurfer.setOptions({
+            waveColor: $currentThemeObject["waveform-wave"],
+            progressColor: $currentThemeObject["waveform-progress"],
+            cursorColor: $currentThemeObject["waveform-cursor"],
+        });
+    }
+
     onMount(async () => {
         const { default: WaveSurfer } = await import("wavesurfer.js");
 
