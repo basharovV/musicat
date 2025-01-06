@@ -1,14 +1,15 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import {
-        currentSong,
-        currentSongIdx,
+        current,
         isPlaying,
-        playlist,
-        popupOpen,
+        isSmartQueryBuilderOpen,
+        query,
+        queue,
         selectedPlaylistFile,
+        selectedSmartQuery,
         toDeletePlaylist,
-        uiView
+        uiView,
     } from "../../data/store";
     import hotkeys from "hotkeys-js";
     import audioPlayer from "../player/AudioPlayer";
@@ -25,6 +26,7 @@
 
     let pressedK = false;
     let pressedD = false;
+    let atEnd = false;
 
     async function getOrCreatePlaylist() {
         let toDelete = $toDeletePlaylist;
@@ -33,7 +35,7 @@
                 id: "todelete",
                 title: $LL.toDelete.title(),
                 tracks: [],
-                path: null
+                path: null,
             });
             toDelete = await db.internalPlaylists.get("todelete");
         }
@@ -42,17 +44,34 @@
 
     async function addToDelete() {
         const toDelete = await getOrCreatePlaylist();
-        toDelete.tracks.push($currentSong.id);
-        db.internalPlaylists.put(toDelete);
-        if (
-            !(
-                $playlist.length === 0 ||
-                $currentSongIdx === $playlist?.length - 1
-            )
-        ) {
+
+        if (!atEnd || !toDelete.tracks.includes($current.song.id)) {
+            toDelete.tracks.push($current.song.id);
+            db.internalPlaylists.put(toDelete);
+        }
+
+        if ($queue.length !== 0 && !atEnd) {
             audioPlayer.playNext();
             pressedD = true;
             setTimeout(() => (pressedD = false), 300);
+        }
+    }
+
+    async function gotoToDeleteView() {
+        const toDelete = $toDeletePlaylist;
+
+        if (!toDelete || toDelete.tracks.length === 0) {
+            if ($toDeletePlaylist) {
+                db.internalPlaylists.delete($toDeletePlaylist.id);
+            }
+
+            $uiView = "library";
+            $isSmartQueryBuilderOpen = false;
+            $selectedPlaylistFile = null;
+            $selectedSmartQuery = null;
+            $query.orderBy = $query.libraryOrderBy;
+        } else {
+            $uiView = "to-delete";
         }
     }
 
@@ -61,13 +80,7 @@
     });
 
     hotkeys("k", "prune", () => {
-        console.log('pressed "k"');
-        if (
-            !(
-                $playlist.length === 0 ||
-                $currentSongIdx === $playlist?.length - 1
-            )
-        ) {
+        if ($queue.length !== 0 && !atEnd) {
             audioPlayer.playNext();
             pressedK = true;
             setTimeout(() => (pressedK = false), 300);
@@ -75,14 +88,11 @@
     });
 
     hotkeys("q", "prune", () => {
-        $uiView = "to-delete";
+        gotoToDeleteView();
     });
 
     onMount(() => {
         hotkeys.setScope("prune");
-    });
-
-    onMount(() => {
         // Start playback if not playing
         if (!$isPlaying) audioPlayer?.playCurrent();
     });
@@ -90,6 +100,8 @@
     onDestroy(() => {
         hotkeys.deleteScope("prune");
     });
+
+    $: atEnd = $current.index === $queue?.length - 1;
 </script>
 
 <div class="container">
@@ -99,9 +111,9 @@
             Listen to tracks and quickly mark them for deletion
         </p>
         <div class="track-info">
-            <h3>{$currentSong?.title}</h3>
-            <h4>{$currentSong?.artist}</h4>
-            <small>{$currentSong?.album}</small>
+            <h3>{$current.song?.title}</h3>
+            <h4>{$current.song?.artist}</h4>
+            <small>{$current.song?.album}</small>
         </div>
         <div class="shortcuts">
             <div class="delete" class:pressed={pressedD}>
@@ -120,7 +132,9 @@
             </div>
         </div>
         <div class="for-delete">
-            <p>{$toDeletePlaylist?.tracks?.length ?? 0} tracks up for deletion</p>
+            <p>
+                {$toDeletePlaylist?.tracks?.length ?? 0} tracks up for deletion
+            </p>
         </div>
         <div class="footer">
             <p>Press Q to finish pruning</p>
@@ -133,7 +147,7 @@
 
 <style lang="scss">
     .container {
-        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
+        border: 0.7px solid var(--panel-primary-border-main);
         margin: 5px 0 0 0;
         border-radius: 5px;
         position: relative;
@@ -147,19 +161,18 @@
         width: auto;
         height: fit-content;
         margin: auto;
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background-color: var(--overlay-bg);
         backdrop-filter: blur(10px);
         min-width: 500px;
         max-width: 500px;
         min-height: 350px;
         border-radius: 5px;
-        color: white;
+        color: var(--text);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        color: white;
         .subtitle {
             opacity: 0.5;
         }
@@ -186,11 +199,11 @@
                     h1 {
                         transition: all 0.2s ease-in-out;
                         box-shadow: 0px 0px 20px
-                            color-mix(in srgb, #ff4747, transparent 20%);
+                            var(--prune-button-delete-pressed-shadow);
                     }
                 }
                 h1 {
-                    background-color: rgba(255, 0, 0, 0.49);
+                    background-color: var(--prune-button-delete-bg);
                 }
             }
             .keep {
@@ -198,11 +211,11 @@
                     h1 {
                         transition: all 0.2s ease-in-out;
                         box-shadow: 0px 0px 20px
-                            color-mix(in srgb, #00ff00, transparent 20%);
+                            var(--prune-button-keep-pressed-shadow);
                     }
                 }
                 h1 {
-                    background-color: rgba(0, 128, 0, 0.451);
+                    background-color: var(--prune-button-keep-bg);
                 }
             }
 
@@ -221,7 +234,7 @@
                     }
                 }
                 h1 {
-                    border: 1px solid var(--inverse);
+                    border: 1px solid var(--prune-button-border);
                     border-radius: 5px;
                     margin: 0;
                     padding: 1em;
@@ -231,7 +244,7 @@
         }
 
         .for-delete {
-            color: rgb(255, 90, 90);
+            color: var(--prune-fordelete);
         }
 
         .footer {

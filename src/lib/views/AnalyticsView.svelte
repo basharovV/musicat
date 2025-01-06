@@ -1,12 +1,7 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
-    import {
-        popupOpen,
-        query,
-        uiView,
-        userSettings
-    } from "../../data/store";
+    import { popupOpen, query, uiView, userSettings } from "../../data/store";
     import type { Album, Song } from "../../App";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { groupBy } from "../../utils/ArrayUtils";
@@ -31,7 +26,7 @@
                 ? "[artist+year+album+trackNumber]"
                 : $query.orderBy === "album"
                   ? "[album+trackNumber]"
-                  : $query.orderBy
+                  : $query.orderBy,
         );
 
         let resultsArray: Song[] = [];
@@ -57,7 +52,7 @@
                     case "duration":
                     case "genre":
                         return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
+                            b[$query.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie
@@ -88,13 +83,13 @@
         genres: {
             count: 0,
             mostPlayed: null,
-            playCount: 0
+            playCount: 0,
         },
         country: {
             count: 0,
             mostPlayed: null,
-            playCount: null
-        }
+            playCount: null,
+        },
     };
 
     let albumsByYear = {};
@@ -123,7 +118,7 @@
                         ? stats.distinctPlays
                         : stats.distinctPlays + 1;
                     stats.totalDurationMins += Number(
-                        song.duration.split(":")[0]
+                        song.duration.split(":")[0],
                     );
                     return stats;
                 },
@@ -136,14 +131,14 @@
                     genres: {
                         count: 0,
                         mostPlayed: null,
-                        playCount: 0
+                        playCount: 0,
                     },
                     country: {
                         count: 0,
                         mostPlayed: null,
-                        playCount: 0
-                    }
-                }
+                        playCount: 0,
+                    },
+                },
             );
 
             // Genre
@@ -208,7 +203,7 @@
                 </h2>
                 <p>
                     You have listened to {stats.percentageListened.toPrecision(
-                        2
+                        2,
                     )}% of your library ({stats.distinctPlays} / {$songs?.length}
                     songs)
                 </p>
@@ -265,8 +260,8 @@
     .container {
         overflow: auto;
         display: flex;
-        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
-        margin: 5px 5px 5px 0;
+        border: 0.7px solid var(--panel-primary-border-main);
+        margin: 5px 5px 0 0;
         border-radius: 5px;
         overflow: hidden;
         background-color: var(--panel-background);
@@ -295,18 +290,13 @@
         }
     }
     .analytics {
-        /* margin: 4em; */
         width: 100%;
-        /* height: fit-content;
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 15px; */
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
         grid-template-rows: auto auto 1fr;
 
         section {
             padding: 4em;
-            /* background-color: rgb(203, 191, 240); */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -333,44 +323,44 @@
             &.plays {
                 grid-row: 1;
                 grid-column: 1 / 3;
-                border-right: 1px solid rgba(255, 255, 255, 0.11);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+                border-right: 1px solid var(--analytics-border);
+                border-bottom: 1px solid var(--analytics-border);
             }
             &.genres {
                 grid-row: 1;
                 grid-column: 3 / 5;
-                border-right: 1px solid rgba(255, 255, 255, 0.11);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+                border-right: 1px solid var(--analytics-border);
+                border-bottom: 1px solid var(--analytics-border);
                 span {
-                    color: #855dff;
+                    color: var(--analytics-text-secondary);
                 }
             }
             &.country {
                 grid-row: 1;
                 grid-column: 5 / 7;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+                border-bottom: 1px solid var(--analytics-border);
                 span {
-                    color: #23dd7f;
+                    color: var(--analytics-text-primary);
                 }
             }
             &.timeline {
                 padding: 0 2em;
                 grid-row: 2;
                 grid-column: 1 / 7;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+                border-bottom: 1px solid var(--analytics-border);
                 span {
-                    color: #23dd7f;
+                    color: var(--analytics-text-primary);
                 }
             }
             &.short-summary {
                 padding: 2em;
                 grid-row: 3;
                 grid-column: 1 / 7;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+                border-bottom: 1px solid var(--analytics-border);
                 align-items: center;
                 justify-content: flex-start;
                 h3 {
-                    color: #23dd7f;
+                    color: var(--analytics-text-primary);
                     font-weight: 300;
                     text-align: left;
                     margin: 0;
@@ -386,12 +376,12 @@
             &.summary {
                 grid-row: 4;
                 grid-column: 1 / 4;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
-                border-right: 1px solid rgba(255, 255, 255, 0.11);
+                border-bottom: 1px solid var(--analytics-border);
+                border-right: 1px solid var(--analytics-border);
                 align-items: flex-start;
                 justify-content: flex-start;
                 h3 {
-                    color: #23dd7f;
+                    color: var(--analytics-text-primary);
                     font-weight: 300;
                     text-align: left;
                 }
@@ -416,11 +406,11 @@
             &.did-you-know {
                 grid-row: 4;
                 grid-column: 4 / 7;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+                border-bottom: 1px solid var(--analytics-border);
                 align-items: flex-start;
                 justify-content: flex-start;
                 h3 {
-                    color: #23dd7f;
+                    color: var(--analytics-text-primary);
 
                     font-weight: 300;
                     text-align: left;

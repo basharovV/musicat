@@ -1,5 +1,6 @@
 <script lang="ts">
     import isDarkColor from "is-dark-color";
+    import { currentThemeObject } from "../../theming/store";
 
     export let isDisabled = false;
     export let isDestructive = false;
@@ -36,7 +37,7 @@
             ? `border: 1px solid ${
                   isDarkColor(color) ? "white" : color
               }e7;background-color: transparent;`
-            : "background-color: #c6c8ca;"
+            : `background-color: ${$currentThemeObject["menu-item-highlight-bg"]};`
         : ""}
     on:click|stopPropagation={() => {
         onClick && onClick();
@@ -87,40 +88,36 @@
         display: flex;
         align-items: center;
         grid-gap: 5px;
-        color: rgb(255, 255, 255);
+        color: var(--menu-item-text);
         border-radius: 2.5px;
 
         &:hover.with-bg,
         &.highlighted.with-bg {
             background: transparent;
             transform: scale(1.1);
-            border: 1px solid white;
-            color: white;
+            border: 1px solid var(--menu-item-text);
+            color: var(--menu-item-text);
         }
         &:not(.with-bg) {
             transform: scale(1);
         }
 
-        &:hover,
-        &.highlighted {
-            /* color: rgb(37, 36, 36); */
-        }
         &.disabled {
-            color: rgba(174, 174, 174, 0.4);
+            color: var(--menu-item-disabled);
             &:hover {
                 background: transparent;
             }
         }
         &.confirming {
-            background: #d2630e;
+            background: var(--menu-item-confirm-bg);
             &:hover {
-                background: #d2630e !important;
+                background: var(--menu-item-confirm-bg) !important;
             }
         }
         &.destructive {
             &:hover {
-                background: #d20e32;
-                color: white;
+                background: var(--menu-item-destructive-hover-bg);
+                color: var(--menu-item-destructive-hover-text);
             }
         }
 

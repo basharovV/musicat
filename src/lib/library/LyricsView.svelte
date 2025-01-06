@@ -2,17 +2,19 @@
     import { fade, fly } from "svelte/transition";
     import { getLyrics } from "../../data/LyricsGrabber";
     import {
-        currentSong,
+        current,
         currentSongLyrics,
         isLyricsHovered,
         isLyricsOpen,
         popupOpen,
         isWaveformOpen,
-        userSettings
+        userSettings,
+        playerTime,
     } from "../../data/store";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
+    import LL from "../../i18n/i18n-svelte";
     export var isFullScreen = false;
     export var right = 0;
     var onLyricsUpdated;
@@ -57,23 +59,25 @@
 
     async function grabLyrics() {
         if (
-            $currentSongLyrics?.songId !== $currentSong.id &&
-            $currentSong?.title &&
-            $currentSong?.artist
+            $currentSongLyrics?.songId !== $current.song.id &&
+            $current.song?.title &&
+            $current.song?.artist
         ) {
             isLoading = true;
             try {
                 let result = await getLyrics(
-                    $currentSong.title,
-                    $currentSong.artist
+                    $current.song.title,
+                    $current.song.artist,
                 );
-                $currentSongLyrics = result.lyrics
-                    ? {
-                          songId: $currentSong.id,
-                          lyrics: result.lyrics,
-                          writers: result.writers
-                      }
-                    : null;
+                $currentSongLyrics =
+                    result.lyrics || result.syncedLyrics
+                        ? {
+                              songId: $current.song.id,
+                              lyrics: result.lyrics,
+                              syncedLyrics: result.syncedLyrics,
+                              writers: result.writers,
+                          }
+                        : null;
                 error = null;
             } catch (err) {
                 error = err;
@@ -109,11 +113,32 @@
     }
 
     let isEmpty = false;
-    $: if ($currentSong && $currentSong?.title && $currentSong?.artist) {
+    $: if ($current.song && $current.song?.title && $current.song?.artist) {
         grabLyrics();
     } else {
         $currentSongLyrics = null;
         isEmpty = true;
+    }
+
+    let autoScroll = true;
+
+    // Synced lyrics
+    $: currentLineIdx =
+        $currentSongLyrics?.syncedLyrics?.findIndex(
+            (l) => l.timestamp >= $playerTime,
+        ) - 1;
+
+    $: if (autoScroll) {
+        let el = document.querySelector(
+            `[data-lyrics-line="lyrics-line-${currentLineIdx}"]`,
+        );
+        if (el) {
+            el.scrollIntoView({
+                block: "center",
+                inline: "center",
+                behavior: "smooth",
+            });
+        }
     }
 </script>
 
@@ -152,9 +177,25 @@
             </div>
             <div class="info">
                 <p>Lyrics</p>
-                <small>{$currentSong.title}</small>
+                <small>{$current.song.title}</small>
             </div>
             <div class="options">
+                {#if $currentSongLyrics?.syncedLyrics}
+                    <Icon
+                        icon="pajamas:scroll-down"
+                        onClick={() => {
+                            autoScroll = !autoScroll;
+                        }}
+                        color={autoScroll
+                            ? "var(--icon-primary)"
+                            : "var(--icon-secondary"}
+                        boxed
+                        size={20}
+                        tooltip={{
+                            content: $LL.lyrics.autoScroll(),
+                        }}
+                    />
+                {/if}
                 <Icon
                     icon="mdi:format-font-size-decrease"
                     onClick={decreaseFontSize}
@@ -178,16 +219,15 @@
                 >
                 <p>
                     Create one on <a
-                            href="https://genius.com/developers"
-                            target="_blank"
-                        >genius.com/developers</a
+                        href="https://genius.com/developers"
+                        target="_blank">genius.com/developers</a
                     >, <br />then add it in settings:
                 </p>
                 <br />
                 <ButtonWithIcon
                     text="Add key in settings"
                     onClick={() => {
-                        $popupOpen = 'settings';
+                        $popupOpen = "settings";
                     }}
                 />
             </div>
@@ -205,15 +245,30 @@
                     <p>one sec...</p></span
                 >
             </div>
-        {:else if $currentSongLyrics}
+        {:else if $currentSongLyrics?.lyrics}
             <div
                 class="textarea {fontSize}"
                 contenteditable="plaintext-only"
-                placeholder="Start typing..."
                 on:input={onLyricsChanged}
                 on:scroll={onScroll}
             >
                 {@html replaceHeadingsWithSpan($currentSongLyrics.lyrics)}
+            </div>
+        {:else if $currentSongLyrics?.syncedLyrics}
+            <div
+                class="textarea {fontSize} synced"
+                contenteditable="plaintext-only"
+                on:input={onLyricsChanged}
+                on:scroll={onScroll}
+            >
+                {#each $currentSongLyrics.syncedLyrics as line, idx}
+                    <p
+                        class:current={currentLineIdx === idx}
+                        data-lyrics-line={`lyrics-line-${idx}`}
+                    >
+                        {line.lyricLine}
+                    </p>
+                {/each}
             </div>
         {:else}
             <div class="placeholder">
@@ -232,7 +287,7 @@
         position: absolute;
         bottom: 3.5em;
         right: 2em;
-        max-height: 400px;
+        max-height: 500px;
         text-align: center;
         min-width: 330px;
         max-width: 360px;
@@ -242,8 +297,12 @@
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(73, 70, 70);
         background: rgba(53, 50, 54, 0.8);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
+
+        @media only screen and (max-height: 605px) {
+            height: 80%;
+        }
 
         &.extra-space {
             bottom: 8em;
@@ -276,8 +335,20 @@
             flex-direction: column;
             overflow: hidden;
 
+            .synced {
+                p {
+                    opacity: 0.5;
+                    margin: 0.5em 0;
+                    transition: all 0.3s ease-in-out;
+                    &.current {
+                        opacity: 1;
+                        scale: 1.1;
+                    }
+                }
+            }
+
             p {
-                opacity: 0.5;
+                opacity: 0.7;
             }
 
             .loading {
@@ -320,7 +391,7 @@
 
             header {
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-columns: auto 1fr 1fr;
                 border-bottom: 1px solid rgb(59, 56, 56);
 
                 .close-icon {
@@ -334,7 +405,7 @@
                 .info {
                     display: flex;
                     flex-direction: column;
-                    align-items: center;
+                    align-items: flex-start;
                     padding: 0.5em 0;
                     * {
                         margin: 0;

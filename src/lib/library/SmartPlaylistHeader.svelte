@@ -9,12 +9,12 @@
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
-        playlistDuration,
+        queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
         smartQueryInitiator,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
@@ -24,8 +24,8 @@
     export let selectedQuery;
 
     let durationText;
-    $: if ($playlistDuration) {
-        durationText = secondsToFriendlyTime($playlistDuration);
+    $: if ($queueDuration) {
+        durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }
@@ -53,13 +53,16 @@
         // Close the builder UI and set the current selected query to the one we just saved
         $isSmartQueryBuilderOpen = false;
         $selectedSmartQuery = `~usq:${id}`;
-        $selectedPlaylistFile = null
+        $selectedPlaylistFile = null;
         $smartQuery.reset();
     }
 </script>
 
 {#if $isSmartQueryBuilderOpen}
-    <form on:submit|preventDefault={save} class:window-padding={!$isSidebarOpen && !$isQueueOpen}>
+    <form
+        on:submit|preventDefault={save}
+        class:window-padding={!$isSidebarOpen && !$isQueueOpen}
+    >
         <Input
             bind:value={$smartQuery.name}
             fullWidth
@@ -191,7 +194,7 @@
         padding: 5px;
     }
     button {
-        background-color: rgb(98, 77, 212);
+        background-color: var(--smart-playlist-button-bg);
         border-radius: 4px;
         height: auto;
         padding: 0.3em 1em;
@@ -200,8 +203,8 @@
         }
 
         &:disabled {
-            background-color: rgb(73, 53, 184);
-            color: rgb(116, 114, 114);
+            background-color: var(--smart-playlist-button-disabled-bg);
+            color: var(--smart-playlist-button-disabled);
         }
     }
 </style>

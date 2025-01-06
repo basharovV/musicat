@@ -14,23 +14,17 @@
     import { db } from "../../data/db";
     import {
         addOriginCountryStatus,
-        currentSong,
         isSmartQueryBuilderOpen,
-        playlist,
-        playlistIsAlbum,
-        playlistCountry,
         queriedSongs,
         query,
+        queue,
+        queueCountry,
         selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
         smartQueryResults,
         smartQueryUpdater,
         uiView,
-        playlistType,
-        currentSongIdx,
-        isShuffleEnabled,
-        isQueueOpen
     } from "../../data/store";
     import SmartQuery from "../smart-query/Query";
     import { codes, countries } from "../data/CountryCodes";
@@ -43,9 +37,12 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import {
         addCountryDataAllSongs,
-        findCountryByArtist
+        findCountryByArtist,
     } from "../data/LibraryEnrichers";
     import ProgressBar from "../ui/ProgressBar.svelte";
+    import { currentThemeObject } from "../../theming/store";
+    import { setQueue } from "../../data/storeHelper";
+
     let isLoading = true;
 
     let container: HTMLElement;
@@ -76,7 +73,7 @@
                             .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
             }
         } else if ($uiView === "smart-query") {
@@ -121,7 +118,7 @@
                         ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy
+                          : $query.orderBy,
                 )
                 .and(
                     (song) =>
@@ -133,7 +130,7 @@
                             .startsWith($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase())
+                            .startsWith($query.query.toLowerCase()),
                 );
         } else {
             results = db.songs.orderBy(
@@ -141,7 +138,7 @@
                     ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy
+                      : $query.orderBy,
             );
         }
         let resultsArray: Song[] = [];
@@ -167,7 +164,7 @@
                     case "duration":
                     case "genre":
                         return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy]
+                            b[$query.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie
@@ -215,7 +212,7 @@
                               currentCountry[1].data.length;
                           return dataSetObj;
                       },
-                      {}
+                      {},
                   )
                 : [];
 
@@ -223,9 +220,9 @@
                 map.dataVisualization = new DataVisualization(
                     {
                         scale: ["#9070BB", "#984EFF"],
-                        values: dataCountMap ? dataCountMap : []
+                        values: dataCountMap ? dataCountMap : [],
                     },
-                    map
+                    map,
                 );
                 if (!initialized) {
                     map.updateSize();
@@ -233,7 +230,7 @@
                     initialized = true;
                 }
 
-                $playlistCountry && setSelectedCountry($playlistCountry);
+                $queueCountry && setSelectedCountry($queueCountry);
             }
         }
         console.log("countMap", dataCountMap);
@@ -248,7 +245,7 @@
         //     path.style.animation = null;
         // });
         const path: SVGPathElement = document.querySelector(
-            `[data-code=${countryCode}]`
+            `[data-code=${countryCode}]`,
         );
         let width = path.getBBox().width;
         let height = path.getBBox().height;
@@ -265,10 +262,10 @@
             // particleContainer._engine.actualOptions.particles.move.center.y =
             //     y;
             particleContainer._engine.plugins.presets.get(
-                "stars"
+                "stars",
             ).particles.move.center.x = x;
             particleContainer._engine.plugins.presets.get(
-                "stars"
+                "stars",
             ).particles.move.center.y = y;
             particleContainer._engine.load("stars");
         }
@@ -307,8 +304,11 @@
             selector: "#map",
             showTooltip: true,
             visualizeData: {
-                scale: ["#eeeeee", "#999999"],
-                values: dataCountMap ? dataCountMap : []
+                scale: [
+                    $currentThemeObject["mapview-scale-1"],
+                    $currentThemeObject["mapview-scale-2"],
+                ],
+                values: dataCountMap ? dataCountMap : [],
             },
             // Play country
             onRegionClick(event, code) {
@@ -318,7 +318,7 @@
                     selectedCountry = code;
                     selectedCountryPos = {
                         x: event.pageX - 11 - mapPadding * 2,
-                        y: event.pageY
+                        y: event.pageY,
                     };
                     dataSetCountryValue = data[countries[code]] || null;
                     onCountryClicked();
@@ -336,14 +336,14 @@
                     let hoveredCountryPlaylist: Song[] = countryValue.data;
                     let hoveredCountryArtists: string[] = [
                         ...new Set(
-                            hoveredCountryPlaylist.map((item) => item.artist)
-                        )
+                            hoveredCountryPlaylist.map((item) => item.artist),
+                        ),
                     ];
                     let hoveredCountryNumArtists = hoveredCountryArtists.length;
                     let hoveredCountryFirstFewArtists =
                         hoveredCountryArtists.slice(
                             0,
-                            Math.min(3, artists.length)
+                            Math.min(3, artists.length),
                         );
 
                     let hoveredCountryFirstFewAlbums: {
@@ -353,7 +353,7 @@
                     }[] = hoveredCountryPlaylist.map((item) => ({
                         path: item.path.replace(`/${item.file}`, ""),
                         artist: item.artist,
-                        album: item.album
+                        album: item.album,
                     }));
 
                     // distinct albums
@@ -361,8 +361,8 @@
                         hoveredCountryFirstFewAlbums.filter(
                             (e, i) =>
                                 hoveredCountryFirstFewAlbums.findIndex(
-                                    (a) => a["album"] === e["album"]
-                                ) === i
+                                    (a) => a["album"] === e["album"],
+                                ) === i,
                         );
 
                     tooltipData = {
@@ -370,7 +370,7 @@
                         emoji: getFlagEmoji(code),
                         numberOfArtists: hoveredCountryNumArtists,
                         artists: hoveredCountryFirstFewArtists,
-                        albums: hoveredCountryFirstFewAlbums
+                        albums: hoveredCountryFirstFewAlbums,
                     };
                 } else {
                     tooltipData = {
@@ -378,7 +378,7 @@
                         emoji: getFlagEmoji(code),
                         numberOfArtists: 0,
                         artists: [],
-                        albums: []
+                        albums: [],
                     };
                 }
             },
@@ -387,28 +387,35 @@
             regionsSelectableOne: true,
             regionStyle: {
                 initial: {
-                    fill: "#645479",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-bg"],
+                    stroke: $currentThemeObject["mapview-region-border"],
                     strokeWidth: 0.5,
-                    fillOpacity: 1
+                    fillOpacity: 1,
                 },
                 selected: {
-                    fill: "#59CD70",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject["mapview-region-selected-bg"],
+                    stroke: $currentThemeObject[
+                        "mapview-region-selected-border"
+                    ],
                     strokeWidth: 1,
-                    fillOpacity: 1
+                    fillOpacity: 1,
                 },
                 selectedHover: {
-                    fill: "#59CD70",
-                    stroke: "#4F4464",
+                    fill: $currentThemeObject[
+                        "mapview-region-selected-hover-bg"
+                    ],
+                    stroke: $currentThemeObject[
+                        "mapview-region-selected-hover-border"
+                    ],
                     strokeWidth: 1,
-                    fillOpacity: 1
+                    fillOpacity: 1,
                 },
                 hover: {
-                    stroke: "#C1B1F3",
-                    strokeWidth: 1
-                }
-            }
+                    fill: $currentThemeObject["mapview-region-hover-bg"],
+                    stroke: $currentThemeObject["mapview-region-hover-border"],
+                    strokeWidth: 1,
+                },
+            },
         });
     }
 
@@ -430,16 +437,14 @@
 
     function onCountryClicked() {
         // Should play immediately after setting playlist (and shuffling if necessary)
-        audioPlayer.shouldPlay = true;
-        $playlistCountry = selectedCountry;
-        $playlistType = "country";
-        $playlist = dataSetCountryValue.data;
         console.log(dataSetCountryValue.data[0]);
+        $queueCountry = selectedCountry;
+        setQueue(dataSetCountryValue.data, 0);
     }
 
     // Selected country
-    $: numberOfTracks = $playlist.length;
-    $: artists = [...new Set($playlist.map((item) => item.artist))];
+    $: numberOfTracks = $queue.length;
+    $: artists = [...new Set($queue.map((item) => item.artist))];
     $: numberOfArtists = artists.length;
     $: firstFewArtists = artists.slice(0, Math.min(3, artists.length));
 
@@ -449,45 +454,45 @@
         preset: "stars",
         fullScreen: false,
         background: {
-            color: "transparent"
-        }
+            color: "transparent",
+        },
     };
 
     let particlesInit = async (engine) => {
         const options = {
             particles: {
                 number: {
-                    value: 100
+                    value: 100,
                 },
                 move: {
                     center: {
                         radius: 50,
                         x: 800,
                         y: 500,
-                        mode: "precise"
+                        mode: "precise",
                     },
                     bounce: true,
                     direction: "outside",
                     enable: true,
                     outModes: {
-                        default: "out"
+                        default: "out",
                     },
                     random: true,
                     speed: 0.4,
-                    straight: false
+                    straight: false,
                 },
                 opacity: {
                     animation: {
                         enable: true,
                         speed: 1,
-                        sync: false
+                        sync: false,
                     },
-                    value: { min: 0, max: 0.3 }
+                    value: { min: 0, max: 0.3 },
                 },
                 size: {
-                    value: { min: 1, max: 3 }
-                }
-            }
+                    value: { min: 1, max: 3 },
+                },
+            },
         };
 
         await loadSlim(engine, false);
@@ -507,7 +512,7 @@
 
 <container bind:this={container}>
     <div class="bg" />
-    <!-- 
+    <!--
     <Particles
         id="tsparticles"
         options={particlesOptions}
@@ -548,13 +553,11 @@
                         />
                     </div>
                 </div>
-            {:else if $playlistCountry}
+            {:else if $queueCountry}
                 <div id="info">
                     <p>Listening to music from</p>
                     <h2>
-                        {getFlagEmoji($playlistCountry)}{countries[
-                            $playlistCountry
-                        ]}
+                        {getFlagEmoji($queueCountry)}{countries[$queueCountry]}
                     </h2>
                     <small
                         >{numberOfTracks} tracks from {numberOfArtists} artists</small
@@ -608,7 +611,7 @@
     container {
         position: relative;
         cursor: grab;
-        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
+        border: 0.7px solid var(--panel-primary-border-main);
         margin: 5px 0 0 0;
         border-radius: 5px;
         overflow: hidden;
@@ -776,10 +779,9 @@
         z-index: 10;
         padding: 2em;
         border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background: var(--overlay-bg);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
         small,
         p {

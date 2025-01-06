@@ -24,6 +24,8 @@ interface TagFieldMap {
     location?: string;
     isrc?: string;
     bpm?: string;
+    compilation?: string;
+    discNumber?: string;
     encodingTool?: string;
     gapless?: string;
     normalization?: string;
@@ -38,6 +40,8 @@ const genericToVorbisMap: TagFieldMap = {
     genre: "GENRE",
     date: "DATE",
     trackNumber: "TRACKNUMBER",
+    compilation: "COMPILATION",
+    discNumber: "DISCNUMBER",
     copyright: "COPYRIGHT",
     publisher: "PUBLISHER",
     performer: "PERFORMER",
@@ -79,6 +83,8 @@ const genericToId3v22Map: TagFieldMap = {
     genre: "TCO",
     date: "TYE",
     trackNumber: "TRK",
+    compilation: "TCP",
+    discNumber: "TPA",
     copyright: "TCR",
     publisher: "TPB",
     isrc: "TRC",
@@ -101,6 +107,8 @@ const genericToId3v23Map: TagFieldMap = {
     genre: "TCON",
     date: "TDAT",
     trackNumber: "TRCK",
+    compilation: "TCMP",
+    discNumber: "TPOS",
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
@@ -123,6 +131,8 @@ const genericToId3v24Map: TagFieldMap = {
     genre: "TCON",
     date: "TDRC",
     trackNumber: "TRCK",
+    compilation: "TCMP",
+    discNumber: "TPOS",
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
@@ -149,7 +159,7 @@ const genericToiTunesMap: TagFieldMap = {
     copyright: "cprt",
     encodingTool: "©too",
     gapless: "----:com.apple.iTunes:iTunSMPB",
-    normalization: "----:com.apple.iTunes:iTunNORM",
+    normalization: "----:com.apple.iTunes:iTunNORM"
 };
 
 const iTunesToGenericMap = inverse(genericToiTunesMap);
@@ -182,8 +192,8 @@ function getMapForTagType(
  * @param codec
  */
 const codecToTagTypeMap = {
-    "FLAC": "Vorbis",
-    "MPEG": "ID3v2.4",
+    FLAC: "Vorbis",
+    MPEG: "ID3v2.4",
     "MPEG 1 Layer 3": "ID3v2.4"
 };
 

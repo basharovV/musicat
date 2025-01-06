@@ -26,7 +26,7 @@
             yearSpan = 0;
 
             albums = Object.entries(albumsByYear).filter(
-                (a) => a[0] && Number(a[0]) > 1800
+                (a) => a[0] && Number(a[0]) > 1800,
             );
             if (albums.length) {
                 maxYear = Number(albums[albums.length - 1][0]);
@@ -120,7 +120,7 @@
                                         class="album"
                                         use:tippy={{
                                             content: `${album[0]} - ${a.title}`,
-                                            placement: "bottom"
+                                            placement: "bottom",
                                         }}
                                     />
                                 {:else}
@@ -128,7 +128,7 @@
                                         class="dot"
                                         use:tippy={{
                                             content: `${album[0]} - ${a.title}`,
-                                            placement: "bottom"
+                                            placement: "bottom",
                                         }}
                                     />
                                 {/if}
@@ -146,7 +146,7 @@
                             opacity: 0,
                             delay: 100,
                             y: -30,
-                            duration: 600
+                            duration: 600,
                         }}
                         class="item"
                         style="left: {getXPos(year)}px"
@@ -161,7 +161,8 @@
 </container>
 
 <style lang="scss">
-    $border_color: rgba(236, 229, 229, 0.61);
+    // $border_color: rgba(236, 229, 229, 0.61);
+    $border_color: var(--text);
     container {
         position: relative;
         width: 100%;
@@ -209,9 +210,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            border: 1px solid rgba(236, 229, 229, 0.31);
+            border: 1px solid var(--analytics-timeline-track-bg);
             border-radius: 2px;
-            /* background-color: $border_color; */
         }
     }
 
@@ -238,7 +238,7 @@
             .vertical-line {
                 height: 20px;
                 width: 1px;
-                border: 1px solid rgba(236, 229, 229, 0.31);
+                border: 1px solid var(--analytics-timeline-vline-bg);
                 border-radius: 2px;
             }
 

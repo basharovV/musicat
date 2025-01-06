@@ -6,9 +6,7 @@
         isTagCloudOpen,
         isTagOrCondition,
         selectedTags,
-
-        uiView
-
+        uiView,
     } from "../../data/store";
     import { liveQuery } from "dexie";
     import Toggle from "../ui/Toggle.svelte";
@@ -16,7 +14,7 @@
     import LL from "../../i18n/i18n-svelte";
 
     $: allTags = liveQuery(
-        async () => await db.songs.orderBy("tags").uniqueKeys()
+        async () => await db.songs.orderBy("tags").uniqueKeys(),
     );
 
     function dedupe(array: string[]) {

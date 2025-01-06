@@ -1,9 +1,6 @@
 import { get } from "svelte/store";
 import processConfig from "./processConfig";
-import {
-    currentFont,
-    currentThemeObject
-} from "./store";
+import { currentFont, currentThemeObject } from "./store";
 
 /**
  * CSS Variable Name

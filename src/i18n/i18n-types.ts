@@ -110,9 +110,17 @@ type RootTranslation = {
 			 */
 			album: string
 			/**
+			 * A​l​b​u​m​ ​A​r​t​i​s​t
+			 */
+			albumArtist: string
+			/**
 			 * T​r​a​c​k
 			 */
 			track: string
+			/**
+			 * C​o​m​p​i​l
+			 */
+			compilation: string
 			/**
 			 * Y​e​a​r
 			 */
@@ -154,6 +162,11 @@ type RootTranslation = {
 		 * S​w​i​t​c​h​ ​t​o​ ​f​i​l​e​ ​o​r​d​e​r​ ​t​o​ ​r​e​-​o​r​d​e​r​ ​t​r​a​c​k​s
 		 */
 		orderDisabledHint: string
+		/**
+		 * N​o​ ​r​e​s​u​l​t​s​ ​f​o​r​ ​"​{​q​u​e​r​y​}​"
+		 * @param {unknown} query
+		 */
+		queryNoResultsPlaceholder: RequiredParams<'query'>
 	}
 	bottomBar: {
 		/**
@@ -591,6 +604,10 @@ type RootTranslation = {
 		 * G​e​n​i​u​s​ ​A​P​I​ ​K​e​y
 		 */
 		geniusApiKey: string
+		/**
+		 * D​i​s​c​o​g​s​ ​A​P​I​ ​K​e​y
+		 */
+		discogsApiKey: string
 	}
 	wiki: {
 		/**
@@ -700,6 +717,10 @@ type RootTranslation = {
 		enterHintTooltip: string
 	}
 	albums: {
+		/**
+		 * A​l​b​u​m​s
+		 */
+		title: string
 		options: {
 			/**
 			 * o​r​d​e​r​ ​b​y
@@ -720,11 +741,11 @@ type RootTranslation = {
 				year: string
 			}
 			/**
-			 * s​h​o​w​ ​s​i​n​g​l​e​s
+			 * s​i​n​g​l​e​s
 			 */
 			showSingles: string
 			/**
-			 * s​h​o​w​ ​i​n​f​o
+			 * i​n​f​o
 			 */
 			showInfo: string
 			/**
@@ -784,6 +805,12 @@ type RootTranslation = {
 			 */
 			deleted: string
 		}
+	}
+	lyrics: {
+		/**
+		 * A​u​t​o​ ​s​c​r​o​l​l
+		 */
+		autoScroll: string
 	}
 }
 
@@ -883,9 +910,17 @@ export type TranslationFunctions = {
 			 */
 			album: () => LocalizedString
 			/**
+			 * Album Artist
+			 */
+			albumArtist: () => LocalizedString
+			/**
 			 * Track
 			 */
 			track: () => LocalizedString
+			/**
+			 * Compil
+			 */
+			compilation: () => LocalizedString
 			/**
 			 * Year
 			 */
@@ -927,6 +962,10 @@ export type TranslationFunctions = {
 		 * Switch to file order to re-order tracks
 		 */
 		orderDisabledHint: () => LocalizedString
+		/**
+		 * No results for "{query}"
+		 */
+		queryNoResultsPlaceholder: (arg: { query: unknown }) => LocalizedString
 	}
 	bottomBar: {
 		/**
@@ -1363,6 +1402,10 @@ export type TranslationFunctions = {
 		 * Genius API Key
 		 */
 		geniusApiKey: () => LocalizedString
+		/**
+		 * Discogs API Key
+		 */
+		discogsApiKey: () => LocalizedString
 	}
 	wiki: {
 		/**
@@ -1471,6 +1514,10 @@ export type TranslationFunctions = {
 		enterHintTooltip: () => LocalizedString
 	}
 	albums: {
+		/**
+		 * Albums
+		 */
+		title: () => LocalizedString
 		options: {
 			/**
 			 * order by
@@ -1491,11 +1538,11 @@ export type TranslationFunctions = {
 				year: () => LocalizedString
 			}
 			/**
-			 * show singles
+			 * singles
 			 */
 			showSingles: () => LocalizedString
 			/**
-			 * show info
+			 * info
 			 */
 			showInfo: () => LocalizedString
 			/**
@@ -1555,6 +1602,12 @@ export type TranslationFunctions = {
 			 */
 			deleted: (arg0: number | string | boolean) => LocalizedString
 		}
+	}
+	lyrics: {
+		/**
+		 * Auto scroll
+		 */
+		autoScroll: () => LocalizedString
 	}
 }
 

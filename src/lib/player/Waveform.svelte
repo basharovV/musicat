@@ -5,12 +5,12 @@
     import ZoomPlugin from "wavesurfer.js/dist/plugins/zoom.esm.js";
 
     import {
-        currentSong,
+        current,
         isCmdOrCtrlPressed,
         os,
         playerTime,
         seekTime,
-        waveformPeaks
+        waveformPeaks,
     } from "../../data/store";
 
     import type { Event } from "@tauri-apps/api/event";
@@ -21,7 +21,9 @@
     import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
     import hotkeys from "hotkeys-js";
     import { db } from "../../data/db";
-const appWindow = getCurrentWebviewWindow()
+    import { currentThemeObject } from "../../theming/store";
+
+    const appWindow = getCurrentWebviewWindow();
 
     let container;
     let isMounted = false;
@@ -38,15 +40,25 @@ const appWindow = getCurrentWebviewWindow()
 
     const emptyAudio =
         "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV";
+
+    // Update colors when theme changes
+    $: if ($currentThemeObject && wavesurfer) {
+        wavesurfer.setOptions({
+            waveColor: $currentThemeObject["waveform-wave"],
+            progressColor: $currentThemeObject["waveform-progress"],
+            cursorColor: $currentThemeObject["waveform-cursor"],
+        });
+    }
+
     onMount(async () => {
         const { default: WaveSurfer } = await import("wavesurfer.js");
 
         wavesurfer = WaveSurfer.create({
             container,
-            waveColor: "#64578cca",
-            progressColor: "#cfbfff",
+            waveColor: $currentThemeObject["waveform-wave"],
+            progressColor: $currentThemeObject["waveform-progress"],
             cursorWidth: 1,
-            cursorColor: "white",
+            cursorColor: $currentThemeObject["waveform-cursor"],
             // backend: 'MediaElement',
             barWidth: 1.5,
             responsive: true,
@@ -58,20 +70,20 @@ const appWindow = getCurrentWebviewWindow()
         });
         wavesurfer.registerPlugin(
             Hover.create({
-                lineColor: "#f8f8f882",
+                lineColor: $currentThemeObject["waveform-hover-line"],
                 lineWidth: 1,
-                labelBackground: "transparent",
-                labelColor: "#fff",
-                labelSize: "11px"
-            })
+                labelBackground: $currentThemeObject["waveform-hover-label-bg"],
+                labelColor: $currentThemeObject["waveform-hover-label-text"],
+                labelSize: "11px",
+            }),
         );
         wavesurfer.registerPlugin(
             ZoomPlugin.create({
                 // the amount of zoom per wheel step, e.g. 0.5 means a 50% magnification per scroll
                 scale: 0.1,
                 // Optionally, specify the maximum pixels-per-second factor while zooming
-                maxZoom: 40
-            })
+                maxZoom: 40,
+            }),
         );
         wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
 
@@ -105,8 +117,8 @@ const appWindow = getCurrentWebviewWindow()
                         event: {
                             enabled: true,
                             start_pos: region.start,
-                            end_pos: region.end
-                        }
+                            end_pos: region.end,
+                        },
                     });
                 }
 
@@ -120,11 +132,11 @@ const appWindow = getCurrentWebviewWindow()
             ev.stopPropagation();
             console.log("region-clicked");
             region.remove();
-            $currentSong.markers?.splice(
-                $currentSong.markers.findIndex((m) => m.pos === region.start),
-                1
+            $current.song.markers?.splice(
+                $current.song.markers.findIndex((m) => m.pos === region.start),
+                1,
             );
-            db.songs.put($currentSong);
+            db.songs.put($current.song);
             if (region.start !== region.end) {
                 $waveformPeaks.loopStartPos = null;
                 $waveformPeaks.loopEndPos = null;
@@ -132,8 +144,8 @@ const appWindow = getCurrentWebviewWindow()
                     event: {
                         enabled: false,
                         start_pos: null,
-                        end_pos: null
-                    }
+                        end_pos: null,
+                    },
                 });
                 $waveformPeaks.loopEnabled = false;
             }
@@ -146,8 +158,8 @@ const appWindow = getCurrentWebviewWindow()
                     event: {
                         enabled: true,
                         start_pos: region.start,
-                        end_pos: region.end
-                    }
+                        end_pos: region.end,
+                    },
                 });
 
                 $waveformPeaks.loopEnabled = true;
@@ -162,32 +174,32 @@ const appWindow = getCurrentWebviewWindow()
         });
 
         wsRegions.enableDragSelection({
-            color: "rgba(220, 188, 255, 0.229)"
+            color: $currentThemeObject["waveform-region-loop"],
         });
 
         wavesurfer.on("click", (pos) => {
             console.log("interaction", pos);
-            let posSeconds = $currentSong.fileInfo.duration * pos;
+            let posSeconds = $current.song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
-                if ($currentSong) {
+                if ($current.song) {
                     const marker: Marker = {
                         pos: posSeconds,
-                        title: "👂"
+                        title: "👂",
                     };
-                    if ($currentSong.markers) {
-                        $currentSong.markers.push(marker);
+                    if ($current.song.markers) {
+                        $current.song.markers.push(marker);
                     } else {
-                        $currentSong.markers = [marker];
+                        $current.song.markers = [marker];
                     }
-                    db.songs.put($currentSong);
+                    db.songs.put($current.song);
                     wsRegions.addRegion({
                         start: posSeconds,
                         content: marker.title,
-                        color: "rgb(0, 197, 108)"
+                        color: $currentThemeObject["waveform-region-current"],
                     });
                 }
             } else {
-                seekTime.set($currentSong.fileInfo.duration * pos);
+                seekTime.set($current.song.fileInfo.duration * pos);
             }
         });
 
@@ -198,18 +210,17 @@ const appWindow = getCurrentWebviewWindow()
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
-            console.log("waveform", event);
             await wavesurfer.load(
                 null,
                 event.payload.data,
-                $currentSong.fileInfo.duration
+                $current.song.fileInfo.duration,
             );
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
-                    songId: $currentSong.id,
-                    data: event.payload.data
+                    songId: $current.song.id,
+                    data: event.payload.data,
                 };
             } else {
                 $waveformPeaks.data = event.payload.data;
@@ -218,9 +229,9 @@ const appWindow = getCurrentWebviewWindow()
     });
 
     playerTime.subscribe((playerTime) => {
-        if (wavesurfer && $currentSong) {
+        if (wavesurfer && $current.song) {
             wavesurfer.seekTo(
-                Math.min(playerTime / $currentSong.fileInfo.duration)
+                Math.min(playerTime / $current.song.fileInfo.duration),
             );
         }
     });
@@ -229,12 +240,12 @@ const appWindow = getCurrentWebviewWindow()
         await wavesurfer.load(
             null,
             $waveformPeaks.data,
-            $currentSong.fileInfo.duration
+            $current.song.fileInfo.duration,
         );
         pxPerSec = wavesurfer.options.minPxPerSec;
 
-        if ($currentSong) {
-            wavesurfer.seekTo($playerTime / $currentSong.fileInfo.duration);
+        if ($current.song) {
+            wavesurfer.seekTo($playerTime / $current.song.fileInfo.duration);
         }
 
         // Restore loop point
@@ -243,15 +254,15 @@ const appWindow = getCurrentWebviewWindow()
             wsRegions.addRegion({
                 start: $waveformPeaks.loopStartPos,
                 end: $waveformPeaks.loopEndPos,
-                color: "rgba(220, 188, 255, 0.227)"
+                color: $currentThemeObject["waveform-region-loop"],
             });
         }
 
-        $currentSong.markers?.forEach((m) => {
+        $current.song.markers?.forEach((m) => {
             wsRegions.addRegion({
                 start: m.pos,
                 content: m.title,
-                color: "rgb(0, 197, 108)"
+                color: $currentThemeObject["waveform-region-current"],
             });
         });
     }
@@ -259,38 +270,38 @@ const appWindow = getCurrentWebviewWindow()
     async function getWaveform() {
         if (
             $waveformPeaks?.data &&
-            $currentSong?.id === $waveformPeaks.songId
+            $current.song?.id === $waveformPeaks.songId
         ) {
             restoreState();
-        } else if ($currentSong?.id !== $waveformPeaks?.songId) {
+        } else if ($current.song?.id !== $waveformPeaks?.songId) {
             // Changing songs, reset and get new waveform
             wsRegions.clearRegions();
             const result = await invoke("get_waveform", {
                 event: {
-                    path: $currentSong.path
-                }
+                    path: $current.song.path,
+                },
             });
-            $waveformPeaks.songId = $currentSong.id;
+            $waveformPeaks.songId = $current.song.id;
 
-            $currentSong.markers?.forEach((m) => {
+            $current.song.markers?.forEach((m) => {
                 wsRegions.addRegion({
                     start: m.pos,
                     content: m.title,
-                    color: "rgb(0, 197, 108)"
+                    color: $currentThemeObject["waveform-region-current"],
                 });
             });
         }
-        song = $currentSong;
+        song = $current.song;
         // console.log("result", result);
     }
 
-    $: if (isMounted && $currentSong?.path !== song?.path && wavesurfer) {
+    $: if (isMounted && $current.song?.path !== song?.path && wavesurfer) {
         getWaveform();
         console.log(
-            "$currentSong.fileInfo.duration",
-            $currentSong.fileInfo.duration
+            "$current.song.fileInfo.duration",
+            $current.song.fileInfo.duration,
         );
-        wavesurfer.setOptions({ duration: $currentSong.fileInfo.duration });
+        wavesurfer.setOptions({ duration: $current.song.fileInfo.duration });
 
         if (wavesurfer.getDecodedData()) {
             wavesurfer.zoom(false);
@@ -360,7 +371,7 @@ const appWindow = getCurrentWebviewWindow()
                 position: absolute;
                 top: 0;
                 bottom: 0;
-                background-color: rgba(255, 255, 255, 0.386);
+                background-color: var(--waveform-hoverhead-line-bg);
             }
         }
     }

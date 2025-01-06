@@ -8,19 +8,19 @@
     let COMPRESSION_OPTIONS: { value: Compression; label: string }[] = [
         {
             value: "lossy",
-            label: "lossy"
+            label: "lossy",
         },
         {
             value: "lossless",
-            label: "lossless"
+            label: "lossless",
         },
         {
             value: "both",
-            label: "lossy + lossless"
-        }
+            label: "lossy + lossless",
+        },
     ];
     $: selected = COMPRESSION_OPTIONS.find(
-        (c) => c.value === $compressionSelected
+        (c) => c.value === $compressionSelected,
     );
 
     // Only show songs with selected compression type

@@ -17,24 +17,20 @@ import type {
     IAFile,
     IAItem,
     ImportStatus,
-    LastPlayedInfo,
     PlaylistFile,
-    PlaylistType,
-    Popup,
     PopupType,
-    QueueMode,
     UiView,
     Song,
     StreamInfo,
     UIPreferences,
     UserSettings,
-    WaveformPlayerState
+    WaveformPlayerState,
+    PlayingSong,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
-import Query from "./SmartQueries";
 import { scanPlaylists } from "./M3UUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
@@ -50,49 +46,93 @@ interface Query {
     query: string;
 }
 
-type UIView = "library" | "albums";
-
 export const isInit = writable(true);
 export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
     orderBy: "artist",
     libraryOrderBy: "artist",
     reverse: false,
-    query: ""
+    query: "",
 });
 
-export const isPlaying = writable(false);
-export const currentSong: Writable<Song> = writable(null);
-export const currentSongIdx = writable(0);
-
-const defaultLastPlayedInfo: LastPlayedInfo = {
-    songId: null,
-    position: 0
-};
-
-export const lastPlayedInfo: Writable<LastPlayedInfo> = writable(
-    {
-        ...defaultLastPlayedInfo,
-        ...JSON.parse(localStorage.getItem("lastPlayedInfo"))
-    } || defaultLastPlayedInfo
-);
-// Auto-persist settings
-lastPlayedInfo.subscribe((val) =>
-    localStorage.setItem("lastPlayedInfo", JSON.stringify(val))
-);
-
-export const nextUpSong: Writable<Song> = writable(null);
+export const allSongs: Writable<Song[]> = writable([]);
 export const queriedSongs: Writable<Song[]> = writable([]);
 
-export const allSongs: Writable<Song[]> = writable([]);
-export const playlist: Writable<Song[]> = writable([]);
-export const shuffledPlaylist: Writable<Song[]> = writable([]);
-export const albumPlaylist: Writable<Song[]> = writable([]);
-export const playlistIsAlbum = writable(false);
-export const playlistCountry = writable(null); // ISO Country code
-export const playlistType: Writable<PlaylistType> = writable("library");
-export const playlistDuration: Writable<number> = writable(0);
+export const isPlaying = writable(false);
+
+async function restoreCurrentSong() {
+    const item = localStorage.getItem("current");
+
+    if (item) {
+        const data = JSON.parse(item);
+
+        if (data.song) {
+            const song = await db.songs.get(data.song);
+
+            current.set({
+                song,
+                index: data.index,
+                position: data.position,
+            });
+
+            playerTime.set(data.position);
+        }
+    }
+}
+
+export const current: Writable<PlayingSong> = writable(
+    { song: null, index: 0, position: 0 },
+    () => {
+        restoreCurrentSong();
+    },
+);
+current.subscribe(({ song, index, position }) => {
+    // don't store song that isn't in the queue
+    const data =
+        song && index >= 0
+            ? { song: song.id, index, position }
+            : { song: null, index: 0, position: 0 };
+
+    localStorage.setItem("current", JSON.stringify(data));
+});
+
+async function readQueueFromFile() {
+    const queuePath = await path.join(await appConfigDir(), "queue.txt");
+    if (!(await fs.exists(queuePath))) {
+        return;
+    }
+    let persistedQueue = await fs.readTextFile(queuePath);
+    if (!persistedQueue) {
+        return;
+    }
+    const songs = await db.songs.bulkGet(persistedQueue.split(","));
+    queue.set(songs);
+}
+
+async function writeQueueToFile(queue: Song[]) {
+    const queuePath = await path.join(await appConfigDir(), "queue.txt");
+    await fs.writeTextFile(queuePath, queue.map((song) => song.id).join(","));
+}
+
+export const queue: Writable<Song[]> = writable([]);
+
+/**
+ * Flag used to let the queue automatically mirror the search results
+ * (only after explicitly playing a track from results)
+ *
+ * - Set to `true` typing in a search query -> playing song. Queue will be replaced with search results.
+ * Updating the query will continue to replace the queue. If current track is no longer in results,
+ * playback will continue from the beginning of the new queue.
+ * - Clearing the query will reset queue back to library and set the flag to `false`
+ *  */
+export const queueMirrorsSearch = writable(false);
+
+export const queueCountry = writable(null); // ISO Country code
+export const queueDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
+export const shuffledQueue: Writable<Song[]> = writable([]);
+
+export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
@@ -104,7 +144,7 @@ export const seekTime = writable(0);
 export const volume: Writable<number> = writable(
     localStorage.getItem("volume")
         ? parseFloat(localStorage.getItem("volume"))
-        : 0.6
+        : 0.6,
 );
 export const isFullScreenVisualiser = writable(false);
 
@@ -118,7 +158,7 @@ export const toDeletePlaylist = liveQuery(async () => {
         console.error("Error fetching todelete playlist", e);
     }
     return null;
-})
+});
 
 export const popupOpen: Writable<PopupType> = writable(null);
 export const uiView: Writable<UiView> = writable("library");
@@ -126,17 +166,17 @@ export const arrowFocus: Writable<ArrowFocus> = writable("library");
 export const draggedColumnIdx: Writable<number | null> = writable(null);
 
 export const isWelcomeSeen: Writable<boolean> = writable(
-    Boolean(localStorage.getItem("isWelcomeSeen") || false)
+    Boolean(localStorage.getItem("isWelcomeSeen") || false),
 );
 isWelcomeSeen.subscribe((val) =>
-    localStorage.setItem("isWelcomeSeen", String(val))
+    localStorage.setItem("isWelcomeSeen", String(val)),
 );
 // File drop
 export const droppedFiles: Writable<string[]> = writable([]);
 export const hoveredFiles: Writable<string[]> = writable([]);
 export const isDraggingExternalFiles = writable(false);
 export const draggedScrapbookItems: Writable<ArtistContentItem[]> = writable(
-    []
+    [],
 );
 export const emptyDropEvent: Writable<{ x: number; y: number } | null> =
     writable(null);
@@ -146,7 +186,7 @@ export const fileDropHandler: Writable<string> = writable(null);
 export const songbookSelectedArtist: Writable<ArtistProject> = writable(
     localStorage.getItem("selectedArtist")
         ? JSON.parse(localStorage.getItem("selectedArtist"))
-        : null || null
+        : null || null,
 );
 songbookSelectedArtist.subscribe((val) => {
     if (val !== null && val !== undefined) {
@@ -201,7 +241,7 @@ const defaultSettings: UserSettings = {
     playlistsLocation: null,
     theme: "dark",
     outputDevice: null, // default system device,
-    followSystemOutput: true
+    followSystemOutput: true,
 };
 
 /**
@@ -234,13 +274,13 @@ const defaultUIPreferences: UIPreferences = {
     albumsViewShowSingles: false,
     albumsViewShowInfo: true,
     albumsViewSortBy: "title",
-    albumsViewGridSize: 197
+    albumsViewGridSize: 197,
 };
 
 // UI preferences
 export const uiPreferences: Writable<UIPreferences> = writable({
     ...defaultUIPreferences,
-    ...JSON.parse(localStorage.getItem("uiPreferences") || "{}")
+    ...JSON.parse(localStorage.getItem("uiPreferences") || "{}"),
 });
 
 uiPreferences.subscribe((val) => {
@@ -250,12 +290,12 @@ uiPreferences.subscribe((val) => {
 
 export const foldersToWatch = derived(
     userSettings,
-    (val) => val.foldersToWatch
+    (val) => val.foldersToWatch,
 );
 
 export const playlistLocation = derived(
     userSettings,
-    (val) => val.playlistsLocation
+    (val) => val.playlistsLocation,
 );
 
 playlistLocation.subscribe((pl) => {
@@ -268,7 +308,7 @@ playlistLocation.subscribe((pl) => {
 export const libraryScrollPos: Writable<number> = writable(
     localStorage.getItem("libraryScrollPos")
         ? parseFloat(localStorage.getItem("libraryScrollPos"))
-        : 0
+        : 0,
 );
 export const scrollToSong: Writable<Song> = writable(null);
 
@@ -286,7 +326,7 @@ export const importStatus: Writable<ImportStatus> = writable({
     backgroundImport: false,
     currentSong: null,
     status: null,
-    percent: 0
+    percent: 0,
 });
 export const isFolderWatchUpdate = writable(false);
 export const bottomBarNotification: Writable<BottomBarNotification> =
@@ -304,9 +344,13 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
-export const isQueueOpen = writable(false);
+export const isQueueOpen: Writable<boolean> = writable(
+    /true/.test(localStorage.getItem("isQueueOpen")) || false,
+);
+isQueueOpen.subscribe((val) =>
+    localStorage.setItem("isQueueOpen", String(val)),
+);
 export const isQueueCleared = writable(false);
-export const queueMode: Writable<QueueMode> = writable("library");
 
 // Wiki
 export const isWikiOpen = writable(false);
@@ -318,15 +362,28 @@ export const sidebarManuallyOpened = writable(false);
 export const sidebarTogglePos = writable({ x: 0, y: 0 });
 export const isCmdOrCtrlPressed = writable(false);
 
-export const isWaveformOpen = writable(false);
+export const isWaveformOpen: Writable<boolean> = writable(
+    /true/.test(localStorage.getItem("isWaveformOpen")) || false,
+);
+isWaveformOpen.subscribe((val) => {
+    localStorage.setItem("isWaveformOpen", String(val));
+});
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,
     data: [],
     markers: [],
     loopEnabled: false,
     loopEndPos: 0,
-    loopStartPos: 0
+    loopStartPos: 0,
 });
+
+/**
+ * Keep track of the song(s) that were last written to from the tag editor.
+ *
+ * Currently this is used to bypass the "same song check" in the sidebar, so that song
+ * info is updated even if the same song is played.
+ */
+export const lastWrittenSongs: Writable<Song[]> = writable([]);
 
 async function init() {
     // Set OS
@@ -336,20 +393,22 @@ async function init() {
     let fileSettings = await getSettings();
 
     // Set default download location
-    if (typeof fileSettings.downloadLocation != 'string') {
+    if (typeof fileSettings.downloadLocation != "string") {
         fileSettings.downloadLocation = await downloadDir();
     }
 
     // Same for playlists location
-    if (typeof fileSettings.playlistsLocation != 'string') {
-        fileSettings.playlistsLocation =
-            await path.join(await audioDir(), "Musicat Playlists");
+    if (typeof fileSettings.playlistsLocation != "string") {
+        fileSettings.playlistsLocation = await path.join(
+            await audioDir(),
+            "Musicat Playlists",
+        );
     }
 
     // Get user settings
     userSettings.set({
         ...defaultSettings,
-        ...fileSettings
+        ...fileSettings,
     });
 
     // Auto-persist settings
@@ -357,6 +416,14 @@ async function init() {
         console.log("[store] userSettings", val);
         // Write settings to file
         await setSettings(val);
+    });
+
+    // Get queue
+    await readQueueFromFile();
+
+    // Auto-persist queue
+    queue.subscribe(async (songs) => {
+        await writeQueueToFile(songs);
     });
 }
 
@@ -366,7 +433,7 @@ export const streamInfo: Writable<StreamInfo> = writable({
     bufferedSamples: 0,
     playedSamples: 0,
     timestamp: 0,
-    sampleIdx: 0
+    sampleIdx: 0,
 });
 
 let defaultColumnOrder = [
@@ -379,23 +446,21 @@ let defaultColumnOrder = [
     "genre",
     "originCountry",
     "duration",
-    "tags"
+    "tags",
 ];
 
 export const columnOrder = writable(
-    JSON.parse(localStorage.getItem("columnOrder")) || defaultColumnOrder
+    JSON.parse(localStorage.getItem("columnOrder")) || defaultColumnOrder,
 );
 
 // Auto-persist column order
 columnOrder.subscribe((val) =>
-    localStorage.setItem("columnOrder", JSON.stringify(val))
+    localStorage.setItem("columnOrder", JSON.stringify(val)),
 );
 
 export const albumColumnOrder = writable(
     JSON.parse(localStorage.getItem("albumColumnOrder")) || defaultColumnOrder
 );
-
-// Auto-persist column order
 albumColumnOrder.subscribe((val) =>
     localStorage.setItem("albumColumnOrder", JSON.stringify(val))
 );

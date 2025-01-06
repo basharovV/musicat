@@ -9,7 +9,7 @@
         isSmartQuerySaveUiOpen,
         selectedSmartQuery,
         smartQueryInitiator,
-        uiView
+        uiView,
     } from "../../data/store";
 
     $: savedSmartQueries = liveQuery(async () => {

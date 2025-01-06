@@ -9,12 +9,12 @@
         fileToDownload,
         scrollToSong,
         uiView,
-        userSettings
+        userSettings,
     } from "../../data/store";
     import { fly } from "svelte/transition";
     import Icon from "../ui/Icon.svelte";
     import ProgressBar from "../ui/ProgressBar.svelte";
-const appWindow = getCurrentWebviewWindow()
+    const appWindow = getCurrentWebviewWindow();
 
     let unlistenFn;
 
@@ -49,7 +49,7 @@ const appWindow = getCurrentWebviewWindow()
                     checkSongAddedToLibrary();
                 }
                 downloadProgress = event.payload;
-            }
+            },
         );
     });
 
@@ -108,7 +108,7 @@ const appWindow = getCurrentWebviewWindow()
         margin: 0.25em;
         align-items: center;
         justify-content: space-between;
-        border: 0.7px solid color-mix(in srgb, var(--inverse) 20%, transparent);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         cursor: default;
         z-index: 10;
         p {
@@ -128,20 +128,6 @@ const appWindow = getCurrentWebviewWindow()
                 text-align: start;
                 user-select: none;
                 color: var(--text);
-
-                span {
-                    color: var(--accent);
-                    padding: 2px 3px;
-                    border-radius: 4px;
-                    user-select: none;
-                    cursor: default;
-                    &:hover {
-                        background-color: #4c4950b3;
-                    }
-                    &:active {
-                        background-color: #6d6470b3;
-                    }
-                }
             }
         }
 

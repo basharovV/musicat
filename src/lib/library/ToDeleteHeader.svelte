@@ -4,22 +4,23 @@
     import {
         bottomBarNotification,
         isSmartQueryBuilderOpen,
-        playlistDuration,
         query,
+        queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
-        uiView
+        uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import type { Song } from "../../App";
+    import { deleteFromLibrary } from "../../data/LibraryUtils";
 
     let playlist = $toDeletePlaylist;
     let isDeleting = false;
     let durationText;
-    $: if ($playlistDuration) {
-        durationText = secondsToFriendlyTime($playlistDuration);
+    $: if ($queueDuration) {
+        durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }
@@ -56,18 +57,12 @@
         await db.internalPlaylists.put(toDelete);
     }
 
-    async function deleteTracksFromDB(tracks: Song[]) {
-        tracks.forEach((t) => {
-            db.songs.delete(t.id);
-        });
-    }
-
     async function deleteTracksFromFileSystem(tracks: Song[]) {
         // Delete from file system (ie. move to trash)
         await invoke("delete_files", {
             event: {
-                files: tracks.map((t) => t.path)
-            }
+                files: tracks.map((t) => t.path),
+            },
         });
     }
 
@@ -79,20 +74,30 @@
 
         $bottomBarNotification = {
             text: $LL.toDelete.notification.deleting(count),
-            timeout: 2000
+            timeout: 2000,
         };
 
         await deleteTracksFromFileSystem(songs);
         await deleteTracksFromPlaylist(songs);
-        await deleteTracksFromDB(songs);
+        await deleteFromLibrary(songs);
         db.internalPlaylists.delete($toDeletePlaylist.id);
 
         $bottomBarNotification = {
             text: $LL.toDelete.notification.deleted(count),
-            timeout: 2000
+            timeout: 2000,
         };
 
         isDeleting = false;
+
+        $uiView = "library";
+        $isSmartQueryBuilderOpen = false;
+        $selectedPlaylistFile = null;
+        $selectedSmartQuery = null;
+        $query.orderBy = $query.libraryOrderBy;
+    }
+
+    async function keepAll() {
+        db.internalPlaylists.delete($toDeletePlaylist.id);
 
         $uiView = "library";
         $isSmartQueryBuilderOpen = false;
@@ -114,7 +119,7 @@
     text={$LL.toDelete.keepAllBtn()}
     disabled={$toDeletePlaylist?.tracks.length === 0}
     onClick={async () => {
-        // deleteAll();
+        keepAll();
     }}
 />
 <ButtonWithIcon

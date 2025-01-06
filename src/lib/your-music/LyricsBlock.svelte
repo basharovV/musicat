@@ -54,7 +54,7 @@
                 }
             }
             &:hover {
-                border: 1px solid  rgb(212, 212, 66);
+                border: 1px solid rgb(212, 212, 66);
             }
             img {
                 width: 100%;

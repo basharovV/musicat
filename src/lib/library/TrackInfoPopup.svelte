@@ -10,20 +10,23 @@
         MetadataEntry,
         Song,
         TagType,
-        ToImport
+        ToImport,
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { fade, fly } from "svelte/transition";
     import { getMapForTagType } from "../../data/LabelMap";
-    import { readMappedMetadataFromSong } from "../../data/LibraryImporter";
+    import { readMappedMetadataFromSong } from "../../data/LibraryUtils";
     import { db } from "../../data/db";
     import {
+        current,
+        lastWrittenSongs,
         os,
+        playerTime,
         popupOpen,
         rightClickedTrack,
-        rightClickedTracks
+        rightClickedTracks,
     } from "../../data/store";
     import { focusTrap } from "../../utils/FocusTrap";
     import "../tippy.css";
@@ -34,11 +37,11 @@
     import {
         ENCODINGS,
         decodeLegacy,
-        encodeUtf8
+        encodeUtf8,
     } from "../../utils/EncodingUtils";
     import {
         fetchAlbumArt,
-        findCountryByArtist
+        findCountryByArtist,
     } from "../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -46,9 +49,18 @@
     import { Image } from "@tauri-apps/api/image";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import { get } from "svelte/store";
     // optional
 
-    const ALBUM_FIELDS = ["album", "artist", "date", "genre"];
+    const ALBUM_FIELDS = [
+        "album",
+        "albumArtist",
+        "artist",
+        "date",
+        "genre",
+        "compilation",
+    ];
 
     function onClose() {
         $popupOpen = null;
@@ -65,25 +77,25 @@
         for (const field of Object.entries(map)) {
             // Check if this default field already exists in the file
             const existingField = metadata?.find(
-                (m) => field[1] === m.genericId
+                (m) => field[1] === m.genericId,
             );
 
             defaults.push({
                 id: field[0],
                 genericId: field[1],
-                value: existingField ? existingField.value : null
+                value: existingField ? existingField.value : null,
             });
         }
 
         for (const field of metadata) {
             const inDefaults = defaults.find(
-                (t) => t.genericId === field.genericId
+                (t) => t.genericId === field.genericId,
             );
             if (!inDefaults) {
                 others.push({
                     id: field.id,
                     genericId: field.genericId,
-                    value: field.value
+                    value: field.value,
                 });
             }
         }
@@ -94,7 +106,7 @@
 
     function mergeDefault(
         metadata: MetadataEntry[],
-        format: TagType
+        format: TagType,
     ): MetadataEntry[] {
         if (
             ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
@@ -112,14 +124,14 @@
         const { defaults, others } = addDefaults(cloned, format);
         return uniqBy(
             [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
-            "id"
+            "id",
         );
     }
 
     // console.log("track", ($rightClickedTrack || $rightClickedTracks[0]));
     let metadata: { mappedMetadata: MetadataEntry[]; tagType: TagType } = {
         mappedMetadata: [],
-        tagType: null
+        tagType: null,
     };
     let metadataFromFile: MetadataEntry[] = [];
     // let metadata: MetadataEntry[] = cloneDeep(($rightClickedTrack || $rightClickedTracks[0]).metadata);
@@ -151,7 +163,7 @@
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
     let artworkToSetData: Uint8Array = null;
-    let isArtworkSet = false;
+    let isArtworkSet: "delete" | "replace" | false = false;
     let artworkFileToSet = null;
 
     let foundArtwork;
@@ -170,13 +182,13 @@
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path, isImport: false, includeFolderArtwork: true }
+                event: { path, isImport: false, includeFolderArtwork: true },
             });
 
             if (!songWithArtwork) {
                 toast.error(
                     `Error reading file ${path}. Check permissions, or if the file is used by another program.`,
-                    { className: "app-toast" }
+                    { className: "app-toast" },
                 );
                 metadata = { mappedMetadata: [], tagType: null };
             }
@@ -187,10 +199,11 @@
                 if (songWithArtwork.artwork.data.length) {
                     artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                    foundArtwork = true;
                 }
 
                 previousArtworkFormat = artworkFormat;
@@ -225,21 +238,21 @@
                 .filter((m) => m.value !== null)
                 .map((t) => ({ id: t.id, value: t.value }));
             console.log("Writing: ", toWrite);
-            
+
             const event = {
                 tracks: [
                     {
-                        "song_id": $rightClickedTrack.id,
+                        song_id: $rightClickedTrack.id,
                         metadata: toWrite,
-                        "tag_type": metadata.tagType,
-                        "file_path": $rightClickedTrack.path,
-                        "artwork_file": artworkFileToSet
-                            ? artworkFileToSet
-                            : "",
-                        "artwork_data": artworkToSetData ?? []
-                    }
-                ]
-            }
+                        tag_type: metadata.tagType,
+                        file_path: $rightClickedTrack.path,
+                        artwork_file: artworkFileToSet ? artworkFileToSet : "",
+                        artwork_data: artworkToSetData ?? [],
+                        artwork_data_mime_type: artworkToSetFormat,
+                        delete_artwork: isArtworkSet === "delete",
+                    },
+                ],
+            };
             // console.log("event: ", event);
 
             toImport = await invoke<ToImport>("write_metadatas", { event });
@@ -252,7 +265,7 @@
                             const fileMetadata =
                                 await readMappedMetadataFromSong(track);
                             return {
-                                "song_id": track.id,
+                                song_id: track.id,
                                 metadata: [
                                     ...fileMetadata?.mappedMetadata,
                                     ...metadata?.mappedMetadata
@@ -260,24 +273,26 @@
                                             (m) =>
                                                 m.value !== null &&
                                                 ALBUM_FIELDS.includes(
-                                                    m.genericId
-                                                )
+                                                    m.genericId,
+                                                ),
                                         )
                                         .map((t) => ({
                                             id: t.id,
-                                            value: t.value
-                                        }))
+                                            value: t.value,
+                                        })),
                                 ],
-                                "tag_type": fileMetadata.tagType,
-                                "file_path": track.path,
-                                "artwork_file": artworkFileToSet
+                                tag_type: fileMetadata.tagType,
+                                file_path: track.path,
+                                artwork_file: artworkFileToSet
                                     ? artworkFileToSet
                                     : "",
-                                "artwork_data": artworkToSetData ?? []
+                                artwork_data: artworkToSetData ?? [],
+                                artwork_data_mime_type: artworkToSetFormat,
+                                delete_artwork: isArtworkSet === "delete",
                             };
-                        })
-                    )
-                }
+                        }),
+                    ),
+                },
             });
         }
         console.log($rightClickedTrack || $rightClickedTracks[0]);
@@ -295,9 +310,6 @@
             }
         }
 
-        artworkFileToSet = null;
-        isArtworkSet = false;
-
         if (toImport.albums.length) {
             for (const album of toImport.albums) {
                 await reImportAlbum(album);
@@ -305,8 +317,25 @@
         }
 
         toast.success("Successfully written metadata!", {
-            position: "top-right"
+            position: "top-right",
         });
+
+        $lastWrittenSongs = $rightClickedTrack
+            ? [$rightClickedTrack]
+            : $rightClickedTracks;
+
+        // If we changed the artwork tag, this offsets the audio data in the file,
+        // so we need to reload the song and seek to the current position
+        // (will cause audible gap)
+        const writtenTracks = $rightClickedTrack
+            ? [$rightClickedTrack]
+            : $rightClickedTracks;
+        if (
+            (artworkFileToSet || artworkToSetData) &&
+            writtenTracks.map((t) => t.id).includes($current.song.id)
+        ) {
+            audioPlayer.playCurrent(get(playerTime));
+        }
 
         await reset();
     }
@@ -316,7 +345,7 @@
         if (existingAlbum) {
             existingAlbum.tracksIds = [
                 ...existingAlbum.tracksIds,
-                ...album.tracksIds
+                ...album.tracksIds,
             ];
             await db.albums.put(existingAlbum);
         }
@@ -339,7 +368,7 @@
             height: 500,
             indexed_color: 0,
             type: "Cover (front)",
-            width: 500
+            width: 500,
         };
         // metadata.push({
         //     id: "METADATA_BLOCK_PICTURE",
@@ -371,11 +400,21 @@
             artworkFocused = true;
             return;
         }
+
+        if (artworkSrc && artworkFormat) {
+            // Let options for existing artwork (delete, replace) handle this
+            return;
+        }
+
+        await openArtworkFilePicker();
+    }
+
+    async function openArtworkFilePicker() {
         // Open a selection dialog for directories
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await pictureDir()
+            defaultPath: await pictureDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -389,7 +428,7 @@
             if (response.status === 200) {
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
-                isArtworkSet = true;
+                isArtworkSet = "replace";
                 artworkFileToSet = selected;
                 artworkToSetData = null;
                 artworkToSetSrc = src;
@@ -431,11 +470,11 @@
         containsError = null;
         previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
         const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
-            $rightClickedTrack || $rightClickedTracks[0]
+            $rightClickedTrack || $rightClickedTracks[0],
         );
         metadata = {
             mappedMetadata: mergeDefault(mappedMetadata, tagType),
-            tagType
+            tagType,
         };
         metadataFromFile = cloneDeep(metadata.mappedMetadata);
         originCountry =
@@ -454,16 +493,6 @@
     });
     hotkeys("esc", "track-info", () => {
         onClose();
-    });
-
-    onDestroy(() => {
-        if (unlisten) {
-            unlisten();
-        }
-        hotkeys.unbind(`${modifier}+enter`, "track-info");
-        hotkeys.unbind("esc", "track-info");
-        hotkeys.deleteScope("track-info");
-        $popupOpen = null;
     });
 
     $: {
@@ -485,8 +514,13 @@
     }
 
     $: artistInput =
-        metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
-            ?.value ?? "";
+        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")
+            ?.value === "1" ||
+        metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")
+            ?.value
+            ? ""
+            : metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
+                  ?.value ?? "";
 
     let artistInputField: HTMLInputElement;
 
@@ -495,7 +529,7 @@
             console.log("firstMatch", firstMatch);
             console.log("artistInput", artistInput);
             const artistField = metadata?.mappedMetadata?.find(
-                (m) => m.genericId === "artist"
+                (m) => m.genericId === "artist",
             );
             if (artistField) {
                 artistField.value = firstMatch;
@@ -510,7 +544,7 @@
         console.log("artist updated");
         artistInput = value;
         const artistField = metadata?.mappedMetadata?.find(
-            (m) => m.genericId === "artist"
+            (m) => m.genericId === "artist",
         );
         if (artistField) {
             artistField.value = artistInput;
@@ -539,7 +573,7 @@
             "Invalid characters in metadata tag (hidden/unicode characters?)",
         "err:null-chars": "Hidden null characer",
         "warn:custom-tag":
-            "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead."
+            "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead.",
     };
 
     type ValidationErrors = "err:invalid-chars" | "err:null-chars";
@@ -562,7 +596,7 @@
     function stripNonAsciiChars() {
         metadata.mappedMetadata = metadata?.mappedMetadata.map((entry) => ({
             ...entry,
-            id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id
+            id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id,
         }));
         console.log("stripped ascii: ", metadata);
         writeMetadata();
@@ -591,7 +625,7 @@
             if (!errors[currentTag.id]) {
                 errors[currentTag.id] = {
                     errors: [],
-                    warnings: []
+                    warnings: [],
                 };
             }
             if (!errors[currentTag.id].errors) {
@@ -641,7 +675,7 @@
         return (
             errors &&
             Object.values(errors).filter((err) =>
-                err.errors.includes(errorType)
+                err.errors.includes(errorType),
             ).length > 0
         );
     }
@@ -673,7 +707,7 @@
         originCountryEdited = null;
         isFetchingOriginCountry = true;
         const country = await findCountryByArtist(
-            ($rightClickedTrack || $rightClickedTracks[0]).artist
+            ($rightClickedTrack || $rightClickedTracks[0]).artist,
         );
         console.log("country", country);
         if (country) {
@@ -754,12 +788,15 @@
             artworkToSetFormat = mimeType;
             artworkToSetData = new Uint8Array(arrayBuffer);
             artworkFileToSet = null;
-            isArtworkSet = true;
+            isArtworkSet = "replace";
         }
         // const src = "asset://localhost/" + folder + artworkFilename;
     }
 
+    let previousScope;
+
     onMount(async () => {
+        previousScope = hotkeys.getScope();
         hotkeys.setScope("track-info");
         document.addEventListener("paste", onPaste);
 
@@ -767,6 +804,13 @@
     });
 
     onDestroy(() => {
+        if (unlisten) {
+            unlisten();
+        }
+        hotkeys.unbind(`${modifier}+enter`, "track-info");
+        hotkeys.unbind("esc", "track-info");
+        hotkeys.deleteScope("track-info", previousScope);
+        $popupOpen = null;
         document.removeEventListener("paste", onPaste);
     });
 
@@ -776,16 +820,16 @@
         isFetchingArtwork = true;
         artworkResult = await fetchAlbumArt(
             null,
-            $rightClickedTrack || $rightClickedTracks[0]
+            $rightClickedTrack || $rightClickedTracks[0],
         );
         if (artworkResult.success) {
             toast.success("Found album art and written to album!", {
-                position: "top-right"
+                position: "top-right",
             });
             updateArtwork();
         } else if (artworkResult.error) {
             toast.error("Couldn't find album art", {
-                position: "top-right"
+                position: "top-right",
             });
         }
         isFetchingArtwork = false;
@@ -799,7 +843,7 @@
             const extension = filename.split(".").pop();
             const filenameWithoutExtension = filename.replace(
                 "." + extension,
-                ""
+                "",
             );
             tag.value = filenameWithoutExtension;
 
@@ -833,8 +877,8 @@
         </div>
     </header>
     <div class="top">
-        <section class="info-section" bind:this={tableOuterContainer}>
-            <div class="file-outer" bind:this={tableOuterContainer}>
+        <div>
+            <section class="file-section boxed" bind:this={tableOuterContainer}>
                 <h5 class="section-title">
                     <Icon icon="bi:file-earmark-play" size={26} />File info
                 </h5>
@@ -873,8 +917,8 @@
                                                 fileOpen(
                                                     track.path.replace(
                                                         track.file,
-                                                        ""
-                                                    )
+                                                        "",
+                                                    ),
                                                 )}
                                         >
                                             <span
@@ -899,7 +943,7 @@
                                     <td>
                                         <p>
                                             {getDurationText(
-                                                track.fileInfo.duration
+                                                track.fileInfo.duration,
                                             )}
                                         </p>
                                     </td>
@@ -923,9 +967,9 @@
                 {:else}
                     <p>{$LL.trackInfo.noMetadata()}</p>
                 {/if}
-            </div>
+            </section>
 
-            <div class="enrichment">
+            <section class="enrichment-section boxed">
                 <h5 class="section-title">
                     <Icon
                         icon="iconoir:atom"
@@ -937,7 +981,7 @@
                     <div
                         use:tippy={{
                             content: $LL.trackInfo.countryOfOriginTooltip(),
-                            placement: "right"
+                            placement: "right",
                         }}
                     >
                         <Icon icon="mdi:information" />
@@ -967,11 +1011,11 @@
                         theme="transparent"
                     />
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
 
         <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <section class="user-section">
+        <section class="artwork-section">
             <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
                 contenteditable
@@ -987,18 +1031,41 @@
                 use:tippy={{
                     content: $LL.trackInfo.artworkTooltip(),
                     placement: "bottom",
-                    trigger: "focusin"
+                    trigger: "focusin",
                 }}
             >
                 <div class="artwork-frame">
-                    {#if (artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat)}
+                    {#if isArtworkSet !== "delete" && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
                         <img
-                            alt="Artwork"
+                            alt=""
                             class="artwork"
                             src={artworkToSetSrc ||
                                 previousArtworkSrc ||
                                 artworkSrc}
                         />
+                        {#if artworkFocused && artworkSrc && artworkFormat && !foundArtwork}
+                            <div class="artwork-options">
+                                <Icon
+                                    icon={artworkToSetSrc
+                                        ? "mingcute:close-circle-fill"
+                                        : "ant-design:delete-outlined"}
+                                    onClick={() => {
+                                        if (artworkToSetSrc) {
+                                            artworkToSetSrc = null;
+                                            artworkToSetFormat = null;
+                                        } else {
+                                            isArtworkSet = "delete";
+                                        }
+                                    }}
+                                />
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openArtworkFilePicker();
+                                    }}
+                                />
+                            </div>
+                        {/if}
                     {:else}
                         <div class="artwork-placeholder">
                             <Icon icon="mdi:music-clef-treble" />
@@ -1010,20 +1077,17 @@
             {#if isArtworkSet}
                 <small>{$LL.trackInfo.artworkReadyToSave()}</small>
             {:else if foundArtwork}
-                <small
-                    >{$LL.trackInfo.artworkFound()}
-                    {foundArtwork.artworkFilenameMatch}</small
-                >
+                <small>{$LL.trackInfo.artworkFound()}</small>
             {:else if artworkSrc}
                 <small>{$LL.trackInfo.encodedInFile()}</small>
             {:else}
-                <small style="color: grey">{$LL.trackInfo.noArtwork()}</small>
+                <small class="notfound">{$LL.trackInfo.noArtwork()}</small>
             {/if}
             <span
                 use:tippy={{
                     allowHTML: true,
                     content: $LL.trackInfo.artworkTooltipBody(),
-                    placement: "left"
+                    placement: "left",
                 }}
                 ><Icon icon="ic:round-info" /><small
                     >{$LL.trackInfo.aboutArtwork()}</small
@@ -1040,7 +1104,7 @@
         </section>
     </div>
     <div class="bottom">
-        <section class="metadata-section">
+        <section class="metadata-section boxed">
             <h5 class="section-title">
                 <Icon icon="fe:music" size={30} />{$LL.trackInfo.metadata()}
             </h5>
@@ -1084,7 +1148,7 @@
                                                     artistInput?.toLowerCase() &&
                                                 artistInput?.length > 0,
                                             showOnCreate: true,
-                                            trigger: "manual"
+                                            trigger: "manual",
                                         }}
                                     >
                                         <Input
@@ -1105,15 +1169,16 @@
                                             .map((e) => VALIDATION_STRINGS[e])
                                             .concat(
                                                 errors[tag.id]?.warnings.map(
-                                                    (e) => VALIDATION_STRINGS[e]
-                                                )
+                                                    (e) =>
+                                                        VALIDATION_STRINGS[e],
+                                                ),
                                             )
                                             .join(","),
                                         placement: "bottom",
                                         theme: "error",
                                         show:
                                             errors[tag.id]?.errors.length > 0 ||
-                                            errors[tag.id]?.warnings.length > 0
+                                            errors[tag.id]?.warnings.length > 0,
                                     }}
                                     class="tag
                                         {errors[tag.id]?.warnings.length > 0
@@ -1134,7 +1199,7 @@
                                             content:
                                                 $LL.trackInfo.setTitleFromFileNameHint(),
                                             show: tag.genericId === "title",
-                                            placement: "bottom"
+                                            placement: "bottom",
                                         }}
                                     >
                                         {tag.genericId ? tag.genericId : tag.id}
@@ -1217,10 +1282,9 @@
         position: relative;
         align-items: center;
         border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background-color: var(--overlay-bg);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
         overflow-y: auto;
         overflow-x: hidden;
@@ -1245,9 +1309,8 @@
         top: -1px;
         padding: 0.4em 0;
         width: 100%;
-        background-color: color-mix(in srgb, var(--background) 1%, transparent);
-        border-bottom: 1px solid
-            color-mix(in srgb, var(--background) 60%, var(--inverse));
+        background-color: var(--popup-track-header-bg);
+        border-bottom: 1px solid var(--popup-track-header-border);
         backdrop-filter: blur(10px);
         z-index: 20;
 
@@ -1321,7 +1384,7 @@
             color-mix(in srgb, var(--background) 60%, var(--inverse));
 
         &:hover {
-            border: 1px solid rgba(255, 255, 255, 0.517);
+            border: 1px solid rgb(from var(--inverse) r g b / 0.517);
         }
 
         &.focused {
@@ -1345,8 +1408,8 @@
                 left bottom,
                 right top;
             animation: border-dance 2s infinite linear;
-            
-             .artwork-frame {
+
+            .artwork-frame {
                 img {
                     transform: scale(0.96);
                 }
@@ -1381,9 +1444,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
             img {
                 height: 100%;
                 width: 100%;
+            }
+
+            .artwork-options {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 2em;
+                background-color: var(--background);
             }
 
             .artwork-placeholder {
@@ -1437,26 +1515,44 @@
         width: 100%;
     }
 
-    .info-section {
-    }
-    .file-outer {
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
+    section.boxed {
+        border: 1px solid var(--popup-track-section-border);
         border-radius: 5px;
-        padding: 4px;
         min-width: 575px;
         position: relative;
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
+        background-color: var(--popup-track-section-bg);
+    }
+
+    .section-title {
+        position: absolute;
+        border-radius: 4px;
+        max-height: 2em;
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+        align-items: center;
+        background-color: var(--popup-track-section-title-bg);
+        z-index: 11;
+        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
+        top: -15px;
+        padding: 0 10px;
+        letter-spacing: 1px;
+        font-weight: 400;
+        left: 3em;
+        right: 0;
+        width: fit-content;
+        margin: 0.5em 0;
+        text-align: start;
+        color: var(--popup-track-section-title-text);
+        text-transform: uppercase;
+    }
+
+    .file-section {
+        padding: 4px;
 
         .section-title {
             top: -10px;
             margin: 0;
-            color: white;
-            border: 1px solid rgba(128, 128, 128, 0.16);
         }
 
         .top-shadow {
@@ -1558,7 +1654,7 @@
                     border-right: 5px solid transparent;
 
                     p {
-                        background-color: rgba(0, 0, 0, 0.118);
+                        background-color: var(--popup-track-data-field-bg);
                         padding: 0.2em 0.5em;
                         width: fit-content;
                         border-radius: 4px;
@@ -1602,14 +1698,18 @@
         }
     }
 
-    .user-section {
+    .artwork-section {
         padding: 0 0 0 1em;
         > small {
-            color: rgb(68, 161, 94);
+            color: var(--popup-track-artwork-found);
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
             display: block;
+
+            &.notfound {
+                color: var(--popup-track-artwork-notfound);
+            }
         }
         span {
             cursor: default;
@@ -1618,7 +1718,7 @@
             display: flex;
             gap: 5px;
             align-items: center;
-            color: rgb(130, 201, 223);
+            color: var(--popup-track-artwork-about);
             user-select: none;
             &:hover {
                 opacity: 0.7;
@@ -1633,35 +1733,7 @@
         }
     }
 
-    .section-title {
-        position: absolute;
-        border-radius: 4px;
-        max-height: 2em;
-        display: flex;
-        flex-direction: row;
-        gap: 5px;
-        align-items: center;
-        background-color: color-mix(
-            in srgb,
-            var(--background) 50%,
-            var(--inverse)
-        );
-        z-index: 11;
-        border: 1px solid rgba(28, 163, 201, 0.29);
-        top: -15px;
-        padding: 0 10px;
-        letter-spacing: 1px;
-        font-weight: 400;
-        left: 3em;
-        right: 0;
-        width: fit-content;
-        margin: 0.5em 0;
-        text-align: start;
-        color: #7dffee;
-        text-transform: uppercase;
-    }
-
-    .enrichment {
+    .enrichment-section {
         margin-top: 1.5em;
         border: 1px solid
             color-mix(in srgb, var(--background) 70%, var(--inverse));
@@ -1674,12 +1746,6 @@
             var(--inverse)
         );
         position: relative;
-
-        .section-title {
-            border: 1px solid rgba(28, 163, 201, 0.19);
-
-            color: #7dffee;
-        }
 
         .label {
             display: flex;
@@ -1699,7 +1765,7 @@
 
             p {
                 margin: 0;
-                color: rgba(255, 255, 255, 0.768);
+                color: rgb(from var(--text) r g b / 0.768);
             }
         }
         .country {
@@ -1716,21 +1782,20 @@
 
     .metadata-section {
         margin-top: 2em;
-        /* border-top: 1px solid rgb(76, 74, 74); */
         border-radius: 5px;
         position: relative;
         padding: 2em 1em;
-        color: white;
+        color: var(--text);
         position: relative;
         width: 100%;
         border: 1px solid
             color-mix(in srgb, var(--background) 70%, var(--inverse));
-
         background-color: color-mix(
             in srgb,
             var(--overlay-bg) 80%,
             var(--inverse)
         );
+
         font-family:
             system-ui,
             -apple-system,
@@ -1740,23 +1805,9 @@
             sans-serif;
 
         .section-title {
-            color: #ffe6ac;
-            border: 1px solid rgba(255, 203, 158, 0.145);
-        }
-        h4 {
-            user-select: none;
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: -13px;
-            background: rgba(67, 65, 73, 0.89);
-            padding: 0 1em;
-            z-index: 10;
-            text-transform: uppercase;
-            opacity: 0.5;
-            width: fit-content;
-            margin: 0 auto;
-            /* font-family: "2Peas"; */
+            color: var(--popup-track-metadata-title);
+            border: 1px solid
+                rgb(from var(--popup-track-metadata-title) r g b / 0.08);
         }
 
         > p {
@@ -1843,11 +1894,11 @@
             }
 
             &.validation-error {
-                border: 1px solid rgb(161, 46, 46);
+                border: 1px solid var(--popup-track-metadata-validation-error);
             }
 
             &.validation-warning {
-                border: 1px solid rgb(225, 154, 0);
+                border: 1px solid var(--popup-track-metadata-validation-warning);
             }
         }
 
@@ -1857,13 +1908,13 @@
     }
 
     .tools {
-        border: 1px solid rgba(255, 255, 255, 0.099);
+        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
         padding: 2em;
         margin: 2em;
         position: relative;
 
         .section-title {
-            color: rgb(170, 170, 170);
+            color: rgb(from var(--popup-track-section-title-text) r g b / 0.85);
             border: transparent;
         }
 
@@ -1899,7 +1950,7 @@
         padding: 0.2em;
         border-radius: 8px;
         margin: 1em;
-        background-color: rgb(111, 87, 87);
+        background-color: var(--popup-track-metadata-prompt-error);
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;

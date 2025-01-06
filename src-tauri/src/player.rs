@@ -29,6 +29,7 @@ use tokio::time::Duration;
 use tokio_util::sync::CancellationToken;
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::MediaEngine;
+use webrtc::api::setting_engine::SettingEngine;
 use webrtc::api::APIBuilder;
 use webrtc::data_channel::data_channel_init::RTCDataChannelInit;
 use webrtc::data_channel::RTCDataChannel;
@@ -203,10 +204,14 @@ impl<'a> AudioPlayer<'a> {
         // Use the default set of Interceptors
         registry = register_default_interceptors(registry, &mut m)?;
 
+        let mut s = SettingEngine::default();
+        s.set_include_loopback_candidate(true);
+
         // Create the API object with the MediaEngine
         let api = APIBuilder::new()
             .with_media_engine(m)
             .with_interceptor_registry(registry)
+            .with_setting_engine(s)
             .build();
 
         // Prepare the configuration
@@ -595,7 +600,7 @@ fn decode_loop(
 
             let spec = SignalSpec {
                 rate: decoder.codec_params().sample_rate.unwrap(),
-                channels
+                channels,
             };
 
             let mut should_reset_audio = false;
@@ -628,7 +633,10 @@ fn decode_loop(
                 cached_devices.replace(dvces);
             };
 
-            let output_device = if cached_devices.as_ref().is_some() && !follow_system_output {
+            let output_device = if cached_devices.as_ref().is_some()
+                && !follow_system_output
+                && audio_device_name.is_some()
+            {
                 info!("Using cached audio device: {:?}", audio_device_name);
                 cached_devices
                     .as_ref()
@@ -729,7 +737,7 @@ fn decode_loop(
                     if let Some(output) = audio_output {
                         if let Ok(out) = output {
                             if let Ok(mut guard) = out.try_lock() {
-                                /* If we determine that audio device should change for the next track, don't stop the stream immediately. 
+                                /* If we determine that audio device should change for the next track, don't stop the stream immediately.
                                 Wait until track has finished playing. */
                                 if is_transition {
                                     while guard.has_remaining_samples() {
@@ -787,9 +795,7 @@ fn decode_loop(
                 let _ = device_change_sender.send(clone_device_name);
                 let _ = app_handle.emit("audio_device_changed", clone_device_name2);
                 let _ = sender_sample_offset.send(SampleOffsetEvent {
-                    sample_offset: Some(
-                        seek_ts * previous_channels as u64,
-                    ),
+                    sample_offset: Some(seek_ts * previous_channels as u64),
                 });
             }
 

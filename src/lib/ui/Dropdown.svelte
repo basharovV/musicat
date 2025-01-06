@@ -13,7 +13,7 @@
     let showSelector = false;
 </script>
 
-<div class="compression-selector" style="{size ? `font-size: ${size}px;` : ''}">
+<div class="dropdown" style={size ? `font-size: ${size}px;` : ""}>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
@@ -27,10 +27,7 @@
     </div>
     {#if showSelector}
         <div class="menu">
-            <Menu
-                position="auto"
-                onClickOutside={() => (showSelector = false)}
-            >
+            <Menu position="auto" onClickOutside={() => (showSelector = false)}>
                 {#each options as option}
                     <MenuOption
                         onClick={() => {
@@ -49,7 +46,7 @@
 </div>
 
 <style lang="scss">
-    .compression-selector {
+    .dropdown {
         cursor: default;
         display: flex;
         position: relative;
@@ -66,7 +63,6 @@
             border: 1px solid rgba(128, 128, 128, 0.159);
             border-radius: 4px;
             padding-bottom: 1px;
-            
 
             &:hover {
                 background-color: rgba(128, 128, 128, 0.191);
@@ -81,7 +77,7 @@
             position: absolute;
             bottom: 0.5em;
             left: -0.5em;
-            z-index: 20;
+            z-index: 30;
         }
 
         * {

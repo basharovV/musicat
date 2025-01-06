@@ -2,10 +2,10 @@
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { open } from "@tauri-apps/plugin-shell";
     import type { ArtistFileItem, Song } from "src/App";
-    import { getMetadataFromFile } from "../../data/LibraryImporter";
-    import { draggedScrapbookItems, playlist } from "../../data/store";
-    import audioPlayer from "../player/AudioPlayer";
+    import { getMetadataFromFile } from "../../data/LibraryUtils";
+    import { draggedScrapbookItems } from "../../data/store";
     import Icon from "../ui/Icon.svelte";
+    import { setQueue } from "../../data/storeHelper";
 
     export let item: ArtistFileItem;
     export let style: "dashed" | "outline" = "outline";
@@ -22,11 +22,10 @@
                 event: {
                     path: item.path,
                     isImport: false,
-                    includeFolderArtwork: false
-                }
+                    includeFolderArtwork: false,
+                },
             });
-            audioPlayer.shouldPlay = true;
-            $playlist = [song];
+            setQueue([song], 0);
         } else {
             // Play in default system app
             open(item.path);
@@ -67,13 +66,22 @@
         {/if}
         <div class="item-info">
             {#if item.fileType.type === "audio"}
-                <Icon icon="bi:file-earmark-play" color="#c745c7" />
+                <Icon
+                    icon="bi:file-earmark-play"
+                    color="var(--atk-icon-audio)"
+                />
             {:else if item.fileType.type === "video"}
-                <Icon icon="dashicons:editor-video" color="#e04848" />
+                <Icon
+                    icon="dashicons:editor-video"
+                    color="var(--atk-icon-video)"
+                />
             {:else if item.fileType.type === "image"}
                 <Icon icon="dashicons:editor-video" />
             {:else if item.fileType.type === "txt"}
-                <Icon icon="dashicons:editor-video" color="#d4d442" />
+                <Icon
+                    icon="dashicons:editor-video"
+                    color="var(--atk-icon-lyric)"
+                />
             {/if}
             <p>{item.name}</p>
         </div>
@@ -104,8 +112,16 @@
             overflow: hidden;
             border-radius: 4px;
             border-width: 1px;
-            border-color: color-mix(in srgb, var(--type-bw-inverse) 11%, transparent);
-            background-color: color-mix(in srgb, var(--type-bw-inverse) 4%, transparent);
+            border-color: color-mix(
+                in srgb,
+                var(--type-bw-inverse) 11%,
+                transparent
+            );
+            background-color: color-mix(
+                in srgb,
+                var(--type-bw-inverse) 4%,
+                transparent
+            );
             padding: 0.7em 1em;
             display: flex;
             align-items: flex-end;

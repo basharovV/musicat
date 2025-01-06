@@ -4,13 +4,13 @@
 
 a {
     font-weight: 500;
-    color: #acafff;
+    color: var(--link);
     text-decoration: inherit;
     -webkit-user-select: none;
     user-select: none;
 }
 a:hover {
-    color: #8086ff;
+    color: var(--link-hover);
 }
 
 body {
@@ -70,7 +70,6 @@ button:disabled {
     color: rgb(181, 171, 171);
 }
 
-
 @font-face {
     font-family: "2Peas";
     src: url("/fonts/2Peas/2Peas.otf") format("opentype");
@@ -100,6 +99,6 @@ button:disabled {
 .toaster .wrapper .app-toast {
     background-color: var(--overlay-bg);
     backdrop-filter: blur(10px);
-    border: 0.7px solid color-mix(in srgb, var(--inverse) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--inverse) 70%, transparent);
     color: var(--text);
 }

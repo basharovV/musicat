@@ -2,7 +2,7 @@
     import type { ArtistProject, SongProject } from "src/App";
     import {
         createSongProject,
-        loadSongProject
+        loadSongProject,
     } from "../../data/ArtistsToolkitData";
 
     export let songProjects: string[];
@@ -15,7 +15,7 @@
         await createSongProject(artist.name, newSongProjectTitle);
         const createdProject = await loadSongProject(
             artist.name,
-            newSongProjectTitle
+            newSongProjectTitle,
         );
         selectedSongProject = createdProject;
         onSelectSongProject(createdProject);
@@ -39,7 +39,7 @@
                 </li>
             {/each}
         </ul>
-    {:else}{/if}
+    {/if}
     <div class="add">
         <p>+</p>
         <form on:submit|preventDefault={onCreateSongProject}>
@@ -88,7 +88,6 @@
                         transparent
                     );
                 }
-                /* border-top: 1px solid rgba(255, 255, 255, 0.093); */
                 p {
                     margin: 0;
                     line-height: 2em;

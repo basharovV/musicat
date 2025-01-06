@@ -1,12 +1,11 @@
 <script lang="ts">
-    export let tags = [
-    ];
+    export let tags = [];
     export let selectedTags = [];
     function selectTag(tag: string) {
         if (selectedTags.includes(tag)) {
             selectedTags.splice(
                 selectedTags.findIndex((t) => t === tag),
-                1
+                1,
             );
         } else {
             selectedTags.push(tag);

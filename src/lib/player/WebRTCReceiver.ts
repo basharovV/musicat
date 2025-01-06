@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { StreamStatus } from "../../App";
 import { streamInfo } from "../../data/store";
-const appWindow = getCurrentWebviewWindow()
+const appWindow = getCurrentWebviewWindow();
 
 const THROUGHPUT_SAMPLE_SIZE = 10;
 
