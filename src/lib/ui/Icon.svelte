@@ -244,10 +244,10 @@
     class={className}
     class:boxed
     class:clickable={onClick}
+    class:disabled
 >
     <svg
         xmlns="http://www.w3.org/2000/svg"
-        class:disabled
         {width}
         {height}
         {viewBox}
@@ -267,6 +267,14 @@
         display: flex;
         align-items: center;
 
+        &.boxed {
+            border-radius: 4px;
+            padding: 6px;
+            &:hover {
+                background-color: var(--icon-boxed-hover-bg);
+            }
+        }
+
         &.clickable {
             color: var(--icon-secondary);
 
@@ -279,20 +287,13 @@
             }
         }
 
-        &.boxed {
-            border-radius: 4px;
-            padding: 6px;
-            &:hover {
-                background-color: rgba(0, 0, 0, 0.187);
-            }
+        &.disabled {
+            pointer-events: none;
+            color: var(--icon-disabled) !important;
         }
+
         svg {
             stroke: none;
-
-            &.disabled {
-                pointer-events: none;
-                color: #474747 !important;
-            }
         }
     }
 </style>

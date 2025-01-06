@@ -532,12 +532,10 @@
         position: sticky;
         top: 0;
         width: 100%;
-        /* background-color: color-mix(in srgb, var(--background) 90%, transparent); */
         backdrop-filter: blur(10px);
         z-index: 0;
         padding: 1em 2em;
-        border-bottom: 0.7px solid
-            color-mix(in srgb, var(--inverse) 50%, transparent);
+        border-bottom: 0.7px solid var(--panel-separator);
     }
     .legend {
         display: inline-flex;
@@ -576,16 +574,16 @@
                 text-transform: capitalize;
             }
             &.lyrics {
-                color: #d4d442;
+                color: var(--atk-icon-lyric);
             }
             &.audio {
-                color: rgb(199, 69, 199);
+                color: var(--atk-icon-audio);
             }
             &.video {
-                color: rgb(224, 72, 72);
+                color: var(--atk-icon-video);
             }
             &.link {
-                color: rgb(70, 227, 227);
+                color: var(--atk-icon-link);
             }
         }
     }

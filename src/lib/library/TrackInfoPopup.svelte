@@ -877,8 +877,8 @@
         </div>
     </header>
     <div class="top">
-        <section class="info-section" bind:this={tableOuterContainer}>
-            <div class="file-outer" bind:this={tableOuterContainer}>
+        <div>
+            <section class="file-section boxed" bind:this={tableOuterContainer}>
                 <h5 class="section-title">
                     <Icon icon="bi:file-earmark-play" size={26} />File info
                 </h5>
@@ -967,9 +967,9 @@
                 {:else}
                     <p>{$LL.trackInfo.noMetadata()}</p>
                 {/if}
-            </div>
+            </section>
 
-            <div class="enrichment">
+            <section class="enrichment-section boxed">
                 <h5 class="section-title">
                     <Icon
                         icon="iconoir:atom"
@@ -1011,11 +1011,11 @@
                         theme="transparent"
                     />
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
 
         <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <section class="user-section">
+        <section class="artwork-section">
             <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
                 contenteditable
@@ -1037,7 +1037,7 @@
                 <div class="artwork-frame">
                     {#if isArtworkSet !== "delete" && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
                         <img
-                            alt="Artwork"
+                            alt=""
                             class="artwork"
                             src={artworkToSetSrc ||
                                 previousArtworkSrc ||
@@ -1104,7 +1104,7 @@
         </section>
     </div>
     <div class="bottom">
-        <section class="metadata-section">
+        <section class="metadata-section boxed">
             <h5 class="section-title">
                 <Icon icon="fe:music" size={30} />{$LL.trackInfo.metadata()}
             </h5>
@@ -1309,9 +1309,8 @@
         top: -1px;
         padding: 0.4em 0;
         width: 100%;
-        background-color: color-mix(in srgb, var(--background) 1%, transparent);
-        border-bottom: 1px solid
-            color-mix(in srgb, var(--background) 60%, var(--inverse));
+        background-color: var(--popup-track-header-bg);
+        border-bottom: 1px solid var(--popup-track-header-border);
         backdrop-filter: blur(10px);
         z-index: 20;
 
@@ -1516,26 +1515,44 @@
         width: 100%;
     }
 
-    .info-section {
-    }
-    .file-outer {
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
+    section.boxed {
+        border: 1px solid var(--popup-track-section-border);
         border-radius: 5px;
-        padding: 4px;
         min-width: 575px;
         position: relative;
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
+        background-color: var(--popup-track-section-bg);
+    }
+
+    .section-title {
+        position: absolute;
+        border-radius: 4px;
+        max-height: 2em;
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+        align-items: center;
+        background-color: var(--popup-track-section-title-bg);
+        z-index: 11;
+        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
+        top: -15px;
+        padding: 0 10px;
+        letter-spacing: 1px;
+        font-weight: 400;
+        left: 3em;
+        right: 0;
+        width: fit-content;
+        margin: 0.5em 0;
+        text-align: start;
+        color: var(--popup-track-section-title-text);
+        text-transform: uppercase;
+    }
+
+    .file-section {
+        padding: 4px;
 
         .section-title {
             top: -10px;
             margin: 0;
-            color: var(--title);
-            border: 1px solid rgb(from var(--inverse) r g b / 0.08);
         }
 
         .top-shadow {
@@ -1637,7 +1654,7 @@
                     border-right: 5px solid transparent;
 
                     p {
-                        background-color: var(--popup-data-field-bg);
+                        background-color: var(--popup-track-data-field-bg);
                         padding: 0.2em 0.5em;
                         width: fit-content;
                         border-radius: 4px;
@@ -1681,17 +1698,17 @@
         }
     }
 
-    .user-section {
+    .artwork-section {
         padding: 0 0 0 1em;
         > small {
-            color: var(--popup-song-artwork-found);
+            color: var(--popup-track-artwork-found);
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
             display: block;
 
             &.notfound {
-                color: var(--popup-song-artwork-notfound);
+                color: var(--popup-track-artwork-notfound);
             }
         }
         span {
@@ -1701,7 +1718,7 @@
             display: flex;
             gap: 5px;
             align-items: center;
-            color: var(--popup-song-artwork-about);
+            color: var(--popup-track-artwork-about);
             user-select: none;
             &:hover {
                 opacity: 0.7;
@@ -1716,35 +1733,7 @@
         }
     }
 
-    .section-title {
-        position: absolute;
-        border-radius: 4px;
-        max-height: 2em;
-        display: flex;
-        flex-direction: row;
-        gap: 5px;
-        align-items: center;
-        background-color: color-mix(
-            in srgb,
-            var(--background) 50%,
-            var(--inverse)
-        );
-        z-index: 11;
-        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
-        top: -15px;
-        padding: 0 10px;
-        letter-spacing: 1px;
-        font-weight: 400;
-        left: 3em;
-        right: 0;
-        width: fit-content;
-        margin: 0.5em 0;
-        text-align: start;
-        color: var(--title);
-        text-transform: uppercase;
-    }
-
-    .enrichment {
+    .enrichment-section {
         margin-top: 1.5em;
         border: 1px solid
             color-mix(in srgb, var(--background) 70%, var(--inverse));
@@ -1757,11 +1746,6 @@
             var(--inverse)
         );
         position: relative;
-
-        .section-title {
-            border: 1px solid rgb(from var(--inverse) r g b / 0.08);
-            color: var(--title);
-        }
 
         .label {
             display: flex;
@@ -1821,9 +1805,9 @@
             sans-serif;
 
         .section-title {
-            color: var(--popup-song-metadata-title);
+            color: var(--popup-track-metadata-title);
             border: 1px solid
-                rgb(from var(--popup-song-metadata-title) r g b / 0.08);
+                rgb(from var(--popup-track-metadata-title) r g b / 0.08);
         }
 
         > p {
@@ -1910,11 +1894,11 @@
             }
 
             &.validation-error {
-                border: 1px solid var(--popup-song-metadata-validation-error);
+                border: 1px solid var(--popup-track-metadata-validation-error);
             }
 
             &.validation-warning {
-                border: 1px solid var(--popup-song-metadata-validation-warning);
+                border: 1px solid var(--popup-track-metadata-validation-warning);
             }
         }
 
@@ -1930,7 +1914,7 @@
         position: relative;
 
         .section-title {
-            color: rgb(from var(--title) r g b / 0.85);
+            color: rgb(from var(--popup-track-section-title-text) r g b / 0.85);
             border: transparent;
         }
 
@@ -1966,7 +1950,7 @@
         padding: 0.2em;
         border-radius: 8px;
         margin: 1em;
-        background-color: var(--popup-song-metadata-prompt-error);
+        background-color: var(--popup-track-metadata-prompt-error);
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;

@@ -611,7 +611,7 @@
     container {
         position: relative;
         cursor: grab;
-        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
+        border: 0.7px solid var(--panel-primary-border-main);
         margin: 5px 0 0 0;
         border-radius: 5px;
         overflow: hidden;

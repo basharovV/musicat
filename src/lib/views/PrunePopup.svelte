@@ -147,7 +147,7 @@
 
 <style lang="scss">
     .container {
-        border: 0.7px solid color-mix(in srgb, var(--inverse) 30%, transparent);
+        border: 0.7px solid var(--panel-primary-border-main);
         margin: 5px 0 0 0;
         border-radius: 5px;
         position: relative;
@@ -168,12 +168,11 @@
         max-width: 500px;
         min-height: 350px;
         border-radius: 5px;
-        color: white;
+        color: var(--text);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        color: white;
         .subtitle {
             opacity: 0.5;
         }
@@ -235,7 +234,7 @@
                     }
                 }
                 h1 {
-                    border: 1px solid var(--inverse);
+                    border: 1px solid var(--prune-button-border);
                     border-radius: 5px;
                     margin: 0;
                     padding: 1em;

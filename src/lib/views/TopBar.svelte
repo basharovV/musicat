@@ -46,7 +46,7 @@
         if (song) {
             if (
                 song.path === currentSong?.path &&
-                !$lastWrittenSongs.some(({path}) => path === song.path)
+                !$lastWrittenSongs.some(({ path }) => path === song.path)
             ) {
                 // same song, no need to update
                 // (unless the metadata was just written to eg. updated artwork)
@@ -288,14 +288,10 @@
             width: 100%;
             overflow: hidden;
             border-radius: 5px;
-            border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 10%, transparent);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
-            border-right: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
-            border-left: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
+            border-top: 0.7px solid var(--panel-primary-border-accent2);
+            border-bottom: 0.7px solid var(--panel-primary-border-main);
+            border-right: 0.7px solid var(--panel-primary-border-main);
+            border-left: 0.7px solid var(--panel-primary-border-main);
 
             background-color: color-mix(
                 in srgb,

@@ -183,11 +183,6 @@
 
 <style lang="scss">
     bottom-bar {
-        /* background-color: rgba(28, 26, 26, 0.645); */
-        /* backdrop-filter: blur(8px); */
-        /* border-top: 1px solid rgb(51, 51, 51); */
-        /* border-left: 0.7px solid #ffffff2a; */
-        /* border-radius: 5px; */
         color: var(--text);
         display: flex;
         flex-direction: row;

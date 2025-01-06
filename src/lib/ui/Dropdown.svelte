@@ -13,7 +13,7 @@
     let showSelector = false;
 </script>
 
-<div class="compression-selector" style={size ? `font-size: ${size}px;` : ""}>
+<div class="dropdown" style={size ? `font-size: ${size}px;` : ""}>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
@@ -46,7 +46,7 @@
 </div>
 
 <style lang="scss">
-    .compression-selector {
+    .dropdown {
         cursor: default;
         display: flex;
         position: relative;
@@ -77,7 +77,7 @@
             position: absolute;
             bottom: 0.5em;
             left: -0.5em;
-            z-index: 20;
+            z-index: 30;
         }
 
         * {

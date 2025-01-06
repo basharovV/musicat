@@ -1,0 +1,766 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "ThemeType": {
+            "enum": [
+                "dark",
+                "light"
+            ],
+            "type": "string"
+        }
+    },
+    "properties": {
+        "accent": {
+            "description": "Primary accent color used for active items that need to stand out",
+            "type": "string"
+        },
+        "accent-secondary": {
+            "type": "string"
+        },
+        "album-playing-pause-bg": {
+            "description": "Album",
+            "type": "string"
+        },
+        "album-playing-pause-border": {
+            "type": "string"
+        },
+        "album-playing-pause-hover-bg": {
+            "type": "string"
+        },
+        "album-playing-pause-hover-icon": {
+            "type": "string"
+        },
+        "album-playing-pause-icon": {
+            "type": "string"
+        },
+        "album-playing-play-bg": {
+            "type": "string"
+        },
+        "album-playing-play-border": {
+            "type": "string"
+        },
+        "album-playing-play-hover-bg": {
+            "type": "string"
+        },
+        "album-playing-play-hover-icon": {
+            "type": "string"
+        },
+        "album-playing-play-icon": {
+            "type": "string"
+        },
+        "album-playing-shadow": {
+            "type": "string"
+        },
+        "album-playing-title-bg": {
+            "type": "string"
+        },
+        "analytics-border": {
+            "description": "Analytics/Stats",
+            "type": "string"
+        },
+        "analytics-text-primary": {
+            "type": "string"
+        },
+        "analytics-text-secondary": {
+            "type": "string"
+        },
+        "analytics-timeline-track-bg": {
+            "type": "string"
+        },
+        "analytics-timeline-vline-bg": {
+            "type": "string"
+        },
+        "atk-icon-audio": {
+            "description": "Artist's Toolkit",
+            "type": "string"
+        },
+        "atk-icon-link": {
+            "type": "string"
+        },
+        "atk-icon-lyric": {
+            "type": "string"
+        },
+        "atk-icon-video": {
+            "type": "string"
+        },
+        "background": {
+            "description": "Window background (will be made more translucent on macOS)",
+            "type": "string"
+        },
+        "button-bg": {
+            "type": "string"
+        },
+        "button-text": {
+            "type": "string"
+        },
+        "display-name": {
+            "type": "string"
+        },
+        "header-opacity": {
+            "type": "number"
+        },
+        "header-text": {
+            "type": "string"
+        },
+        "icon-boxed-hover-bg": {
+            "type": "string"
+        },
+        "icon-disabled": {
+            "type": "string"
+        },
+        "icon-primary": {
+            "type": "string"
+        },
+        "icon-secondary": {
+            "type": "string"
+        },
+        "icon-secondary-hover": {
+            "type": "string"
+        },
+        "icon-tertiary": {
+            "type": "string"
+        },
+        "icon-tertiary-hover": {
+            "type": "string"
+        },
+        "input-alt-focus-outline": {
+            "type": "string"
+        },
+        "input-bg": {
+            "type": "string"
+        },
+        "input-focus-outline": {
+            "type": "string"
+        },
+        "library-clickable-cell-bg": {
+            "type": "string"
+        },
+        "library-clickable-cell-hover-bg": {
+            "type": "string"
+        },
+        "library-favourite-hover-icon": {
+            "type": "string"
+        },
+        "library-favourite-icon": {
+            "type": "string"
+        },
+        "library-header-active-bg": {
+            "type": "string"
+        },
+        "library-header-bg": {
+            "type": "string"
+        },
+        "library-header-text": {
+            "type": "string"
+        },
+        "library-highlight-bg": {
+            "type": "string"
+        },
+        "library-hover-bg": {
+            "type": "string"
+        },
+        "library-playing-bg": {
+            "type": "string"
+        },
+        "library-playing-icon": {
+            "type": "string"
+        },
+        "library-playing-text": {
+            "type": "string"
+        },
+        "library-text-color": {
+            "description": "Library",
+            "type": "string"
+        },
+        "link": {
+            "type": "string"
+        },
+        "link-hover": {
+            "type": "string"
+        },
+        "mapview-region-bg": {
+            "description": "Map View",
+            "type": "string"
+        },
+        "mapview-region-border": {
+            "type": "string"
+        },
+        "mapview-region-hover-bg": {
+            "type": "string"
+        },
+        "mapview-region-hover-border": {
+            "type": "string"
+        },
+        "mapview-region-selected-bg": {
+            "type": "string"
+        },
+        "mapview-region-selected-border": {
+            "type": "string"
+        },
+        "mapview-region-selected-hover-bg": {
+            "type": "string"
+        },
+        "mapview-region-selected-hover-border": {
+            "type": "string"
+        },
+        "mapview-scale-1": {
+            "type": "string"
+        },
+        "mapview-scale-2": {
+            "type": "string"
+        },
+        "mapview-tooltip-artist": {
+            "type": "string"
+        },
+        "mapview-tooltip-bg": {
+            "type": "string"
+        },
+        "mapview-tooltip-border": {
+            "type": "string"
+        },
+        "mapview-tooltip-text": {
+            "type": "string"
+        },
+        "menu-bg": {
+            "description": "Menus",
+            "type": "string"
+        },
+        "menu-border": {
+            "type": "string"
+        },
+        "menu-checkbox-off": {
+            "type": "string"
+        },
+        "menu-checkbox-on": {
+            "type": "string"
+        },
+        "menu-divider": {
+            "type": "string"
+        },
+        "menu-item-confirm-bg": {
+            "type": "string"
+        },
+        "menu-item-destructive-hover-bg": {
+            "type": "string"
+        },
+        "menu-item-destructive-hover-text": {
+            "type": "string"
+        },
+        "menu-item-disabled": {
+            "type": "string"
+        },
+        "menu-item-highlight-bg": {
+            "type": "string"
+        },
+        "menu-item-highlight-border": {
+            "type": "string"
+        },
+        "menu-item-highlight-secondary-bg": {
+            "type": "string"
+        },
+        "menu-item-highlight-secondary-border": {
+            "type": "string"
+        },
+        "menu-item-highlight-secondary-text": {
+            "type": "string"
+        },
+        "menu-item-highlight-text": {
+            "type": "string"
+        },
+        "menu-item-loading-from": {
+            "type": "string"
+        },
+        "menu-item-loading-to": {
+            "type": "string"
+        },
+        "menu-item-text": {
+            "type": "string"
+        },
+        "menu-shadow": {
+            "type": "string"
+        },
+        "oscilloscope": {
+            "description": "Oscilloscope",
+            "type": "string"
+        },
+        "overlay-bg": {
+            "description": "Overlays, popups",
+            "type": "string"
+        },
+        "overlay-shadow": {
+            "type": "string"
+        },
+        "panel-background": {
+            "description": "Main panel background",
+            "type": "string"
+        },
+        "panel-primary-border-accent1": {
+            "type": "string"
+        },
+        "panel-primary-border-accent2": {
+            "type": "string"
+        },
+        "panel-primary-border-main": {
+            "type": "string"
+        },
+        "panel-secondary-border-accent": {
+            "type": "string"
+        },
+        "panel-secondary-border-main": {
+            "type": "string"
+        },
+        "panel-separator": {
+            "type": "string"
+        },
+        "popup-track-artwork-about": {
+            "description": "Popups",
+            "type": "string"
+        },
+        "popup-track-artwork-found": {
+            "type": "string"
+        },
+        "popup-track-artwork-notfound": {
+            "type": "string"
+        },
+        "popup-track-data-field-bg": {
+            "type": "string"
+        },
+        "popup-track-header-bg": {
+            "type": "string"
+        },
+        "popup-track-header-border": {
+            "type": "string"
+        },
+        "popup-track-metadata-prompt-error": {
+            "type": "string"
+        },
+        "popup-track-metadata-title": {
+            "type": "string"
+        },
+        "popup-track-metadata-validation-error": {
+            "type": "string"
+        },
+        "popup-track-metadata-validation-warning": {
+            "type": "string"
+        },
+        "popup-track-section-bg": {
+            "type": "string"
+        },
+        "popup-track-section-border": {
+            "type": "string"
+        },
+        "popup-track-section-title-bg": {
+            "type": "string"
+        },
+        "popup-track-section-title-text": {
+            "type": "string"
+        },
+        "progressbar-track-bg": {
+            "description": "Progress bar",
+            "type": "string"
+        },
+        "progressbar-value-bg": {
+            "type": "string"
+        },
+        "prune-button-delete-bg": {
+            "description": "Prune",
+            "type": "string"
+        },
+        "prune-button-delete-pressed-shadow": {
+            "type": "string"
+        },
+        "prune-button-keep-bg": {
+            "type": "string"
+        },
+        "prune-button-keep-pressed-shadow": {
+            "type": "string"
+        },
+        "prune-fordelete": {
+            "type": "string"
+        },
+        "seekbar-hoverhead": {
+            "type": "string"
+        },
+        "seekbar-line-bg": {
+            "description": "Seekbar",
+            "type": "string"
+        },
+        "seekbar-thumb": {
+            "type": "string"
+        },
+        "sidebar-info-artist-active-bg": {
+            "description": "Sidebar",
+            "type": "string"
+        },
+        "sidebar-info-artist-hover-bg": {
+            "type": "string"
+        },
+        "sidebar-info-title-hover-bg": {
+            "type": "string"
+        },
+        "sidebar-info-title-hover-border": {
+            "type": "string"
+        },
+        "sidebar-item-drag-bg": {
+            "type": "string"
+        },
+        "sidebar-item-hover-bg": {
+            "type": "string"
+        },
+        "sidebar-item-hover-text": {
+            "type": "string"
+        },
+        "sidebar-item-selected-pipe-bg": {
+            "type": "string"
+        },
+        "sidebar-node-inactive-hover-bg": {
+            "type": "string"
+        },
+        "sidebar-node-inactive-hover-opacity": {
+            "type": "number"
+        },
+        "sidebar-node-inactive-hover-text": {
+            "type": "string"
+        },
+        "sidebar-player-disabled-bg": {
+            "type": "string"
+        },
+        "sidebar-player-disabled-text": {
+            "type": "string"
+        },
+        "sidebar-search-focus-bg": {
+            "type": "string"
+        },
+        "smart-playlist-builder-bg": {
+            "description": "Smart playlist",
+            "type": "string"
+        },
+        "smart-playlist-builder-block-bg": {
+            "type": "string"
+        },
+        "smart-playlist-builder-block-focused-bg": {
+            "type": "string"
+        },
+        "smart-playlist-builder-block-input-bg": {
+            "type": "string"
+        },
+        "smart-playlist-builder-block-input-text": {
+            "type": "string"
+        },
+        "smart-playlist-builder-text": {
+            "type": "string"
+        },
+        "smart-playlist-button-bg": {
+            "type": "string"
+        },
+        "smart-playlist-button-disabled": {
+            "type": "string"
+        },
+        "smart-playlist-button-disabled-bg": {
+            "type": "string"
+        },
+        "text": {
+            "description": "Primary text color",
+            "type": "string"
+        },
+        "text-active": {
+            "description": "Text color for active items",
+            "type": "string"
+        },
+        "text-inactive": {
+            "description": "Text color for inactive items",
+            "type": "string"
+        },
+        "text-secondary": {
+            "description": "Secondary text color, for dimmed text",
+            "type": "string"
+        },
+        "title": {
+            "type": "string"
+        },
+        "transport-control": {
+            "description": "Play, pause, next, previous",
+            "type": "string"
+        },
+        "transport-control-hover": {
+            "type": "string"
+        },
+        "transport-favorite": {
+            "type": "string"
+        },
+        "transport-favorite-hover": {
+            "type": "string"
+        },
+        "transport-shuffle": {
+            "type": "string"
+        },
+        "transport-shuffle-hover": {
+            "type": "string"
+        },
+        "transport-volume-line-bg": {
+            "type": "string"
+        },
+        "transport-volume-thumb-bg": {
+            "type": "string"
+        },
+        "transport-volume-thumb-icon": {
+            "type": "string"
+        },
+        "transport-volume-thumb-secondary": {
+            "type": "string"
+        },
+        "type": {
+            "$ref": "#/definitions/ThemeType"
+        },
+        "waveform-bg": {
+            "description": "Waveform",
+            "type": "string"
+        },
+        "waveform-bg-hover": {
+            "type": "string"
+        },
+        "waveform-cursor": {
+            "type": "string"
+        },
+        "waveform-hover-label-bg": {
+            "type": "string"
+        },
+        "waveform-hover-label-text": {
+            "type": "string"
+        },
+        "waveform-hover-line": {
+            "type": "string"
+        },
+        "waveform-hoverhead-line-bg": {
+            "type": "string"
+        },
+        "waveform-progress": {
+            "type": "string"
+        },
+        "waveform-region-current": {
+            "type": "string"
+        },
+        "waveform-region-loop": {
+            "type": "string"
+        },
+        "waveform-wave": {
+            "type": "string"
+        },
+        "wiki-bg": {
+            "description": "Wiki",
+            "type": "string"
+        },
+        "wiki-close-prompt-bg": {
+            "type": "string"
+        },
+        "wiki-close-prompt-text": {
+            "type": "string"
+        },
+        "wiki-header-bg": {
+            "type": "string"
+        },
+        "wiki-inarticle-bg": {
+            "type": "string"
+        },
+        "wiki-pill-bg": {
+            "type": "string"
+        },
+        "wiki-pill-border": {
+            "type": "string"
+        },
+        "wiki-pill-hover-bg": {
+            "type": "string"
+        },
+        "wiki-pill-hover-text": {
+            "type": "string"
+        },
+        "wiki-pill-text": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "accent",
+        "accent-secondary",
+        "album-playing-pause-bg",
+        "album-playing-pause-border",
+        "album-playing-pause-hover-bg",
+        "album-playing-pause-hover-icon",
+        "album-playing-pause-icon",
+        "album-playing-play-bg",
+        "album-playing-play-border",
+        "album-playing-play-hover-bg",
+        "album-playing-play-hover-icon",
+        "album-playing-play-icon",
+        "album-playing-shadow",
+        "album-playing-title-bg",
+        "analytics-border",
+        "analytics-text-primary",
+        "analytics-text-secondary",
+        "analytics-timeline-track-bg",
+        "analytics-timeline-vline-bg",
+        "atk-icon-audio",
+        "atk-icon-link",
+        "atk-icon-lyric",
+        "atk-icon-video",
+        "background",
+        "button-bg",
+        "button-text",
+        "display-name",
+        "header-opacity",
+        "header-text",
+        "icon-boxed-hover-bg",
+        "icon-disabled",
+        "icon-primary",
+        "icon-secondary",
+        "icon-secondary-hover",
+        "icon-tertiary",
+        "icon-tertiary-hover",
+        "input-alt-focus-outline",
+        "input-bg",
+        "input-focus-outline",
+        "library-clickable-cell-bg",
+        "library-clickable-cell-hover-bg",
+        "library-favourite-hover-icon",
+        "library-favourite-icon",
+        "library-header-active-bg",
+        "library-header-bg",
+        "library-header-text",
+        "library-highlight-bg",
+        "library-hover-bg",
+        "library-playing-bg",
+        "library-playing-icon",
+        "library-playing-text",
+        "library-text-color",
+        "link",
+        "link-hover",
+        "mapview-region-bg",
+        "mapview-region-border",
+        "mapview-region-hover-bg",
+        "mapview-region-hover-border",
+        "mapview-region-selected-bg",
+        "mapview-region-selected-border",
+        "mapview-region-selected-hover-bg",
+        "mapview-region-selected-hover-border",
+        "mapview-scale-1",
+        "mapview-scale-2",
+        "mapview-tooltip-artist",
+        "mapview-tooltip-bg",
+        "mapview-tooltip-border",
+        "mapview-tooltip-text",
+        "menu-bg",
+        "menu-border",
+        "menu-checkbox-off",
+        "menu-checkbox-on",
+        "menu-divider",
+        "menu-item-confirm-bg",
+        "menu-item-destructive-hover-bg",
+        "menu-item-destructive-hover-text",
+        "menu-item-disabled",
+        "menu-item-highlight-bg",
+        "menu-item-highlight-border",
+        "menu-item-highlight-secondary-bg",
+        "menu-item-highlight-secondary-border",
+        "menu-item-highlight-secondary-text",
+        "menu-item-highlight-text",
+        "menu-item-loading-from",
+        "menu-item-loading-to",
+        "menu-item-text",
+        "menu-shadow",
+        "oscilloscope",
+        "overlay-bg",
+        "overlay-shadow",
+        "panel-background",
+        "panel-primary-border-accent1",
+        "panel-primary-border-accent2",
+        "panel-primary-border-main",
+        "panel-secondary-border-accent",
+        "panel-secondary-border-main",
+        "panel-separator",
+        "popup-track-artwork-about",
+        "popup-track-artwork-found",
+        "popup-track-artwork-notfound",
+        "popup-track-data-field-bg",
+        "popup-track-header-bg",
+        "popup-track-header-border",
+        "popup-track-metadata-prompt-error",
+        "popup-track-metadata-title",
+        "popup-track-metadata-validation-error",
+        "popup-track-metadata-validation-warning",
+        "popup-track-section-bg",
+        "popup-track-section-border",
+        "popup-track-section-title-bg",
+        "popup-track-section-title-text",
+        "progressbar-track-bg",
+        "progressbar-value-bg",
+        "prune-button-delete-bg",
+        "prune-button-delete-pressed-shadow",
+        "prune-button-keep-bg",
+        "prune-button-keep-pressed-shadow",
+        "prune-fordelete",
+        "seekbar-hoverhead",
+        "seekbar-line-bg",
+        "seekbar-thumb",
+        "sidebar-info-artist-active-bg",
+        "sidebar-info-artist-hover-bg",
+        "sidebar-info-title-hover-bg",
+        "sidebar-info-title-hover-border",
+        "sidebar-item-drag-bg",
+        "sidebar-item-hover-bg",
+        "sidebar-item-hover-text",
+        "sidebar-item-selected-pipe-bg",
+        "sidebar-node-inactive-hover-bg",
+        "sidebar-node-inactive-hover-opacity",
+        "sidebar-node-inactive-hover-text",
+        "sidebar-player-disabled-bg",
+        "sidebar-player-disabled-text",
+        "sidebar-search-focus-bg",
+        "smart-playlist-builder-bg",
+        "smart-playlist-builder-block-bg",
+        "smart-playlist-builder-block-focused-bg",
+        "smart-playlist-builder-block-input-bg",
+        "smart-playlist-builder-block-input-text",
+        "smart-playlist-builder-text",
+        "smart-playlist-button-bg",
+        "smart-playlist-button-disabled",
+        "smart-playlist-button-disabled-bg",
+        "text",
+        "text-active",
+        "text-inactive",
+        "text-secondary",
+        "title",
+        "transport-control",
+        "transport-control-hover",
+        "transport-favorite",
+        "transport-favorite-hover",
+        "transport-shuffle",
+        "transport-shuffle-hover",
+        "transport-volume-line-bg",
+        "transport-volume-thumb-bg",
+        "transport-volume-thumb-icon",
+        "transport-volume-thumb-secondary",
+        "type",
+        "waveform-bg",
+        "waveform-bg-hover",
+        "waveform-cursor",
+        "waveform-hover-label-bg",
+        "waveform-hover-label-text",
+        "waveform-hover-line",
+        "waveform-hoverhead-line-bg",
+        "waveform-progress",
+        "waveform-region-current",
+        "waveform-region-loop",
+        "waveform-wave",
+        "wiki-bg",
+        "wiki-close-prompt-bg",
+        "wiki-close-prompt-text",
+        "wiki-header-bg",
+        "wiki-inarticle-bg",
+        "wiki-pill-bg",
+        "wiki-pill-border",
+        "wiki-pill-hover-bg",
+        "wiki-pill-hover-text",
+        "wiki-pill-text"
+    ],
+    "type": "object"
+}
+

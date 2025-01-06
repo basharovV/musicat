@@ -2522,10 +2522,8 @@
         justify-content: center;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
-        border-left: 0.7px solid
-            color-mix(in srgb, var(--inverse) 40%, transparent);
-        border-bottom: 0.7px solid
-            color-mix(in srgb, var(--inverse) 40%, transparent);
+        border-left: 0.7px solid var(--panel-primary-border-main);
+        border-bottom: 0.7px solid var(--panel-primary-border-main);
         overflow: hidden;
     }
     .container {

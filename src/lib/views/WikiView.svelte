@@ -539,8 +539,7 @@
 
         .in-article {
             background-color: var(--wiki-inarticle-bg);
-            border-bottom: 1px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
+            border-bottom: 1px solid var(--panel-primary-border-main);
             padding: 1em;
 
             > p {
@@ -578,8 +577,7 @@
                         margin: 5px 5px 0px 0;
                         padding: 2px 5px;
                         background-color: var(--wiki-pill-bg);
-                        border: 1px solid
-                            color-mix(in srgb, var(--inverse) 40%, transparent);
+                        border: 1px solid var(--wiki-pill-border);
                         border-radius: 5px;
                         display: flex;
                         flex-direction: column;

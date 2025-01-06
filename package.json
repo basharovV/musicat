@@ -4,17 +4,19 @@
     "version": "0.11.0",
     "type": "module",
     "scripts": {
-        "dev": "vite --host",
         "build": "vite build",
-        "preview": "vite preview",
         "check": "svelte-check --tsconfig ./tsconfig.json",
+        "dev": "vite --host",
+        "preview": "vite preview",
         "tauri": "tauri",
+        "tm-schema": "npx typescript-json-schema --required --out src/theming/theme.schema.json src/types/theme.d.ts Theme",
         "typesafe-i18n": "typesafe-i18n"
     },
     "devDependencies": {
         "@alexanderolsen/libsamplerate-js": "^2.1.1",
         "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
         "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
+        "@modyfi/vite-plugin-yaml": "^1.1.0",
         "@sveltejs/vite-plugin-svelte": "^2.4.1",
         "@tauri-apps/api": "^2.0.0-rc.0",
         "@tauri-apps/cli": "^2.0.3",

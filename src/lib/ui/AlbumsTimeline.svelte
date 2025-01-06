@@ -161,7 +161,8 @@
 </container>
 
 <style lang="scss">
-    $border_color: rgba(236, 229, 229, 0.61);
+    // $border_color: rgba(236, 229, 229, 0.61);
+    $border_color: var(--text);
     container {
         position: relative;
         width: 100%;
@@ -209,9 +210,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            border: 1px solid rgba(236, 229, 229, 0.31);
+            border: 1px solid var(--analytics-timeline-track-bg);
             border-radius: 2px;
-            /* background-color: $border_color; */
         }
     }
 
@@ -238,7 +238,7 @@
             .vertical-line {
                 height: 20px;
                 width: 1px;
-                border: 1px solid rgba(236, 229, 229, 0.31);
+                border: 1px solid var(--analytics-timeline-vline-bg);
                 border-radius: 2px;
             }
 
