@@ -6,7 +6,9 @@
         uiPreferences,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
+    import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
+    import Icon from "../ui/Icon.svelte";
 
     $: showSingles = $uiPreferences.albumsViewShowSingles;
     $: showInfo = $uiPreferences.albumsViewShowInfo;
@@ -52,26 +54,34 @@
                 }}
             />
         </div>
-        <label
-            >{$LL.albums.options.showSingles()}
-            <input
-                type="checkbox"
-                checked={showSingles}
-                on:change={(ev) => {
-                    $uiPreferences.albumsViewShowSingles = ev.target.checked;
+        <Divider />
+        <div class="toggle">
+            <Icon
+                icon={showSingles ? "mdi:show" : "mdi:hide"}
+                color={showSingles
+                    ? "var(--icon-primary)"
+                    : "var(--icon-secondary)"}
+                boxed
+                onClick={() => {
+                    $uiPreferences.albumsViewShowSingles = !showSingles;
                 }}
-            /></label
-        >
-        <label
-            >{$LL.albums.options.showInfo()}
-            <input
-                type="checkbox"
-                checked={showInfo}
-                on:change={(ev) => {
-                    $uiPreferences.albumsViewShowInfo = ev.target.checked;
+            />
+            <p>{$LL.albums.options.showSingles()}</p>
+        </div>
+        <div class="toggle">
+            <Icon
+                icon={showInfo ? "mdi:show" : "mdi:hide"}
+                color={showInfo
+                    ? "var(--icon-primary)"
+                    : "var(--icon-secondary)"}
+                boxed
+                onClick={() => {
+                    $uiPreferences.albumsViewShowInfo = !showInfo;
                 }}
-            /></label
-        >
+            />
+            <p>{$LL.albums.options.showInfo()}</p>
+        </div>
+        <Divider />
         <label
             >{$LL.albums.options.gridSize()}
             <input
@@ -115,7 +125,7 @@
 
         .options {
             display: flex;
-            gap: 20px;
+            gap: 10px;
             align-items: center;
             margin-right: 5px;
             * {
@@ -128,6 +138,15 @@
                 display: flex;
                 gap: 3px;
                 color: var(--text-secondary);
+            }
+            .toggle {
+                display: flex;
+                align-items: center;
+                color: var(--text-secondary);
+                cursor: default;
+                :global(svg) {
+                    opacity: 0.7;
+                }
             }
         }
 

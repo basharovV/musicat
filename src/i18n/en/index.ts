@@ -4,7 +4,7 @@ const en = {
     infoPopup: {
         buildBy: "Built by ",
         version: "version",
-        releaseNotes: "Release Notes"
+        releaseNotes: "Release Notes",
     },
     sidebar: {
         search: "Search",
@@ -21,7 +21,7 @@ const en = {
         openWikiTooltip: "Open Wiki panel for {artist}",
         addMetadataHint: "Add metadata",
         takeControl: "Take control of your library",
-        iaMode: "Main player off in Internet Archive mode<br /><br />Stop playback to re-enable"
+        iaMode: "Main player off in Internet Archive mode<br /><br />Stop playback to re-enable",
     },
     library: {
         fields: {
@@ -37,13 +37,13 @@ const en = {
             genre: "Genre",
             origin: "Origin",
             duration: "Duration",
-            tags: "Tags"
+            tags: "Tags",
         },
         resetToFileOrder: "Reset to file order",
         orderHint: "Showing file order",
         orderHintTemp: "Showing temporary order",
         orderDisabledHint: "Switch to file order to re-order tracks",
-        queryNoResultsPlaceholder: 'No results for "{query}"'
+        queryNoResultsPlaceholder: 'No results for "{query}"',
     },
     bottomBar: {
         queue: "Queue",
@@ -51,19 +51,19 @@ const en = {
         lossySelector: {
             lossy: "lossy",
             lossless: "lossless",
-            both: "lossy + lossless"
+            both: "lossy + lossless",
         },
         nextUp: "Next Up",
         stats: {
             songs: "songs",
             artists: "artists",
-            albums: "albums"
-        }
+            albums: "albums",
+        },
     },
     smartPlaylists: {
         builtIn: {
             recentlyAdded: "Recently Added",
-            favourites: "Favourites"
+            favourites: "Favourites",
         },
         builder: {
             close: "Close editor",
@@ -75,51 +75,51 @@ const en = {
             parts: {
                 byArtist: {
                     title: "by artist",
-                    example: "eg. by Charlie Parker"
+                    example: "eg. by Charlie Parker",
                 },
                 releasedBetween: {
                     title: "released between",
-                    example: "eg. released between 1950 and 1967"
+                    example: "eg. released between 1950 and 1967",
                 },
                 releasedAfter: {
                     title: "released after",
-                    example: "eg. released after 1950"
+                    example: "eg. released after 1950",
                 },
                 releasedIn: {
                     title: "released in",
-                    example: "eg. released in 1999"
+                    example: "eg. released in 1999",
                 },
                 titleContains: {
                     title: "song title contains {text}",
-                    example: " eg. title contains Love"
+                    example: " eg. title contains Love",
                 },
                 longerThan: {
                     title: "longer than",
-                    example: "eg. longer than 04:00"
+                    example: "eg. longer than 04:00",
                 },
                 containsGenre: {
                     title: "contains genre",
-                    example: "eg. contains Rock"
+                    example: "eg. contains Rock",
                 },
                 fromCountry: {
                     title: "from country",
-                    example: "eg. from Australia"
+                    example: "eg. from Australia",
                 },
                 byComposer: {
                     title: "by composer",
-                    example: "eg. by Charles Mingus"
+                    example: "eg. by Charles Mingus",
                 },
                 containsTag: {
                     title: "contains tag",
-                    example: "eg. contains love"
-                }
-            }
+                    example: "eg. contains love",
+                },
+            },
         },
         newSmartPlaylist: "New smart playlist",
         libraryPlaceholder: {
             title: "Smart playlist results will appear here",
-            subtitle: "Happy searching!"
-        }
+            subtitle: "Happy searching!",
+        },
     },
     trackInfo: {
         title: "Track Info",
@@ -158,15 +158,15 @@ const en = {
         fix: "Fix",
         errors: {
             nullChars:
-                "Some tags have a hidden character that prevents them from being read properly."
+                "Some tags have a hidden character that prevents them from being read properly.",
         },
         artist: "artist",
         fixLegacyEncodings: {
             title: "Fix legacy encodings",
             body: "If you have ID3 tags encoded with legacy encodings, you should update them to the universal UTF-8 so they display properly. Select an encoding and click Fix.",
-            hint: "Select encoding..."
+            hint: "Select encoding...",
         },
-        setTitleFromFileNameHint: "Click to set title from filename"
+        setTitleFromFileNameHint: "Click to set title from filename",
     },
     settings: {
         title: "Settings",
@@ -190,17 +190,17 @@ const en = {
         aiModel: "AI Model (LLM)",
         openApiKey: "OpenAI API Key",
         geniusApiKey: "Genius API Key",
-        discogsApiKey: "Discogs API Key"
+        discogsApiKey: "Discogs API Key",
     },
     wiki: {
         inArticle: "Found mentions from your library:",
         clickHint: "Click to scroll to mention",
         albums: "Albums",
         songs: "Songs",
-        artists: "Artists"
+        artists: "Artists",
     },
     tagCloud: {
-        close: "Close tags"
+        close: "Close tags",
     },
     artistsToolkit: {
         header: {
@@ -209,33 +209,33 @@ const en = {
             songbookLocationHintEmpty:
                 "Please set your songbook location to be managed by Musicat.",
             showScrapbook: "Show scrapbook",
-            hideScrapbook: "Hide scrapbook"
+            hideScrapbook: "Hide scrapbook",
         },
         scrapbook: {
             title: "Scrapbook",
             setupHint: "Please set up your scrapbook location in settings",
             notFoundError: "Scrapbook location not found",
             openSettings: "Open settings",
-            openInFinder: "Open in Finder"
+            openInFinder: "Open in Finder",
         },
         songDetails: {
             tabs: {
                 lyrics: "Lyrics & Chords",
                 files: "Files",
-                other: "Other"
+                other: "Other",
             },
             lyricsEditor: {
                 options: {
-                    alignFirstChord: "Align 1st chord"
-                }
-            }
-        }
+                    alignFirstChord: "Align 1st chord",
+                },
+            },
+        },
     },
     button: {
-        areYouSure: "Click again to confirm"
+        areYouSure: "Click again to confirm",
     },
     input: {
-        enterHintTooltip: "Press ENTER to autocomplete"
+        enterHintTooltip: "Press ENTER to autocomplete",
     },
     albums: {
         title: "Albums",
@@ -244,21 +244,21 @@ const en = {
             orderByFields: {
                 title: "Title",
                 artist: "Artist",
-                year: "Year"
+                year: "Year",
             },
-            showSingles: "show singles",
-            showInfo: "show info",
-            gridSize: "grid size"
+            showSingles: "singles",
+            showInfo: "info",
+            gridSize: "grid size",
         },
         scrollToNowPlaying: "Scroll to Now playing",
         item: {
-            tracksLabel: "tracks"
-        }
+            tracksLabel: "tracks",
+        },
     },
     trackMenu: {
         removeFromLibrary: "Remove {{track | ?? tracks}} from library",
         deleteFile: "Delete {{file | ?? files}}",
-        deleteFileHint: "Move to system Trash / Recycle bin"
+        deleteFileHint: "Move to system Trash / Recycle bin",
     },
     toDelete: {
         title: "To Delete",
@@ -267,9 +267,12 @@ const en = {
         deleteAllBtn: "Move all to trash",
         notification: {
             deleting: "Deleting {{track | ?? tracks}}",
-            deleted: "Deleted {{track | ?? tracks}}"
-        }
-    }
+            deleted: "Deleted {{track | ?? tracks}}",
+        },
+    },
+    lyrics: {
+        autoScroll: "Auto scroll",
+    },
 } satisfies BaseTranslation;
 
 export default en;

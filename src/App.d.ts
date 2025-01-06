@@ -314,6 +314,7 @@ interface GetHTMLResponse {
 interface CurrentSongLyrics {
     songId: string;
     lyrics?: string;
+    syncedLyrics?: SyncedLyrics[];
     writers?: string[];
 }
 
@@ -429,3 +430,5 @@ interface AudioDevices {
 }
 
 type PopupType = "info" | "track-info" | "settings";
+
+type SyncedLyrics = { timestamp: number; lyricLine: string };
