@@ -18,12 +18,14 @@
         uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
+    import AlbumDetails from "../albums/AlbumDetails.svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
     import { path } from "@tauri-apps/api";
     import VirtualList from "svelte-tiny-virtual-list";
     import { debounce } from "lodash-es";
+    import { getAlbumDetailsHeight } from "../albums/util";
 
     const PADDING = 14;
 
@@ -32,15 +34,19 @@
     let container: HTMLDivElement;
     let currentAlbum: Album;
     let currentAlbumOffset = 0;
+    let detailsAlbum: Album = null;
+    let detailsAlbumHeight = 0;
+    let detailsAlbumIndex = -1;
+    let detailsAlbumRow = -1;
     let highlightedAlbum;
     let isCurrentAlbumInView = false;
     let isInit = true;
     let isLoading = true;
     let itemSizes = [];
-    let lastCount = 0;
     let lastOffset = 0;
     let position;
     let rowCount = 0;
+    let rowHeight = 0;
     let showAlbumMenu = false;
     let virtualList;
 
@@ -127,12 +133,14 @@
         if (!showSingles) {
             activeAlbums = activeAlbums.filter((a) => a.tracksIds.length > 1);
         }
+
         rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
 
-        onResize();
+        if (detailsAlbum) {
+            rowCount += 1;
+        }
 
-        const remainder = activeAlbums.length % columnCount;
-        lastCount = remainder === 0 ? columnCount : remainder;
+        onResize();
     }
 
     function getContentWidth(element) {
@@ -189,8 +197,10 @@
         if (!container) {
             return;
         }
+
         height = container?.clientHeight;
         width = container?.clientWidth;
+
         const contentWidth = getContentWidth(container) - PADDING - PADDING;
         const count = Math.floor(contentWidth / minWidth);
         const remaining = contentWidth - count * minWidth;
@@ -202,13 +212,24 @@
         } else {
             columnWidth = minWidth + perColumn;
         }
+
+        // album might have moved, details need to follow
+        if (detailsAlbum && columnCount !== count) {
+            detailsAlbumRow = Math.floor(detailsAlbumIndex / count) + 2;
+        }
+
         columnCount = count;
 
-        const size = Math.floor(columnWidth + (showInfo ? 55 : 0));
+        rowHeight = Math.floor(columnWidth + (showInfo ? 55 : 0));
 
-        itemSizes = Array(rowCount).fill(size);
+        itemSizes = Array(rowCount).fill(rowHeight);
         itemSizes[0] = PADDING;
         itemSizes[itemSizes.length - 1] = PADDING;
+
+        if (detailsAlbum) {
+            itemSizes[detailsAlbumRow] = detailsAlbumHeight;
+        }
+
         if (virtualList?.scrollToIndex) virtualList.scrollToIndex = null;
     }
 
@@ -222,6 +243,35 @@
         $rightClickedTracks = tracks;
         showAlbumMenu = true;
         position = { x: e.clientX, y: e.clientY };
+    }
+
+    async function onLeftClick(e, album, index) {
+        if (detailsAlbum == album) {
+            detailsAlbum = null;
+            detailsAlbumHeight = 0;
+            detailsAlbumIndex = -1;
+            detailsAlbumRow = -1;
+
+            itemSizes.splice(Math.floor(index / columnCount) + 2, 1);
+            rowCount -= 1;
+        } else {
+            const oldRow = detailsAlbumRow;
+            detailsAlbumHeight = await getAlbumDetailsHeight(album);
+
+            detailsAlbum = album;
+            detailsAlbumIndex = index;
+            detailsAlbumRow = Math.floor(index / columnCount) + 2;
+
+            if (oldRow >= 0) {
+                var sizes = [...itemSizes];
+                sizes.splice(oldRow, 1);
+                sizes.splice(detailsAlbumRow, 0, detailsAlbumHeight);
+                itemSizes = sizes;
+            } else {
+                itemSizes.splice(detailsAlbumRow, 0, detailsAlbumHeight);
+                rowCount += 1;
+            }
+        }
     }
 
     function scrollToCurrentAlbum() {
@@ -270,7 +320,6 @@
     }}
 />
 
-<!-- <svelte:window on:resize={debounce(onResize, 30)} /> -->
 <div class="albums-container" bind:this={container}>
     {#if isLoading}
         <!-- <div
@@ -291,19 +340,17 @@
                 scrollToBehaviour="smooth"
                 on:afterScroll={debounce(onAfterScroll, 20)}
             >
-                <div
-                    slot="item"
-                    let:index
-                    let:style
-                    {style}
-                    class="grid-row"
-                    class:last-row={index + 2 === rowCount}
-                >
+                <div slot="item" let:index let:style {style} class="grid-row">
                     {#if index === 0 || index + 1 === rowCount}
                         <div></div>
+                    {:else if detailsAlbumRow === index}
+                        <AlbumDetails album={detailsAlbum} />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
-                            {@const albumIdx = (index - 1) * columnCount + col}
+                            {@const albumIdx =
+                                detailsAlbumRow == -1 || index < detailsAlbumRow
+                                    ? (index - 1) * columnCount + col
+                                    : (index - 2) * columnCount + col}
                             {@const album =
                                 albumIdx < activeAlbums.length &&
                                 activeAlbums[albumIdx]}
@@ -311,6 +358,8 @@
                                 <div
                                     on:contextmenu|preventDefault={(e) =>
                                         onRightClick(e, album)}
+                                    on:click|preventDefault={(e) =>
+                                        onLeftClick(e, album, albumIdx)}
                                     data-album={album.id}
                                     style="width: {columnWidth}px"
                                 >
@@ -391,9 +440,6 @@
         visibility: hidden;
         opacity: 0;
         transition: opacity 0.15s cubic-bezier(0.455, 0.03, 0.515, 0.955);
-        /* background-color: rgb(34, 33, 33); */
-        /* background-image: url("images/textures/soft-wallpaper.png"); */
-        /* background-repeat: repeat; */
         > div {
             position: relative;
             width: 100%;

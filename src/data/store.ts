@@ -458,6 +458,13 @@ columnOrder.subscribe((val) =>
     localStorage.setItem("columnOrder", JSON.stringify(val)),
 );
 
+export const albumColumnOrder = writable(
+    JSON.parse(localStorage.getItem("albumColumnOrder")) || defaultColumnOrder
+);
+albumColumnOrder.subscribe((val) =>
+    localStorage.setItem("albumColumnOrder", JSON.stringify(val))
+);
+
 // Internet Archive
 export const iaCollections: Writable<IACollection[]> = writable([]);
 export const iaSelectedCollection: Writable<IACollection> = writable(null);

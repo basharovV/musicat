@@ -31,7 +31,6 @@
     import {
         arrowFocus,
         current,
-        columnOrder,
         compressionSelected,
         draggedColumnIdx,
         draggedSongs,
@@ -84,10 +83,11 @@
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
 
     export let allSongs: Observable<Song[]> = null;
+    export let columnOrder;
     export let dim = false;
+    export let isInit = true;
     export let isLoading = false;
     export let theme = "default";
-    export let isInit = true;
 
     $: songs =
         $allSongs
@@ -339,7 +339,7 @@
     let hoveredField = null;
     let hoveredTag = null;
     $: isOrderChanged =
-        JSON.stringify($columnOrder) !==
+        JSON.stringify(columnOrder) !==
         JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
 
     let showColumnPicker = false;
@@ -553,6 +553,9 @@
     } else if ($uiView.match(/^(smart-query|favourites)/)) {
         onScroll(null, 0, null, false, true);
         ready = true;
+    } else if ($uiView.match(/^(albums)/)) {
+        onScroll(null, 0, null, false, true);
+        ready = true;
     }
 
     function drawSongDataGrid(isResize = false) {
@@ -606,7 +609,7 @@
         let runningX = 0;
         let previousWidth = 0;
 
-        const sortedFields = $columnOrder.map((c) =>
+        const sortedFields = columnOrder.map((c) =>
             fields.find((f) => f.value === c),
         );
 
@@ -955,12 +958,36 @@
     let currentSongInView = false;
     let currentSongScrollIdx = null;
 
-    function onDoubleClickSong(song, idx) {
-        if ($uiView === "smart-query") {
+    async function onDoubleClickSong(song, idx) {
+        if ($uiView.match(/^(albums)/)) {
+            const albums = await db.albums
+                .where("displayTitle")
+                .equals(song.album)
+                .filter(({ tracksIds }) => tracksIds.includes(song.id))
+                .toArray();
+
+            if (albums.length !== 1) {
+                return;
+            }
+
+            const album = albums[0];
+
+            let tracks = await db.songs
+                .where("id")
+                .anyOf(album.tracksIds)
+                .toArray();
+
+            tracks.sort((a, b) => {
+                return a.trackNumber - b.trackNumber;
+            });
+
+            setQueue(tracks, song.viewModel.index);
+        } else if ($uiView === "smart-query") {
             setQueue($smartQueryResults, song.viewModel.index);
         } else {
             setQueue($queriedSongs, song.viewModel.index);
         }
+
         if ($query.query.length) {
             $queueMirrorsSearch = true;
         }
@@ -1324,7 +1351,7 @@
     // Re-order columns
 
     $: {
-        displayFields && $columnOrder && calculateColumns();
+        displayFields && columnOrder && calculateColumns();
     }
 
     let dropColumnIdx = null;
@@ -1408,18 +1435,18 @@
 
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const $columnOrderOldIdx = $columnOrder.findIndex(
+        const columnOrderOldIdx = columnOrder.findIndex(
             (c) => c === oldIdxField.value,
         );
-        const $columnOrderNewIdx = $columnOrder.findIndex(
+        const columnOrderNewIdx = columnOrder.findIndex(
             (c) => c === newIdxField.value,
         );
-        $columnOrder = moveArrayElement(
-            $columnOrder,
-            $columnOrderOldIdx,
-            $columnOrderNewIdx,
+        columnOrder = moveArrayElement(
+            columnOrder,
+            columnOrderOldIdx,
+            columnOrderNewIdx,
         );
-        console.log("column order", $columnOrder);
+        console.log("column order", columnOrder);
         // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
         resetColumnOrderUi();
     }
@@ -1427,27 +1454,27 @@
     function swapColumns(oldIndex, newIndex) {
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const $columnOrderOldIdx = $columnOrder.findIndex(
+        const columnOrderOldIdx = columnOrder.findIndex(
             (c) => c === oldIdxField.value,
         );
-        const $columnOrderNewIdx = $columnOrder.findIndex(
+        const columnOrderNewIdx = columnOrder.findIndex(
             (c) => c === newIdxField.value,
         );
-        console.log("swap column", $columnOrderOldIdx, $columnOrderNewIdx);
-        $columnOrder = swapArrayElements(
-            $columnOrder,
-            $columnOrderOldIdx,
-            $columnOrderNewIdx,
+        console.log("swap column", columnOrderOldIdx, columnOrderNewIdx);
+        columnOrder = swapArrayElements(
+            columnOrder,
+            columnOrderOldIdx,
+            columnOrderNewIdx,
         );
         // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
-        console.log("column order", $columnOrder);
+        console.log("column order", columnOrder);
         resetColumnOrderUi();
     }
 
     // Sets back to default
     function resetColumnOrder() {
         fields = DEFAULT_FIELDS;
-        $columnOrder = DEFAULT_FIELDS.map((f) => f.value);
+        columnOrder = DEFAULT_FIELDS.map((f) => f.value);
     }
 
     // SMART QUERY
@@ -1619,6 +1646,7 @@
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
     bind:fields
+    bind:columnOrder
     onResetOrder={resetColumnOrder}
     {isOrderChanged}
 />
@@ -2282,11 +2310,17 @@
                                         if (ev.detail.evt.button === 0)
                                             updateOrderBy(f.value);
                                         else if (ev.detail.evt.button === 2) {
-                                            console.log("ev", ev);
-                                            columnPickerPos = {
-                                                x: ev.detail.evt.clientX,
-                                                y: 15,
-                                            };
+                                            if ($uiView.match(/^(albums)/)) {
+                                                columnPickerPos = {
+                                                    x: ev.detail.evt.clientX,
+                                                    y: ev.detail.evt.clientY,
+                                                };
+                                            } else {
+                                                columnPickerPos = {
+                                                    x: ev.detail.evt.clientX,
+                                                    y: 15,
+                                                };
+                                            }
                                             showColumnPicker =
                                                 !showColumnPicker;
                                         }

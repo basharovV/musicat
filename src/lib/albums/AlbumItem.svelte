@@ -127,7 +127,10 @@
                             ? "play-button-container pause-button"
                             : "play-button-container play-button"}
                     >
-                        <div class="button" on:click={playPauseToggle}>
+                        <div
+                            class="button"
+                            on:click|stopPropagation={playPauseToggle}
+                        >
                             <Icon
                                 icon={$isPlaying && isPlayingCurrentAlbum
                                     ? "fe:pause"
