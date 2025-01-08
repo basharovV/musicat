@@ -891,7 +891,12 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                             if tag_key.eq_ignore_ascii_case("TRCK") {
                                 item_key = ItemKey::TrackNumber;
                             }
-                            to_write.insert(TagItem::new(item_key, item_value));
+
+                            let item = TagItem::new(item_key, item_value);
+
+                            if !to_write.insert(item.clone()) && tag_type_evt == "iTunes" {
+                                to_write.insert_unchecked(item);
+                            }
                         }
                     }
                 }
@@ -902,7 +907,8 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 while to_write.pictures().len() > 0 {
                     to_write.remove_picture(0);
                 }
-            } // Set artwork if provided
+            }
+            // Set artwork if provided
             else if !v.artwork_file.is_empty() {
                 let picture_file = File::options()
                     .read(true)

@@ -27,8 +27,6 @@ interface TagFieldMap {
     compilation?: string;
     discNumber?: string;
     encodingTool?: string;
-    gapless?: string;
-    normalization?: string;
 }
 
 const genericToVorbisMap: TagFieldMap = {
@@ -48,7 +46,7 @@ const genericToVorbisMap: TagFieldMap = {
     license: "LICENSE",
     location: "LOCATION",
     isrc: "ISRC",
-    bpm: "BPM"
+    bpm: "BPM",
 };
 
 const vorbisToGenericMap = inverse(genericToVorbisMap);
@@ -64,7 +62,7 @@ const genericToId3v1Map: TagFieldMap = {
     album: "album",
     genre: "genre",
     date: "year",
-    trackNumber: "track"
+    trackNumber: "track",
 };
 
 const id3v1ToGenericMap = inverse(genericToId3v1Map);
@@ -88,7 +86,7 @@ const genericToId3v22Map: TagFieldMap = {
     copyright: "TCR",
     publisher: "TPB",
     isrc: "TRC",
-    bpm: "TBP"
+    bpm: "TBP",
 };
 
 const id3v22ToGenericMap = inverse(genericToId3v22Map);
@@ -112,7 +110,7 @@ const genericToId3v23Map: TagFieldMap = {
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v23ToGenericMap = inverse(genericToId3v23Map);
@@ -136,7 +134,7 @@ const genericToId3v24Map: TagFieldMap = {
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v24ToGenericMap = inverse(genericToId3v24Map);
@@ -158,15 +156,13 @@ const genericToiTunesMap: TagFieldMap = {
     trackNumber: "trkn",
     copyright: "cprt",
     encodingTool: "©too",
-    gapless: "----:com.apple.iTunes:iTunSMPB",
-    normalization: "----:com.apple.iTunes:iTunNORM"
 };
 
 const iTunesToGenericMap = inverse(genericToiTunesMap);
 
 function getMapForTagType(
     tagType: TagType,
-    fromGeneric: boolean = true
+    fromGeneric: boolean = true,
 ): object | null {
     switch (tagType) {
         case "vorbis":
@@ -194,7 +190,7 @@ function getMapForTagType(
 const codecToTagTypeMap = {
     FLAC: "Vorbis",
     MPEG: "ID3v2.4",
-    "MPEG 1 Layer 3": "ID3v2.4"
+    "MPEG 1 Layer 3": "ID3v2.4",
 };
 
 function getTagTypeFromCodec(codec) {

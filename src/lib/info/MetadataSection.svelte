@@ -355,7 +355,6 @@
                     }),
                 ],
             };
-            // console.log("event: ", event);
 
             toImport = await invoke<ToImport>("write_metadatas", { event });
         } else if ($rightClickedTracks?.length) {
