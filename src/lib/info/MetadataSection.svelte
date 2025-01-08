@@ -427,7 +427,7 @@
             hasArtworkToSet() &&
             writtenTracks.map((t) => t.id).includes($current.song.id)
         ) {
-            audioPlayer.playCurrent(get(playerTime));
+            audioPlayer.setSeek(get(playerTime));
         }
 
         await reset();
