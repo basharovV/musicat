@@ -140,7 +140,9 @@
     }
 
     function hasArtworkToSet() {
-        return artworkFileToSet || artworkToSetData;
+        return (
+            artworkFileToSet || artworkToSetData || isArtworkSet === "delete"
+        );
     }
 
     function onClose() {

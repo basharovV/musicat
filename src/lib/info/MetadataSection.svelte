@@ -6,6 +6,7 @@
     import LL from "../../i18n/i18n-svelte";
     import {
         current,
+        isPlaying,
         lastWrittenSongs,
         playerTime,
         rightClickedTrack,
@@ -413,21 +414,24 @@
             position: "top-right",
         });
 
-        $lastWrittenSongs = $rightClickedTrack
-            ? [$rightClickedTrack]
-            : $rightClickedTracks;
-
-        // If we changed the artwork tag, this offsets the audio data in the file,
-        // so we need to reload the song and seek to the current position
-        // (will cause audible gap)
         const writtenTracks = $rightClickedTrack
             ? [$rightClickedTrack]
             : $rightClickedTracks;
-        if (
-            hasArtworkToSet() &&
-            writtenTracks.map((t) => t.id).includes($current.song.id)
-        ) {
-            audioPlayer.setSeek(get(playerTime));
+
+        $lastWrittenSongs = writtenTracks;
+
+        const id = $current.song?.id;
+
+        if (id && writtenTracks.some((t) => t.id == id)) {
+            // Update sidebar infos
+            $current = $current;
+
+            // If we changed the artwork tag, this offsets the audio data in the file,
+            // so we need to reload the song and seek to the current position
+            // (will cause audible gap)
+            if (hasArtworkToSet()) {
+                audioPlayer.setSeek(get(playerTime));
+            }
         }
 
         await reset();
