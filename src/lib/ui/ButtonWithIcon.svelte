@@ -17,7 +17,9 @@
 
 <div
     on:click={() => {
-        if (isDestructive && !isConfirmingAction) {
+        if (disabled) {
+            return;
+        } else if (isDestructive && !isConfirmingAction) {
             isConfirmingAction = true;
         } else {
             onClick();
