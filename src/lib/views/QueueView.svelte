@@ -133,17 +133,9 @@
     let DRAGGING_SOURCE_COLOR: string;
 
     export let fields = {
-        artwork: {
-            viewProps: {
-                x: 1,
-                y: 1,
-                width: HEADER_HEIGHT * 2,
-                height: HEADER_HEIGHT * 2,
-            },
-        },
         title: {
             viewProps: {
-                x: HEADER_HEIGHT * 2 + 5,
+                x: 10,
                 y: 1,
                 width: 0,
                 height: HEADER_HEIGHT,
@@ -151,7 +143,7 @@
         },
         artist: {
             viewProps: {
-                x: HEADER_HEIGHT * 2 + 5,
+                x: 10,
                 y: HEADER_HEIGHT + 1,
                 width: 0,
                 height: HEADER_HEIGHT,
@@ -449,7 +441,6 @@
             // Make sure the window is always filled with the right amount of rows
 
             songsSlice = songs.slice(songsStartSlice, songsEndSlice);
-            loadImages(songsSlice);
             // console.log("slice", songsStartSlice, songsEndSlice);
             let diff = songsCountViewport - (songsSlice.length - 1);
             // console.log("diff", diff);
@@ -474,41 +465,6 @@
                     ),
                 );
             // console.log(songsSlice.length);
-        }
-    }
-
-    async function loadImages(songsSlice) {
-        const cache = {};
-        for (const song of songsSlice) {
-            var songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: {
-                    path: song.path,
-                    isImport: false,
-                    includeFolderArtwork: true,
-                },
-            });
-
-            if (songWithArtwork.artwork) {
-                const format = songWithArtwork.artwork.format;
-                if (songWithArtwork.artwork.data?.length) {
-                    const buffer = Buffer.from(songWithArtwork.artwork.data);
-                    const src = `data:${format};base64, ${buffer.toString("base64")}`;
-
-                    if (!cache[src]) {
-                        cache[src] = await loadImage(src);
-                    }
-
-                    artworks[song.id] = cache[src];
-                } else if (songWithArtwork.artwork.src) {
-                    const src = convertFileSrc(songWithArtwork.artwork.src);
-
-                    if (!cache[src]) {
-                        cache[src] = await loadImage(src);
-                    }
-
-                    artworks[song.id] = cache[src];
-                }
-            }
         }
     }
 
@@ -1139,23 +1095,6 @@
                                             />
                                         {/if}
 
-                                        <KonvaImage
-                                            config={{
-                                                x: fields.artwork.viewProps.x,
-                                                y: fields.artwork.viewProps.y,
-                                                width: fields.artwork.viewProps
-                                                    .width,
-                                                height: fields.artwork.viewProps
-                                                    .height,
-                                                image:
-                                                    artworks[song.id] ||
-                                                    defaultArtwork,
-                                                opacity: artworks[song.id]
-                                                    ? 1
-                                                    : 0.2,
-                                                verticalAlign: "middle",
-                                            }}
-                                        />
                                         <Text
                                             config={{
                                                 x: fields.title.viewProps.x,
