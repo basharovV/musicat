@@ -39,7 +39,7 @@ interface TagFieldMap {
     composer?: string;
     performer?: string;
     genre: string;
-    date: string;
+    year: string;
     copyright?: string;
     publisher?: string;
     trackNumber: string;
@@ -60,7 +60,7 @@ const genericToVorbisMap: TagFieldMap = {
     albumArtist: "ALBUMARTIST",
     composer: "COMPOSER",
     genre: "GENRE",
-    date: "DATE",
+    year: "DATE",
     compilation: "COMPILATION",
     trackNumber: "TRACKNUMBER",
     trackTotal: ["TRACKTOTAL", "TOTALTRACKS"],
@@ -86,7 +86,7 @@ const genericToId3v1Map: TagFieldMap = {
     artist: "artist",
     album: "album",
     genre: "genre",
-    date: "year",
+    year: "year",
     trackNumber: "track",
 };
 
@@ -104,7 +104,7 @@ const genericToId3v22Map: TagFieldMap = {
     albumArtist: "TP2",
     composer: "TCM",
     genre: "TCO",
-    date: "TYE",
+    year: "TYE",
     compilation: "TCP",
     trackNumber: "TRK",
     trackTotal: ["TRK"],
@@ -130,7 +130,7 @@ const genericToId3v23Map: TagFieldMap = {
     albumArtist: "TPE2",
     composer: "TCOM",
     genre: "TCON",
-    date: "TDAT",
+    year: "TDAT",
     compilation: "TCMP",
     trackNumber: "TRCK",
     trackTotal: ["TRCK"],
@@ -156,7 +156,7 @@ const genericToId3v24Map: TagFieldMap = {
     albumArtist: "TPE2",
     composer: "TCOM",
     genre: "TCON",
-    date: "TDRC",
+    year: "TDRC",
     compilation: "TCMP",
     trackNumber: "TRCK",
     trackTotal: ["TRCK"],
@@ -183,7 +183,8 @@ const genericToiTunesMap: TagFieldMap = {
     albumArtist: "aART",
     composer: "©wrt",
     genre: "gnre",
-    date: "©day",
+    year: "©day",
+    compilation: "cpil",
     trackNumber: "trkn",
     trackTotal: ["trkn"],
     discNumber: "disk",

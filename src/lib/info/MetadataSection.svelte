@@ -33,7 +33,7 @@
         encodeUtf8,
     } from "../../utils/EncodingUtils";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { cloneDeep, isEqual, uniqBy } from "lodash-es";
+    import { cloneDeep, isEqual, uniq, uniqBy } from "lodash-es";
     import { getMapForTagType } from "../../data/LabelMap";
     import { onMount } from "svelte";
 
@@ -51,9 +51,12 @@
         "album",
         "albumArtist",
         "artist",
-        "date",
+        "year",
         "genre",
         "compilation",
+        "trackTotal",
+        "discNumber",
+        "discTotal",
     ];
 
     const VALIDATION_STRINGS = {
@@ -88,12 +91,8 @@
     let selectedEncoding = "placeholder";
 
     $: artistInput =
-        data?.mappedMetadata?.find((m) => m.genericId === "compilation")
-            ?.value === "1" ||
-        data?.mappedMetadata?.find((m) => m.genericId === "albumArtist")?.value
-            ? ""
-            : (data?.mappedMetadata?.find((m) => m.genericId === "artist")
-                  ?.value ?? "");
+        data?.mappedMetadata?.find((m) => m.genericId === "artist")?.value ??
+        "";
 
     /**
      * A map of tag id <-> errors that apply to this tag
@@ -249,12 +248,10 @@
         isUnsupportedFormat = false;
         const cloned = cloneDeep(metadata);
         const { defaults, others } = addDefaults(cloned, format);
-        console.log(defaults, others);
         const result = uniqBy(
             [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
             "genericId",
         );
-        console.log(result);
         return result;
     }
 
@@ -320,10 +317,10 @@
     async function reImportAlbum(album: Album) {
         const existingAlbum = await db.albums.get(album.id);
         if (existingAlbum) {
-            existingAlbum.tracksIds = [
+            existingAlbum.tracksIds = uniq([
                 ...existingAlbum.tracksIds,
                 ...album.tracksIds,
-            ];
+            ]);
             await db.albums.put(existingAlbum);
         }
     }
@@ -337,8 +334,57 @@
         const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
             $rightClickedTrack || $rightClickedTracks[0],
         );
+        let metadata = mergeDefault(mappedMetadata, tagType);
+
+        if ($rightClickedTracks.length) {
+            const isCompilation =
+                metadata.find((m) => m.genericId === "compilation")?.value ===
+                "1";
+            const hasAlbumArtist = metadata.find(
+                (m) => m.genericId === "albumArtist",
+            )?.value?.length;
+            let hideArtist = false;
+
+            if (!isCompilation) {
+                const artist = metadata.find(
+                    (m) => m.genericId === "artist",
+                )?.value;
+
+                if (artist.length) {
+                    for (let i = 1; i < $rightClickedTracks.length; i += 1) {
+                        const { mappedMetadata } =
+                            await readMappedMetadataFromSong(
+                                $rightClickedTracks[i],
+                            );
+                        const newArtist = mappedMetadata.find(
+                            (m) => m.genericId === "artist",
+                        )?.value;
+
+                        if (artist !== newArtist) {
+                            hideArtist = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            metadata = metadata.filter(({ genericId }) => {
+                if (!ALBUM_FIELDS.includes(genericId)) {
+                    return false;
+                }
+                if (genericId === "artist") {
+                    return !isCompilation && !hasAlbumArtist && !hideArtist;
+                }
+                if (isCompilation && genericId === "albumArtist") {
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
         data = {
-            mappedMetadata: mergeDefault(mappedMetadata, tagType),
+            mappedMetadata: metadata,
             tagType,
         };
         metadataFromFile = cloneDeep(data.mappedMetadata);
@@ -361,9 +407,10 @@
     export async function writeMetadata() {
         let toImport: ToImport;
         if ($rightClickedTrack) {
-            const toWrite = data?.mappedMetadata
-                .filter((m) => m.value !== null)
-                .map((t) => ({ id: t.genericId, value: t.value }));
+            const toWrite = data.mappedMetadata.map((t) => ({
+                id: t.genericId,
+                value: t.value,
+            }));
             console.log("Writing: ", toWrite);
 
             const event = {
@@ -380,32 +427,19 @@
             toImport = await invoke<ToImport>("write_metadatas", { event });
         } else if ($rightClickedTracks?.length) {
             console.log("Writing album");
+            const toWrite = data.mappedMetadata.map((t) => ({
+                id: t.genericId,
+                value: t.value,
+            }));
+
             toImport = await invoke<ToImport>("write_metadatas", {
                 event: {
-                    tracks: await Promise.all(
-                        $rightClickedTracks.map(async (track) => {
-                            const fileMetadata =
-                                await readMappedMetadataFromSong(track);
-                            return completeEvent({
-                                song_id: track.id,
-                                metadata: [
-                                    ...fileMetadata?.mappedMetadata,
-                                    ...data?.mappedMetadata
-                                        .filter(
-                                            (m) =>
-                                                m.value !== null &&
-                                                ALBUM_FIELDS.includes(
-                                                    m.genericId,
-                                                ),
-                                        )
-                                        .map((t) => ({
-                                            id: t.id,
-                                            value: t.value,
-                                        })),
-                                ],
-                                tag_type: fileMetadata.tagType,
-                                file_path: track.path,
-                            });
+                    tracks: $rightClickedTracks.map((track) =>
+                        completeEvent({
+                            song_id: track.id,
+                            metadata: toWrite,
+                            tag_type: data.tagType,
+                            file_path: track.path,
                         }),
                     ),
                 },
@@ -487,7 +521,7 @@
                 </div>
             {/if}
             <form>
-                {#each data?.mappedMetadata?.filter((m) => $rightClickedTrack || ($rightClickedTracks.length && ALBUM_FIELDS.includes(m.genericId))) as tag, idx}
+                {#each data?.mappedMetadata as tag}
                     {#if tag.genericId === "artist"}
                         <div class="tag">
                             <p class="label">

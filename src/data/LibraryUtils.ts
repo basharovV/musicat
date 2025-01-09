@@ -62,8 +62,10 @@ export async function readMappedMetadataFromSong(
     const mappedMetadata: MetadataEntry[] = [];
 
     if (map) {
-        for (const { id, value } of metadata?.native[tagType]) {
-            if (typeof value !== "string") {
+        for (let { id, value } of metadata?.native[tagType]) {
+            if (typeof value === "number") {
+                value = `${value}`;
+            } else if (typeof value !== "string") {
                 continue;
             }
 

@@ -802,19 +802,6 @@ pub fn extract_metadata(
     None
 }
 
-fn map_id3v1_to_id3v2_4(key: &str) -> Option<&'static str> {
-    match key {
-        "title" => Some("TIT2"),
-        "artist" => Some("TPE1"),
-        "album" => Some("TALB"),
-        "year" => Some("TDRC"),
-        "comment" => Some("COMM"),
-        "track" => Some("TRCK"),
-        "genre" => Some("TCON"),
-        _ => None,
-    }
-}
-
 fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
     // info!("got event-name with payload {:?}", event.payload());
 
@@ -851,7 +838,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 tagged_file.first_tag_mut().unwrap()
             };
 
-            if tag_type_evt == "ID3v1" || tag_type_evt == "ID3v2.2" || tag_type_evt == "ID3v2.3" {
+            if tag.tag_type() == TagType::Id3v1 {
                 // upgrade to ID3v2.4
                 tag.re_map(TagType::Id3v2);
             }
@@ -859,6 +846,17 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
             for item in v.metadata.iter() {
                 if item.id == "METADATA_BLOCK_PICTURE" {
                     // Ignore picture, set by artwork_file_to_set
+                } else if item.id == "year" {
+                    info!("year");
+                    if item.value.is_null() {
+                        tag.remove_year();
+                    } else {
+                        if let Ok(num) = item.value.as_str().unwrap().parse::<u64>() {
+                            if let Some(u32_num) = num.try_into().ok() {
+                                tag.set_year(u32_num);
+                            }
+                        }
+                    }
                 } else {
                     let item_key = match item.id.as_str() {
                         "album" => ItemKey::AlbumTitle,
@@ -879,17 +877,14 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         "trackNumber" => ItemKey::TrackNumber,
                         "trackTotal" => ItemKey::TrackTotal,
                         "title" => ItemKey::TrackTitle,
-                        "year" => ItemKey::Year,
                         _ => panic!("Unhandled key: {:?}", item.id),
                     };
 
                     if item.value.is_null() {
                         tag.remove_key(&item_key);
-                        info!("remove: {:?}", item_key);
                     } else {
                         let item_value: ItemValue =
                             ItemValue::Text(String::from(item.value.as_str().unwrap()));
-                        info!("insert: {:?} = {}", item_key, item.value);
 
                         tag.insert(TagItem::new(item_key, item_value));
                     }
