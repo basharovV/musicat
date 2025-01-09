@@ -2,15 +2,7 @@
 
 <script lang="ts">
     import { onMount } from "svelte";
-    import {
-        Group,
-        Layer,
-        Path,
-        Rect,
-        Stage,
-        Text,
-        Image as KonvaImage,
-    } from "svelte-konva";
+    import { Group, Layer, Path, Rect, Stage, Text } from "svelte-konva";
 
     import hotkeys from "hotkeys-js";
     import { debounce } from "lodash-es";
@@ -18,18 +10,15 @@
     import { onDestroy } from "svelte";
     import { cubicInOut } from "svelte/easing";
     import { fade } from "svelte/transition";
-    import { Buffer } from "buffer";
     import { db } from "../../data/db";
 
     import {
         arrowFocus,
-        columnOrder,
         current,
         draggedAlbum,
         draggedSongs,
         forceRefreshLibrary,
         isDraggingFromQueue,
-        isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
@@ -46,18 +35,14 @@
         singleKeyShortcutsEnabled,
         uiView,
     } from "../../data/store";
-    import { moveArrayElement } from "../../utils/ArrayUtils";
-    import AudioPlayer from "../player/AudioPlayer";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
     import Konva from "konva";
     import audioPlayer from "../player/AudioPlayer";
     import TrackMenu from "../queue/TrackMenu.svelte";
     import { currentThemeObject } from "../../theming/store";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
-    import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import {
         findQueueIndex,
-        findQueueIndexes,
         setQueue,
         updateQueues,
     } from "../../data/storeHelper";
@@ -83,10 +68,6 @@
     let isDraggingOver = false;
     let isOver = false;
 
-    // $: displayFields = fields.filter((f) => f.show);
-    // $: numColumns = fields.filter((f) => f.show).length;
-
-    let artworks = {};
     let songsSlice: Song[];
     let songsStartSlice = 0;
     let songsEndSlice = 0;
@@ -218,19 +199,13 @@
     let scrollableArea = contentHeight;
     let defaultArtwork;
 
-    let prevSongCount = 0;
-
     $: noSongs = !songs || songs.length === 0;
 
     // Trigger: on songs updated
-    $: if (songs !== undefined && libraryContainer !== undefined) {
+    $: if (songs && libraryContainer) {
         (async () => {
             console.log("Queue::queue updated", songs.length);
-            if (prevSongCount != songs.length) {
-                artworks = {};
-            }
             await drawSongDataGrid();
-            prevSongCount = songs.length;
         })();
     }
 
@@ -891,12 +866,6 @@
         removeEventListener("keyup", onKeyUp);
     });
 
-    // Re-order columns
-
-    $: {
-        fields && calculateColumns();
-    }
-
     // Favourite
 
     async function favouriteSong(song: Song) {
@@ -905,11 +874,12 @@
         });
 
         song.isFavourite = true;
-        songs = songs;
 
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = true;
         }
+
+        shouldRender = true;
     }
 
     async function unfavouriteSong(song: Song) {
@@ -918,11 +888,12 @@
         });
 
         song.isFavourite = false;
-        songs = songs;
 
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = false;
         }
+
+        shouldRender = true;
     }
 
     function isInvalidValue(value) {
