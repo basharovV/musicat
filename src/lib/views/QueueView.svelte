@@ -152,9 +152,25 @@
         duration: {
             viewProps: {
                 x: 0,
-                y: 0,
+                y: 1,
                 width: 40,
-                height: HEADER_HEIGHT * 2,
+                height: HEADER_HEIGHT,
+            },
+        },
+        favourite: {
+            viewProps: {
+                x: 0,
+                y: HEADER_HEIGHT + 5,
+                width: 18,
+                height: HEADER_HEIGHT,
+            },
+        },
+        playing: {
+            viewProps: {
+                x: 0,
+                y: HEADER_HEIGHT + 5,
+                width: 18,
+                height: HEADER_HEIGHT,
             },
         },
     };
@@ -307,6 +323,9 @@
         fields.artist.viewProps.width =
             width - fields.artist.viewProps.x - fields.duration.viewProps.width;
         fields.duration.viewProps.x = width - fields.duration.viewProps.width;
+        fields.favourite.viewProps.x = width - fields.favourite.viewProps.width;
+        fields.playing.viewProps.x =
+            fields.favourite.viewProps.x - fields.playing.viewProps.width;
     }
 
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
@@ -887,6 +906,7 @@
 
         song.isFavourite = true;
         songs = songs;
+
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = true;
         }
@@ -896,8 +916,10 @@
         await db.songs.update(song, {
             isFavourite: false,
         });
+
         song.isFavourite = false;
         songs = songs;
+
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = false;
         }
@@ -1176,29 +1198,46 @@
                                                         : TEXT_COLOR,
                                             }}
                                         />
-                                        <!-- Favourite icon button -- >
+                                        <!-- Now playing icon -->
+                                        {#if $current.index === song?.viewModel?.index && song.id === $current.song?.id}
+                                            <Path
+                                                config={{
+                                                    x: fields.playing.viewProps
+                                                        .x,
+                                                    y: fields.playing.viewProps
+                                                        .y,
+                                                    listening: false,
+                                                    scaleX: 0.65,
+                                                    scaleY: 0.65,
+                                                    data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
+                                                    fill: $currentThemeObject[
+                                                        "library-playing-icon"
+                                                    ],
+                                                }}
+                                            />
+                                        {/if}
+                                        <!-- Favourite icon button -->
                                         {#if song.isFavourite}
                                             <Path
                                                 on:click={() =>
-                                                    unfavouriteSong(
-                                                        song
-                                                    )}
+                                                    unfavouriteSong(song)}
                                                 config={{
-                                                    x:
-                                                        f.viewProps
-                                                            .width - 20,
-                                                    y: 6,
+                                                    x: fields.favourite
+                                                        .viewProps.x,
+                                                    y: fields.favourite
+                                                        .viewProps.y,
                                                     scaleX: 0.36,
                                                     scaleY: 0.36,
                                                     data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                     fill:
-                                                        $currentSong?.id === song.id
+                                                        $current.song?.id ===
+                                                        song.id
                                                             ? $currentThemeObject[
-                                                                    "library-playing-icon"
-                                                                ]
+                                                                  "library-playing-icon"
+                                                              ]
                                                             : $currentThemeObject[
-                                                                    "library-favourite-icon"
-                                                                ]
+                                                                  "library-favourite-icon"
+                                                              ],
                                                 }}
                                             />
                                         {:else if hoveredSongIdx === songIdx}
@@ -1206,26 +1245,26 @@
                                                 on:click={() =>
                                                     favouriteSong(song)}
                                                 config={{
-                                                    x:
-                                                        f.viewProps
-                                                            .width - 20,
-                                                    y: 6,
+                                                    x: fields.favourite
+                                                        .viewProps.x,
+                                                    y: fields.favourite
+                                                        .viewProps.y,
                                                     scaleX: 0.36,
                                                     scaleY: 0.36,
                                                     data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
                                                     fill: "transparent",
                                                     stroke:
-                                                        $currentSong?.id === song.id
+                                                        $current.song?.id ===
+                                                        song.id
                                                             ? $currentThemeObject[
-                                                                    "library-playing-icon"
-                                                                ]
+                                                                  "library-playing-icon"
+                                                              ]
                                                             : $currentThemeObject[
-                                                                    "library-favourite-hover-icon"
-                                                                ]
+                                                                  "library-favourite-hover-icon"
+                                                              ],
                                                 }}
                                             />
                                         {/if}
-                                        -->
                                     </Group>
 
                                     {#if hoveredSongIdx === songIdx && $draggedSongs?.length}
