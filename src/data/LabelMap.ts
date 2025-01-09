@@ -1,9 +1,32 @@
 import type { TagType } from "src/App";
 
 function inverse(obj) {
-    var retobj = {};
-    for (var key in obj) {
-        retobj[obj[key]] = key;
+    const retobj = {};
+    for (const key in obj) {
+        const value = obj[key];
+        if (Array.isArray(value)) {
+            for (const val of value) {
+                if (retobj[val]) {
+                    if (Array.isArray(retobj[val])) {
+                        retobj[val].push(key);
+                    } else {
+                        retobj[val] = [retobj[val], key];
+                    }
+                } else {
+                    retobj[val] = key;
+                }
+            }
+        } else {
+            if (retobj[value]) {
+                if (Array.isArray(retobj[value])) {
+                    retobj[value].push(key);
+                } else {
+                    retobj[value] = [retobj[value], key];
+                }
+            } else {
+                retobj[value] = key;
+            }
+        }
     }
     return retobj;
 }
@@ -20,12 +43,13 @@ interface TagFieldMap {
     copyright?: string;
     publisher?: string;
     trackNumber: string;
+    trackTotal?: string[];
     license?: string;
-    location?: string;
     isrc?: string;
     bpm?: string;
     compilation?: string;
     discNumber?: string;
+    discTotal?: string[];
     encodingTool?: string;
 }
 
@@ -37,14 +61,15 @@ const genericToVorbisMap: TagFieldMap = {
     composer: "COMPOSER",
     genre: "GENRE",
     date: "DATE",
-    trackNumber: "TRACKNUMBER",
     compilation: "COMPILATION",
+    trackNumber: "TRACKNUMBER",
+    trackTotal: ["TRACKTOTAL", "TOTALTRACKS"],
     discNumber: "DISCNUMBER",
+    discTotal: ["DISCTOTAL", "TOTALDISCS"],
     copyright: "COPYRIGHT",
     publisher: "PUBLISHER",
     performer: "PERFORMER",
     license: "LICENSE",
-    location: "LOCATION",
     isrc: "ISRC",
     bpm: "BPM",
 };
@@ -80,9 +105,11 @@ const genericToId3v22Map: TagFieldMap = {
     composer: "TCM",
     genre: "TCO",
     date: "TYE",
-    trackNumber: "TRK",
     compilation: "TCP",
+    trackNumber: "TRK",
+    trackTotal: ["TRK"],
     discNumber: "TPA",
+    discTotal: ["TPA"],
     copyright: "TCR",
     publisher: "TPB",
     isrc: "TRC",
@@ -104,9 +131,11 @@ const genericToId3v23Map: TagFieldMap = {
     composer: "TCOM",
     genre: "TCON",
     date: "TDAT",
-    trackNumber: "TRCK",
     compilation: "TCMP",
+    trackNumber: "TRCK",
+    trackTotal: ["TRCK"],
     discNumber: "TPOS",
+    discTotal: ["TPOS"],
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
@@ -128,9 +157,11 @@ const genericToId3v24Map: TagFieldMap = {
     composer: "TCOM",
     genre: "TCON",
     date: "TDRC",
-    trackNumber: "TRCK",
     compilation: "TCMP",
+    trackNumber: "TRCK",
+    trackTotal: ["TRCK"],
     discNumber: "TPOS",
+    discTotal: ["TPOS"],
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
@@ -154,6 +185,9 @@ const genericToiTunesMap: TagFieldMap = {
     genre: "gnre",
     date: "©day",
     trackNumber: "trkn",
+    trackTotal: ["trkn"],
+    discNumber: "disk",
+    discTotal: ["disk"],
     copyright: "cprt",
     encodingTool: "©too",
 };

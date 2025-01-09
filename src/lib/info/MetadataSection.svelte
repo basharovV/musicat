@@ -167,15 +167,32 @@
         const others: MetadataEntry[] = [];
         console.log("map", map);
         if (!map) return { defaults, others };
-        for (const field of Object.entries(map)) {
-            // Check if this default field already exists in the file
-            const existingField = entry?.find((m) => field[1] === m.genericId);
+        for (const [id, genericId] of Object.entries(map)) {
+            if (Array.isArray(genericId)) {
+                for (const genId of genericId) {
+                    // Check if this default field already exists in the file
+                    const existingField = entry?.find(
+                        (m) => m.genericId === genId,
+                    );
 
-            defaults.push({
-                id: field[0],
-                genericId: field[1],
-                value: existingField ? existingField.value : null,
-            });
+                    defaults.push({
+                        id,
+                        genericId: genId,
+                        value: existingField ? existingField.value : null,
+                    });
+                }
+            } else {
+                // Check if this default field already exists in the file
+                const existingField = entry?.find(
+                    (m) => m.genericId === genericId,
+                );
+
+                defaults.push({
+                    id,
+                    genericId,
+                    value: existingField ? existingField.value : null,
+                });
+            }
         }
 
         for (const field of entry) {
@@ -190,6 +207,7 @@
                 });
             }
         }
+
         return { defaults, others };
     }
 
@@ -231,10 +249,13 @@
         isUnsupportedFormat = false;
         const cloned = cloneDeep(metadata);
         const { defaults, others } = addDefaults(cloned, format);
-        return uniqBy(
+        console.log(defaults, others);
+        const result = uniqBy(
             [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
-            "id",
+            "genericId",
         );
+        console.log(result);
+        return result;
     }
 
     function onArtistAutocompleteSelected() {
@@ -342,7 +363,7 @@
         if ($rightClickedTrack) {
             const toWrite = data?.mappedMetadata
                 .filter((m) => m.value !== null)
-                .map((t) => ({ id: t.id, value: t.value }));
+                .map((t) => ({ id: t.genericId, value: t.value }));
             console.log("Writing: ", toWrite);
 
             const event = {

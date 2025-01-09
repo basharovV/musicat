@@ -2,7 +2,6 @@ use artwork_cacher::look_for_art;
 use chksum_md5::MD5;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
-use lofty::id3::v2::{upgrade_v2, upgrade_v3};
 use lofty::picture::{MimeType, Picture};
 use lofty::probe::Probe;
 use lofty::read_from_path;
@@ -96,6 +95,9 @@ pub struct Song {
     genre: Vec<String>,
     composer: Vec<String>,
     track_number: i32,
+    track_total: i32,
+    disc_number: i32,
+    disc_total: i32,
     duration: String,
     pub file_info: FileInfo,
     pub artwork: Option<Artwork>,
@@ -613,6 +615,9 @@ pub fn extract_metadata(
                         let mut genre = Vec::new();
                         let mut composer = Vec::new();
                         let mut track_number = -1;
+                        let mut track_total = -1;
+                        let mut disc_number = -1;
+                        let mut disc_total = -1;
                         let mut duration = String::new();
                         let file_info;
                         let mut artwork = None;
@@ -717,6 +722,15 @@ pub fn extract_metadata(
                             if track_number == -1 {
                                 track_number = tag.track().unwrap_or(0) as i32;
                             }
+                            if track_total == -1 {
+                                track_total = tag.track_total().unwrap_or(0) as i32;
+                            }
+                            if disc_number == -1 {
+                                disc_number = tag.disk().unwrap_or(0) as i32;
+                            }
+                            if disc_total == -1 {
+                                disc_total = tag.disk_total().unwrap_or(0) as i32;
+                            }
                         });
 
                         if tagged_file.primary_tag().is_some() {
@@ -761,6 +775,9 @@ pub fn extract_metadata(
                             genre,
                             composer,
                             track_number,
+                            track_total,
+                            disc_number,
+                            disc_total,
                             duration,
                             file_info,
                             artwork,
@@ -808,104 +825,81 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
 
         if !v.metadata.is_empty() {
             // info!("{:?}", v.metadata);
-            let mut tag_type: Option<TagType> = None;
             let tag_type_evt = v.tag_type.as_deref().unwrap();
-            match tag_type_evt {
-                "vorbis" => tag_type = Some(TagType::VorbisComments),
-                "ID3v1" => tag_type = Some(TagType::Id3v2),
-                "ID3v2.2" => tag_type = Some(TagType::Id3v2),
-                "ID3v2.3" => tag_type = Some(TagType::Id3v2),
-                "ID3v2.4" => tag_type = Some(TagType::Id3v2),
-                "iTunes" => tag_type = Some(TagType::Mp4Ilst),
-                _ => info!("Unhandled tag type: {:?}", v.tag_type),
-            }
-            let tag_type_value = tag_type.unwrap();
+            let tag_type = match tag_type_evt {
+                "vorbis" => TagType::VorbisComments,
+                "ID3v1" => TagType::Id3v2,
+                "ID3v2.2" => TagType::Id3v2,
+                "ID3v2.3" => TagType::Id3v2,
+                "ID3v2.4" => TagType::Id3v2,
+                "iTunes" => TagType::Mp4Ilst,
+                _ => panic!("Unhandled tag type: {:?}", v.tag_type),
+            };
+            info!("tag fileType: {:?}", &tag_type);
             let probe = Probe::open(&v.file_path).unwrap().guess_file_type()?;
-            // &probe.guess_file_type();
             let file_type = &probe.file_type();
             info!("fileType: {:?}", &file_type);
-            let mut tag = read_from_path(&v.file_path).unwrap();
-            let tag_file_type = tag.file_type();
-            let mut to_write = lofty::tag::Tag::new(tag_type.unwrap());
+            let mut tagged_file = probe.read().expect("ERROR: Failed to read file!");
 
-            if tag.primary_tag().is_some() {
-                tag.primary_tag()
-                    .unwrap()
-                    .pictures()
-                    .iter()
-                    .enumerate()
-                    .for_each(|(idx, pic)| to_write.set_picture(idx, pic.clone()));
+            let tag = if let Some(primary_tag) = tagged_file.primary_tag_mut() {
+                primary_tag
+            } else if let Some(first_tag) = tagged_file.first_tag_mut() {
+                first_tag
+            } else {
+                tagged_file.insert_tag(lofty::tag::Tag::new(tag_type));
+
+                tagged_file.first_tag_mut().unwrap()
+            };
+
+            if tag_type_evt == "ID3v1" || tag_type_evt == "ID3v2.2" || tag_type_evt == "ID3v2.3" {
+                // upgrade to ID3v2.4
+                tag.re_map(TagType::Id3v2);
             }
-            info!("tag fileType: {:?}", &tag_file_type);
 
-            // let primary_tag = tag.primary_tag_mut().unwrap();
             for item in v.metadata.iter() {
-                if tag_type.is_some() {
-                    if item.id == "METADATA_BLOCK_PICTURE" {
-                        // Ignore picture, set by artwork_file_to_set
+                if item.id == "METADATA_BLOCK_PICTURE" {
+                    // Ignore picture, set by artwork_file_to_set
+                } else {
+                    let item_key = match item.id.as_str() {
+                        "album" => ItemKey::AlbumTitle,
+                        "albumArtist" => ItemKey::AlbumArtist,
+                        "artist" => ItemKey::TrackArtist,
+                        "bpm" => ItemKey::Bpm,
+                        "compilation" => ItemKey::FlagCompilation,
+                        "composer" => ItemKey::Composer,
+                        "copyright" => ItemKey::CopyrightMessage,
+                        "discNumber" => ItemKey::DiscNumber,
+                        "discTotal" => ItemKey::DiscTotal,
+                        "encodingTool" => ItemKey::EncoderSoftware,
+                        "genre" => ItemKey::Genre,
+                        "isrc" => ItemKey::Isrc,
+                        "license" => ItemKey::License,
+                        "performer" => ItemKey::Performer,
+                        "publisher" => ItemKey::Publisher,
+                        "trackNumber" => ItemKey::TrackNumber,
+                        "trackTotal" => ItemKey::TrackTotal,
+                        "title" => ItemKey::TrackTitle,
+                        "year" => ItemKey::Year,
+                        _ => panic!("Unhandled key: {:?}", item.id),
+                    };
+
+                    if item.value.is_null() {
+                        tag.remove_key(&item_key);
+                        info!("remove: {:?}", item_key);
                     } else {
-                        let mut tag_key: String = item.id.clone();
+                        let item_value: ItemValue =
+                            ItemValue::Text(String::from(item.value.as_str().unwrap()));
+                        info!("insert: {:?} = {}", item_key, item.value);
 
-                        if tag_type_evt == "ID3v1" {
-                            info!("Upgrading v1 to v2.4 tag: {}", tag_key);
-                            let item_keyv4 = map_id3v1_to_id3v2_4(&tag_key);
-                            info!("Result v4: {:?}", item_keyv4);
-                            if item_keyv4.is_some() {
-                                tag_key = item_keyv4.unwrap().to_string();
-                                info!("Upgraded ID3v1 tag to ID3v2.4: {}", tag_key);
-                            }
-                        } else if tag_type_evt == "ID3v2.2" {
-                            info!("Upgrading v2.2 to v2.3 tag: {}", tag_key);
-                            let item_keyv4 = upgrade_v2(tag_key.as_str());
-                            info!("Result v4: {:?}", item_keyv4);
-                            if item_keyv4.is_some() {
-                                tag_key = item_keyv4.unwrap().to_string();
-                                info!("Upgraded ID3v2.2 tag to ID3v2.4: {}", tag_key);
-                            }
-                        } else if tag_type_evt == "ID3v2.3" {
-                            let item_keyv4 = upgrade_v3(tag_key.as_str());
-                            info!("Result v4: {:?}", item_keyv4);
-                            if item_keyv4.is_some() {
-                                tag_key = item_keyv4.unwrap().to_string();
-                                info!("Upgraded ID3v2.3 tag to ID3v2.4: {}", tag_key);
-                            }
-                        }
-                        let mut item_key = ItemKey::from_key(tag_type_value, tag_key.deref());
-
-                        if item.value.is_null() {
-                            let mut exists = false;
-
-                            for tag_item in tag.tags() {
-                                for tg in tag_item.items() {
-                                    if tg.key().eq(&item_key) {
-                                        exists = true;
-                                    }
-                                }
-                            }
-                            if exists {
-                                to_write.remove_key(&item_key);
-                            }
-                        } else {
-                            let item_value: ItemValue =
-                                ItemValue::Text(String::from(item.value.as_str().unwrap()));
-                            if tag_key.eq_ignore_ascii_case("TRCK") {
-                                item_key = ItemKey::TrackNumber;
-                            }
-
-                            let item = TagItem::new(item_key, item_value);
-
-                            if !to_write.insert(item.clone()) && tag_type_evt == "iTunes" {
-                                to_write.insert_unchecked(item);
-                            }
-                        }
+                        tag.insert(TagItem::new(item_key, item_value));
                     }
                 }
             }
 
             // Delete artwork if requested
-            if v.delete_artwork && to_write.pictures().len() > 0 {
-                while to_write.pictures().len() > 0 {
-                    to_write.remove_picture(0);
+            if v.delete_artwork && tag.pictures().len() > 0 {
+                while tag.pictures().len() > 0 {
+                    tag.remove_picture(0);
                 }
             }
             // Set artwork if provided
@@ -917,7 +911,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
 
                 let mut reader = BufReader::new(picture_file);
                 let pic = Picture::from_reader(reader.get_mut());
-                to_write.set_picture(0, pic.unwrap());
+                tag.set_picture(0, pic.unwrap());
             } else if !v.artwork_data.is_empty() {
                 let mime_type = if let Some(mime) = &v.artwork_data_mime_type {
                     match mime.as_str() {
@@ -935,24 +929,21 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                     None,
                     v.artwork_data.clone(),
                 );
-                to_write.set_picture(0, pic);
+                tag.set_picture(0, pic);
             }
 
-            for tag_item in tag.tags() {
-                for tag in tag_item.items() {
-                    info!("{:?}", tag);
-                }
+            for item in tag.items() {
+                info!("{:?}", item);
             }
+
             let mut file = File::options().read(true).write(true).open(&v.file_path)?;
             info!("{:?}", file);
             info!("FILETYPE: {:?}", file_type);
 
             // Keep picture, overwrite everything else
-            let _pictures = to_write.pictures();
+            let _pictures = tag.pictures();
 
-            tag.clear();
-            tag.insert_tag(to_write);
-            tag.save_to(&mut file, WriteOptions::new())?;
+            tagged_file.save_to(&mut file, WriteOptions::new())?;
             info!("File saved succesfully!");
         }
     } else {

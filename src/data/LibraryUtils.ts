@@ -59,15 +59,36 @@ export async function readMappedMetadataFromSong(
         ? metadata.format.tagTypes[0]
         : getTagTypeFromCodec(metadata.format.codec);
     const map = getMapForTagType(tagType, false);
-    const mappedMetadata: MetadataEntry[] = tagType
-        ? metadata?.native[tagType]
-              ?.map((tag) => ({
-                  genericId: map && tag ? map[tag.id] : "unknown",
-                  id: tag.id,
-                  value: tag.value,
-              }))
-              .filter((tag) => typeof tag.value === "string") ?? []
-        : [];
+    const mappedMetadata: MetadataEntry[] = [];
+
+    if (map) {
+        for (const { id, value } of metadata?.native[tagType]) {
+            if (typeof value !== "string") {
+                continue;
+            }
+
+            const genericId = map[id];
+
+            if (Array.isArray(genericId)) {
+                const values = value.split("/");
+
+                for (const [index, genId] of genericId.entries()) {
+                    mappedMetadata.push({
+                        genericId: genId,
+                        id,
+                        value: values[index],
+                    });
+                }
+            } else if (genericId) {
+                mappedMetadata.push({
+                    genericId,
+                    id,
+                    value,
+                });
+            }
+        }
+    }
+
     return { mappedMetadata, tagType };
 }
 
