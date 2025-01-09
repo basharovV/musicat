@@ -6,17 +6,17 @@
     import {
         popupOpen,
         rightClickedAlbum,
-        rightClickedTracks
+        rightClickedTracks,
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
     import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import { rescanAlbumArtwork } from "../../data/LibraryImporter";
+    import { rescanAlbumArtwork } from "../../data/LibraryUtils";
     import type { Album, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api/core";
 
-    export let pos = { x: 0, y: 0 };
+    export let position = { x: 0, y: 0 };
     export let showMenu = false;
     export let onClose;
 
@@ -77,7 +77,7 @@
     function searchSongOnYouTube() {
         closeMenu();
         const query = encodeURIComponent(
-            $rightClickedAlbum.displayTitle ?? $rightClickedAlbum.title
+            $rightClickedAlbum.displayTitle ?? $rightClickedAlbum.title,
         );
         open(`https://www.youtube.com/results?search_query=${query}`);
     }
@@ -86,20 +86,30 @@
         const query = encodeURIComponent($rightClickedAlbum.artist);
         open(`https://en.wikipedia.org/wiki/${query}`);
     }
+    function searchArtworkOnBrave() {
+        closeMenu();
+        const query = encodeURIComponent(
+            `${$rightClickedAlbum.artist} - ${$rightClickedAlbum.title}`,
+        );
+        open(`https://search.brave.com/images?q=${query}`);
+    }
     function openInFinder() {
         closeMenu();
         open($rightClickedAlbum.path);
     }
     function openInfo() {
         closeMenu();
-        $popupOpen = 'track-info';
+        $popupOpen = "track-info";
     }
 
     // Enrichers
     let isFetchingArtwork = false;
     let artworkResult: { success?: string; error?: string };
+    let artworkResultForAlbum: String;
     async function fetchArtwork() {
+        artworkResult = null;
         isFetchingArtwork = true;
+        artworkResultForAlbum = $rightClickedAlbum.id;
         artworkResult = await fetchAlbumArt($rightClickedAlbum);
         isFetchingArtwork = false;
     }
@@ -117,8 +127,8 @@
                 paths: [$rightClickedAlbum.path],
                 recursive: false,
                 process_albums: true,
-                is_async: false
-            }
+                is_async: false,
+            },
         });
         console.log("response", response);
         await db.transaction("rw", db.songs, db.albums, async () => {
@@ -130,7 +140,7 @@
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu}>
+    <Menu {...position} onClickOutside={closeMenu}>
         <MenuOption
             isDisabled={true}
             text="{$rightClickedAlbum.displayTitle ??
@@ -159,7 +169,7 @@
                     ? "Fetching from Wikipedia..."
                     : "Save to folder as cover.jpg"}
             />
-            {#if artworkResult}
+            {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
                 <MenuOption
                     text={artworkResult.error || artworkResult.success}
                     isDisabled
@@ -169,6 +179,10 @@
                 onClick={rescanLocalArtwork}
                 text="Scan existing artwork"
                 description="Check encoded art in tracks / folder image"
+            />
+            <MenuOption
+                onClick={searchArtworkOnBrave}
+                text="Search for artwork on Brave"
             />
             <MenuDivider />
             <MenuOption

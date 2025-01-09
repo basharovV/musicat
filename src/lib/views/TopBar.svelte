@@ -5,28 +5,30 @@
     import type { Song } from "../../App";
     import { db } from "../../data/db";
     import {
-        currentSong,
-        currentSongIdx,
+        current,
         isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
         popupOpen,
         isWaveformOpen,
         playerTime,
-        playlist,
         queriedSongs,
+        queue,
         rightClickedTrack,
         rightClickedTracks,
-        seekTime
+        seekTime,
+        lastWrittenSongs,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
     import Seekbar from "../sidebar/Seekbar.svelte";
     import Icon from "../ui/Icon.svelte";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
+    import { setQueue } from "../../data/storeHelper";
 
     let duration;
     let artworkSrc;
+    let currentSong;
 
     $: elapsedTime = `${(~~($playerTime / 60))
         .toString()
@@ -40,26 +42,36 @@
         .toString()
         .padStart(2, "0")}`;
 
-    currentSong.subscribe(async (song) => {
+    current.subscribe(async ({ song }) => {
         if (song) {
+            if (
+                song.path === currentSong?.path &&
+                !$lastWrittenSongs.some(({ path }) => path === song.path)
+            ) {
+                // same song, no need to update
+                // (unless the metadata was just written to eg. updated artwork)
+                return;
+            }
+
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: {
                     path: song.path,
                     isImport: false,
-                    includeFolderArtwork: true
-                }
+                    includeFolderArtwork: true,
+                },
             });
-            console.log("test", songWithArtwork);
+
+            currentSong = song.id;
             duration = songWithArtwork.fileInfo.duration;
 
             if (songWithArtwork.artwork) {
                 if (songWithArtwork.artwork.data.length) {
                     let artworkBuffer = Buffer.from(
-                        songWithArtwork.artwork.data
+                        songWithArtwork.artwork.data,
                     );
                     let artworkFormat = songWithArtwork.artwork.format;
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
@@ -72,18 +84,17 @@
 
     function togglePlayPause() {
         if (!audioPlayer.currentSong) {
-            audioPlayer.shouldPlay = true;
-            $playlist = $queriedSongs;
+            setQueue($queriedSongs, true);
         } else {
             audioPlayer.togglePlay();
         }
     }
 
     async function favouriteCurrentSong() {
-        if (!$currentSong) return;
-        $currentSong.isFavourite = !$currentSong.isFavourite;
-        await db.songs.put($currentSong);
-        $currentSong = $currentSong;
+        if (!$current.song) return;
+        $current.song.isFavourite = !$current.song.isFavourite;
+        await db.songs.put($current.song);
+        $current = $current;
     }
 </script>
 
@@ -106,7 +117,7 @@
             class="transport-middle"
             icon="fe:backward"
             size={24}
-            disabled={$currentSongIdx === 0}
+            disabled={$current.index === 0}
             onClick={() => audioPlayer.playPrevious()}
             color={$currentThemeObject["transport-controls"]}
         />
@@ -121,21 +132,21 @@
             class="transport-middle"
             size={24}
             icon="fe:forward"
-            disabled={$playlist.length === 0 ||
-                $currentSongIdx === $playlist?.length - 1}
+            disabled={$queue.length === 0 ||
+                $current.index === $queue?.length - 1}
             onClick={() => audioPlayer.playNext()}
             color={$currentThemeObject["transport-controls"]}
         />
         <div class="favourite">
             <Icon
-                class="transport-side favourite {$currentSong?.isFavourite
+                class="transport-side favourite {$current.song?.isFavourite
                     ? 'active'
                     : 'inactive'}"
                 size={18}
-                color={$currentSong?.isFavourite
+                color={$current.song?.isFavourite
                     ? $currentThemeObject["transport-favorite"]
                     : $currentThemeObject["icon-secondary"]}
-                icon={$currentSong?.isFavourite
+                icon={$current.song?.isFavourite
                     ? "clarity:heart-solid"
                     : "clarity:heart-line"}
                 onClick={() => {
@@ -153,9 +164,9 @@
             {/if}
             <div class="song-info" data-tauri-drag-region>
                 <small
-                    >{$currentSong?.title}
-                    <span> • {$currentSong?.artist}</span>
-                    <span> • {$currentSong?.album}</span>
+                    >{$current.song?.title}
+                    <span> • {$current.song?.artist}</span>
+                    <span> • {$current.song?.album}</span>
                 </small>
             </div>
 
@@ -164,9 +175,9 @@
                     size={16}
                     icon="mdi:information"
                     onClick={() => {
-                        $rightClickedTrack = $currentSong;
+                        $rightClickedTrack = $current.song;
                         $rightClickedTracks = [];
-                        $popupOpen = 'track-info';
+                        $popupOpen = "track-info";
                     }}
                     color={$currentThemeObject["icon-secondary"]}
                 />
@@ -180,7 +191,7 @@
             class="visualizer-icon"
             use:tippy={{
                 content: "waveform, loop region, marker editor",
-                placement: "top"
+                placement: "top",
             }}
         >
             <Icon
@@ -226,7 +237,6 @@
         @media screen and (max-width: 600px) {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto 40px;
-
         }
 
         &.sidebar-collapsed {
@@ -278,14 +288,10 @@
             width: 100%;
             overflow: hidden;
             border-radius: 5px;
-            border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 10%, transparent);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
-            border-right: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
-            border-left: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
+            border-top: 0.7px solid var(--panel-primary-border-accent2);
+            border-bottom: 0.7px solid var(--panel-primary-border-main);
+            border-right: 0.7px solid var(--panel-primary-border-main);
+            border-left: 0.7px solid var(--panel-primary-border-main);
 
             background-color: color-mix(
                 in srgb,

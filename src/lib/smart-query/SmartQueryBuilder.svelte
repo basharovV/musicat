@@ -6,7 +6,7 @@
     import {
         isSmartQueryValid,
         smartQuery,
-        smartQueryInitiator
+        smartQueryInitiator,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { autoWidth } from "../../utils/AutoWidth";
@@ -96,7 +96,7 @@
 
                             return matched;
                         },
-                        []
+                        [],
                     );
 
                     matchingQueryParts = matchedQueryParts;
@@ -189,7 +189,7 @@
                 items={matchingQueryParts.map((p) => ({
                     text: $_(p.description),
                     description: $_(p.example),
-                    source: p
+                    source: p,
                 }))}
                 onItemSelected={onSelectPart}
             />
@@ -253,12 +253,12 @@
         }
 
         button {
-            background-color: rgb(98, 77, 212);
+            background-color: var(--smart-playlist-button-bg);
             border-radius: 4px;
 
             &:disabled {
-                background-color: rgb(73, 53, 184);
-                color: rgb(116, 114, 114);
+                background-color: var(--smart-playlist-button-disabled-bg);
+                color: var(--smart-playlist-button-disabled);
             }
         }
     }

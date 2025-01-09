@@ -7,7 +7,7 @@
         isFullScreenLyrics,
         isScrapbookShown,
         songbookSelectedArtist,
-        userSettings
+        userSettings,
     } from "../../data/store";
 
     import { blur } from "svelte/transition";
@@ -19,7 +19,7 @@
     import type { UnlistenFn } from "@tauri-apps/api/event";
     import {
         startWatchingScrapbookFolder,
-        startWatchingSongbookFolder
+        startWatchingSongbookFolder,
     } from "../../data/FolderWatcher";
     import { onDestroy } from "svelte";
     let selectedSong: Song;
@@ -155,7 +155,7 @@
         grid-template-columns: 1fr auto auto;
         gap: 5px;
         grid-template-rows: auto 1fr;
-        margin: 5px 5px 5px 0;
+        margin: 5px 5px 0 0;
         border-radius: 5px;
         overflow: hidden;
 
@@ -180,8 +180,7 @@
             position: relative;
             background-color: var(--panel-background);
             border-radius: 5px;
-            border: 0.7px solid
-                color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+            border: 0.7px solid var(--panel-primary-border-accent1);
 
             .close-scrapbook-prompt {
                 position: absolute;
@@ -239,7 +238,7 @@
     }
 
     .content {
-        width: 100%;    
+        width: 100%;
         grid-column: 1;
         grid-row: 2;
         z-index: 1;

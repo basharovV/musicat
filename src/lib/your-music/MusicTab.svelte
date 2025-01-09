@@ -2,7 +2,7 @@
     import { open } from "@tauri-apps/plugin-dialog";
     import { audioDir } from "@tauri-apps/api/path";
     import type { Song, SongProject, SongProjectRecording } from "src/App";
-    import { currentSong, songDetailsUpdater } from "../../data/store";
+    import { current, songDetailsUpdater } from "../../data/store";
     import { db } from "../../data/db";
     import AudioPlayer from "../player/AudioPlayer";
     import { fly } from "svelte/transition";
@@ -25,7 +25,7 @@
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple files
@@ -49,7 +49,7 @@
             <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
                 in:fly={{ duration: 150, easing: quadOut }}
-                class:playing={$currentSong?.file === recording.song.file}
+                class:playing={$current.song?.file === recording.song.file}
                 class="recording"
                 on:click={() => {
                     playSong(recording);

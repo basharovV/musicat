@@ -207,10 +207,16 @@ type UiView =
     | "map"
     | "analytics"
     | "internet-archive"
-    | "prune" 
-    | "to-delete"
+    | "prune"
+    | "to-delete";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
+
+interface PlayingSong {
+    song?: Song;
+    index: number;
+    position: number; //seconds;
+}
 
 interface ContentFileType {
     type: "audio" | "video" | "txt" | "image" | "unsupported";
@@ -293,11 +299,6 @@ type LLM = "gpt-3.5-turbo" | "gpt-4" | "ollama";
 
 type Compression = "lossy" | "lossless" | "both";
 
-interface LastPlayedInfo {
-    songId?: string;
-    position: number; //seconds;
-}
-
 interface AddOriginCountryStatus {
     percent: number;
 }
@@ -313,6 +314,7 @@ interface GetHTMLResponse {
 interface CurrentSongLyrics {
     songId: string;
     lyrics?: string;
+    syncedLyrics?: SyncedLyrics[];
     writers?: string[];
 }
 
@@ -370,11 +372,7 @@ interface Marker {
     title: string;
 }
 
-type PlaylistType = "library" | "album" | "playlist" | "country";
-
 type ArrowFocus = "library" | "queue";
-
-type QueueMode = "library" | "custom";
 
 interface IACollection {
     id: string;
@@ -419,7 +417,7 @@ interface IAItem {
     date?: number;
     performer?: string;
     writer?: string;
-    original: IAFile;
+    originals: IAFile[];
 }
 
 interface AudioDevice {
@@ -432,3 +430,5 @@ interface AudioDevices {
 }
 
 type PopupType = "info" | "track-info" | "settings";
+
+type SyncedLyrics = { timestamp: number; lyricLine: string };

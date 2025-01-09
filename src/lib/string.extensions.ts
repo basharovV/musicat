@@ -1,10 +1,10 @@
 declare global {
     interface String {
-        format(...arguments) : string;
+        format(...arguments): string;
     }
 }
 
-String.prototype.format = function() {
+String.prototype.format = function () {
     // store arguments in an array
     var args = arguments;
     // use replace to iterate over the string
@@ -14,6 +14,6 @@ String.prototype.format = function() {
         // check if the argument is present
         return typeof args[index] == "undefined" ? match : args[index];
     });
-}
+};
 
-export {}
+export {};

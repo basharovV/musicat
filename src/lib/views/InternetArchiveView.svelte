@@ -4,13 +4,13 @@
     import {
         getIACollection,
         getIACollections,
-        getIAItem
+        getIAItem,
     } from "../../data/InternetArchiveAPI";
     import IaItemPlayer from "../internet-archive/IAItemPlayer.svelte";
     import webAudioPlayer, {
         currentItem,
         currentSrc,
-        isIAPlaying
+        isIAPlaying,
     } from "../player/WebAudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
@@ -21,7 +21,7 @@
         iaSelectedCollection,
         iaSelectedCollectionItems,
         iaSelectedItem,
-        webPlayerVolume
+        webPlayerVolume,
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
@@ -75,7 +75,7 @@
         $iaSelectedCollection = collection;
         $iaSelectedCollectionItems = await getIACollection(
             collection.id,
-            collectionPage
+            collectionPage,
         );
         isLoadingCollection = false;
     }
@@ -91,7 +91,7 @@
                 isLoadingCollection = true;
                 const newPage = await getIACollection(
                     $iaSelectedCollection.id,
-                    ++collectionPage
+                    ++collectionPage,
                 );
                 $iaSelectedCollectionItems.push(...newPage);
                 $iaSelectedCollectionItems = $iaSelectedCollectionItems;
@@ -123,8 +123,7 @@
                 <small
                     >public domain music from <a
                         href="https://archive.org/details/audio_music"
-                        target="_blank"
-                        >archive.org</a
+                        target="_blank">archive.org</a
                     ></small
                 >
             </div>
@@ -212,10 +211,15 @@
                 <div class="header">
                     {#if $iaSelectedCollection}
                         <div class="top-row">
-                            <img
-                                src="https://archive.org/services/img/{$iaSelectedCollection.id}"
-                            />
-                            <h2>{$iaSelectedCollection.title}</h2>
+                            <a
+                                href="https://archive.org/details/{$iaSelectedCollection.id}"
+                                target="_blank"
+                            >
+                                <img
+                                    src="https://archive.org/services/img/{$iaSelectedCollection.id}"
+                                />
+                                <h2>{$iaSelectedCollection.title}</h2>
+                            </a>
                         </div>
                         {#if $iaSelectedCollection.description}
                             <p class="description">
@@ -242,7 +246,7 @@
                                             rightClickedItem = item;
                                             pos = {
                                                 x: e.clientX,
-                                                y: e.clientY
+                                                y: e.clientY,
                                             };
                                             showMenu = true;
                                         }}
@@ -252,7 +256,7 @@
                                         on:dblclick={async () => {
                                             await selectItem(item);
                                             await webAudioPlayer.playFromUrl(
-                                                $iaSelectedItem.original
+                                                $iaSelectedItem.original,
                                             );
                                         }}
                                     >
@@ -282,7 +286,12 @@
             <div class="column-audio">
                 {#if isLoadingItem}
                     <div class="header">
-                        <h2>{$iaSelectedItem?.title}</h2>
+                        <a
+                            href="https://archive.org/details/{$iaSelectedItem?.id}"
+                            target="_blank"
+                        >
+                            <h2>{$iaSelectedItem?.title}</h2>
+                        </a>
                         <p>Loading</p>
                         <div class="loading">
                             <LoadingSpinner />
@@ -290,11 +299,21 @@
                     </div>
                 {:else if $iaSelectedItem}
                     <div class="header">
-                        <h2>{$iaSelectedItem?.title}</h2>
+                        <a
+                            href="https://archive.org/details/{$iaSelectedItem?.id}"
+                            target="_blank"
+                        >
+                            <h2>{$iaSelectedItem?.title}</h2>
+                        </a>
                     </div>
-                    <h3>Original</h3>
-                    {#if $iaSelectedItem.original}
-                        <IaFileBlock file={$iaSelectedItem.original} />
+                    {#if $iaSelectedItem.originals}
+                        <h3>Original</h3>
+
+                        <div class="files">
+                            {#each $iaSelectedItem.originals as file}
+                                <IaFileBlock {file} />
+                            {/each}
+                        </div>
                     {/if}
                     {#if $iaSelectedItem.files}
                         <h3>Files</h3>
@@ -376,12 +395,9 @@
             align-items: center;
             height: 60px;
             background-color: var(--panel-background);
-            border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
-            border-left: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-top: 0.7px solid var(--panel-primary-border-accent1);
+            border-left: 0.7px solid var(--panel-primary-border-accent1);
+            border-bottom: 0.7px solid var(--panel-primary-border-accent1);
             border-radius: 5px;
             margin-bottom: 5px;
 
@@ -392,14 +408,17 @@
                 align-items: center;
                 justify-self: flex-end;
                 padding: 0.5em 1em;
-                border-left: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-left: 0.7px solid var(--panel-primary-border-accent1);
 
                 input {
                     -webkit-appearance: none;
                     width: 100%;
                     height: 5px;
-                    background: #474747d4;
+                    background: color-mix(
+                        in srgb,
+                        var(--inverse) 20%,
+                        transparent
+                    );
                     outline: none;
                     opacity: 1;
                     margin: auto;
@@ -412,13 +431,13 @@
                         appearance: none;
                         width: 20px;
                         height: 20px;
-                        background: url("/images/volume-up.svg");
+                        background: var(--transport-volume-thumb-url);
                     }
 
                     &::-moz-range-thumb {
                         width: 20px;
                         height: 20px;
-                        background: #04aa6d;
+                        background: var(--transport-volume-thumb-secondary);
                     }
                 }
             }
@@ -430,8 +449,7 @@
                 padding: 0.5em 1em;
 
                 height: 100%;
-                border-right: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-right: 0.7px solid var(--panel-primary-border-accent1);
                 h3 {
                     white-space: nowrap;
                 }
@@ -468,22 +486,19 @@
         overflow: hidden;
         > div {
             height: 100%;
-            border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-top: 0.7px solid var(--panel-primary-border-accent1);
             border-bottom-left-radius: 5px;
             border-bottom-right-radius: 5px;
-            border-left: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
-            border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+            border-left: 0.7px solid var(--panel-primary-border-accent1);
+            border-bottom: 0.7px solid var(--panel-primary-border-accent1);
             background-color: var(--panel-background);
             border-radius: 4px;
             overflow: auto;
             &:not(:nth-child(1)) {
-                border-left: 0.7px solid #ffffff2a;
+                border-left: 0.7px solid var(--panel-secondary-border-main);
             }
             &:not(:last-child) {
-                border-right: 0.7px solid #ffffff2a;
+                border-right: 0.7px solid var(--panel-secondary-border-main);
             }
         }
         .column-collections {
@@ -503,8 +518,7 @@
                 height: auto;
                 gap: 10px;
                 padding: 1em 2em;
-                border-top: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-top: 0.7px solid var(--panel-primary-border-accent1);
                 opacity: 0.8;
                 &.selected {
                     background-color: color-mix(
@@ -584,10 +598,9 @@
                 background-color: var(--panel-background);
                 backdrop-filter: blur(8px);
                 flex-wrap: wrap;
-                border-bottom: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-bottom: 0.7px solid var(--panel-primary-border-accent1);
                 z-index: 2;
-                .top-row {
+                .top-row a {
                     display: flex;
                     width: 100%;
 
@@ -626,7 +639,6 @@
                 li {
                     text-align: left;
                     padding: 0 1em;
-                    /* border-bottom: 0.7px solid #ffffff2a; */
                     height: 26px;
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -688,8 +700,7 @@
                 flex-direction: column;
                 background-color: var(--panel-background);
                 padding: 0.5em;
-                border-bottom: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-bottom: 0.7px solid var(--panel-primary-border-accent1);
                 h2 {
                     padding: 1em;
                     margin: 0;
@@ -728,8 +739,7 @@
 
             .hint {
                 padding-bottom: 1em;
-                border-bottom: 0.7px solid
-                    color-mix(in srgb, var(--inverse) 30%, transparent);
+                border-bottom: 0.7px solid var(--panel-primary-border-accent1);
             }
         }
     }

@@ -1,28 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import { get } from "svelte/store";
-import type { ArtworkSrc, LastPlayedInfo, Song, ToImport } from "../../App";
+import type { ArtworkSrc, Song, ToImport } from "../../App";
 import { db } from "../../data/db";
 import {
-    currentSong,
+    current,
     currentSongArtworkSrc,
-    currentSongIdx,
     isPlaying,
     isShuffleEnabled,
-    lastPlayedInfo,
     nextUpSong,
     playerTime,
-    playlist,
+    queue,
     seekTime,
-    shuffledPlaylist,
+    shuffledQueue,
     userSettings,
-    volume
+    volume,
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
 
 import type { Event } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import WebRTCReceiver from "./WebRTCReceiver";
-import { register } from "@tauri-apps/plugin-global-shortcut";
 import webAudioPlayer, { isIAPlaying } from "./WebAudioPlayer";
 const appWindow = getCurrentWebviewWindow();
 
@@ -65,9 +62,9 @@ class AudioPlayer {
     currentSong: Song;
     currentSongIdx: number;
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
-    playlist: Song[];
+    queue: Song[];
     shouldPlay = false; // Whether to play immediately after loading playlist
-    shouldRestoreLastPlayed: LastPlayedInfo;
+    shouldShuffle = true; // Whether to suffle immediately after loading playlist
     isRunningTransition = false;
     isInit = true;
     isStopped = true;
@@ -77,7 +74,7 @@ class AudioPlayer {
     stats = {
         packetDropCounter: 0,
         packetReceivedCounter: 0,
-        totalPacketCounter: 0
+        totalPacketCounter: 0,
     };
     flowControlSendInterval;
 
@@ -96,102 +93,139 @@ class AudioPlayer {
         });
 
         isShuffleEnabled.subscribe((enabled) => {
-            const shuffledPlylist = get(shuffledPlaylist);
+            const queue = get(shuffledQueue);
             let newCurrentSongIdx = 0;
             // If shuffle is enabled but not yet shuffled
-            if (enabled && shuffledPlylist.length === 0) {
+            if (enabled && queue.length === 0) {
                 this.shuffle();
                 // If shuffle is disabled, need to unshuffle
-            } else if (!enabled && shuffledPlylist.length > 0) {
+            } else if (!enabled && queue.length > 0) {
                 this.unshuffle();
                 // Restore position
-                newCurrentSongIdx = this.playlist.findIndex(
-                    (s) => s.id === this.currentSong?.id
-                );
-                if (newCurrentSongIdx === -1) {
+                const id = this.currentSong?.id;
+                if (id) {
+                    newCurrentSongIdx = this.queue.findIndex(
+                        (s) => s.id === id,
+                    );
+                } else {
                     newCurrentSongIdx = 0;
                 }
             }
 
             this.currentSongIdx = newCurrentSongIdx;
-            currentSongIdx.set(newCurrentSongIdx);
+
+            current.set({ ...get(current), index: newCurrentSongIdx });
 
             this.setNextUpSong();
         });
 
-        playlist.subscribe(async (playlist) => {
-            this.playlist = playlist;
+        current.subscribe(async ({ song }) => {
+            if (song) {
+                this.currentSong = song;
+            }
+        });
 
-            if (playlist.length === 0) {
+        queue.subscribe(async (queue) => {
+            if (queue.length === 0) {
+                this.queue = queue;
+                this.currentSongIdx = -1;
                 return;
             }
 
+            if (!this.currentSong) {
+                this.currentSong = get(current).song;
+            }
+
             const shuffleEnabled = get(isShuffleEnabled);
-            const shuffledPlylist = get(shuffledPlaylist);
             let newCurrentSongIdx = 0;
-            console.log("shuffled", shuffledPlylist);
+
             // If shuffle is enabled but not yet shuffled
             if (shuffleEnabled) {
-                this.shuffle();
+                if (this.shouldShuffle) {
+                    this.shuffle();
+                } else {
+                    this.queue = get(shuffledQueue);
+
+                    const id = this.currentSong?.id;
+                    if (id) {
+                        newCurrentSongIdx = this.queue.findIndex(
+                            (s) => s.id === id,
+                        );
+                    } else {
+                        newCurrentSongIdx = 0;
+                    }
+
+                    this.shouldShuffle = true;
+                }
                 // If shuffle is disabled, need to unshuffle
-            } else if (!shuffleEnabled && shuffledPlylist.length > 0) {
+            } else if (!shuffleEnabled && get(shuffledQueue).length > 0) {
                 this.unshuffle();
                 // Restore position
-                newCurrentSongIdx = playlist.findIndex(
-                    (s) => s.id === this.currentSong?.id
-                );
-                if (newCurrentSongIdx === -1) {
+                const id = this.currentSong?.id;
+                if (id) {
+                    newCurrentSongIdx = this.queue.findIndex(
+                        (s) => s.id === id,
+                    );
+                } else {
                     newCurrentSongIdx = 0;
                 }
-            } else {
                 // Shuffle was disabled already
-                this.playlist = playlist;
+            } else {
+                this.queue = queue;
 
-                newCurrentSongIdx = playlist.findIndex(
-                    (s) => s.id === this.currentSong?.id
-                );
-                // console.log("found index", playlist, this.currentSong);
-                if (newCurrentSongIdx === -1) {
+                const id = this.currentSong?.id;
+                if (id) {
+                    newCurrentSongIdx = this.queue.findIndex(
+                        (s) => s.id === id,
+                    );
+                } else {
                     newCurrentSongIdx = 0;
                 }
             }
 
             this.currentSongIdx = newCurrentSongIdx;
-            currentSongIdx.set(newCurrentSongIdx);
+
+            current.set({ ...get(current), index: newCurrentSongIdx });
+
             console.log(
                 "playlist: currentsongindex",
                 this.currentSongIdx,
-                this.currentSong
+                this.currentSong,
             );
 
             this.setNextUpSong();
+
             if (this.shouldPlay) {
-                this.playCurrent();
+                const seek = get(current).position;
+
+                this.playCurrent(seek);
                 this.shouldPlay = false;
+
+                if (seek) {
+                    current.set({ ...get(current), position: 0 });
+                }
             }
-            if (this.shouldRestoreLastPlayed) {
-                await this.restoreLastPlayed(this.shouldRestoreLastPlayed);
-                this.shouldRestoreLastPlayed = null;
-            }
-        });
-        currentSongIdx.subscribe((idx) => {
-            this.currentSongIdx = idx;
         });
 
         volume.subscribe(async (vol) => {
             await invoke("volume_control", {
                 event: {
-                    volume: vol * 0.75
-                }
+                    volume: vol * 0.75,
+                },
             });
             localStorage.setItem("volume", String(vol));
         });
 
         appWindow.listen("song_change", async (event: Event<Song>) => {
             this.currentSong = event.payload;
-            currentSong.set(this.currentSong);
             this.currentSongIdx += 1;
-            currentSongIdx.set(this.currentSongIdx);
+
+            current.set({
+                song: this.currentSong,
+                index: this.currentSongIdx,
+                position: 0,
+            });
+
             this.setNextUpSong();
             this.isRunningTransition = false;
         });
@@ -217,11 +251,15 @@ class AudioPlayer {
         });
 
         appWindow.listen("audio_device_changed", async (event: any) => {
-            userSettings.update(userSettings => {
+            userSettings.update((userSettings) => {
                 userSettings.outputDevice = event.payload;
                 return userSettings;
-            })
-        })
+            });
+        });
+
+        appWindow.listen("close", () => {
+            current.set({ ...get(current), position: get(playerTime) });
+        });
     }
 
     async setupBuffers() {
@@ -229,17 +267,24 @@ class AudioPlayer {
     }
 
     shuffle() {
-        let toShuffle = [...this.playlist];
-        toShuffle.splice(get(currentSongIdx), 1);
-        const shuffled = [this.currentSong].concat(shuffleArray(toShuffle));
-        shuffledPlaylist.set(shuffled);
-        this.playlist = shuffled;
+        let toShuffle = [...this.queue];
+        toShuffle.splice(this.currentSongIdx, 1);
+        const shuffled = [this.currentSong, ...shuffleArray(toShuffle)];
+        shuffledQueue.set(shuffled);
+        var { position } = get(current);
+        this.queue = shuffled;
+        this.currentSongIdx = 0;
+        current.set({
+            song: this.currentSong,
+            index: this.currentSongIdx,
+            position,
+        });
         isShuffleEnabled.set(true);
     }
 
     unshuffle() {
-        this.playlist = get(playlist);
-        shuffledPlaylist.set([]);
+        this.queue = get(queue);
+        shuffledQueue.set([]);
         isShuffleEnabled.set(false);
     }
 
@@ -256,24 +301,25 @@ class AudioPlayer {
     }
 
     playCurrent(seek: number = 0) {
-        this.playSong(this.playlist[this.currentSongIdx], seek);
+        if (this.currentSong) {
+            this.playSong(this.currentSong, seek);
+        } else {
+            this.playSong(this.queue[this.currentSongIdx], seek);
+        }
     }
 
     hasNext() {
-        return this.currentSongIdx + 1 < this.playlist.length;
+        return this.currentSongIdx + 1 < this.queue.length;
     }
 
     playNext() {
         this.currentSongIdx++;
-        currentSongIdx.set(this.currentSongIdx);
-        this.playSong(this.playlist[this.currentSongIdx]);
+        this.playSong(this.queue[this.currentSongIdx]);
     }
 
     playPrevious() {
         this.currentSongIdx--;
-        currentSongIdx.set(this.currentSongIdx);
-        this.playSong(this.playlist[this.currentSongIdx]);
-        currentSongIdx.set(this.currentSongIdx);
+        this.playSong(this.queue[this.currentSongIdx]);
     }
 
     restart() {}
@@ -298,10 +344,10 @@ class AudioPlayer {
                               sizes: this.artworkSrc.size
                                   ? `${this.artworkSrc.size.width}x${this.artworkSrc.size.height}`
                                   : "128x128",
-                              type: this.artworkSrc.format
-                          }
+                              type: this.artworkSrc.format,
+                          },
                       ]
-                    : []
+                    : [],
             });
         }
     }
@@ -312,8 +358,8 @@ class AudioPlayer {
                 "play",
                 () => {
                     console.log("action handler play");
-                    this.play();
-                }
+                    this.play(true);
+                },
             ],
             [
                 "pause",
@@ -321,25 +367,25 @@ class AudioPlayer {
                     console.log("action handler pause");
                     // Pause active playback
                     this.pause();
-                }
+                },
             ],
             [
                 "previoustrack",
                 () => {
                     /* ... */
-                }
+                },
             ],
             [
                 "nexttrack",
                 () => {
                     /* ... */
-                }
+                },
             ],
             [
                 "stop",
                 () => {
                     /* ... */
-                }
+                },
             ],
             ["seekbackward", null],
             ["seekforward", null],
@@ -347,8 +393,8 @@ class AudioPlayer {
                 "seekto",
                 (details) => {
                     /* ... */
-                }
-            ]
+                },
+            ],
         ];
 
         for (const [action, handler] of actionHandlers) {
@@ -356,7 +402,7 @@ class AudioPlayer {
                 navigator.mediaSession.setActionHandler(action, handler);
             } catch (error) {
                 console.log(
-                    `The media session action "${action}" is not supported yet.`
+                    `The media session action "${action}" is not supported yet.`,
                 );
             }
         }
@@ -371,16 +417,16 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
-        if (this.currentSongIdx + 1 < this.playlist?.length) {
-            const nextSong = this.playlist[this.currentSongIdx + 1];
+        if (this.currentSongIdx + 1 < this.queue?.length) {
+            const nextSong = this.queue[this.currentSongIdx + 1];
             nextUpSong.set(nextSong);
             invoke("queue_next", {
                 event: {
                     path: nextSong.path,
                     seek: 0,
                     file_info: nextSong.fileInfo,
-                    volume: get(volume)
-                }
+                    volume: get(volume),
+                },
             });
         } else {
             nextUpSong.set(null);
@@ -390,15 +436,15 @@ class AudioPlayer {
                     path: null,
                     seek: 0,
                     file_info: null,
-                    volume: get(volume)
-                }
+                    volume: get(volume),
+                },
             });
         }
     }
 
     async incrementPlayCounter(song: Song) {
         await db.songs.update(song, {
-            playCount: song.playCount ? song.playCount + 1 : 1
+            playCount: song.playCount ? song.playCount + 1 : 1,
         });
     }
 
@@ -411,7 +457,6 @@ class AudioPlayer {
             }
             // this.pause();
             this.isRunningTransition = false;
-            currentSong.set(song);
             this.currentSong = song;
             console.log("play", play, this.shouldPlay);
             if (play) {
@@ -419,7 +464,7 @@ class AudioPlayer {
                 playerTime.set(position);
                 console.log(
                     "audioplayer::datachannel::",
-                    this.webRTCReceiver.dataChannel?.readyState
+                    this.webRTCReceiver.dataChannel?.readyState,
                 );
 
                 if (
@@ -440,8 +485,8 @@ class AudioPlayer {
                         path: this.currentSong.path,
                         seek: position,
                         file_info: this.currentSong.fileInfo,
-                        volume: get(volume)
-                    }
+                        volume: get(volume),
+                    },
                 });
                 this.incrementPlayCounter(song);
             }
@@ -449,20 +494,19 @@ class AudioPlayer {
             let newCurrentSongIdx =
                 index !== null
                     ? index
-                    : this.playlist.findIndex(
-                          (s) => s.id === this.currentSong?.id
+                    : this.queue.findIndex(
+                          (s) => s.id === this.currentSong?.id,
                       );
             if (newCurrentSongIdx === -1) {
                 newCurrentSongIdx = 0;
             }
-            currentSongIdx.set(newCurrentSongIdx);
+            this.currentSongIdx = newCurrentSongIdx;
+            current.set({ song, index: newCurrentSongIdx, position });
             this.setNextUpSong();
             this.setMediaSessionData();
-
-            lastPlayedInfo.set({
-                songId: this.currentSong.id,
-                position: 0
-            });
+        } else {
+            this.currentSong = null;
+            current.set({ song: null, index: 0, position: 0 });
         }
     }
 
@@ -484,33 +528,35 @@ class AudioPlayer {
                 paths: paths,
                 recursive: false,
                 process_albums: false,
-                is_async: false
-            }
+                is_async: false,
+            },
         });
         console.log("scan_paths response", response);
         if (response.songs) {
             this.shouldPlay = true;
-            playlist.set(response.songs);
+            queue.set(response.songs);
         }
     }
 
     async play(isResume: boolean) {
         this.isStopped = false;
+
         if (isResume) {
             await invoke("decode_control", {
                 event: {
-                    decoding_active: true
-                }
+                    decoding_active: true,
+                },
             });
         }
+
         this.onPlay();
     }
 
     async pause() {
         invoke("decode_control", {
             event: {
-                decoding_active: false
-            }
+                decoding_active: false,
+            },
         });
         this.onPause();
     }
@@ -527,11 +573,6 @@ class AudioPlayer {
                 this.play(true);
             }
         }
-    }
-
-    async restoreLastPlayed(lastPlayed: LastPlayedInfo) {
-        const song = await db.songs.get(lastPlayed.songId);
-        await this.playSong(song, lastPlayed.position, false);
     }
 }
 

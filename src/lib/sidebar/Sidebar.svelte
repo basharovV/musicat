@@ -19,16 +19,13 @@
         createNewPlaylistFile,
         deletePlaylistFile,
         renamePlaylist,
-        scanPlaylists,
-        writePlaylist
     } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
         currentIAFile,
-        currentSong,
+        current,
         currentSongArtworkSrc,
-        currentSongIdx,
         draggedAlbum,
         draggedSongs,
         isDraggingFromQueue,
@@ -44,9 +41,9 @@
         isWikiOpen,
         os,
         playerTime,
-        playlist,
         queriedSongs,
         query,
+        queue,
         rightClickedTrack,
         seekTime,
         selectedPlaylistFile,
@@ -59,7 +56,8 @@
         uiView,
         userPlaylists,
         userSettings,
-        toDeletePlaylist
+        toDeletePlaylist,
+        lastWrittenSongs,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -74,10 +72,13 @@
     import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import { setQueue } from "../../data/storeHelper";
+    import { get } from "svelte/store";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
     // What to show in the sidebar
+    let song: Song;
     let title;
     let fileName;
     $: displayTitle = title ?? fileName;
@@ -123,14 +124,27 @@
 
     let placeholderArtwork: HTMLImageElement;
 
-    currentSong.subscribe(async (song) => {
-        if (song) {
+    current.subscribe(async (current) => {
+        if (current.song) {
+            if (
+                current.song.path === song?.path &&
+                !$lastWrittenSongs.some(
+                    ({ path }) => path === current.song.path,
+                )
+            ) {
+                // same song, no need to update
+                // (unless the metadata was just written to eg. updated artwork)
+                return;
+            }
+
+            song = current.song;
+
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: {
                     path: song.path,
                     isImport: false,
-                    includeFolderArtwork: true
-                }
+                    includeFolderArtwork: true,
+                },
             });
 
             if (!songWithArtwork) {
@@ -139,7 +153,7 @@
                 album = "in use by another program?";
                 toast.error(
                     `Error reading file ${song.path}. Check permissions, or if the file is used by another program.`,
-                    { className: "app-toast" }
+                    { className: "app-toast" },
                 );
                 return;
             }
@@ -159,7 +173,7 @@
                 if (songWithArtwork.artwork.data?.length) {
                     artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
-                        "base64"
+                        "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
@@ -171,29 +185,21 @@
                     format: artworkFormat,
                     size: {
                         width: 200,
-                        height: 200
-                    }
+                        height: 200,
+                    },
                 };
             } else {
                 artworkSrc = null;
             }
+
+            drawArtwork(previousSongIdx > current.index);
+            previousSongIdx = current.index;
         }
-        drawArtwork(previousSongIdx > $currentSongIdx);
-        previousSongIdx = $currentSongIdx;
     });
 
-    function togglePlayPause() {
-        if (!audioPlayer.currentSong) {
-            audioPlayer.shouldPlay = true;
-            $playlist = $queriedSongs;
-        } else {
-            audioPlayer.togglePlay();
-        }
-    }
-
     function openTrackInfo() {
-        if ($currentSong) {
-            $rightClickedTrack = $currentSong;
+        if (song) {
+            $rightClickedTrack = song;
             $popupOpen = "track-info";
         }
     }
@@ -235,7 +241,7 @@
         if (topContainer) {
             $sidebarTogglePos = {
                 x: topContainer.getBoundingClientRect().right,
-                y: topContainer.getBoundingClientRect().bottom
+                y: topContainer.getBoundingClientRect().bottom,
             };
         }
     }
@@ -298,8 +304,8 @@
                             monitor.position.y +
                                 monitor.size.height -
                                 windowSize.height -
-                                paddingPx
-                        )
+                                paddingPx,
+                        ),
                     );
                     break;
                 case "bottom-right":
@@ -312,8 +318,8 @@
                             monitor.position.y +
                                 monitor.size.height -
                                 windowSize.height -
-                                paddingPx
-                        )
+                                paddingPx,
+                        ),
                     );
                     break;
                 case "top-left":
@@ -321,8 +327,8 @@
                         new PhysicalPosition(
                             monitor.position.x + paddingPx,
                             monitor.position.y +
-                                ($os === "macos" ? paddingPx + 40 : paddingPx)
-                        )
+                                ($os === "macos" ? paddingPx + 40 : paddingPx),
+                        ),
                     );
                     break;
                 case "top-right":
@@ -333,8 +339,8 @@
                                 windowSize.width -
                                 paddingPx,
                             monitor.position.y +
-                                ($os === "macos" ? paddingPx + 40 : paddingPx)
-                        )
+                                ($os === "macos" ? paddingPx + 40 : paddingPx),
+                        ),
                     );
                     break;
             }
@@ -345,7 +351,7 @@
             await appWindow.hide();
             if (widthToRestore && heightToRestore) {
                 await appWindow.setSize(
-                    new LogicalSize(widthToRestore, heightToRestore)
+                    new LogicalSize(widthToRestore, heightToRestore),
                 );
             } else {
                 await appWindow.setSize(new LogicalSize(1100, 750));
@@ -380,7 +386,7 @@
             "scrollTop",
             menuInnerScrollArea.scrollTop,
             menuInnerScrollArea.clientHeight,
-            menuInnerScrollArea.scrollHeight
+            menuInnerScrollArea.scrollHeight,
         );
         // Check scroll area size, add shadows if necessary
         if (menuInnerScrollArea) {
@@ -542,8 +548,8 @@
                         : $draggedSongs[0].title
                 } added to ${playlist.path}`,
                 {
-                    position: "bottom-center"
-                }
+                    position: "bottom-center",
+                },
             );
             $draggedSongs = [];
             $draggedAlbum = null;
@@ -552,10 +558,10 @@
     }
 
     async function favouriteCurrentSong() {
-        if (!$currentSong) return;
-        $currentSong.isFavourite = !$currentSong.isFavourite;
-        await db.songs.put($currentSong);
-        $currentSong = $currentSong;
+        if (!$current.song) return;
+        $current.song.isFavourite = !$current.song.isFavourite;
+        await db.songs.put($current.song);
+        $current = $current;
     }
     let sidebar;
     let sidebarWidth = 210;
@@ -602,7 +608,7 @@
     let canvas: HTMLCanvasElement;
 
     $: if (
-        $currentSong &&
+        song &&
         canvas &&
         sidebarWidth &&
         displayTitle &&
@@ -621,7 +627,7 @@
         if (topContainer) {
             $sidebarTogglePos = {
                 x: topContainer.getBoundingClientRect().right - 15,
-                y: topContainer.getBoundingClientRect().bottom - 10
+                y: topContainer.getBoundingClientRect().bottom - 10,
             };
         }
     }
@@ -704,7 +710,7 @@
                 context.fillText(
                     displayTitle,
                     (canvas.width - textWidth) / 2,
-                    yPos
+                    yPos,
                 );
             }
         }
@@ -721,7 +727,7 @@
             if (!context) return;
 
             context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
-            if ($currentSong) {
+            if (song) {
                 const artwork = artworkSrc;
                 console.log("artwork", artwork);
                 if (artwork) {
@@ -733,7 +739,7 @@
                             0,
                             0,
                             artworkCanvas.width,
-                            artworkCanvas.height
+                            artworkCanvas.height,
                         );
                     };
                 } else {
@@ -746,14 +752,14 @@
                                 0,
                                 0,
                                 artworkCanvas.width,
-                                artworkCanvas.height
+                                artworkCanvas.height,
                             );
                             context.drawImage(
                                 placeholderArtwork,
                                 45,
                                 45,
                                 120,
-                                120
+                                120,
                             );
                         };
                     } else {
@@ -761,7 +767,7 @@
                             0,
                             0,
                             artworkCanvas.width,
-                            artworkCanvas.height
+                            artworkCanvas.height,
                         );
                         context.drawImage(placeholderArtwork, 45, 45, 120, 120);
                     }
@@ -774,7 +780,7 @@
                         artworkSrc,
                         artworkCanvas.width,
                         artworkCanvas.height,
-                        isPrevious ? "right" : "left"
+                        isPrevious ? "right" : "left",
                     );
                 }
             } else {
@@ -785,7 +791,7 @@
                         0,
                         0,
                         artworkCanvas.width,
-                        artworkCanvas.height
+                        artworkCanvas.height,
                     );
 
                     context.drawImage(img, 45, 45, 120, 120);
@@ -800,7 +806,7 @@
         src2,
         width,
         height,
-        direction = "left"
+        direction = "left",
     ) {
         const img1 = new Image();
         const img2 = new Image();
@@ -817,7 +823,7 @@
                 0,
                 0,
                 artworkCanvas.width,
-                artworkCanvas.height
+                artworkCanvas.height,
             );
             img2.onload = startAnimation;
         };
@@ -848,7 +854,7 @@
                     direction === "left" ? -x : x,
                     0,
                     width,
-                    height
+                    height,
                 );
 
                 // Draw the second image with fading in
@@ -858,7 +864,7 @@
                     direction === "left" ? width - x : -width + x,
                     0,
                     width,
-                    height
+                    height,
                 );
 
                 if (progress < 1) {
@@ -877,8 +883,8 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <sidebar
-    class:has-current-song={$currentSong}
-    class:empty={!$currentSong}
+    class:has-current-song={song}
+    class:empty={!song}
     class:hovered={isMiniPlayerHovered}
     class:visible={$isSidebarOpen}
     transition:fly={{ duration: 200, x: -200 }}
@@ -1059,7 +1065,7 @@
                                         <div
                                             animate:flip={{
                                                 duration: 300,
-                                                easing: cubicInOut
+                                                easing: cubicInOut,
                                             }}
                                             class="playlist"
                                             class:dragover={draggingOverPlaylist ===
@@ -1070,8 +1076,13 @@
                                                 playlist.path}
                                             on:click={() => {
                                                 $uiView = "playlists";
-                                                $query.orderBy = "none";
-                                                $query.reverse = false;
+                                                // Opening a playlist will reset the query
+                                                $query = {
+                                                    ...$query,
+                                                    orderBy: "none",
+                                                    reverse: false,
+                                                    query: "",
+                                                };
                                                 $selectedPlaylistFile =
                                                     playlist;
                                                 $selectedSmartQuery = null;
@@ -1087,7 +1098,7 @@
                                                     bind:value={updatedPlaylistName}
                                                     onEnterPressed={() => {
                                                         onRenamePlaylist(
-                                                            playlist
+                                                            playlist,
                                                         );
                                                     }}
                                                     fullWidth
@@ -1171,7 +1182,7 @@
                                     <div
                                         animate:flip={{
                                             duration: 300,
-                                            easing: cubicInOut
+                                            easing: cubicInOut,
                                         }}
                                         class="playlist"
                                         class:hover={hoveringOverSmartPlaylistId ===
@@ -1189,7 +1200,7 @@
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseOverSmartPlaylist(
-                                                smartQuery.value
+                                                smartQuery.value,
                                             )}
                                     >
                                         <p>{smartQuery.name}</p>
@@ -1199,7 +1210,7 @@
                                     <div
                                         animate:flip={{
                                             duration: 300,
-                                            easing: cubicInOut
+                                            easing: cubicInOut,
                                         }}
                                         class="playlist"
                                         class:selected={$selectedSmartQuery ===
@@ -1219,7 +1230,7 @@
                                                 bind:value={updatedSmartPlaylistName}
                                                 onEnterPressed={() => {
                                                     onRenameSmartPlaylist(
-                                                        query
+                                                        query,
                                                     );
                                                 }}
                                                 fullWidth
@@ -1432,13 +1443,12 @@
                     class:visible={$isSidebarOpen}
                     use:tippy={{
                         content: "Toggle the sidebar.",
-                        placement: "right"
+                        placement: "right",
                     }}
                 >
                     <Icon
                         icon="tabler:layout-sidebar-left-collapse"
                         size={22}
-                        color={$currentThemeObject["icon-secondary"]}
                         onClick={(e) => {
                             $isSidebarOpen = false;
                             $sidebarManuallyOpened = false;
@@ -1458,14 +1468,13 @@
                 use:tippy={{
                     theme: $isMiniPlayer ? "hidden" : "",
                     content: "Toggle the mini player.",
-                    placement: "right"
+                    placement: "right",
                 }}
             >
                 <Icon
                     icon={$isMiniPlayer
                         ? "gg:arrows-expand-up-right"
                         : "gg:arrows-expand-down-left"}
-                    color={$currentThemeObject["icon-secondary"]}
                     onClick={() => toggleMiniPlayer()}
                     boxed
                 />
@@ -1473,12 +1482,12 @@
             <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
 
             <div class="info">
-                {#if $currentSong}
+                {#if song}
                     {#if sidebarWidth && displayTitle}
                         <div
                             class="marquee-container"
                             on:mousedown={() => {
-                                $draggedSongs = [$currentSong];
+                                $draggedSongs = [song];
                             }}
                         >
                             <canvas
@@ -1499,9 +1508,9 @@
                             use:optionalTippy={{
                                 show: !$isMiniPlayer,
                                 content: $LL.sidebar.openWikiTooltip({
-                                    artist
+                                    artist,
                                 }),
-                                placement: "right"
+                                placement: "right",
                             }}
                         >
                             {artist}
@@ -1540,7 +1549,7 @@
         </div>
     </div>
 
-    {#if $currentSong}
+    {#if song}
         <div class="artwork-container">
             <div class="artwork-frame">
                 <canvas
@@ -1565,11 +1574,10 @@
         </div>
         <transport>
             <Icon
-                class="transport-side"
+                class="transport-side shuffle {$isShuffleEnabled
+                    ? 'active'
+                    : 'inactive'}"
                 icon="ph:shuffle-bold"
-                color={!$isShuffleEnabled
-                    ? $currentThemeObject["icon-secondary"]
-                    : $currentThemeObject["transport-shuffle"]}
                 onClick={() => {
                     $isShuffleEnabled = !$isShuffleEnabled;
                 }}
@@ -1578,34 +1586,28 @@
                 class="transport-middle"
                 icon="fe:backward"
                 size={36}
-                disabled={$currentSongIdx === 0}
+                disabled={$current.index <= 0}
                 onClick={() => audioPlayer.playPrevious()}
-                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-middle"
                 size={42}
-                onClick={togglePlayPause}
+                onClick={() => audioPlayer.togglePlay()}
                 icon={$isPlaying ? "fe:pause" : "fe:play"}
-                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
                 class="transport-middle"
                 size={36}
                 icon="fe:forward"
-                disabled={$playlist.length === 0 ||
-                    $currentSongIdx === $playlist?.length - 1}
+                disabled={$queue.length === 0 ||
+                    $current.index === $queue?.length - 1}
                 onClick={() => audioPlayer.playNext()}
-                color={$currentThemeObject["transport-controls"]}
             />
             <Icon
-                class="transport-side favourite {$currentSong?.isFavourite
+                class="transport-side favourite {$current.song?.isFavourite
                     ? 'active'
                     : 'inactive'}"
-                color={$currentSong?.isFavourite
-                    ? $currentThemeObject["transport-favorite"]
-                    : $currentThemeObject["icon-secondary"]}
-                icon={$currentSong?.isFavourite
+                icon={$current.song?.isFavourite
                     ? "clarity:heart-solid"
                     : "clarity:heart-line"}
                 onClick={() => {
@@ -1619,10 +1621,9 @@
                 <Icon
                     icon="mdi:information"
                     onClick={() => {
-                        $rightClickedTrack = $currentSong;
+                        $rightClickedTrack = song;
                         $popupOpen = "track-info";
                     }}
-                    color={$currentThemeObject["icon-secondary"]}
                 />
             </div>
 
@@ -1632,15 +1633,13 @@
                 class="visualizer-icon"
                 use:tippy={{
                     content: "waveform, loop region, marker editor",
-                    placement: "top"
+                    placement: "top",
                 }}
             >
                 <Icon
+                    class={$isWaveformOpen ? "active" : "inactive"}
                     icon="ph:wave-sine-duotone"
                     onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                    color={$isWaveformOpen
-                        ? $currentThemeObject["accent-secondary"]
-                        : $currentThemeObject["icon-secondary"]}
                 />
             </div>
         </div>
@@ -1652,6 +1651,47 @@
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
     $sidebar_secondary_color: transparent;
+
+    :global {
+        sidebar {
+            .transport-middle {
+                color: var(--transport-control) !important;
+
+                &:hover {
+                    color: var(--transport-control-hover) !important;
+                }
+            }
+
+            .transport-side {
+                &.favourite.active {
+                    color: var(--transport-favorite);
+
+                    &:hover {
+                        color: var(--transport-favorite-hover);
+                    }
+                }
+
+                &.shuffle.active {
+                    color: var(--transport-shuffle);
+
+                    &:hover {
+                        color: var(--transport-shuffle-hover);
+                    }
+                }
+            }
+
+            .visualizer-icon {
+                .active {
+                    color: var(--icon-tertiary) !important;
+
+                    &:hover {
+                        color: var(--icon-tertiary-hover) !important;
+                    }
+                }
+            }
+        }
+    }
+
     sidebar {
         position: relative;
         display: grid;
@@ -1807,7 +1847,7 @@
         margin: 0;
         position: relative;
         user-select: none;
-        padding: 0 1em 0.5em 1em;
+        padding: 0 0.5em 0.5em 0.5em;
         margin-block-start: 0;
         &::-webkit-scrollbar {
             /* hide scrollbar */
@@ -1828,12 +1868,12 @@
             text-transform: uppercase;
             text-align: left;
             width: max-content;
-            padding: 0.17em 0.5em 0.17em 0;
+            padding: 0.17em 0.5em 0.17em 0.5em;
             font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.4px;
             color: var(--text-inactive, initial);
-            /* width: 100%; */
+            width: 100%;
             border-radius: 3px;
             box-sizing: border-box;
             border: 1px solid transparent;
@@ -1848,7 +1888,9 @@
             }
 
             &:hover:not(.selected) {
-                opacity: 0.5;
+                background-color: var(--sidebar-node-inactive-hover-bg);
+                color: var(--sidebar-node-inactive-hover-text);
+                opacity: var(--sidebar-node-inactive-hover-opacity);
 
                 .chevron {
                     visibility: visible;
@@ -1885,7 +1927,7 @@
         top: 0;
         z-index: 3;
         transition: height 1s ease-in-out;
-        border-bottom: 0.7px solid #ffffff17;
+        border-bottom: 0.7px solid var(--panel-separator);
 
         .top-header {
             /* height: 80px; */
@@ -1903,7 +1945,8 @@
             user-select: none;
             margin: 0.3em 0;
             /* transition: height 1s ease-in-out; */
-            opacity: 0.2;
+            color: var(--header-text);
+            opacity: var(--header-opacity);
             cursor: default;
             &:hover {
                 opacity: 0.5;
@@ -1935,12 +1978,8 @@
                 color: var(--text-inactive, initial);
             }
             &:focus {
-                /* outline: 1px solid #5123dd; */
-                background-color: color-mix(
-                    in srgb,
-                    var(--inverse) 80%,
-                    transparent
-                );
+                outline: var(--input-focus-outline);
+                background-color: var(--sidebar-search-focus-bg);
                 &::placeholder {
                     color: var(--text-inactive, initial);
                 }
@@ -1969,7 +2008,6 @@
         cursor: default;
         user-select: none;
         pointer-events: none;
-        /* border-top: 0.7px solid #ffffff23; */
         z-index: 2;
         overflow: hidden;
     }
@@ -1979,9 +2017,9 @@
         right: 0;
         bottom: 0;
         height: 520px;
-        background-color: #312d3ec0;
+        background-color: var(--sidebar-player-disabled-bg);
         backdrop-filter: blur(8px);
-        color: var(--text, initial);
+        color: var(--sidebar-player-disabled-text);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2039,16 +2077,12 @@
                 white 85%,
                 transparent 100%
             );
-            
+
             &:hover {
-                background-color: color-mix(
-                    in srgb,
-                    var(--inverse) 40%,
-                    transparent
-                );
+                background-color: var(--sidebar-info-title-hover-bg);
                 border-radius: 5px;
                 mask-image: none;
-                border: 1px dashed var(--inverse);
+                border: 1px dashed var(--sidebar-info-title-hover-border);
             }
 
             canvas {
@@ -2076,19 +2110,11 @@
             pointer-events: all;
             @media screen and (min-width: 211px) and (min-height: 211px) {
                 &:hover {
-                    background-color: color-mix(
-                        in srgb,
-                        var(--inverse) 80%,
-                        transparent
-                    );
+                    background-color: var(--sidebar-info-artist-hover-bg);
                     border-radius: 5px;
                 }
                 &:active {
-                    background-color: color-mix(
-                        in srgb,
-                        var(--inverse) 90%,
-                        transparent
-                    );
+                    background-color: var(--sidebar-info-artist-active-bg);
                 }
             }
         }
@@ -2199,16 +2225,12 @@
         pointer-events: none;
         opacity: 1;
         box-sizing: content-box;
-        /* border-top: 0.7px solid #ffffff23; */
-        /* border-bottom: 0.7px solid #ffffff23; */
         z-index: 1;
 
         .artwork-frame {
             width: 100%;
             height: 100%;
             box-sizing: border-box;
-            /* border-radius: 3px; */
-            /* border: 1px solid rgb(94, 94, 94); */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2271,35 +2293,19 @@
             border-radius: 5px;
             user-select: none;
             letter-spacing: 0.4px;
-            /* background-color: color-mix(in srgb, var(--background) 66%, black); */
             .elapsed {
                 font-weight: 500;
                 color: var(--text-active);
             }
         }
     }
+
     transport {
-        /* background-color: rgb(255, 255, 255); */
         padding: 0em 1em 1em 1em;
         width: 100%;
-        color: white;
         z-index: 2;
         display: flex;
         justify-content: space-between;
-
-        .transport-middle {
-            align-self: center;
-            font-size: 42px;
-        }
-
-        :not(.off)[icon="ph:shuffle-bold"] {
-            color: #e1ff00;
-        }
-
-        .transport-side {
-            align-self: center;
-            font-size: 20px;
-        }
     }
 
     .other-controls {
@@ -2344,13 +2350,16 @@
             position: relative;
 
             &.dragover {
-                background-color: #5123dd;
+                background-color: var(--sidebar-item-drag-bg);
                 border-radius: 5px;
             }
 
             &.hover {
                 border-radius: 5px;
-                background-color: #392f5d3b;
+                background-color: var(--sidebar-item-hover-bg);
+                p {
+                    color: var(--sidebar-item-hover-text);
+                }
                 .playlist-options {
                     display: flex;
                 }
@@ -2368,7 +2377,7 @@
                     left: -4px;
                     position: absolute;
                     height: 70%;
-                    background-color: #5123dd;
+                    background-color: var(--sidebar-item-selected-pipe-bg);
                     border-radius: 4px;
                 }
             }

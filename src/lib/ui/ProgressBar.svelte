@@ -1,5 +1,4 @@
 <script lang="ts">
-
     // seconds
     export let percent = 0;
 
@@ -60,7 +59,7 @@
     }
 
     .bg {
-        background: rgba(255, 255, 255, 0.262);
+        background: var(--progressbar-track-bg);
         height: 2px;
         width: 100%;
         overflow: visible;
@@ -85,7 +84,7 @@
     }
 
     .progress {
-        background: #23DD7F;
+        background: var(--progressbar-value-bg);
         height: 2px;
         width: 100%;
         overflow: visible;

@@ -9,7 +9,7 @@
         popupOpen,
         songbookArtists,
         songbookSelectedArtist,
-        userSettings
+        userSettings,
     } from "../../data/store";
 
     import { convertFileSrc } from "@tauri-apps/api/core";
@@ -28,9 +28,9 @@
         readDir,
         remove,
         rename,
-        mkdir
+        mkdir,
     } from "@tauri-apps/plugin-fs";
-    import { getArtistProfileImage } from "../../data/LibraryImporter";
+    import { getArtistProfileImage } from "../../data/LibraryUtils";
     import { createTippy, optionalTippy } from "../ui/TippyAction";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
@@ -64,7 +64,7 @@
     async function selectArtist(artistName: string) {
         console.log("selecting artist", artistName);
         $songbookSelectedArtist = $songbookArtists?.find(
-            (a) => a.name === artistName
+            (a) => a.name === artistName,
         );
         await loadCurrentArtist();
     }
@@ -76,7 +76,7 @@
         await mkdir(`${$userSettings.songbookLocation}/${newArtist}`);
         $songbookArtists = await loadArtistsFromSongbook();
         $songbookSelectedArtist = $songbookArtists.find(
-            (a) => a.name === newArtist
+            (a) => a.name === newArtist,
         );
         newArtist = "";
         showArtistAddUi = false;
@@ -101,8 +101,8 @@
             await remove(
                 `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`,
                 {
-                    recursive: true
-                }
+                    recursive: true,
+                },
             );
             $songbookArtists = await loadArtistsFromSongbook();
             $songbookSelectedArtist =
@@ -117,7 +117,7 @@
     async function updateArtistName(name) {
         await rename(
             `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`,
-            `${$userSettings.songbookLocation}/${name}`
+            `${$userSettings.songbookLocation}/${name}`,
         );
         $songbookSelectedArtist.name = name;
         $songbookArtists = await loadArtistsFromSongbook();
@@ -169,7 +169,7 @@
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await pictureDir()
+            defaultPath: await pictureDir(),
         });
         if (selected === null) {
             // user cancelled the selection
@@ -207,7 +207,7 @@
                 class="profile-pic"
                 use:tippy={{
                     content: "Add a profile pic",
-                    placement: "bottom"
+                    placement: "bottom",
                 }}
                 on:click={showProfilePicPicker}
             >
@@ -253,7 +253,7 @@
                         size={16}
                         boxed
                     />
-                    <!--                     
+                    <!--
                     <ButtonWithIcon
                         icon="ant-design:delete-outlined"
                         disabled={editedArtistName === $songbookSelectedArtist.name}
@@ -273,12 +273,12 @@
                             size={18}
                             selected={{
                                 value: $songbookSelectedArtist.name,
-                                label: $songbookSelectedArtist.name
+                                label: $songbookSelectedArtist.name,
                             }}
                             options={$songbookArtists.map((a) => {
                                 return {
                                     value: a.name,
-                                    label: a.name
+                                    label: a.name,
                                 };
                             })}
                             onSelect={(artist) => {
@@ -309,7 +309,7 @@
                         color={$currentThemeObject["icon-secondary"]}
                         tooltip={{
                             content: "Edit artist",
-                            placement: "bottom"
+                            placement: "bottom",
                         }}
                     />
                     <Icon
@@ -322,7 +322,7 @@
                         color={$currentThemeObject["icon-secondary"]}
                         tooltip={{
                             content: "Add new artist",
-                            placement: "bottom"
+                            placement: "bottom",
                         }}
                     />
                 </div>
@@ -370,10 +370,10 @@
             use:tippy={{
                 content: $userSettings.songbookLocation
                     ? $LL.artistsToolkit.header.songbookLocationHint({
-                          path: $userSettings.songbookLocation
+                          path: $userSettings.songbookLocation,
                       })
                     : $LL.artistsToolkit.header.songbookLocationHintEmpty(),
-                placement: "top"
+                placement: "top",
             }}
         >
             <Icon
@@ -382,7 +382,7 @@
                     if ($userSettings.songbookLocation) {
                         openShell($userSettings.songbookLocation);
                     } else {
-                        $popupOpen = 'settings';
+                        $popupOpen = "settings";
                     }
                 }}
             ></Icon>
@@ -394,7 +394,7 @@
                 content: $isScrapbookShown
                     ? $LL.artistsToolkit.header.hideScrapbook()
                     : $LL.artistsToolkit.header.showScrapbook(),
-                placement: "bottom"
+                placement: "bottom",
             }}
             onClick={() => {
                 $isScrapbookShown = !$isScrapbookShown;
@@ -410,7 +410,7 @@
             items={matchingArtists.map((p) => ({
                 text: p,
                 description: "",
-                source: p
+                source: p,
             }))}
             position="manual"
             onItemSelected={onSelectArtist}
@@ -430,11 +430,9 @@
         padding: 4px;
         background-color: var(--panel-background);
         border-radius: 5px;
-        border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
+        border: 0.7px solid var(--panel-primary-border-accent2);
     }
     h3 {
-        /* color: rgb(137, 130, 130); */
         font-family: Snake;
         font-size: 3em;
         margin: 0;
@@ -477,7 +475,6 @@
         display: flex;
         margin-left: 2px;
         flex-direction: row;
-        /* background-color: #7c7b8023; */
         border-radius: 5px;
         text-shadow: 0px 2px 20px rgba(0, 0, 0, 0.2);
         color: rgba(255, 255, 255, 0.303);
@@ -487,7 +484,6 @@
 
         .active {
             color: white;
-            /* border: 1px solid #5123dd; */
         }
 
         p {

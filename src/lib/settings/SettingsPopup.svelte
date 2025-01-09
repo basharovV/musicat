@@ -8,19 +8,15 @@
         AudioDevice,
         AudioDevices,
         LLM,
-        MiniPlayerLocation
+        MiniPlayerLocation,
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import { focusTrap } from "svelte-focus-trap";
     import tippy from "svelte-tippy";
-    import { importPaths } from "../../data/LibraryImporter";
-    import {
-        importStatus,
-        popupOpen,
-        userSettings
-    } from "../../data/store";
+    import { importPaths } from "../../data/LibraryUtils";
+    import { importStatus, popupOpen, userSettings } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
-    import { allThemes } from "../../theming/themes";
+    import { darkThemes, lightThemes } from "../../theming/themes";
     import { clickOutside } from "../../utils/ClickOutside";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -33,9 +29,9 @@
         "bottom-left",
         "bottom-right",
         "top-left",
-        "top-right"
+        "top-right",
     ];
-    
+
     function onUpdateFilenames() {
         console.log("filenames", commaSeparatedFilenames);
         $userSettings.albumArtworkFilenames = commaSeparatedFilenames
@@ -60,7 +56,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -82,7 +78,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await downloadDir()
+            defaultPath: await downloadDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -100,7 +96,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -118,7 +114,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await downloadDir()
+            defaultPath: await downloadDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -136,7 +132,7 @@
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await downloadDir()
+            defaultPath: await downloadDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple directories
@@ -159,7 +155,7 @@
 
     let audioDevices: AudioDevices = {
         devices: [],
-        default: null
+        default: null,
     };
 
     let fallbackAudioDevice: AudioDevice;
@@ -169,8 +165,8 @@
         $userSettings.outputDevice = event.target.value;
         invoke("change_audio_device", {
             event: {
-                audioDevice: $userSettings.outputDevice
-            }
+                audioDevice: $userSettings.outputDevice,
+            },
         });
     }
 
@@ -180,8 +176,8 @@
             $userSettings.outputDevice = fallbackAudioDevice.name;
             invoke("change_audio_device", {
                 event: {
-                    audioDevice: $userSettings.outputDevice
-                }
+                    audioDevice: $userSettings.outputDevice,
+                },
             });
         }
     }
@@ -243,7 +239,7 @@
                             {:else if $userSettings.foldersToWatch.length}
                                 <small>
                                     {$LL.settings.folder(
-                                        $userSettings.foldersToWatch.length
+                                        $userSettings.foldersToWatch.length,
                                     )}
                                 </small>
                             {/if}
@@ -256,7 +252,7 @@
                                         use:tippy={{
                                             content:
                                                 "Removing a folder will not remove the tracks from your library.",
-                                            placement: "right"
+                                            placement: "right",
                                         }}
                                     >
                                         <Icon
@@ -373,9 +369,20 @@
                         <td>Theme</td>
                         <td>
                             <select bind:value={$userSettings.theme}>
-                                {#each Object.keys(allThemes) as theme}
-                                    <option value={theme}>{theme}</option>
-                                {/each}
+                                <optgroup label="light themes">
+                                    {#each Object.entries(lightThemes) as [name, theme]}
+                                        <option value={name}
+                                            >{theme["display-name"]}</option
+                                        >
+                                    {/each}
+                                </optgroup>
+                                <optgroup label="dark themes">
+                                    {#each Object.entries(darkThemes) as [name, theme]}
+                                        <option value={name}
+                                            >{theme["display-name"]}</option
+                                        >
+                                    {/each}
+                                </optgroup>
                             </select></td
                         >
                     </tr>
@@ -473,11 +480,10 @@
         position: relative;
         align-items: center;
         border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(53, 51, 51);
+        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
         background-color: var(--overlay-bg);
         backdrop-filter: blur(10px);
-        box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.259);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
         overflow: auto;
 
         @media only screen and (max-width: 400px) {
@@ -498,7 +504,8 @@
             var(--background) 26%,
             transparent
         );
-        border-bottom: 1px solid rgb(53, 51, 51);
+        border-bottom: 1px solid
+            color-mix(in srgb, var(--background) 70%, var(--inverse));
         backdrop-filter: blur(10px);
         z-index: 20;
 
@@ -620,7 +627,7 @@
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        border: 1px solid grey;
+        border: 1px solid rgb(from var(--inverse) r g b / 0.4);
         border-radius: 6px;
         padding: 1px 10px;
         margin-bottom: 5px;

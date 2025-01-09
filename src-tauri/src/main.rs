@@ -25,6 +25,7 @@ use tokio_util::sync::CancellationToken;
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
+mod constants;
 mod dsp;
 mod files;
 #[cfg(target_os = "macos")]
@@ -35,7 +36,6 @@ mod player;
 mod resampler;
 mod scrape;
 mod store;
-mod constants;
 
 #[cfg(test)]
 mod tests;
@@ -145,11 +145,7 @@ struct GetWaveformResponse {
 }
 
 #[tauri::command]
-fn stream_file(
-    event: StreamFileRequest,
-    state: State<AudioPlayer>,
-    _app_handle: tauri::AppHandle,
-) {
+fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Stream file {:?}", event);
     let _ = state
         .player_control_sender
@@ -158,11 +154,7 @@ fn stream_file(
 }
 
 #[tauri::command]
-fn queue_next(
-    event: StreamFileRequest,
-    state: State<AudioPlayer>,
-    _app_handle: tauri::AppHandle,
-) {
+fn queue_next(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Queue next file {:?}", event);
     // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
@@ -303,12 +295,36 @@ async fn download_file(
         .sync_all()
         .map_err(|e| e.to_string())?;
 
-    // Move the temporary file to the final destination
+    let temp_dev = get_device_id(temp_file.path());
     let temp_path = temp_file.into_temp_path();
     let final_path = Path::new(&path);
-    temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+    let final_dev = get_device_id(&final_path);
+
+    if temp_dev == final_dev {
+        // Move the temporary file to the final destination
+        temp_path.persist(&final_path).map_err(|e| e.to_string())?;
+    } else {
+        // Copy the temporary file to the final destination since files aren't on the same device
+        fs::copy(temp_path, final_path).expect("Failed to copy file");
+    }
 
     Ok(())
+}
+
+fn get_device_id(path: &Path) -> u64 {
+    let parent_path = path.parent().expect("Failed to get parent directory");
+
+    match file_id::get_file_id(parent_path).unwrap() {
+        file_id::FileId::Inode { device_id, .. } => device_id,
+        file_id::FileId::HighRes {
+            volume_serial_number,
+            ..
+        } => volume_serial_number,
+        file_id::FileId::LowRes {
+            volume_serial_number,
+            ..
+        } => volume_serial_number.into(),
+    }
 }
 
 struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
@@ -360,23 +376,29 @@ async fn main() {
             let app_ = app.handle();
             let app2_ = app_.clone();
             let state: State<player::AudioPlayer<'static>> = app.state();
-            
+
             env::set_var("MUSICAT_LOG_DIR", app.path().app_log_dir().unwrap());
 
             #[cfg(dev)]
             {
                 let resource_path = app
                     .path()
-                    .resolve("resources/log4rs.dev.yml", tauri::path::BaseDirectory::Resource)
+                    .resolve(
+                        "resources/log4rs.dev.yml",
+                        tauri::path::BaseDirectory::Resource,
+                    )
                     .expect("failed to resolve resource");
                 log4rs::init_file(resource_path, Default::default()).unwrap();
             }
-            
-           #[cfg(not(dev))]
+
+            #[cfg(not(dev))]
             {
                 let resource_path = app
                     .path()
-                    .resolve("resources/log4rs.release.yml", tauri::path::BaseDirectory::Resource)
+                    .resolve(
+                        "resources/log4rs.release.yml",
+                        tauri::path::BaseDirectory::Resource,
+                    )
                     .expect("failed to resolve resource");
                 log4rs::init_file(resource_path, Default::default()).unwrap();
             }

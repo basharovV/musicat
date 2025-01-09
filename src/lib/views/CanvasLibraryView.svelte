@@ -5,17 +5,17 @@
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
+        columnOrder,
         isInit,
         isLyricsHovered,
         isLyricsOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isTagOrCondition,
-        lastPlayedInfo,
-        playlist,
-        playlistDuration,
         queriedSongs,
         query,
+        queue,
+        queueMirrorsSearch,
         selectedPlaylistFile,
         selectedSmartQuery,
         selectedTags,
@@ -23,12 +23,13 @@
         smartQueryResults,
         smartQueryUpdater,
         toDeletePlaylist,
-        uiView
+        uiView,
     } from "../../data/store";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
     import { parsePlaylist } from "../../data/M3UUtils";
+    import { setQueue } from "../../data/storeHelper";
 
     let isLoading = true;
 
@@ -50,8 +51,8 @@
             results = results.map((s, idx) => ({
                 ...s,
                 viewModel: {
-                    viewId: idx.toString()
-                }
+                    viewId: idx.toString(),
+                },
             }));
             console.log("to delete songs", results);
             isIndexed = false;
@@ -63,8 +64,8 @@
             results = results.map((s, idx) => ({
                 ...s,
                 viewModel: {
-                    viewId: idx.toString()
-                }
+                    viewId: idx.toString(),
+                },
             }));
             isIndexed = false;
             // Filter within playlist
@@ -79,7 +80,7 @@
                             .includes($query.query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
             }
         } else if ($uiView === "smart-query" || $uiView === "favourites") {
@@ -123,7 +124,7 @@
                         ? "[artist+year+album+trackNumber]"
                         : $query.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy
+                          : $query.orderBy,
                 )
                 .and(
                     (song) =>
@@ -137,12 +138,14 @@
                             .toLowerCase()
                             .includes($query.query.toLowerCase()) ||
                         song.genre.some((g) =>
-                            g.toLowerCase().includes($query.query.toLowerCase())
+                            g
+                                .toLowerCase()
+                                .includes($query.query.toLowerCase()),
                         ) ||
                         song.tags
                             ?.map((t) => t.toLowerCase())
                             .join(" ")
-                            .includes($query.query.toLowerCase())
+                            .includes($query.query.toLowerCase()),
                 );
         } else {
             results = db.songs.orderBy(
@@ -150,7 +153,7 @@
                     ? "[artist+year+album+trackNumber]"
                     : $query.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy
+                      : $query.orderBy,
             );
         }
         let resultsArray: Song[] = [];
@@ -196,10 +199,6 @@
             });
         }
 
-        $playlistDuration = resultsArray.reduce((total, song) => {
-            return total + song.fileInfo.duration;
-        }, 0);
-
         // Do sorting for non-indexed results
         if (!isIndexed) {
             resultsArray = resultsArray.sort((a, b) => {
@@ -212,7 +211,7 @@
                     case "duration":
                     case "genre":
                         result = String(a[$query.orderBy]).localeCompare(
-                            String(b[$query.orderBy])
+                            String(b[$query.orderBy]),
                         );
                         break;
                     case "artist":
@@ -238,26 +237,35 @@
         }
         if ($uiView === "library" && get(isInit)) {
             console.log("init");
-            const lastPlayed = get(lastPlayedInfo);
             // TESTING ONLY: Uncomment when needed
             // window["openedUrls"] = "file:///Users/slav/Downloads/Intrusive Thoughts 14-12-2023.mp3";
 
             if (window["openedUrls"]?.length) {
                 await audioPlayer.handleOpenedUrls(window["openedUrls"]);
-            } else if (lastPlayed.songId) {
-                audioPlayer.shouldRestoreLastPlayed = lastPlayed;
-                // audioPlayer.currentSong = await db.songs.get(lastPlayed.songId);
-                playlist.set(resultsArray);
             }
+
             isInit.set(false);
         }
+
+        if ($queueMirrorsSearch) {
+            setQueue(resultsArray, false);
+            if ($query.query.length === 0) {
+                $queueMirrorsSearch = false;
+            }
+        }
+
         isLoading = false;
         return resultsArray;
     });
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
-    <CanvasLibrary allSongs={songs} {isLoading} dim={$isLyricsHovered} />
+    <CanvasLibrary
+        bind:columnOrder={$columnOrder}
+        allSongs={songs}
+        dim={$isLyricsHovered}
+        {isLoading}
+    />
 </div>
 
 <style lang="scss">
@@ -270,9 +278,7 @@
         border-radius: 5px;
         box-sizing: content-box;
         overflow: hidden;
-        border-top: 0.7px solid
-            color-mix(in srgb, var(--inverse) 40%, transparent);
-        border-bottom: 0.7px solid
-            color-mix(in srgb, var(--inverse) 30%, transparent);
+        border-top: 0.7px solid var(--panel-primary-border-main);
+        border-bottom: 0.7px solid var(--panel-primary-border-accent1);
     }
 </style>

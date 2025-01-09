@@ -10,8 +10,8 @@
         console.log("albums to get", data);
         albums = await db.albums.bulkGet(
             data?.albums.map((a) =>
-                md5(`${a.artist} - ${a.album}`.toLowerCase())
-            )
+                md5(`${a.artist} - ${a.album}`.toLowerCase()),
+            ),
         );
         albums = albums.filter((a) => a?.artwork).slice(0, 5);
     }
@@ -52,8 +52,8 @@
 <style lang="scss">
     .tooltip {
         position: relative;
-        background-color: rgba(35, 35, 37, 0.799);
-        border: 0.5px solid rgba(255, 255, 255, 0.177);
+        background-color: var(--mapview-tooltip-bg);
+        border: 0.5px solid var(--mapview-tooltip-border);
         border-radius: 9px;
         backdrop-filter: blur(8px);
         padding: 0.5em 1em;
@@ -62,6 +62,7 @@
         align-items: flex-start;
         justify-content: flex-start;
         flex-direction: column;
+        color: var(--mapview-tooltip-text);
 
         p {
             display: inline-block;
@@ -78,12 +79,12 @@
         .description {
             font-size: smaller;
             line-height: 1.3em;
-            color: grey;
+            color: var(--mapview-tooltip-text);
             max-width: 200px;
 
             .artists {
                 font-style: italic;
-                color: rgba(255, 255, 255, 0.586);
+                color: var(--mapview-tooltip-artist);
             }
         }
 

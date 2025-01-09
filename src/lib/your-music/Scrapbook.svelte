@@ -8,7 +8,7 @@
         ArtistContentItem,
         ArtistFileItem,
         ArtistLinkItem,
-        ContentItem
+        ContentItem,
     } from "src/App";
     import { db } from "../../data/db";
     import { getContentFileType } from "../../utils/FileUtils";
@@ -18,7 +18,7 @@
         fileDropHandler,
         hoveredFiles,
         popupOpen,
-        userSettings
+        userSettings,
     } from "../../data/store";
     import FileBlock from "./FileBlock.svelte";
     import LinkBlock from "./LinkBlock.svelte";
@@ -36,7 +36,7 @@
     import { copyFile, readDir } from "@tauri-apps/plugin-fs";
     import {
         addScrapbookFile,
-        scanScrapbook
+        scanScrapbook,
     } from "../../data/ArtistsToolkitData";
     import LL from "../../i18n/i18n-svelte";
     import tippy from "tippy.js";
@@ -44,20 +44,20 @@
     let contentTypes = [
         {
             icon: "bi:file-earmark-text",
-            name: "lyrics"
+            name: "lyrics",
         },
         {
             icon: "bi:file-earmark-play",
-            name: "audio"
+            name: "audio",
         },
         {
             icon: "dashicons:editor-video",
-            name: "video"
+            name: "video",
         },
         {
             icon: "akar-icons:link-chain",
-            name: "link"
-        }
+            name: "link",
+        },
     ];
 
     let selectedContentTypes = [];
@@ -66,7 +66,7 @@
         if (selectedContentTypes.includes(contentType)) {
             selectedContentTypes.splice(
                 selectedContentTypes.findIndex((t) => t === contentType),
-                1
+                1,
             );
         } else {
             selectedContentTypes.push(contentType);
@@ -86,7 +86,7 @@
             let matchesTags = selectedTags.length ? false : true;
             if (selectedTags.length) {
                 const matchingTags = item.tags.filter((i) =>
-                    selectedTags.includes(i)
+                    selectedTags.includes(i),
                 );
                 matchesTags = matchingTags.length > 0;
             }
@@ -107,7 +107,7 @@
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await audioDir()
+            defaultPath: await audioDir(),
         });
         if (Array.isArray(selected)) {
             // user selected multiple files
@@ -135,7 +135,7 @@
             const filename = droppedFile.split("/")?.pop() ?? "";
             copyFile(
                 droppedFile,
-                `${$userSettings.scrapbookLocation}/${filename}`
+                `${$userSettings.scrapbookLocation}/${filename}`,
             );
         }
         $droppedFiles = [];
@@ -156,7 +156,7 @@
         console.log(`container, top: ${containerRect.top}`);
         console.log(`container, left: ${containerRect.left}`);
         console.log(
-            `container, bottom: ${containerRect.height + containerRect.top}`
+            `container, bottom: ${containerRect.height + containerRect.top}`,
         );
         console.log(`container, right: ${containerRect.right}`);
 
@@ -175,7 +175,7 @@
     }
 
     async function getDropDataAsString(
-        item: DataTransferItem
+        item: DataTransferItem,
     ): Promise<string> {
         return new Promise((resolve, reject) => {
             try {
@@ -307,11 +307,11 @@
     function deleteTag(tag) {
         contextItem.tags.splice(
             contextItem.tags.findIndex((t) => t === tag),
-            1
+            1,
         );
         contextItem = contextItem;
         db.scrapbook.update(contextItem.id, {
-            tags: contextItem.tags
+            tags: contextItem.tags,
         });
     }
     function addTagToContextItem() {
@@ -319,7 +319,7 @@
             tagUserInput = tagAutoCompleteValue;
         }
         db.scrapbook.update(contextItem.id, {
-            tags: [...contextItem.tags, tagUserInput.toLowerCase().trim()]
+            tags: [...contextItem.tags, tagUserInput.toLowerCase().trim()],
         });
         tagUserInput = "";
         contextItem = null;
@@ -347,7 +347,7 @@
         <div
             use:tippy={{
                 content: $userSettings.scrapbookLocation,
-                placement: "top"
+                placement: "top",
             }}
         >
             <Icon
@@ -361,7 +361,7 @@
     {#if $userSettings.scrapbookLocation === null}
         <p>{$LL.artistsToolkit.scrapbook.setupHint()}</p>
         <ButtonWithIcon
-            onClick={() => ($popupOpen = 'settings')}
+            onClick={() => ($popupOpen = "settings")}
             text={$LL.artistsToolkit.scrapbook.openSettings()}
         />
     {:else if scrapbookDirNotFound}
@@ -369,7 +369,7 @@
             <Icon icon="ant-design:warning-outlined" />
             <p>{$LL.artistsToolkit.scrapbook.notFoundError()}</p>
             <ButtonWithIcon
-                onClick={() => ($popupOpen = 'settings')}
+                onClick={() => ($popupOpen = "settings")}
                 text={$LL.artistsToolkit.scrapbook.openSettings()}
             />
         </div>
@@ -380,7 +380,7 @@
                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                     <div
                         class:selected={selectedContentTypes.includes(
-                            contentType.name
+                            contentType.name,
                         )}
                         class={contentType.name}
                         on:click={() => toggleContentType(contentType.name)}
@@ -402,7 +402,7 @@
                         <div
                             animate:flip={{
                                 duration: 180,
-                                easing: quadInOut
+                                easing: quadInOut,
                             }}
                             class="item"
                             on:contextmenu|preventDefault={(e) => {
@@ -419,7 +419,7 @@
                                 {#each item.tags as tag}
                                     <p
                                         class:selected={selectedTags.includes(
-                                            tag
+                                            tag,
                                         )}
                                     >
                                         {tag}
@@ -532,12 +532,10 @@
         position: sticky;
         top: 0;
         width: 100%;
-        /* background-color: color-mix(in srgb, var(--background) 90%, transparent); */
         backdrop-filter: blur(10px);
         z-index: 0;
         padding: 1em 2em;
-        border-bottom: 0.7px solid
-            color-mix(in srgb, var(--inverse) 50%, transparent);
+        border-bottom: 0.7px solid var(--panel-separator);
     }
     .legend {
         display: inline-flex;
@@ -576,16 +574,16 @@
                 text-transform: capitalize;
             }
             &.lyrics {
-                color: #d4d442;
+                color: var(--atk-icon-lyric);
             }
             &.audio {
-                color: rgb(199, 69, 199);
+                color: var(--atk-icon-audio);
             }
             &.video {
-                color: rgb(224, 72, 72);
+                color: var(--atk-icon-video);
             }
             &.link {
-                color: rgb(70, 227, 227);
+                color: var(--atk-icon-link);
             }
         }
     }

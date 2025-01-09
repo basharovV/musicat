@@ -25,7 +25,7 @@
         selectedSmartQuery,
         sidebarManuallyOpened,
         sidebarTogglePos,
-        uiView
+        uiView,
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
@@ -35,7 +35,7 @@
     import { cubicInOut } from "svelte/easing";
     import { blur, fade, fly } from "svelte/transition";
     import { startWatchingLibraryFolders } from "./data/FolderWatcher";
-    import { importPaths, startImportListener } from "./data/LibraryImporter";
+    import { importPaths, startImportListener } from "./data/LibraryUtils";
     import { findQuery } from "./data/SmartQueries";
     import { setLocale } from "./i18n/i18n-svelte";
     import { loadLocale } from "./i18n/i18n-util.sync";
@@ -64,7 +64,6 @@
     import MapView from "./lib/views/MapView.svelte";
     import NotesView from "./lib/views/NotesView.svelte";
     import PrunePopup from "./lib/views/PrunePopup.svelte";
-    import QueueOptions from "./lib/views/QueueOptions.svelte";
     import QueueView from "./lib/views/QueueView.svelte";
     import TopBar from "./lib/views/TopBar.svelte";
     import WikiView from "./lib/views/WikiView.svelte";
@@ -80,7 +79,7 @@
 
     init({
         fallbackLocale: "en",
-        initialLocale: getLocaleFromNavigator()
+        initialLocale: getLocaleFromNavigator(),
     });
 
     loadLocale("en");
@@ -277,7 +276,7 @@
 
         $sidebarTogglePos = {
             x: 0,
-            y: window.innerHeight / 2 - 30
+            y: window.innerHeight / 2 - 30,
         };
     }
 </script>
@@ -343,9 +342,7 @@
                     class="queue-container"
                     transition:fly={{ duration: 200, x: -200 }}
                 >
-                    <!-- <QueueView /> -->
                     <QueueView />
-                    <QueueOptions />
                 </div>
             {/if}
         </div>
@@ -362,7 +359,6 @@
                     <ToDeleteHeader />
                 </div>
             {:else if $uiView === "smart-query" || $uiView === "favourites"}
-                <!-- <p class="label">playlist:</p> -->
                 <div class="content" data-tauri-drag-region>
                     {#await selectedQuery then query}
                         <SmartPlaylistHeader selectedQuery={query} />
@@ -382,7 +378,7 @@
                     transition:fly={{
                         y: -10,
                         duration: 200,
-                        easing: cubicInOut
+                        easing: cubicInOut,
                     }}
                 >
                     <TagCloud />
@@ -394,7 +390,7 @@
                         transition:fly={{
                             y: -10,
                             duration: 200,
-                            easing: cubicInOut
+                            easing: cubicInOut,
                         }}
                     >
                         <SmartQueryBuilder />
@@ -456,9 +452,6 @@
             {/if}
         </div>
 
-        <!-- <div class="top-bar">
-        </div> -->
-
         <div class="bottom-bar">
             {#if !$isSidebarOpen}
                 <div class="top" in:fly={{ duration: 200, y: 30 }}>
@@ -514,9 +507,6 @@
         opacity: 1;
         position: relative;
         background-color: var(--background, initial);
-        /* &.transparent {
-            background-color: color-mix(in srgb, var(--background, initial) 86%, transparent);
-        } */
 
         @media screen and (max-width: 210px) and (max-height: 210px) {
             grid-template-columns: auto; // Sidebar, queue, panel, resizer, wiki
@@ -637,18 +627,16 @@
                 height: 100%;
                 box-sizing: border-box;
                 overflow: hidden;
-                /* border-bottom: 0.7px solid #ffffff36; */
                 border-radius: 5px;
                 margin: 0px 8px 0 0;
                 display: grid;
                 grid-template-rows: 1fr auto;
                 gap: 5px;
-                /* display: grid; */
             }
         }
 
         .wiki {
-            grid-row: 3/6;
+            grid-row: 2/5;
             grid-column: 5;
             overflow-y: hidden;
             height: 100%;
@@ -671,8 +659,8 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
-                background-color: #33303ce2;
+                color: var(--wiki-close-prompt-text);
+                background-color: var(--wiki-close-prompt-bg);
                 backdrop-filter: blur(5px);
                 z-index: 10;
             }
@@ -705,7 +693,6 @@
                 box-sizing: border-box;
                 background: url("/images/resize-handle.svg") no-repeat center;
                 opacity: 0.3;
-                /* border: 2px dotted color-mix(in srgb, var(--inverse) 90%, transparent); */
                 z-index: 10;
             }
             &:hover,

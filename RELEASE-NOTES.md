@@ -1,3 +1,17 @@
+### 📦 0.11.0
+_BREAKING RELEASE_.The app identifier has changed, please re-import your library after installation.
+-   **M3U playlist support**. Playlists are no longer stored in the database, but are regular .m3u files stored in a configurable directory. Editing the playlist in Musicat will automatically update the M3U file. 
+-   **Prune Mode**. Sometimes you just need to clean up your junk. The new Prune Mode let's you quickly listen to and mark tracks for deletion with keyboard shortcuts (K to keep, D to delete, Q to quit). Cmd/Ctrl + P or Library -> Prune Mode in menu to open. 
+- **M4A format support** thanks to [@daiyam](https://github.com/daiyam).
+-   **Even faster library scrolling**. Scrolling the library (especially using the new scrollbar in a library with thousands of tracks) should be significantly faster due to reduction in memory allocation per scroll event. 
+- **More artwork sources** - now also using Discogs (API key required), Genius (same API key as for lyrics) and Musicbrainz. Contributed by [@daiyam](https://github.com/daiyam).
+- You can now **paste image to replace the artwork** in the track info popup.
+- **External drive support**. Contributed by [@daiyam](https://github.com/daiyam).
+- **Logarithmic volume adjustment**. This matches human hearing perception much better than linear, since "twice as loud" does not simply mean double the signal. 
+- **Added Album Artist and Compilation tag support**. Contributed by [@daiyam](https://github.com/daiyam).
+- Fixed a gapless transition bug which caused an audible click 5 seconds before the next track, and sometimes messed up the current display time. 
+- Various bug fixes in the Wiki view, Internet Archive explorer. Contributed by [@daiyam](https://github.com/daiyam).
+- Thanks to [@daiyam](https://github.com/daiyam) for many thoughtful contributions and bug fixes! 
 ### 📦 0.10.0
 
 -   **Artist's toolkit v2 (WIP)**. The songbook and scrapbook are now linked to user folders (configurable in settings). The Lyrics editor now includes chord support via the ChordMark format. Click on the lyrics view to toggle edit mode. Read more [here](https://slavbasharov.com/blog/musicat-progress-update).

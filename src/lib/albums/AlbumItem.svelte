@@ -1,54 +1,46 @@
 <script lang="ts">
-    import { fade, fly } from "svelte/transition";
-    import type { Album, Song } from "../../App";
+    import { fade } from "svelte/transition";
+    import type { Album } from "../../App";
     import { db } from "../../data/db";
     import {
-        albumPlaylist,
-        currentSong,
+        current,
         draggedAlbum,
         draggedSongs,
         isPlaying,
-        playlist,
-        playlistType
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
-    import { currentThemeObject } from "../../theming/store";
     import LL from "../../i18n/i18n-svelte";
+    import { setQueue } from "../../data/storeHelper";
 
     export let album: Album; // to display album data
     export let highlighted = false;
     export let showInfo = true;
 
-    // console.log("highlight", highlighted);
+    let cancel = false;
     let isHovered = false;
+
     async function playPauseToggle() {
-        if (
-            $playlistType === "album" &&
-            $currentSong?.album.toLowerCase() === album.title.toLowerCase()
-        ) {
-            if ($isPlaying) {
-                audioPlayer.pause();
-            } else {
-                audioPlayer.play(true);
-            }
+        cancel = true;
+
+        if (isPlayingCurrentAlbum) {
+            audioPlayer.togglePlay();
         } else {
-            let tracks = await db.songs
+            const tracks = await db.songs
                 .where("id")
                 .anyOf(album.tracksIds)
                 .toArray();
-            tracks = tracks.sort((a, b) => {
+
+            tracks.sort((a, b) => {
                 return a.trackNumber - b.trackNumber;
             });
-            if (tracks) audioPlayer.playSong(tracks[0]);
-            $playlist = tracks;
-            $albumPlaylist = tracks;
-            $playlistType = "album";
+
+            setQueue(tracks, 0);
         }
     }
 
     $: isPlayingCurrentAlbum =
-        $currentSong?.album.toLowerCase() === album.title.toLowerCase();
+        $current.song?.album.toLowerCase() === album.title.toLowerCase();
 </script>
 
 <div
@@ -71,16 +63,29 @@
         on:mouseleave={() => {
             isHovered = false;
         }}
-        on:mousedown|preventDefault={async () => {
-            let tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .toArray();
-            tracks = tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
-            $draggedSongs = tracks;
-            $draggedAlbum = album;
+        on:mousedown|preventDefault={async (e) => {
+            cancel = false;
+
+            if (e.button === 0) {
+                let tracks = await db.songs
+                    .where("id")
+                    .anyOf(album.tracksIds)
+                    .toArray();
+                tracks = tracks.sort((a, b) => {
+                    return a.trackNumber - b.trackNumber;
+                });
+
+                if (cancel) {
+                    $draggedSongs = [];
+                    $draggedAlbum = null;
+                } else {
+                    $draggedSongs = tracks;
+                    $draggedAlbum = album;
+                }
+            }
+        }}
+        on:mouseup|preventDefault={async (e) => {
+            cancel = true;
         }}
     >
         <div class="hinge" />
@@ -95,7 +100,7 @@
             <div class="artwork-frame">
                 {#if album.artwork}
                     <img
-                        alt="Artwork"
+                        alt=""
                         type={album.artwork.format}
                         class="artwork"
                         src={album.artwork.src}
@@ -116,24 +121,21 @@
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
-                {#if isHovered || ($playlistType === "album" && isPlayingCurrentAlbum)}
-                    <div class="play-button-container">
+                {#if isHovered || isPlayingCurrentAlbum}
+                    <div
+                        class={$isPlaying && isPlayingCurrentAlbum
+                            ? "play-button-container pause-button"
+                            : "play-button-container play-button"}
+                    >
                         <div
-                            class={$playlistType === "album" &&
-                            $isPlaying &&
-                            isPlayingCurrentAlbum
-                                ? "pause-button"
-                                : "play-button"}
-                            on:click={playPauseToggle}
+                            class="button"
+                            on:click|stopPropagation={playPauseToggle}
                         >
                             <Icon
-                                icon={$playlistType === "album" &&
-                                $isPlaying &&
-                                isPlayingCurrentAlbum
+                                icon={$isPlaying && isPlayingCurrentAlbum
                                     ? "fe:pause"
                                     : "fe:play"}
                                 size={25}
-                                color="white"
                             />
                         </div>
                     </div>
@@ -142,14 +144,19 @@
         </div>
     </div>
     {#if showInfo}
-        <p class="title">{album.displayTitle ?? album.title}</p>
-        <p class="artist">{album?.artist}</p>
-        <div class="info">
-            {#if album?.year > 0}
-                <small>{album.year}</small>
-                <small>•</small>
-            {/if}
-            <small>{album?.tracksIds.length} {$LL.albums.item.tracksLabel()}</small>
+        <div class="info-container">
+            <p class="title">{album.displayTitle ?? album.title}</p>
+            <p class="artist">{album?.artist}</p>
+            <div class="info">
+                {#if album?.year > 0}
+                    <small>{album.year}</small>
+                    <small>•</small>
+                {/if}
+                <small
+                    >{album?.tracksIds.length}
+                    {$LL.albums.item.tracksLabel()}</small
+                >
+            </div>
         </div>
     {/if}
 </div>
@@ -158,14 +165,43 @@
     .playing {
         transform: scale(1.1);
         z-index: 9;
-        
+
         .cd {
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
             box-shadow: 2px 2px 50px 40px
-                color-mix(in srgb, var(--library-playing-bg) 50%, transparent) !important;
+                color-mix(in srgb, var(--album-playing-shadow) 50%, transparent) !important;
             .hinge {
-                background-color: rgba(167, 164, 173, 0.078);
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 10.32%,
+                    transparent
+                );
+                backdrop-filter: blur(8px);
+                border-left: 1px solid
+                    color-mix(in srgb, var(--inverse), transparent 50%);
+                box-shadow:
+                    inset -0.75px -0.5px rgba(255, 255, 255, 0.1),
+                    inset + 0.75px +0.5px rgba(255, 255, 255, 0.025),
+                    3px 2px 10px rgba(0, 0, 0, 0.25),
+                    inset 0px 0px 10px 5px rgba(255, 255, 255, 0.025),
+                    inset 0px 0px 40px 5px rgba(255, 255, 255, 0.025);
+            }
+            .artwork-frame {
+                &::after {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-image: url("images/cd-shimmer.png");
+                    background-repeat: no-repeat;
+                    z-index: 20;
+                    animation: playing-shimmer 3.5s
+                        cubic-bezier(0.4, 0, 0.41, 0.97) 1;
+                    pointer-events: none;
+                }
             }
         }
 
@@ -173,14 +209,26 @@
             transform: translate(15%, -10px) rotate(140deg) !important;
         }
         .title {
-            background-color: var(--accent-secondary);
-            border-radius: 4px;
+            background-color: var(--album-playing-title-bg);
+            border-radius: 0 0 8px 8px;
             color: var(--text);
             z-index: 20;
+            margin-top: 3px !important;
         }
         .artist,
         .info {
             z-index: 20;
+        }
+    }
+
+    @keyframes playing-shimmer {
+        0% {
+            background-position: -40% 110%;
+            background-size: 250%;
+        }
+        100% {
+            background-position: 120% -30%;
+            background-size: 250%;
         }
     }
 
@@ -235,7 +283,11 @@
             cursor: default;
             user-select: none;
         }
-
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
         .info {
             display: flex;
             flex-direction: row;
@@ -244,12 +296,14 @@
             gap: 4px;
             justify-content: center;
             align-items: center;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
 
         .title {
             margin-top: 10px;
             padding: 0.1em 0.5em;
-            border-radius: 20px;
         }
         .artist {
             opacity: 0.7;
@@ -262,7 +316,9 @@
             margin: 0;
             line-height: 1em;
             color: var(--text);
-            max-lines: 2;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
 
         small {
@@ -320,11 +376,11 @@
         box-sizing: border-box;
         .hinge {
             border-left: 1px solid
-                color-mix(in srgb, var(--inverse) 10.32%, transparent);
+                color-mix(in srgb, var(--inverse) 20.32%, transparent);
             width: 5%;
             background-color: color-mix(
                 in srgb,
-                var(--inverse) 4.32%,
+                var(--inverse) 9.32%,
                 transparent
             );
         }
@@ -364,38 +420,66 @@
                 .play-button-container {
                     position: absolute;
                     align-self: center;
-                    border: 1px solid
-                        color-mix(
-                            in srgb,
-                            var(--library-playing-bg) 60%,
-                            transparent
-                        );
-                    background-color: #25222b;
                     border-radius: 50px;
                     width: 40px;
                     height: 40px;
                     display: flex;
                     z-index: 10;
 
-                    &:hover {
-                        background-color: var(--library-playing-bg);
-                    }
-                    &:active {
-                        background-color: var(--library-playing-bg);
-                        transform: scale(0.9);
-                    }
-                    .play-button {
-                        position: relative;
-                        left: 1px;
-                        font-size: 2em;
-                        margin: auto;
-                        align-self: center;
+                    &.play-button {
+                        border: 1px solid
+                            color-mix(
+                                in srgb,
+                                var(--album-playing-play-border) 60%,
+                                transparent
+                            );
+                        background-color: var(--album-playing-play-bg);
+
+                        .button {
+                            position: relative;
+                            left: 1px;
+                            font-size: 2em;
+                            margin: auto;
+                            align-self: center;
+                            color: var(--album-playing-play-icon);
+                        }
+
+                        &:hover {
+                            background-color: var(
+                                --album-playing-play-hover-bg
+                            );
+
+                            .button {
+                                color: var(--album-playing-play-hover-icon);
+                            }
+                        }
                     }
 
-                    .pause-button {
-                        font-size: 2.2em;
-                        margin: auto;
-                        align-self: center;
+                    &.pause-button {
+                        border: 1px solid
+                            color-mix(
+                                in srgb,
+                                var(--album-playing-pause-border) 60%,
+                                transparent
+                            );
+                        background-color: var(--album-playing-pause-bg);
+
+                        .button {
+                            font-size: 2.2em;
+                            margin: auto;
+                            align-self: center;
+                            color: var(--album-playing-pause-icon);
+                        }
+
+                        &:hover {
+                            background-color: var(
+                                --album-playing-pause-hover-bg
+                            );
+
+                            .button {
+                                color: var(--album-playing-pause-hover-icon);
+                            }
+                        }
                     }
                 }
 

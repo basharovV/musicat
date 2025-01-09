@@ -32,7 +32,7 @@
                 name: file,
                 tags: [],
                 type: "file",
-                fileType
+                fileType,
             };
             if (highlightedOption === "add-to-scrapbook") {
                 // await db.scrapbook.add(contentItem);
@@ -47,8 +47,8 @@
                             event: {
                                 path: entry,
                                 isImport: false,
-                                includeFolderArtwork: false
-                            }
+                                includeFolderArtwork: false,
+                            },
                         });
                         if (song) {
                             await db.songProjects.update(songProject, {
@@ -56,9 +56,9 @@
                                     ...songProject.recordings,
                                     {
                                         recordingType: "master",
-                                        song
-                                    }
-                                ]
+                                        song,
+                                    },
+                                ],
                             });
                         }
 
@@ -68,9 +68,9 @@
                             otherContentItems: songProject.otherContentItems
                                 ? [
                                       ...songProject.otherContentItems,
-                                      contentItem
+                                      contentItem,
                                   ]
-                                : [contentItem]
+                                : [contentItem],
                         });
                         break;
                 }

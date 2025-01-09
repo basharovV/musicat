@@ -2,13 +2,13 @@
     import type { ArtistProject, SongProject } from "src/App";
     import {
         currentSongProjects,
-        songbookSelectedArtist
+        songbookSelectedArtist,
     } from "../../data/store";
 
     import {
         deleteSongProject,
         loadSongProject,
-        loadSongProjectsForArtist
+        loadSongProjectsForArtist,
     } from "../../data/ArtistsToolkitData";
     import SongDetails from "../your-music/SongDetails.svelte";
     import SongProjects from "../your-music/SongProjects.svelte";
@@ -21,7 +21,7 @@
     async function loadSongbook() {
         isLoading = true;
         $currentSongProjects = await loadSongProjectsForArtist(
-            $songbookSelectedArtist.name
+            $songbookSelectedArtist.name,
         );
         // Sort the $currentSongProjects alphabetically
         console.log("songbook: $currentSongProjects", $currentSongProjects);
@@ -42,7 +42,7 @@
     async function onSelectSong(song: string) {
         selectedSongProject = await loadSongProject(
             $songbookSelectedArtist.name,
-            song
+            song,
         );
     }
 
@@ -115,8 +115,7 @@
         grid-column: 1;
         background-color: var(--panel-background);
         border-radius: 5px;
-        border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        border: 0.7px solid var(--panel-primary-border-accent1);
         div {
             padding: 2em;
         }
@@ -159,8 +158,7 @@
         height: 100%;
         background-color: var(--panel-background);
         border-radius: 5px;
-        border: 0.7px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        border: 0.7px solid var(--panel-primary-border-accent1);
         div {
             padding: 2em;
         }

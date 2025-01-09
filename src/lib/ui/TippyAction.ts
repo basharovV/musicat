@@ -13,7 +13,7 @@ export interface TippyReturn {
 export type Tippy = (element: HTMLElement, props?: TippyProps) => TippyReturn;
 /**
  * Svelte action for rendering a [Tippy.JS](https://atomiks.github.io/tippyjs/) tooltip
- * 
+ *
  * @example
  * ```svelte
  * <script lang="ts">

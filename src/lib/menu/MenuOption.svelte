@@ -1,6 +1,7 @@
 <script lang="ts">
     import isDarkColor from "is-dark-color";
     import Icon from "../ui/Icon.svelte";
+    import { currentThemeObject } from "../../theming/store";
 
     export let isDisabled = false;
     export let isDestructive = false;
@@ -38,7 +39,7 @@
             ? `border: 1px solid ${
                   isDarkColor(color) ? "white" : color
               }e7;background-color: transparent;`
-            : "background-color: #c6c8ca;"
+            : `background-color: ${$currentThemeObject["menu-item-highlight-bg"]};`
         : ""}
     on:click|stopPropagation={(e) => {
         onClick && onClick();
@@ -66,18 +67,15 @@
                 icon="charm:tick"
                 size={12}
                 color={checked
-                    ? "white"
+                    ? $currentThemeObject["menu-checkbox-on"]
                     : singleSelection
                       ? "transparent"
-                      : "grey"}
+                      : $currentThemeObject["menu-checkbox-off"]}
             />
         {/if}
 
         {#if onDelete}
-            <Icon
-                icon="mingcute:close-circle-fill"
-                onClick={onDelete}
-            />
+            <Icon icon="mingcute:close-circle-fill" onClick={onDelete} />
         {/if}
     {:else}
         <slot />
@@ -103,7 +101,7 @@
         display: flex;
         align-items: center;
         grid-gap: 5px;
-        color: rgb(255, 255, 255);
+        color: var(--menu-item-text);
         border-radius: 2.5px;
         user-select: none;
 
@@ -111,8 +109,8 @@
         &.highlighted.with-bg {
             background: transparent;
             transform: scale(1.1);
-            border: 1px solid white;
-            color: white;
+            border: 1px solid var(--menu-item-text);
+            color: var(--menu-item-text);
         }
         &:not(.with-bg) {
             transform: scale(1);
@@ -120,31 +118,31 @@
 
         &:hover,
         &.highlighted {
-            color: rgb(37, 36, 36);
-            background-color: rgba(255, 255, 255, 0.796);
+            color: var(--menu-item-highlight-text);
+            background-color: var(--menu-item-highlight-bg);
+            border: 1px solid var(--menu-item-highlight-border);
             &.border-highlight {
-                color: white;
-                background-color: rgba(255, 255, 255, 0.196);
-
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                color: var(--menu-item-highlight-secondary-text);
+                background-color: var(--menu-item-highlight-secondary-bg);
+                border: 1px solid var(--menu-item-highlight-secondary-border);
             }
         }
         &.disabled {
-            color: rgba(174, 174, 174, 0.4);
+            color: var(--menu-item-disabled);
             &:hover {
                 background: transparent;
             }
         }
         &.confirming {
-            background: #d2630e;
+            background: var(--menu-item-confirm-bg);
             &:hover {
-                background: #d2630e !important;
+                background: var(--menu-item-confirm-bg) !important;
             }
         }
         &.destructive {
             &:hover {
-                background: #d20e32;
-                color: white;
+                background: var(--menu-item-destructive-hover-bg);
+                color: var(--menu-item-destructive-hover-text);
             }
         }
 
@@ -179,10 +177,10 @@
 
     @keyframes loading {
         from {
-            background-color: inherit;
+            background-color: var(--menu-item-loading-from);
         }
         to {
-            background-color: #dba4fac1;
+            background-color: var(--menu-item-loading-to);
         }
     }
 </style>
