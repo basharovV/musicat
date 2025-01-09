@@ -847,7 +847,6 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 if item.id == "METADATA_BLOCK_PICTURE" {
                     // Ignore picture, set by artwork_file_to_set
                 } else if item.id == "year" {
-                    info!("year");
                     if item.value.is_null() {
                         tag.remove_year();
                     } else {

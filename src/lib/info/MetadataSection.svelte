@@ -317,10 +317,17 @@
     async function reImportAlbum(album: Album) {
         const existingAlbum = await db.albums.get(album.id);
         if (existingAlbum) {
+            existingAlbum.artist = album.artist;
+            existingAlbum.artwork = album.artwork;
+            existingAlbum.displayTitle = album.displayTitle;
+            existingAlbum.genre = album.genre;
+            existingAlbum.title = album.title;
+            existingAlbum.year = album.year;
             existingAlbum.tracksIds = uniq([
                 ...existingAlbum.tracksIds,
                 ...album.tracksIds,
             ]);
+
             await db.albums.put(existingAlbum);
         }
     }
@@ -375,8 +382,8 @@
                 if (genericId === "artist") {
                     return !isCompilation && !hasAlbumArtist && !hideArtist;
                 }
-                if (isCompilation && genericId === "albumArtist") {
-                    return false;
+                if (genericId === "albumArtist") {
+                    return !isCompilation;
                 }
 
                 return true;
@@ -405,14 +412,14 @@
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
     export async function writeMetadata() {
+        const toWrite = data.mappedMetadata.map(({ genericId, value }) => ({
+            id: genericId,
+            value: value?.length ? value : null,
+        }));
+        console.log("Writing: ", toWrite);
+
         let toImport: ToImport;
         if ($rightClickedTrack) {
-            const toWrite = data.mappedMetadata.map((t) => ({
-                id: t.genericId,
-                value: t.value,
-            }));
-            console.log("Writing: ", toWrite);
-
             const event = {
                 tracks: [
                     completeEvent({
@@ -427,11 +434,6 @@
             toImport = await invoke<ToImport>("write_metadatas", { event });
         } else if ($rightClickedTracks?.length) {
             console.log("Writing album");
-            const toWrite = data.mappedMetadata.map((t) => ({
-                id: t.genericId,
-                value: t.value,
-            }));
-
             toImport = await invoke<ToImport>("write_metadatas", {
                 event: {
                     tracks: $rightClickedTracks.map((track) =>
