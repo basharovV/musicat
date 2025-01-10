@@ -516,6 +516,7 @@ async fn main() {
             });
 
             let command_clone = strm3.clone();
+            let app_clone = app_.clone();
             // Prepare to set Now Playing info on Mac
             #[cfg(target_os = "macos")]
             {
@@ -534,8 +535,14 @@ async fn main() {
                     command_clone.pause();
                 };
 
+                let next_handler = move || {
+                    println!("Next command received - custom handling logic here");
+                    // Add your custom next logic
+                    let _ = app_clone.emit("play_next", ());
+                };
+
                 // Set the handlers
-                command_center.set_handlers(play_handler, pause_handler);
+                command_center.set_handlers(play_handler, pause_handler, next_handler);
 
                 // Setup the remote command center
                 command_center.setup_remote_command_center();

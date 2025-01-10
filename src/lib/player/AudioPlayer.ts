@@ -260,6 +260,21 @@ class AudioPlayer {
         appWindow.listen("close", () => {
             current.set({ ...get(current), position: get(playerTime) });
         });
+
+        appWindow.listen("toggle_play", async (event: any) => {
+            console.log("toggle_play");
+            this.togglePlay();
+        });
+
+        appWindow.listen("play_next", async (event: any) => {
+            console.log("play_next");
+            this.playNext();
+        });
+
+        appWindow.listen("play_previous", async (event: any) => {
+            console.log("play_previous");
+            this.playPrevious();
+        });
     }
 
     async setupBuffers() {
