@@ -146,6 +146,7 @@ export const volume: Writable<number> = writable(
         ? parseFloat(localStorage.getItem("volume"))
         : 0.6,
 );
+export const playbackSpeed = writable(1.0);
 export const isFullScreenVisualiser = writable(false);
 
 // Playlists (populated from folder)
@@ -459,10 +460,10 @@ columnOrder.subscribe((val) =>
 );
 
 export const albumColumnOrder = writable(
-    JSON.parse(localStorage.getItem("albumColumnOrder")) || defaultColumnOrder
+    JSON.parse(localStorage.getItem("albumColumnOrder")) || defaultColumnOrder,
 );
 albumColumnOrder.subscribe((val) =>
-    localStorage.setItem("albumColumnOrder", JSON.stringify(val))
+    localStorage.setItem("albumColumnOrder", JSON.stringify(val)),
 );
 
 // Internet Archive

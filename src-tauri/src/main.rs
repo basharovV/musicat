@@ -17,6 +17,7 @@ use std::error::Error;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
+use symphonia::core::units::TimeBase;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
@@ -192,24 +193,6 @@ fn get_waveform(
 #[derive(Clone, Debug)]
 pub struct SampleOffsetEvent {
     pub sample_offset: Option<u64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct VolumeControlEvent {
-    volume: Option<f64>, // 0 to 1
-}
-
-#[tauri::command]
-fn volume_control(event: VolumeControlEvent, state: State<AudioPlayer>) {
-    info!("Received volume_control event");
-    match state.volume_control_sender.send(event) {
-        Ok(_) => {
-            // info!("Sent control flow info");
-        }
-        Err(_err) => {
-            info!("Error sending volume control info (channel inactive");
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -651,7 +634,8 @@ async fn main() {
             queue_next,
             init_streamer,
             decode_control,
-            volume_control,
+            player::volume_control,
+            player::playback_speed_control,
             get_waveform,
             player::loop_region,
             player::change_audio_device,

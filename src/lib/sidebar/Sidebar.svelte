@@ -58,6 +58,7 @@
         userSettings,
         toDeletePlaylist,
         lastWrittenSongs,
+        playbackSpeed,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -74,6 +75,9 @@
     import Seekbar from "./Seekbar.svelte";
     import { setQueue } from "../../data/storeHelper";
     import { get } from "svelte/store";
+    import Toggle from "../ui/Toggle.svelte";
+    import ToggleButton from "../ui/ToggleButton.svelte";
+    import PlaybackSpeed from "../ui/PlaybackSpeed.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -878,6 +882,9 @@
             requestAnimationFrame(step);
         }
     }
+
+    // Playback speed
+    let isPlaybackSpeedControlOpen = false;
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -1568,83 +1575,92 @@
                 onSeek={(time) => seekTime.set(time)}
                 playerTime={$playerTime}
             />
-            <p class="elapsed-time">
-                <span class="elapsed">{elapsedTime}</span> / {durationText}
-            </p>
-        </div>
-        <transport>
-            <Icon
-                class="transport-side shuffle {$isShuffleEnabled
-                    ? 'active'
-                    : 'inactive'}"
-                icon="ph:shuffle-bold"
-                onClick={() => {
-                    $isShuffleEnabled = !$isShuffleEnabled;
-                }}
-            />
-            <Icon
-                class="transport-middle"
-                icon="fe:backward"
-                size={36}
-                disabled={$current.index <= 0}
-                onClick={() => audioPlayer.playPrevious()}
-            />
-            <Icon
-                class="transport-middle"
-                size={42}
-                onClick={() => audioPlayer.togglePlay()}
-                icon={$isPlaying ? "fe:pause" : "fe:play"}
-            />
-            <Icon
-                class="transport-middle"
-                size={36}
-                icon="fe:forward"
-                disabled={$queue.length === 0 ||
-                    $current.index === $queue?.length - 1}
-                onClick={() => audioPlayer.playNext()}
-            />
-            <Icon
-                class="transport-side favourite {$current.song?.isFavourite
-                    ? 'active'
-                    : 'inactive'}"
-                icon={$current.song?.isFavourite
-                    ? "clarity:heart-solid"
-                    : "clarity:heart-line"}
-                onClick={() => {
-                    favouriteCurrentSong();
-                }}
-            />
-        </transport>
-
-        <div class="other-controls">
-            <div class="track-info-icon">
+            <div
+                class="time-controls"
+                class:speed-control-expanded={isPlaybackSpeedControlOpen}
+            >
+                <p class="elapsed-time">
+                    <span class="elapsed">{elapsedTime} </span>
+                </p>
+                <PlaybackSpeed bind:selected={isPlaybackSpeedControlOpen} />
+                <p class="elapsed-time">
+                    <span class="elapsed">{durationText} </span>
+                </p>
+            </div>
+            <transport>
                 <Icon
-                    icon="mdi:information"
+                    class="transport-side shuffle {$isShuffleEnabled
+                        ? 'active'
+                        : 'inactive'}"
+                    icon="ph:shuffle-bold"
                     onClick={() => {
-                        $rightClickedTrack = song;
-                        $popupOpen = "track-info";
+                        $isShuffleEnabled = !$isShuffleEnabled;
                     }}
                 />
-            </div>
-
-            <VolumeSlider />
-
-            <div
-                class="visualizer-icon"
-                use:tippy={{
-                    content: "waveform, loop region, marker editor",
-                    placement: "top",
-                }}
-            >
                 <Icon
-                    class={$isWaveformOpen ? "active" : "inactive"}
-                    icon="ph:wave-sine-duotone"
-                    onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+                    class="transport-middle"
+                    icon="fe:backward"
+                    size={36}
+                    disabled={$current.index <= 0}
+                    onClick={() => audioPlayer.playPrevious()}
                 />
+                <Icon
+                    class="transport-middle"
+                    size={42}
+                    onClick={() => audioPlayer.togglePlay()}
+                    icon={$isPlaying ? "fe:pause" : "fe:play"}
+                />
+                <Icon
+                    class="transport-middle"
+                    size={36}
+                    icon="fe:forward"
+                    disabled={$queue.length === 0 ||
+                        $current.index === $queue?.length - 1}
+                    onClick={() => audioPlayer.playNext()}
+                />
+                <Icon
+                    class="transport-side favourite {$current.song?.isFavourite
+                        ? 'active'
+                        : 'inactive'}"
+                    icon={$current.song?.isFavourite
+                        ? "clarity:heart-solid"
+                        : "clarity:heart-line"}
+                    onClick={() => {
+                        favouriteCurrentSong();
+                    }}
+                />
+            </transport>
+
+            <div class="other-controls">
+                <div class="track-info-icon">
+                    <Icon
+                        icon="mdi:information"
+                        onClick={() => {
+                            $rightClickedTrack = song;
+                            $popupOpen = "track-info";
+                        }}
+                    />
+                </div>
+
+                <VolumeSlider />
+
+                <div
+                    class="visualizer-icon"
+                    use:tippy={{
+                        content: "waveform, loop region, marker editor",
+                        placement: "top",
+                    }}
+                >
+                    <Icon
+                        class={$isWaveformOpen ? "active" : "inactive"}
+                        icon="ph:wave-sine-duotone"
+                        onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+                    />
+                </div>
             </div>
         </div>
-    </div>
-</sidebar>
+    </div></sidebar
+>
 
 <style lang="scss">
     $mini_y_breakpoint: 460px;
@@ -2284,11 +2300,25 @@
         padding: 0 1em;
         display: flex;
         flex-direction: column;
+
+        .time-controls {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            transition: all 0.3s ease-in-out;
+
+            &.speed-control-expanded {
+                .elapsed-time {
+                    flex-shrink: 1;
+                }
+            }
+        }
+
         .elapsed-time {
             opacity: 0.5;
             font-size: 12px;
-            margin: auto;
-            padding: 0 5px;
+            margin: 0;
+            padding: 0;
             width: fit-content;
             border-radius: 5px;
             user-select: none;
@@ -2301,7 +2331,7 @@
     }
 
     transport {
-        padding: 0em 1em 1em 1em;
+        padding-bottom: 1em;
         width: 100%;
         z-index: 2;
         display: flex;
@@ -2309,7 +2339,7 @@
     }
 
     .other-controls {
-        padding: 0 1em 1em;
+        padding: 0 0 1em;
         width: 100%;
         display: flex;
         align-items: center;
