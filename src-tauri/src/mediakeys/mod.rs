@@ -85,6 +85,7 @@ pub fn set_paused() {
 pub struct RemoteCommandCenter {
     play_handler: Option<Rc<dyn Fn()>>,
     pause_handler: Option<Rc<dyn Fn()>>,
+    next_handler: Option<Rc<dyn Fn()>>,
 }
 
 impl RemoteCommandCenter {
@@ -92,17 +93,20 @@ impl RemoteCommandCenter {
         RemoteCommandCenter {
             play_handler: None,
             pause_handler: None,
+            next_handler: None,
         }
     }
 
     // Set handlers as closures
-    pub fn set_handlers<F, G>(&mut self, play: F, pause: G)
+    pub fn set_handlers<F, G, H>(&mut self, play: F, pause: G, next: H)
     where
         F: Fn() + 'static,
         G: Fn() + 'static,
+        H: Fn() + 'static,
     {
         self.play_handler = Some(Rc::new(play));
         self.pause_handler = Some(Rc::new(pause));
+        self.next_handler = Some(Rc::new(next));
     }
 
     pub fn setup_remote_command_center(&self) {
@@ -139,6 +143,20 @@ impl RemoteCommandCenter {
             let pause_command: *mut NSObject = msg_send![command_center, pauseCommand];
             let _: *mut NSObject =
                 msg_send![pause_command, addTargetWithHandler: &*pause_handler_block];
+
+            // Create the next handler block using the closure
+            let next_handler_clone = self.next_handler.clone();
+            let next_handler_block = RcBlock::new(move |_command: *mut NSObject| {
+                if let Some(handler) = &next_handler_clone {
+                    handler(); // Call the play handler closure
+                }
+                Id::as_ptr(&NSNumber::new_i32(0)) // Return NSNumber indicating success
+            });
+
+            // Register the next command with the block.
+            let next_command: *mut NSObject = msg_send![command_center, nextTrackCommand];
+            let _: *mut NSObject =
+                msg_send![next_command, addTargetWithHandler: &*next_handler_block];
         }
     }
 }
