@@ -20,6 +20,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import LL from "../../i18n/i18n-svelte";
     import { setQueue } from "../../data/storeHelper";
+    import ScrollTo from "../ui/ScrollTo.svelte";
     wtf.extend(wtfHtml);
 
     let wikiResult: GetHTMLResponse;
@@ -319,15 +320,9 @@
 <!-- Add style skin -->
 <div class="container" bind:this={container}>
     {#if isScrollToTopVisible}
-        <div
-            class="scroll-to-top"
-            transition:fly={{ duration: 150, y: 20, opacity: 0.3 }}
-        >
-            <ButtonWithIcon
-                text="↑ Scroll to top"
-                onClick={() => scrollContainer?.scrollTo(0, 0)}
-            />
-        </div>
+        <ScrollTo on:click={() => scrollContainer?.scrollTo(0, 0)}>
+            ↑ Scroll to top
+        </ScrollTo>
     {/if}
     <div
         class="scroll-container"
@@ -708,17 +703,17 @@
                 display: inline;
             }
         }
-        .scroll-to-top {
-            position: absolute;
-            bottom: 0.5em;
-            margin: auto;
-            left: 0;
-            right: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.5em 1em;
-            border-radius: 10px;
-        }
+        // .scroll-to-top {
+        //     position: absolute;
+        //     bottom: 0.5em;
+        //     margin: auto;
+        //     left: 0;
+        //     right: 0;
+        //     display: flex;
+        //     align-items: center;
+        //     justify-content: center;
+        //     padding: 0.5em 1em;
+        //     border-radius: 10px;
+        // }
     }
 </style>

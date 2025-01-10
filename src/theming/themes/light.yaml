@@ -134,6 +134,18 @@ prune-button-delete-pressed-shadow: "#ff4747aa"
 prune-button-keep-bg: "#008000dd"
 prune-button-keep-pressed-shadow: "#00ff00aa"
 prune-fordelete: "#ff5a5a"
+# ScrollTo
+scrollto-active-bg: "#c0c0ca"
+scrollto-active-border: "#65626243"
+scrollto-active-shadow: "#1f1f1f88"
+scrollto-bg: "#d9d9e0"
+scrollto-border: "#a39e9e7f"
+scrollto-eq: "#a0a0a0"
+scrollto-hover-bg: "#d2d2dd"
+scrollto-hover-border: "#6562624f"
+scrollto-hover-shadow: "#1f1f1f88"
+scrollto-shadow: "#1f1f1f33"
+scrollto-text: var(--text)
 # Seekbar
 seekbar-hoverhead: "#ffffff"
 seekbar-line-bg: color-mix(in srgb, var(--inverse) 20%, transparent)

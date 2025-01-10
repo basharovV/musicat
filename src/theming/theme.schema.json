@@ -291,7 +291,7 @@
             "type": "string"
         },
         "panel-background": {
-            "description": "Main panel background",
+            "description": "Panels",
             "type": "string"
         },
         "panel-primary-border-accent1": {
@@ -362,8 +362,11 @@
         "progressbar-value-bg": {
             "type": "string"
         },
-        "prune-button-delete-bg": {
+        "prune-button-border": {
             "description": "Prune",
+            "type": "string"
+        },
+        "prune-button-delete-bg": {
             "type": "string"
         },
         "prune-button-delete-pressed-shadow": {
@@ -376,6 +379,40 @@
             "type": "string"
         },
         "prune-fordelete": {
+            "type": "string"
+        },
+        "scrollto-active-bg": {
+            "description": "ScrollTo",
+            "type": "string"
+        },
+        "scrollto-active-border": {
+            "type": "string"
+        },
+        "scrollto-active-shadow": {
+            "type": "string"
+        },
+        "scrollto-bg": {
+            "type": "string"
+        },
+        "scrollto-border": {
+            "type": "string"
+        },
+        "scrollto-eq": {
+            "type": "string"
+        },
+        "scrollto-hover-bg": {
+            "type": "string"
+        },
+        "scrollto-hover-border": {
+            "type": "string"
+        },
+        "scrollto-hover-shadow": {
+            "type": "string"
+        },
+        "scrollto-shadow": {
+            "type": "string"
+        },
+        "scrollto-text": {
             "type": "string"
         },
         "seekbar-hoverhead": {
@@ -692,11 +729,23 @@
         "popup-track-section-title-text",
         "progressbar-track-bg",
         "progressbar-value-bg",
+        "prune-button-border",
         "prune-button-delete-bg",
         "prune-button-delete-pressed-shadow",
         "prune-button-keep-bg",
         "prune-button-keep-pressed-shadow",
         "prune-fordelete",
+        "scrollto-active-bg",
+        "scrollto-active-border",
+        "scrollto-active-shadow",
+        "scrollto-bg",
+        "scrollto-border",
+        "scrollto-eq",
+        "scrollto-hover-bg",
+        "scrollto-hover-border",
+        "scrollto-hover-shadow",
+        "scrollto-shadow",
+        "scrollto-text",
         "seekbar-hoverhead",
         "seekbar-line-bg",
         "seekbar-thumb",
