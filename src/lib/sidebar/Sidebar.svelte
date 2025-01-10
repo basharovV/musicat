@@ -23,8 +23,8 @@
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
-        currentIAFile,
         current,
+        currentIAFile,
         currentSongArtworkSrc,
         draggedAlbum,
         draggedSongs,
@@ -36,12 +36,12 @@
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
-        popupOpen,
         isWaveformOpen,
         isWikiOpen,
+        lastWrittenSongs,
         os,
         playerTime,
-        queriedSongs,
+        popupOpen,
         query,
         queue,
         rightClickedTrack,
@@ -53,12 +53,10 @@
         sidebarTogglePos,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
+        toDeletePlaylist,
         uiView,
         userPlaylists,
         userSettings,
-        toDeletePlaylist,
-        lastWrittenSongs,
-        playbackSpeed,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -70,14 +68,10 @@
     import "../tippy.css";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
+    import PlaybackSpeed from "../ui/PlaybackSpeed.svelte";
     import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
-    import { setQueue } from "../../data/storeHelper";
-    import { get } from "svelte/store";
-    import Toggle from "../ui/Toggle.svelte";
-    import ToggleButton from "../ui/ToggleButton.svelte";
-    import PlaybackSpeed from "../ui/PlaybackSpeed.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
