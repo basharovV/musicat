@@ -2,7 +2,6 @@
     import { liveQuery } from "dexie";
     import md5 from "md5";
     import { onMount } from "svelte";
-    import { fly } from "svelte/transition";
     import type { Album } from "../../App";
     import { db } from "../../data/db";
     import {
@@ -26,6 +25,7 @@
     import VirtualList from "svelte-tiny-virtual-list";
     import { debounce } from "lodash-es";
     import { getAlbumDetailsHeight } from "../albums/util";
+    import ScrollTo from "../ui/ScrollTo.svelte";
 
     const PADDING = 14;
 
@@ -380,20 +380,9 @@
         </div>
     {/if}
     {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
-        <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <div
-            in:fly={{ duration: 150, y: 30 }}
-            out:fly={{ duration: 150, y: 30 }}
-            class="scroll-now-playing"
-            on:click={scrollToCurrentAlbum}
-        >
-            <div class="eq">
-                <span class="eq1" />
-                <span class="eq2" />
-                <span class="eq3" />
-            </div>
-            <p>{$LL.albums.scrollToNowPlaying()}</p>
-        </div>
+        <ScrollTo equalizer={true} on:click={scrollToCurrentAlbum}>
+            {$LL.albums.scrollToNowPlaying()}
+        </ScrollTo>
     {/if}
 
     <ShadowGradient type="top" />
@@ -476,109 +465,6 @@
         justify-content: center;
         p {
             opacity: 0.6;
-        }
-    }
-
-    .scroll-now-playing {
-        position: absolute;
-        bottom: 0.5em;
-        grid-column: 1 / 4;
-        left: 0;
-        right: 0;
-        padding: 0.5em 1em;
-        border-radius: 10px;
-        background-color: #1b1b1c;
-        border: 1px solid rgb(58, 56, 56);
-        box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.834);
-        color: white;
-        margin: auto;
-        width: fit-content;
-        z-index: 11;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        cursor: default;
-        user-select: none;
-
-        @media only screen and (max-width: 522px) {
-            display: none;
-        }
-        &:hover {
-            background-color: #1f1f21;
-            border: 1px solid rgb(101, 98, 98);
-            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
-        }
-        &:active {
-            background-color: #2a2a2d;
-            border: 2px solid rgb(101, 98, 98);
-            box-shadow: 10px 10px 10px rgba(31, 31, 31, 0.934);
-        }
-
-        .eq {
-            width: 15px;
-            padding: 0.5em;
-            position: relative;
-
-            span {
-                display: inline-block;
-                width: 3px;
-                background-color: #ddd;
-                position: absolute;
-                bottom: 0;
-            }
-
-            .eq1 {
-                height: 13px;
-                left: 0;
-                animation-name: shorteq;
-                animation-duration: 0.5s;
-                animation-iteration-count: infinite;
-                animation-delay: 0s;
-            }
-
-            .eq2 {
-                height: 15px;
-                left: 6px;
-                animation-name: talleq;
-                animation-duration: 0.5s;
-                animation-iteration-count: infinite;
-                animation-delay: 0.17s;
-            }
-
-            .eq3 {
-                height: 13px;
-                left: 12px;
-                animation-name: shorteq;
-                animation-duration: 0.5s;
-                animation-iteration-count: infinite;
-                animation-delay: 0.34s;
-            }
-        }
-        p {
-            margin: 0;
-        }
-    }
-
-    @keyframes shorteq {
-        0% {
-            height: 10px;
-        }
-        50% {
-            height: 5px;
-        }
-        100% {
-            height: 10px;
-        }
-    }
-    @keyframes talleq {
-        0% {
-            height: 15px;
-        }
-        50% {
-            height: 8px;
-        }
-        100% {
-            height: 15px;
         }
     }
 </style>

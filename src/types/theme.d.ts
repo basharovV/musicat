@@ -144,6 +144,18 @@ export interface Theme {
     "prune-fordelete": string;
     /** Oscilloscope */
     oscilloscope: string;
+    /** ScrollTo */
+    "scrollto-active-bg": string;
+    "scrollto-active-border": string;
+    "scrollto-active-shadow": string;
+    "scrollto-bg": string;
+    "scrollto-border": string;
+    "scrollto-eq": string;
+    "scrollto-hover-bg": string;
+    "scrollto-hover-border": string;
+    "scrollto-hover-shadow": string;
+    "scrollto-shadow": string;
+    "scrollto-text": string;
     /** Seekbar */
     "seekbar-line-bg": string;
     "seekbar-hoverhead": string;
