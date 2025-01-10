@@ -173,13 +173,18 @@
         );
         if (!currentAlbum) return false;
 
-        const index = activeAlbums.findIndex(
-            (album) => album.id === currentAlbum.id,
-        );
-
-        currentAlbumOffset = Math.ceil(index / columnCount) * 225 + PADDING;
+        updatePlayingAlbumOffset();
 
         return true;
+    }
+
+    function updatePlayingAlbumOffset() {
+        const { id } = currentAlbum;
+        const index = activeAlbums.findIndex((album) => album.id === id);
+
+        currentAlbumOffset = Math.round(
+            (Math.floor(index / columnCount) + 0.5) * rowHeight,
+        );
     }
 
     function onAfterScroll(e) {
@@ -228,6 +233,11 @@
 
         if (detailsAlbum) {
             itemSizes[detailsAlbumRow] = detailsAlbumHeight;
+        }
+
+        if (currentAlbum) {
+            updatePlayingAlbumOffset();
+            updateInView();
         }
 
         if (virtualList?.scrollToIndex) virtualList.scrollToIndex = null;

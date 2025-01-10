@@ -157,16 +157,6 @@
                     status.state.previousAlbum = s?.album;
                     status.state.previousArtist = s?.artist;
 
-                    // If currently in album/shuffle/custom queue mode, then the current song index doesn't match the library index,
-                    // and we need to find it
-                    if (s.id === $current.song?.id) {
-                        console.log("found song:", idx);
-                        currentSongY = idx * ROW_HEIGHT;
-                        currentSongScrollIdx = idx;
-                    } else {
-                        currentSongScrollIdx = null;
-                    }
-
                     // Highlighted songs indexes might need to be updated
                     if (idx === songsArray.length - 1) {
                         if (songsHighlighted.length > 0) {
@@ -866,11 +856,12 @@
             // let startTime = performance.now();
             calculateSongSlice();
             // console.log("took: ", performance.now() - startTime);
-            let idx =
-                currentSongScrollIdx !== null
-                    ? currentSongScrollIdx
-                    : $current.index;
-            currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
+
+            if (currentSongScrollIdx !== null) {
+                currentSongInView =
+                    currentSongScrollIdx >= songsStartSlice &&
+                    currentSongScrollIdx <= songsEndSlice;
+            }
         }
 
         // Only save/restore scroll pos in main library view, not on playlists
@@ -893,19 +884,14 @@
         }
     }
 
-    function currentSongIdxMatches() {
-        return (
-            $current.index < $allSongs?.length &&
-            $allSongs[$current.index]?.id === $current.song?.id
-        );
-    }
-
     let currentSongY = 0;
-    $: if (!$isShuffleEnabled) {
-        let idx = currentSongIdxMatches()
-            ? $current.index
-            : $allSongs?.findIndex((s) => s.id === $current.song?.id);
+
+    $: if (columnOrder && $current.song) {
+        const { id } = $current.song;
+        const idx = $allSongs?.findIndex((s) => s.id === id);
+
         if (idx !== undefined) {
+            currentSongScrollIdx = idx;
             currentSongY = idx * ROW_HEIGHT;
             currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
         }
