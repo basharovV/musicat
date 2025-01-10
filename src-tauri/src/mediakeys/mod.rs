@@ -6,7 +6,7 @@ use std::rc::Rc;
 use block2::RcBlock;
 use objc2::rc::{Id, Retained};
 use objc2::runtime::AnyObject;
-use objc2::{class, msg_send, Encode, Encoding, RefEncode};
+use objc2::{class, msg_send};
 use objc2_foundation::{CGSize, NSDictionary, NSNumber, NSObject, NSString, NSUInteger};
 
 use crate::metadata::{Artwork, Song};
@@ -83,30 +83,44 @@ pub fn set_paused() {
 }
 
 pub struct RemoteCommandCenter {
-    play_handler: Option<Rc<dyn Fn()>>,
-    pause_handler: Option<Rc<dyn Fn()>>,
     next_handler: Option<Rc<dyn Fn()>>,
+    pause_handler: Option<Rc<dyn Fn()>>,
+    play_handler: Option<Rc<dyn Fn()>>,
+    previous_handler: Option<Rc<dyn Fn()>>,
+    toogle_handler: Option<Rc<dyn Fn()>>,
 }
 
 impl RemoteCommandCenter {
     pub fn new() -> Self {
         RemoteCommandCenter {
-            play_handler: None,
-            pause_handler: None,
             next_handler: None,
+            pause_handler: None,
+            play_handler: None,
+            previous_handler: None,
+            toogle_handler: None,
         }
     }
 
     // Set handlers as closures
-    pub fn set_handlers<F, G, H>(&mut self, play: F, pause: G, next: H)
-    where
+    pub fn set_handlers<F, G, H, I, J>(
+        &mut self,
+        play: F,
+        pause: G,
+        toogle: H,
+        previous: I,
+        next: J,
+    ) where
         F: Fn() + 'static,
         G: Fn() + 'static,
         H: Fn() + 'static,
+        I: Fn() + 'static,
+        J: Fn() + 'static,
     {
-        self.play_handler = Some(Rc::new(play));
-        self.pause_handler = Some(Rc::new(pause));
         self.next_handler = Some(Rc::new(next));
+        self.pause_handler = Some(Rc::new(pause));
+        self.play_handler = Some(Rc::new(play));
+        self.previous_handler = Some(Rc::new(previous));
+        self.toogle_handler = Some(Rc::new(toogle));
     }
 
     pub fn setup_remote_command_center(&self) {
@@ -143,6 +157,34 @@ impl RemoteCommandCenter {
             let pause_command: *mut NSObject = msg_send![command_center, pauseCommand];
             let _: *mut NSObject =
                 msg_send![pause_command, addTargetWithHandler: &*pause_handler_block];
+
+            // Create the previous handler block using the closure
+            let previous_handler_clone = self.previous_handler.clone();
+            let previous_handler_block = RcBlock::new(move |_command: *mut NSObject| {
+                if let Some(handler) = &previous_handler_clone {
+                    handler(); // Call the play handler closure
+                }
+                Id::as_ptr(&NSNumber::new_i32(0)) // Return NSNumber indicating success
+            });
+
+            // Register the previous command with the block.
+            let previous_command: *mut NSObject = msg_send![command_center, previousTrackCommand];
+            let _: *mut NSObject =
+                msg_send![previous_command, addTargetWithHandler: &*previous_handler_block];
+
+            // Create the toogle handler block using the closure
+            let toogle_handler_clone = self.toogle_handler.clone();
+            let toogle_handler_block = RcBlock::new(move |_command: *mut NSObject| {
+                if let Some(handler) = &toogle_handler_clone {
+                    handler(); // Call the play handler closure
+                }
+                Id::as_ptr(&NSNumber::new_i32(0)) // Return NSNumber indicating success
+            });
+
+            // Register the toogle command with the block.
+            let toogle_command: *mut NSObject = msg_send![command_center, togglePlayPauseCommand];
+            let _: *mut NSObject =
+                msg_send![toogle_command, addTargetWithHandler: &*toogle_handler_block];
 
             // Create the next handler block using the closure
             let next_handler_clone = self.next_handler.clone();
