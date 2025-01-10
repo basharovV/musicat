@@ -48,7 +48,7 @@
     import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
     import TagCloud from "./lib/library/TagCloud.svelte";
     import ToDeleteHeader from "./lib/library/ToDeleteHeader.svelte";
-    import TrackInfoPopup from "./lib/library/TrackInfoPopup.svelte";
+    import TrackInfoPopup from "./lib/info/TrackInfoPopup.svelte";
     import audioPlayer from "./lib/player/AudioPlayer";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
