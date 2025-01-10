@@ -516,17 +516,19 @@ async fn main() {
             });
 
             let command_clone = strm3.clone();
-            let app_clone = app_.clone();
+            let app_next = app_.clone();
+            let app_previous = app_.clone();
+            let app_toggle = app_.clone();
             // Prepare to set Now Playing info on Mac
             #[cfg(target_os = "macos")]
             {
                 let mut command_center = RemoteCommandCenter::new();
 
-                // Define play and pause handlers
-                let play_handler = move || {
-                    println!("Play command received - custom handling logic here");
-                    // Add your custom play logic
-                    strm3.resume();
+                // Define the handlers
+                let next_handler = move || {
+                    println!("Next command received - custom handling logic here");
+                    // Add your custom next logic
+                    let _ = app_next.emit("play_next", ());
                 };
 
                 let pause_handler = move || {
@@ -535,14 +537,32 @@ async fn main() {
                     command_clone.pause();
                 };
 
-                let next_handler = move || {
-                    println!("Next command received - custom handling logic here");
-                    // Add your custom next logic
-                    let _ = app_clone.emit("play_next", ());
+                let play_handler = move || {
+                    println!("Play command received - custom handling logic here");
+                    // Add your custom play logic
+                    strm3.resume();
+                };
+
+                let previous_handler = move || {
+                    println!("Previous command received - custom handling logic here");
+                    // Add your custom previous logic
+                    let _ = app_previous.emit("play_previous", ());
+                };
+
+                let toggle_handler = move || {
+                    println!("Toggle command received - custom handling logic here");
+                    // Add your custom toggle logic
+                    let _ = app_toggle.emit("toggle_play", ());
                 };
 
                 // Set the handlers
-                command_center.set_handlers(play_handler, pause_handler, next_handler);
+                command_center.set_handlers(
+                    play_handler,
+                    pause_handler,
+                    toggle_handler,
+                    previous_handler,
+                    next_handler,
+                );
 
                 // Setup the remote command center
                 command_center.setup_remote_command_center();
