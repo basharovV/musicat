@@ -15,6 +15,7 @@ extern "C" {
     static MPMediaItemPropertyArtist: *const NSString;
     static MPMediaItemPropertyAlbumTitle: *const NSString;
     static MPMediaItemPropertyPlaybackDuration: *const NSString;
+    static MPMediaItemPropertyArtwork: *const NSString;
 }
 /// Sets the now playing information using an immutable `NSDictionary`.
 pub fn set_now_playing_info(song: &Song) {
@@ -26,13 +27,14 @@ pub fn set_now_playing_info(song: &Song) {
     let duration_nsnumber = NSNumber::new_f64(song.file_info.duration.unwrap_or(0.0f64));
 
     unsafe {
-        // Use the extern NSString constants as keys.
+        // // Use the extern NSString constants as keys.
         let title_key = &*MPMediaItemPropertyTitle;
         let artist_key = &*MPMediaItemPropertyArtist;
         let album_key = &*MPMediaItemPropertyAlbumTitle;
         let duration_key = &*MPMediaItemPropertyPlaybackDuration;
+        let artwork_key = &*MPMediaItemPropertyArtwork;
 
-        let artwork = Retained::from_raw(set_artwork(&song.artwork));
+        let mut keys = [title_key, artist_key, album_key, duration_key].to_vec();
 
         let mut objects = [
             Id::cast(title_nsstring),
@@ -42,13 +44,14 @@ pub fn set_now_playing_info(song: &Song) {
         ]
         .to_vec();
 
-        if let Some(art) = artwork {
+        if let Some(art) = Retained::from_raw(set_artwork(&song.artwork)) {
+            keys.push(artwork_key);
             objects.push(art);
         }
 
         // Create an NSDictionary with these key-value pairs.
         let now_playing_info: Retained<NSDictionary<NSString, NSObject>> =
-            NSDictionary::from_vec(&[title_key, artist_key, album_key, duration_key], objects);
+            NSDictionary::from_vec(&keys, objects);
 
         // Get the MPNowPlayingInfoCenter class and its defaultCenter singleton.
         let info_center: *mut NSObject = msg_send![class!(MPNowPlayingInfoCenter), defaultCenter];
@@ -184,24 +187,7 @@ unsafe fn set_artwork(artwork: &Option<Artwork>) -> *mut NSObject {
     });
     let _size = CGSize::new(200f64, 200f64);
 
-    return ptr::null_mut();
-    // TODO: This is not working yet. Maybe worth trying in objc1 instead.
     let artwork: *mut NSObject = msg_send![media_artwork_class_alloc, initWithBoundsSize: _size requestHandler: &*handler_block];
+
     return artwork;
-}
-
-#[derive(Debug, Clone)]
-struct ImageSize {
-    width: f64,
-    height: f64,
-}
-
-unsafe impl Encode for ImageSize {
-    // Or whatever encoding would be most descriptive for your type
-    const ENCODING: Encoding = Encoding::Struct("CGSize", &[Encoding::Double, Encoding::Double]);
-}
-
-unsafe impl RefEncode for ImageSize {
-    // Or whatever encoding would be most descriptive for your type
-    const ENCODING_REF: Encoding = Encoding::Pointer(&Self::ENCODING);
 }
