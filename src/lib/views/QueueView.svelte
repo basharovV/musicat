@@ -212,18 +212,18 @@
     $: if ($currentThemeObject) {
         // COLORS
         BG_COLOR = $currentThemeObject["panel-background"];
+        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
+        DRAGGING_SOURCE_COLOR = "#8a69683e";
         HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
-        OFFSCREEN_BG_COLOR = "#71658e3b";
-        TEXT_COLOR = $currentThemeObject["library-text-color"];
         HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
-        ROW_BG_COLOR = "transparent";
-        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
+        OFFSCREEN_BG_COLOR = "#71658e3b";
         PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
         PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
         PLAYING_TITLE_COLOR = $currentThemeObject["library-playing-title"];
+        ROW_BG_COLOR = "transparent";
+        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
+        TEXT_COLOR = $currentThemeObject["library-text"];
         TITLE_COLOR = $currentThemeObject["library-title"];
-        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
-        DRAGGING_SOURCE_COLOR = "#8a69683e";
     }
 
     // Restore scroll position if any
@@ -1087,7 +1087,12 @@
                                                 }}
                                             />
                                         {/if}
-
+                                        {console.log(
+                                            $current.index,
+                                            song?.viewModel?.index,
+                                            song.id,
+                                            $current.song?.id,
+                                        )}
                                         <Text
                                             config={{
                                                 x: fields.title.viewProps.x,
@@ -1105,7 +1110,7 @@
                                                 align: "left",
                                                 verticalAlign: "middle",
                                                 fill:
-                                                    $current.song?.index ===
+                                                    $current.index ===
                                                         song?.viewModel
                                                             ?.index &&
                                                     song.id ===
@@ -1133,7 +1138,7 @@
                                                 align: "left",
                                                 verticalAlign: "middle",
                                                 fill:
-                                                    $current.song?.index ===
+                                                    $current.index ===
                                                         song?.viewModel
                                                             ?.index &&
                                                     song.id ===
@@ -1160,7 +1165,7 @@
                                                 align: "left",
                                                 verticalAlign: "middle",
                                                 fill:
-                                                    $current.song?.index ===
+                                                    $current.index ===
                                                         song?.viewModel
                                                             ?.index &&
                                                     song.id ===

@@ -61,19 +61,21 @@ export interface Theme {
     "atk-icon-lyric": string;
     "atk-icon-video": string;
     /** Library */
-    "library-text-color": string;
-    "library-playing-bg": string;
-    "library-playing-text": string;
-    "library-playing-icon": string;
-    "library-highlight-bg": string;
-    "library-hover-bg": string;
-    "library-header-bg": string;
-    "library-header-text": string;
-    "library-header-active-bg": string;
     "library-clickable-cell-bg": string;
     "library-clickable-cell-hover-bg": string;
-    "library-favourite-icon": string;
     "library-favourite-hover-icon": string;
+    "library-favourite-icon": string;
+    "library-header-active-bg": string;
+    "library-header-bg": string;
+    "library-header-text": string;
+    "library-highlight-bg": string;
+    "library-hover-bg": string;
+    "library-playing-bg": string;
+    "library-playing-icon": string;
+    "library-playing-text": string;
+    "library-playing-title": string;
+    "library-text": string;
+    "library-title": string;
     /** Map View */
     "mapview-region-bg": string;
     "mapview-region-border": string;
