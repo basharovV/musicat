@@ -15,7 +15,7 @@
     import { fade, fly } from "svelte/transition";
     import type { PlaylistFile, Song } from "../../App";
     import {
-        addSongsToPlaylists,
+        addSongsToPlaylist,
         createNewPlaylistFile,
         deletePlaylistFile,
         parsePlaylist,
@@ -531,7 +531,7 @@
 
         if ($draggedSongs.length) {
             console.log("[Sidebar] Adding to playlist: ", playlist);
-            await addSongsToPlaylists(playlist, $draggedSongs);
+            await addSongsToPlaylist(playlist, $draggedSongs);
             $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
             toast.success(
                 `${
