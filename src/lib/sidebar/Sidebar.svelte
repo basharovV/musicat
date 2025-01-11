@@ -18,6 +18,7 @@
         addSongsToPlaylists,
         createNewPlaylistFile,
         deletePlaylistFile,
+        parsePlaylist,
         renamePlaylist,
     } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
@@ -72,6 +73,8 @@
     import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import MenuDivider from "../menu/MenuDivider.svelte";
+    import { setQueue } from "../../data/storeHelper";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -466,6 +469,14 @@
         isConfirmingPlaylistDelete = false;
     }
 
+    async function playPlaylist() {
+        const songs = await parsePlaylist(playlistToEdit);
+
+        setQueue(songs, 0);
+
+        showPlaylistMenu = !showPlaylistMenu;
+    }
+
     async function onRenamePlaylist(playlist: PlaylistFile) {
         await renamePlaylist(playlist, updatedPlaylistName);
         updatedPlaylistName = "";
@@ -488,6 +499,26 @@
     function onMouseLeavePlaylist() {
         draggingOverPlaylist = null;
         hoveringOverPlaylistId = null;
+    }
+
+    function onClickPlaylist(e, playlist) {
+        $uiView = "playlists";
+        // Opening a playlist will reset the query
+        $query = {
+            ...$query,
+            orderBy: "none",
+            reverse: false,
+            query: "",
+        };
+        $selectedPlaylistFile = playlist;
+        $selectedSmartQuery = null;
+    }
+
+    function onClickPlaylistOptions(e, playlist) {
+        menuX = e.clientX;
+        menuY = e.clientY;
+        playlistToEdit = playlist;
+        showPlaylistMenu = !showPlaylistMenu;
     }
 
     // $: {
@@ -1075,19 +1106,15 @@
                                                 playlist?.title}
                                             class:selected={$selectedPlaylistFile?.path ===
                                                 playlist.path}
-                                            on:click={() => {
-                                                $uiView = "playlists";
-                                                // Opening a playlist will reset the query
-                                                $query = {
-                                                    ...$query,
-                                                    orderBy: "none",
-                                                    reverse: false,
-                                                    query: "",
-                                                };
-                                                $selectedPlaylistFile =
-                                                    playlist;
-                                                $selectedSmartQuery = null;
-                                            }}
+                                            on:contextmenu|preventDefault={(
+                                                e,
+                                            ) =>
+                                                onClickPlaylistOptions(
+                                                    e,
+                                                    playlist,
+                                                )}
+                                            on:click={(e) =>
+                                                onClickPlaylist(e, playlist)}
                                             on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
                                                 onMouseOverPlaylist(playlist)}
@@ -1129,14 +1156,11 @@
                                                         icon="charm:menu-kebab"
                                                         color="#898989"
                                                         size={14}
-                                                        onClick={(e) => {
-                                                            menuX = e.clientX;
-                                                            menuY = e.clientY;
-                                                            playlistToEdit =
-                                                                playlist;
-                                                            showPlaylistMenu =
-                                                                !showPlaylistMenu;
-                                                        }}
+                                                        onClick={(e) =>
+                                                            onClickPlaylistOptions(
+                                                                e,
+                                                                playlist,
+                                                            )}
                                                     />
                                                 </div>
                                             {/if}
@@ -1376,6 +1400,8 @@
                 }}
                 fixed
             >
+                <MenuOption onClick={playPlaylist} text="Play playlist" />
+                <MenuDivider />
                 <MenuOption
                     isDestructive={true}
                     isConfirming={isConfirmingPlaylistDelete}
