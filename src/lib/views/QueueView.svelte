@@ -29,8 +29,8 @@
         current,
         draggedAlbum,
         draggedSongs,
+        draggedSource,
         forceRefreshLibrary,
-        isDraggingFromQueue,
         isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
@@ -68,6 +68,7 @@
     import {
         findQueueIndex,
         findQueueIndexes,
+        resetDraggedSongs,
         setQueue,
         updateQueues,
     } from "../../data/storeHelper";
@@ -691,13 +692,9 @@
 
         if (!isKeyboardArrows && shouldProcessDrag) {
             // console.log("songshighlighted", songsHighlighted);
-            if (songsHighlighted.length > 1) {
-                $draggedSongs = songsHighlighted;
-                $isDraggingFromQueue = true;
-            } else {
-                $draggedSongs = [song];
-                $isDraggingFromQueue = true;
-            }
+            $draggedSongs =
+                songsHighlighted.length > 1 ? songsHighlighted : [song];
+            $draggedSource = "Queue";
         }
     }
 
@@ -788,8 +785,7 @@
             }
         }
 
-        $draggedSongs = [];
-        $draggedAlbum = null;
+        resetDraggedSongs();
     }
 
     // Something got released over a song in the queue
@@ -798,12 +794,12 @@
             return;
         }
 
-        console.log("mouse up - song", $isDraggingFromQueue);
+        console.log("mouse up - song", $draggedSource);
 
         const delta =
             song.viewModel?.index > $draggedSongs[0].viewModel?.index ? 1 : 0;
 
-        if ($isDraggingFromQueue) {
+        if ($draggedSource === "Queue") {
             if ($draggedSongs.includes(song)) {
                 return;
             }
@@ -843,15 +839,15 @@
                 );
             }
 
-            // Avoid layout shift - compensate for the scroll jump after adding new elements
-            scrollContainer.scrollBy({
-                top: ROW_HEIGHT * $draggedSongs.length,
-            });
+            if ($draggedSource === "Library") {
+                // Avoid layout shift - compensate for the scroll jump after adding new elements
+                scrollContainer.scrollBy({
+                    top: ROW_HEIGHT * $draggedSongs.length,
+                });
+            }
         }
 
-        $draggedSongs = [];
-        $draggedAlbum = null;
-        $isDraggingFromQueue = false;
+        resetDraggedSongs();
     }
 
     function reorderSongs(queue, [index, songs, delta]) {
@@ -1568,13 +1564,13 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
-        border-left: 0.7px solid var(--panel-secondary-border-main);
-        border-bottom: 0.7px solid var(--panel-secondary-border-main);
-        border-right: 0.7px solid var(--panel-secondary-border-main);
+        border-left: 1px solid var(--panel-secondary-border-main);
+        border-bottom: 1px solid var(--panel-secondary-border-main);
+        border-right: 1px solid var(--panel-secondary-border-main);
         overflow: hidden;
         margin: 4px 0 0 0;
         &.dragover {
-            border: 1.5px solid var(--accent-secondary);
+            border-color: var(--accent-secondary);
         }
     }
     .container {

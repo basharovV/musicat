@@ -61,6 +61,7 @@
         smartQueryInitiator,
         smartQueryResults,
         uiView,
+        draggedSource,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -78,7 +79,11 @@
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
     import Scrollbar from "../ui/Scrollbar.svelte";
-    import { setQueue } from "../../data/storeHelper";
+    import {
+        setDraggedAlbum,
+        setDraggedSongs,
+        setQueue,
+    } from "../../data/storeHelper";
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
 
@@ -1130,9 +1135,10 @@
         $arrowFocus = "library";
         // console.log("songshighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
-            $draggedSongs = songsHighlighted;
+            setDraggedSongs(songsHighlighted, "Library");
         } else {
-            $draggedSongs = [song];
+            setDraggedSongs([song], "Library");
+
             if (idx !== undefined && $uiView === "playlists") {
                 draggingSongIdx = idx;
             }

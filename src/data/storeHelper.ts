@@ -1,10 +1,15 @@
-import type { Song } from "src/App";
+import type { Album, PlaylistFile, Song } from "src/App";
 import {
     current,
+    draggedAlbum,
+    draggedSongs,
+    draggedSource,
     isShuffleEnabled,
     queue,
     queueDuration,
     shuffledQueue,
+    type DragSource,
+    draggedPlaylist,
 } from "./store";
 import AudioPlayer from "../lib/player/AudioPlayer";
 import { get } from "svelte/store";
@@ -17,6 +22,44 @@ export function findQueueIndexes(songs: Song[]): number[] {
     const q = get(queue);
 
     return songs.map(({ id }) => q.findIndex((song) => song.id === id));
+}
+
+export function resetDraggedSongs() {
+    if (get(draggedSongs).length) {
+        draggedAlbum.set(null);
+        draggedPlaylist.set(null);
+        draggedSongs.set([]);
+        draggedSource.set(null);
+    }
+}
+
+export function setDraggedAlbum(
+    album: Album,
+    songs: Song[],
+    source: DragSource,
+) {
+    draggedAlbum.set(album);
+    draggedPlaylist.set(null);
+    draggedSongs.set(songs);
+    draggedSource.set(source);
+}
+
+export function setDraggedPlaylist(
+    playlist: PlaylistFile,
+    songs: Song[],
+    source: DragSource,
+) {
+    draggedAlbum.set(null);
+    draggedPlaylist.set(playlist);
+    draggedSongs.set(songs);
+    draggedSource.set(source);
+}
+
+export function setDraggedSongs(songs: Song[], source: DragSource) {
+    draggedAlbum.set(null);
+    draggedPlaylist.set(null);
+    draggedSongs.set(songs);
+    draggedSource.set(source);
 }
 
 export function setQueue(

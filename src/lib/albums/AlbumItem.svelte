@@ -6,12 +6,17 @@
         current,
         draggedAlbum,
         draggedSongs,
+        draggedSource,
         isPlaying,
     } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import LL from "../../i18n/i18n-svelte";
-    import { setQueue } from "../../data/storeHelper";
+    import {
+        resetDraggedSongs,
+        setDraggedAlbum,
+        setQueue,
+    } from "../../data/storeHelper";
 
     export let album: Album; // to display album data
     export let highlighted = false;
@@ -67,20 +72,19 @@
             cancel = false;
 
             if (e.button === 0) {
-                let tracks = await db.songs
+                const songs = await db.songs
                     .where("id")
                     .anyOf(album.tracksIds)
                     .toArray();
-                tracks = tracks.sort((a, b) => {
+
+                songs.sort((a, b) => {
                     return a.trackNumber - b.trackNumber;
                 });
 
                 if (cancel) {
-                    $draggedSongs = [];
-                    $draggedAlbum = null;
+                    resetDraggedSongs();
                 } else {
-                    $draggedSongs = tracks;
-                    $draggedAlbum = album;
+                    setDraggedAlbum(album, songs, "Library");
                 }
             }
         }}

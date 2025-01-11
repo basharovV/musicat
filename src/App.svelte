@@ -69,6 +69,7 @@
     import WikiView from "./lib/views/WikiView.svelte";
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
     import { startMenuListener } from "./window/EventListener";
+    import { resetDraggedSongs } from "./data/storeHelper";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -192,8 +193,8 @@
     }
 
     function onMouseUp() {
-        $draggedSongs = [];
-        $draggedAlbum = null;
+        resetDraggedSongs();
+
         mouseX = 0;
         mouseY = 0;
     }

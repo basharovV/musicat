@@ -28,8 +28,9 @@
         currentIAFile,
         currentSongArtworkSrc,
         draggedAlbum,
+        draggedPlaylist,
         draggedSongs,
-        isDraggingFromQueue,
+        draggedSource,
         isFindFocused,
         isMiniPlayer,
         isPlaying,
@@ -74,7 +75,12 @@
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
-    import { setQueue } from "../../data/storeHelper";
+    import {
+        resetDraggedSongs,
+        setDraggedPlaylist,
+        setDraggedSongs,
+        setQueue,
+    } from "../../data/storeHelper";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -444,6 +450,7 @@
     let draggingOverPlaylist: PlaylistFile = null;
     let hoveringOverPlaylistId: string = null;
     let isRenamingPlaylist = false;
+    let activePlaylist: PlaylistFile = null;
 
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
@@ -484,7 +491,7 @@
         isRenamingPlaylist = false;
     }
 
-    function onMouseOverPlaylist(playlist: PlaylistFile) {
+    function onMouseEnterPlaylist(playlist: PlaylistFile) {
         if (
             $draggedSongs.length &&
             draggingOverPlaylist?.title !== playlist?.title
@@ -496,9 +503,51 @@
         }
     }
 
-    function onMouseLeavePlaylist() {
+    async function onMouseLeavePlaylist(e) {
         draggingOverPlaylist = null;
         hoveringOverPlaylistId = null;
+
+        if (activePlaylist) {
+            const songs = await parsePlaylist(activePlaylist);
+
+            setDraggedPlaylist(activePlaylist, songs, "Sidebar");
+
+            activePlaylist = null;
+        }
+    }
+
+    function onMouseDownPlaylist(playlist: PlaylistFile) {
+        if (!$draggedSongs.length) {
+            activePlaylist = playlist;
+        }
+    }
+
+    async function onMouseUpPlaylist(playlist: PlaylistFile) {
+        if ($draggedPlaylist?.title === playlist.title) {
+            resetDraggedSongs();
+
+            return;
+        }
+
+        if ($draggedSongs.length) {
+            console.log("[Sidebar] Adding to playlist: ", playlist);
+            await addSongsToPlaylists(playlist, $draggedSongs);
+            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
+            toast.success(
+                `${
+                    $draggedSongs.length > 1
+                        ? $draggedSongs.length + " songs"
+                        : $draggedSongs[0].title
+                } added to ${playlist.path}`,
+                {
+                    position: "bottom-center",
+                },
+            );
+
+            resetDraggedSongs();
+        }
+
+        activePlaylist = null;
     }
 
     function onClickPlaylist(e, playlist) {
@@ -512,6 +561,8 @@
         };
         $selectedPlaylistFile = playlist;
         $selectedSmartQuery = null;
+
+        activePlaylist = null;
     }
 
     function onClickPlaylistOptions(e, playlist) {
@@ -557,33 +608,12 @@
         console.log("queries", userQueries);
     }
 
-    function onMouseOverSmartPlaylist(queryId: number | string) {
+    function onMouseEnterSmartPlaylist(queryId: number | string) {
         hoveringOverSmartPlaylistId = queryId;
     }
 
     function onMouseLeaveSmartPlaylist() {
         hoveringOverSmartPlaylistId = null;
-    }
-
-    async function onDropSongsToPlaylist(playlist: PlaylistFile) {
-        if ($draggedSongs.length) {
-            console.log("[Sidebar] Adding to playlist: ", playlist);
-            await addSongsToPlaylists(playlist, $draggedSongs);
-            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
-            toast.success(
-                `${
-                    $draggedSongs.length > 1
-                        ? $draggedSongs.length + " songs"
-                        : $draggedSongs[0].title
-                } added to ${playlist.path}`,
-                {
-                    position: "bottom-center",
-                },
-            );
-            $draggedSongs = [];
-            $draggedAlbum = null;
-            $isDraggingFromQueue = false;
-        }
     }
 
     async function favouriteCurrentSong() {
@@ -1115,11 +1145,13 @@
                                                 )}
                                             on:click={(e) =>
                                                 onClickPlaylist(e, playlist)}
-                                            on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
-                                                onMouseOverPlaylist(playlist)}
+                                                onMouseEnterPlaylist(playlist)}
+                                            on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
+                                            on:mousedown|preventDefault|stopPropagation={() =>
+                                                onMouseDownPlaylist(playlist)}
                                             on:mouseup|preventDefault|stopPropagation={() =>
-                                                onDropSongsToPlaylist(playlist)}
+                                                onMouseUpPlaylist(playlist)}
                                         >
                                             {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                                 <Input
@@ -1224,7 +1256,7 @@
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseOverSmartPlaylist(
+                                            onMouseEnterSmartPlaylist(
                                                 smartQuery.value,
                                             )}
                                     >
@@ -1248,7 +1280,7 @@
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseOverSmartPlaylist(query.id)}
+                                            onMouseEnterSmartPlaylist(query.id)}
                                     >
                                         {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Input
@@ -1514,7 +1546,7 @@
                         <div
                             class="marquee-container"
                             on:mousedown={() => {
-                                $draggedSongs = [song];
+                                setDraggedSongs([song], "Player");
                             }}
                         >
                             <canvas
