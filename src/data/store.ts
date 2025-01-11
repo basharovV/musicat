@@ -224,10 +224,12 @@ export const selectedTags = writable(new Set());
 export const isTagOrCondition = writable(false);
 
 // Playlists
+export type DragSource = "Library" | "Player" | "Queue" | "Sidebar";
 export const selectedPlaylistFile: Writable<PlaylistFile> = writable(null);
-export const draggedSongs: Writable<Song[]> = writable([]);
 export const draggedAlbum: Writable<Album> = writable(null);
-export const isDraggingFromQueue = writable(false);
+export const draggedPlaylist: Writable<PlaylistFile> = writable(null);
+export const draggedSongs: Writable<Song[]> = writable([]);
+export const draggedSource: Writable<DragSource> = writable(null);
 export const dragGhostReset = writable(false);
 
 // Settings

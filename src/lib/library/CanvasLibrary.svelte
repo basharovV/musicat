@@ -26,7 +26,11 @@
     import Konva from "konva";
     import { Context } from "konva/lib/Context";
     import toast from "svelte-french-toast";
-    import { reorderSongsInPlaylist } from "../../data/M3UUtils";
+    import {
+        addSongsToPlaylist,
+        insertSongsToPlaylist,
+        reorderSongsInPlaylist,
+    } from "../../data/M3UUtils";
     import {
         arrowFocus,
         current,
@@ -61,6 +65,7 @@
         smartQueryInitiator,
         smartQueryResults,
         uiView,
+        draggedSource,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -78,7 +83,11 @@
     import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import TrackMenu from "./TrackMenu.svelte";
     import Scrollbar from "../ui/Scrollbar.svelte";
-    import { setQueue } from "../../data/storeHelper";
+    import {
+        resetDraggedSongs,
+        setDraggedSongs,
+        setQueue,
+    } from "../../data/storeHelper";
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
 
@@ -379,6 +388,9 @@
     let virtualViewportHeight = 0; // With padding
     let ctx: CanvasRenderingContext2D;
     let dpr;
+
+    // drag-n-drop
+    let isDraggingOver = false;
 
     // CONSTANTS
     const HEADER_HEIGHT = 22;
@@ -1130,17 +1142,61 @@
         $arrowFocus = "library";
         // console.log("songshighlighted", songsHighlighted);
         if (songsHighlighted.length > 1) {
-            $draggedSongs = songsHighlighted;
+            setDraggedSongs(songsHighlighted, "Library");
         } else {
-            $draggedSongs = [song];
+            setDraggedSongs([song], "Library");
+
             if (idx !== undefined && $uiView === "playlists") {
                 draggingSongIdx = idx;
             }
         }
     }
 
-    async function onReorderSong(song: Song, idx: number) {
-        if (draggingSongIdx !== null && $selectedPlaylistFile) {
+    async function onMouseUpContainer(e) {
+        if (isDraggingOver) {
+            const playlist = $selectedPlaylistFile;
+            const songs = $draggedSongs;
+
+            isDraggingOver = false;
+            resetDraggedSongs();
+
+            console.log("[Library] Adding to playlist: ", playlist);
+            await addSongsToPlaylist(playlist, songs);
+            toast.success(
+                `${
+                    songs.length > 1 ? songs.length + " songs" : songs[0].title
+                } added to ${playlist.path}`,
+                {
+                    position: "bottom-center",
+                },
+            );
+
+            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
+        }
+    }
+
+    async function onMouseUpSong(song: Song, idx: number) {
+        if (isDraggingOver) {
+            const playlist = $selectedPlaylistFile;
+            const songs = $draggedSongs;
+
+            // reset immediately so mouseUp on container won't trigger another addition
+            isDraggingOver = false;
+            resetDraggedSongs();
+
+            console.log("[Library] Insert to playlist: ", playlist);
+            await insertSongsToPlaylist(playlist, songs, idx);
+            toast.success(
+                `${
+                    songs.length > 1 ? songs.length + " songs" : songs[0].title
+                } added to ${playlist.path}`,
+                {
+                    position: "bottom-center",
+                },
+            );
+
+            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
+        } else if (draggingSongIdx !== null && $selectedPlaylistFile) {
             console.log("reorder song", idx);
             if (idx === draggingSongIdx) {
                 draggingSongIdx = null;
@@ -1637,11 +1693,32 @@
     {isOrderChanged}
 />
 
-<div class="library-container" bind:this={libraryContainer}>
+<div
+    class="library-container"
+    class:dragover={isDraggingOver}
+    bind:this={libraryContainer}
+>
     {#if isLoading}
         <!-- <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
         </div> -->
+    {:else if noSongs && $selectedPlaylistFile}
+        <div
+            id="scroll-container"
+            class:ready
+            on:mouseenter={() => {
+                isDraggingOver =
+                    $selectedPlaylistFile && $draggedSongs?.length > 0;
+            }}
+            on:mouseleave={() => {
+                isDraggingOver = false;
+            }}
+        >
+            <div class="container" on:mouseup={onMouseUpContainer}>
+                <h2>Empty playlist</h2>
+                <p>🪣</p>
+            </div>
+        </div>
     {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
         <ImportPlaceholder />
     {:else}
@@ -1650,6 +1727,13 @@
             style="overflow-y: {false ? 'visible' : 'hidden'}"
             class:ready
             bind:this={scrollContainer}
+            on:mouseenter={() => {
+                isDraggingOver =
+                    $selectedPlaylistFile && $draggedSongs?.length > 0;
+            }}
+            on:mouseleave={() => {
+                isDraggingOver = false;
+            }}
         >
             <div
                 id="large-container"
@@ -1662,6 +1746,7 @@
                 class="container"
                 bind:this={container}
                 on:contextmenu|preventDefault
+                on:mouseup={onMouseUpContainer}
             >
                 {#if dim}
                     <div class="dimmer" />
@@ -1751,7 +1836,7 @@
                                             visible: !song.dummy,
                                         }}
                                         on:mouseup={(e) => {
-                                            onReorderSong(
+                                            onMouseUpSong(
                                                 song,
                                                 song.viewModel.index,
                                             );
@@ -2532,6 +2617,9 @@
         border-left: 0.7px solid var(--panel-primary-border-main);
         border-bottom: 0.7px solid var(--panel-primary-border-main);
         overflow: hidden;
+        &.dragover {
+            border-color: var(--accent-secondary);
+        }
     }
     .container {
         width: 100%;
@@ -2543,6 +2631,8 @@
         top: 0;
         bottom: 0;
         user-select: none;
+        align-items: center;
+        justify-content: center;
     }
 
     .dimmer {

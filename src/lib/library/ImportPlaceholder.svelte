@@ -12,10 +12,7 @@
 </script>
 
 <div class="container">
-    {#if $selectedPlaylistFile}
-        <h2>Empty playlist</h2>
-        <p>🪣</p>
-    {:else if $importStatus.isImporting}
+    {#if $importStatus.isImporting}
         <h1>🥁Importing...</h1>
         {#if $importStatus.currentFolder}
             <small>{$importStatus.currentFolder}</small>

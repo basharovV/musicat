@@ -4,7 +4,7 @@ import {
     readDir,
     readTextFile,
     rename,
-    writeTextFile
+    writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
@@ -37,7 +37,7 @@ function parse(contents: string): M3U {
                 line.match(/#EXTINF:([+-]?\d+(?:\.\d+)?),(.+)/) || [];
             currentTrack = {
                 duration: parseInt(duration, 10),
-                title: title.trim()
+                title: title.trim(),
             };
         } else if (!line.trim().startsWith("#")) {
             // Parse media file path
@@ -82,7 +82,7 @@ export async function scanPlaylists() {
         if (entry.isFile && entry.name.endsWith(".m3u")) {
             m3uFiles.push({
                 title: entry.name.split(".m3u")[0],
-                path: await path.join(playlistsLocation, entry.name)
+                path: await path.join(playlistsLocation, entry.name),
             });
         }
     }
@@ -91,7 +91,7 @@ export async function scanPlaylists() {
 }
 
 export async function parsePlaylist(
-    playlistFile: PlaylistFile
+    playlistFile: PlaylistFile,
 ): Promise<Song[]> {
     const fileContents = await readTextFile(playlistFile.path);
     let playlist: M3U;
@@ -116,12 +116,23 @@ export async function parsePlaylist(
     }
 }
 
-export async function addSongsToPlaylists(
+export async function addSongsToPlaylist(
     playlistFile: PlaylistFile,
-    songs: Song[]
+    songs: Song[],
 ) {
     const existingSongs = await parsePlaylist(playlistFile);
     await writePlaylist(playlistFile, [...existingSongs, ...songs]);
+}
+
+export async function insertSongsToPlaylist(
+    playlistFile: PlaylistFile,
+    songs: Song[],
+    index: number,
+) {
+    const playlist = await parsePlaylist(playlistFile);
+    const newPlaylist = [...playlist];
+    newPlaylist.splice(index, 0, ...songs);
+    await writePlaylist(playlistFile, newPlaylist);
 }
 
 export async function createNewPlaylistFile(title: string, songs: Song[] = []) {
@@ -129,18 +140,18 @@ export async function createNewPlaylistFile(title: string, songs: Song[] = []) {
         {
             path: await path.join(
                 get(userSettings).playlistsLocation,
-                `${title}.m3u`
+                `${title}.m3u`,
             ),
-            title
+            title,
         },
-        songs
+        songs,
     );
     await scanPlaylists();
 }
 
 export async function renamePlaylist(
     playlistFile: PlaylistFile,
-    newTitle: string
+    newTitle: string,
 ) {
     console.log("renamePlaylist", playlistFile, newTitle);
     const newPath = playlistFile.path.replace(playlistFile.title, newTitle);
@@ -149,15 +160,15 @@ export async function renamePlaylist(
     await scanPlaylists();
     selectedPlaylistFile.set({
         path: newPath,
-        title: newTitle
+        title: newTitle,
     });
 }
 
 export async function deletePlaylistFile(playlistFile: PlaylistFile) {
     await invoke("delete_files", {
         event: {
-            files: [playlistFile.path]
-        }
+            files: [playlistFile.path],
+        },
     });
     await scanPlaylists();
 }
@@ -165,7 +176,7 @@ export async function deletePlaylistFile(playlistFile: PlaylistFile) {
 export async function reorderSongsInPlaylist(
     playlistFile: PlaylistFile,
     fromIdx: number,
-    toIdx: number
+    toIdx: number,
 ) {
     let playlist = await parsePlaylist(playlistFile);
     playlist = moveArrayElement(playlist, fromIdx, toIdx);
@@ -174,11 +185,11 @@ export async function reorderSongsInPlaylist(
 
 export async function deleteSongsFromPlaylist(
     playlistFile: PlaylistFile,
-    songs: Song[]
+    songs: Song[],
 ): Promise<Song[]> {
     const playlist = await parsePlaylist(playlistFile);
     const newPlaylist = playlist.filter(
-        (ps) => !songs.find((s) => s.id === ps.id)
+        (ps) => !songs.find((s) => s.id === ps.id),
     );
     await writePlaylist(playlistFile, newPlaylist);
     return parsePlaylist(playlistFile);
@@ -191,8 +202,8 @@ export async function writePlaylist(playlistFile: PlaylistFile, songs: Song[]) {
         tracks: songs.map((s) => ({
             title: `${s.artist} - ${s.title}`,
             path: s.path,
-            duration: s.fileInfo.duration
-        }))
+            duration: s.fileInfo.duration,
+        })),
     };
 
     const m3u = write(playlist);
