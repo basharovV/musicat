@@ -380,7 +380,10 @@
                     return false;
                 }
                 if (genericId === "artist") {
-                    return !isCompilation && !hasAlbumArtist && !hideArtist;
+                    return (
+                        !isCompilation &&
+                        ((hasAlbumArtist && !hideArtist) || !hasAlbumArtist)
+                    );
                 }
                 if (genericId === "albumArtist") {
                     return !isCompilation;
