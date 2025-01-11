@@ -22,7 +22,7 @@
         "@tauri-apps/cli": "^2.0.3",
         "@tauri-apps/plugin-clipboard-manager": "^2.0.0-rc.0",
         "@tauri-apps/plugin-dialog": "^2.0.0-rc.0",
-        "@tauri-apps/plugin-fs": "^2.0.0-rc.1",
+        "@tauri-apps/plugin-fs": "^2.2.0",
         "@tauri-apps/plugin-global-shortcut": "^2.0.0-rc.0",
         "@tauri-apps/plugin-http": "^2.0.0-rc.1",
         "@tauri-apps/plugin-os": "^2.0.0-rc.0",
