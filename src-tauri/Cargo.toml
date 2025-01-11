@@ -52,7 +52,7 @@ anyhow = "1.0.90"
 futures-util = "0.3.31"
 tempfile = "3.13.0"
 color-print = "0.3.6"
-tauri-plugin-fs = { version = "2.0.0", features = ["watch"] }
+tauri-plugin-fs = { version = "2.2.0", features = ["watch"] }
 tauri-plugin-os = "2.0.0"
 tauri-plugin-dialog = "2.0.0"
 tauri-plugin-shell = "2.0.0"
