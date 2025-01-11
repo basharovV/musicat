@@ -61,6 +61,7 @@ class AudioPlayer {
     artworkSrc: ArtworkSrc; // for media session (notifications)
     currentSong: Song;
     currentSongIdx: number;
+    seek: number = 0;
     isAlreadyLoadingSong = false; // for when the 'ended' event fires
     queue: Song[];
     shouldPlay = false; // Whether to play immediately after loading playlist
@@ -83,7 +84,9 @@ class AudioPlayer {
 
         seekTime.subscribe((time) => {
             // Tell Rust to play file with seek position
-            if (this.currentSong) this.playCurrent(time);
+            if (this.currentSong) {
+                this.setSeek(time);
+            }
         });
 
         this.setupMediaSession();
@@ -120,6 +123,8 @@ class AudioPlayer {
         });
 
         current.subscribe(async ({ song }) => {
+            this.seek = 0;
+
             if (song) {
                 this.currentSong = song;
             }
@@ -260,6 +265,21 @@ class AudioPlayer {
         appWindow.listen("close", () => {
             current.set({ ...get(current), position: get(playerTime) });
         });
+
+        appWindow.listen("toggle_play", async (event: any) => {
+            console.log("toggle_play");
+            this.togglePlay();
+        });
+
+        appWindow.listen("play_next", async (event: any) => {
+            console.log("play_next");
+            this.playNext();
+        });
+
+        appWindow.listen("play_previous", async (event: any) => {
+            console.log("play_previous");
+            this.playPrevious();
+        });
     }
 
     async setupBuffers() {
@@ -302,7 +322,7 @@ class AudioPlayer {
 
     playCurrent(seek: number = 0) {
         if (this.currentSong) {
-            this.playSong(this.currentSong, seek);
+            this.playSong(this.currentSong, seek || this.seek);
         } else {
             this.playSong(this.queue[this.currentSongIdx], seek);
         }
@@ -442,6 +462,16 @@ class AudioPlayer {
         }
     }
 
+    setSeek(seek: number) {
+        if (get(isPlaying)) {
+            this.playSong(this.currentSong, seek);
+        } else {
+            this.seek = seek;
+
+            playerTime.set(seek);
+        }
+    }
+
     async incrementPlayCounter(song: Song) {
         await db.songs.update(song, {
             playCount: song.playCount ? song.playCount + 1 : 1,
@@ -451,6 +481,8 @@ class AudioPlayer {
     // MEDIA
 
     async playSong(song: Song, position = 0, play = true, index = null) {
+        this.seek = 0;
+
         if (song) {
             if (get(isIAPlaying)) {
                 webAudioPlayer.pause();
@@ -539,17 +571,21 @@ class AudioPlayer {
     }
 
     async play(isResume: boolean) {
-        this.isStopped = false;
+        if (this.seek) {
+            this.playSong(this.currentSong, this.seek);
+        } else {
+            this.isStopped = false;
 
-        if (isResume) {
-            await invoke("decode_control", {
-                event: {
-                    decoding_active: true,
-                },
-            });
+            if (isResume) {
+                await invoke("decode_control", {
+                    event: {
+                        decoding_active: true,
+                    },
+                });
+            }
+
+            this.onPlay();
         }
-
-        this.onPlay();
     }
 
     async pause() {

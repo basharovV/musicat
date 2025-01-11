@@ -17,6 +17,7 @@ use std::error::Error;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
+use symphonia::core::units::TimeBase;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
@@ -192,24 +193,6 @@ fn get_waveform(
 #[derive(Clone, Debug)]
 pub struct SampleOffsetEvent {
     pub sample_offset: Option<u64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct VolumeControlEvent {
-    volume: Option<f64>, // 0 to 1
-}
-
-#[tauri::command]
-fn volume_control(event: VolumeControlEvent, state: State<AudioPlayer>) {
-    info!("Received volume_control event");
-    match state.volume_control_sender.send(event) {
-        Ok(_) => {
-            // info!("Sent control flow info");
-        }
-        Err(_err) => {
-            info!("Error sending volume control info (channel inactive");
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -533,16 +516,19 @@ async fn main() {
             });
 
             let command_clone = strm3.clone();
+            let app_next = app_.clone();
+            let app_previous = app_.clone();
+            let app_toggle = app_.clone();
             // Prepare to set Now Playing info on Mac
             #[cfg(target_os = "macos")]
             {
                 let mut command_center = RemoteCommandCenter::new();
 
-                // Define play and pause handlers
-                let play_handler = move || {
-                    println!("Play command received - custom handling logic here");
-                    // Add your custom play logic
-                    strm3.resume();
+                // Define the handlers
+                let next_handler = move || {
+                    println!("Next command received - custom handling logic here");
+                    // Add your custom next logic
+                    let _ = app_next.emit("play_next", ());
                 };
 
                 let pause_handler = move || {
@@ -551,8 +537,32 @@ async fn main() {
                     command_clone.pause();
                 };
 
+                let play_handler = move || {
+                    println!("Play command received - custom handling logic here");
+                    // Add your custom play logic
+                    strm3.resume();
+                };
+
+                let previous_handler = move || {
+                    println!("Previous command received - custom handling logic here");
+                    // Add your custom previous logic
+                    let _ = app_previous.emit("play_previous", ());
+                };
+
+                let toggle_handler = move || {
+                    println!("Toggle command received - custom handling logic here");
+                    // Add your custom toggle logic
+                    let _ = app_toggle.emit("toggle_play", ());
+                };
+
                 // Set the handlers
-                command_center.set_handlers(play_handler, pause_handler);
+                command_center.set_handlers(
+                    play_handler,
+                    pause_handler,
+                    toggle_handler,
+                    previous_handler,
+                    next_handler,
+                );
 
                 // Setup the remote command center
                 command_center.setup_remote_command_center();
@@ -651,7 +661,8 @@ async fn main() {
             queue_next,
             init_streamer,
             decode_control,
-            volume_control,
+            player::volume_control,
+            player::playback_speed_control,
             get_waveform,
             player::loop_region,
             player::change_audio_device,

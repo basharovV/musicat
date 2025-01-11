@@ -44,12 +44,9 @@ use crate::constants::*;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::metadata::Song;
-use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig};
+use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState};
 use crate::store::load_settings;
-use crate::{
-    dsp, GetWaveformRequest, GetWaveformResponse, SampleOffsetEvent, StreamFileRequest,
-    VolumeControlEvent,
-};
+use crate::{dsp, GetWaveformRequest, GetWaveformResponse, SampleOffsetEvent, StreamFileRequest};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LoopRegionRequest {
@@ -69,6 +66,17 @@ pub enum PlayerControlEvent {
     StreamFile(StreamFileRequest), // path, seekpos
     LoopRegion(LoopRegionRequest),
     ChangeAudioDevice(ChangeAudioDeviceRequest),
+    ChangePlaybackSpeed(PlaybackSpeedControlEvent),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VolumeControlEvent {
+    pub volume: Option<f64>, // 0 to 1
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PlaybackSpeedControlEvent {
+    playback_speed: Option<f64>, // 0.3 to 3
 }
 
 #[tauri::command]
@@ -96,6 +104,36 @@ pub fn change_audio_device(
 
     // Handle the case where audio device is changed while paused
     state.resume();
+}
+
+#[tauri::command]
+pub fn volume_control(event: VolumeControlEvent, state: State<AudioPlayer>) {
+    info!("Received volume_control event");
+    match state.volume_control_sender.send(event) {
+        Ok(_) => {
+            // info!("Sent control flow info");
+        }
+        Err(_err) => {
+            info!("Error sending volume control info (channel inactive)");
+        }
+    }
+}
+
+#[tauri::command]
+pub fn playback_speed_control(event: PlaybackSpeedControlEvent, state: State<AudioPlayer>) {
+    info!("Received playback_speed_control event");
+
+    match state
+        .player_control_sender
+        .send(PlayerControlEvent::ChangePlaybackSpeed(event))
+    {
+        Ok(_) => {
+            // info!("Sent control flow info");
+        }
+        Err(_err) => {
+            info!("Error sending playback_speed_control info (channel inactive)");
+        }
+    }
 }
 
 pub const PAUSED: u32 = 0;
@@ -356,7 +394,6 @@ pub fn start_audio(
 ) {
     let decoding_active = decoding_active.clone();
     let vol_receiver = volume_control_receiver.clone();
-
     decoding_active.store(ACTIVE, std::sync::atomic::Ordering::Relaxed);
 
     wake_all(decoding_active.as_ref());
@@ -403,6 +440,7 @@ fn decode_loop(
     let mut end_pos = None;
 
     let mut volume = None;
+    let mut playback_speed = 1.0f64;
     let mut audio_device_name = None;
     let mut previous_audio_device_name: String = String::new();
     let mut previous_sample_rate = 44100;
@@ -433,6 +471,8 @@ fn decode_loop(
      * while playing the ending of the current one. */
     let mut is_transition = false;
     let mut is_reset = true; // Whether the playback has been 'reset' (i.e double click on new track, next btn)
+
+    let mut resampler_delay = 0.0;
 
     let mut current_max_frames = 1152;
 
@@ -470,6 +510,12 @@ fn decode_loop(
                         }
                         is_reset = true;
                         is_transition = false;
+                    }
+                    PlayerControlEvent::ChangePlaybackSpeed(request) => {
+                        info!("audio: change playback speed! {:?}", request);
+                        if let Some(speed) = request.playback_speed {
+                            playback_speed = speed;
+                        }
                     }
                 }
             }
@@ -524,7 +570,10 @@ fn decode_loop(
                 error!("Error probing file: {}", probe_result.err().unwrap());
                 path_str = None;
                 let _ = reset_control_sender.send(true);
-                let _ = playback_state_sender.send(false);
+                let _ = playback_state_sender.send(PlaybackState {
+                    is_playing: false,
+                    playback_speed,
+                });
                 continue;
             }
 
@@ -724,7 +773,7 @@ fn decode_loop(
             let song = crate::metadata::extract_metadata(
                 &Path::new(&p.clone().as_str()),
                 false,
-                false,
+                true,
                 &app_handle,
             );
 
@@ -812,10 +861,9 @@ fn decode_loop(
                     if let Ok(mut guard) = ao.try_lock() {
                         let mut transition_time = Instant::now();
                         let mut started_transition = false;
-
                         // Resampling stuff
                         guard.resume();
-                        guard.update_resampler(spec, current_max_frames);
+                        guard.update_resampler(spec, current_max_frames, playback_speed, is_reset);
 
                         // Until all samples have been flushed - don't start decoding
                         // Keep checking until all samples have been played (buffer is empty)
@@ -882,6 +930,24 @@ fn decode_loop(
                                         is_reset = true;
                                         is_transition = false;
                                     }
+                                    PlayerControlEvent::ChangePlaybackSpeed(request) => {
+                                        info!("audio: change playback speed! {:?}", request);
+                                        if let Some(speed) = request.playback_speed {
+                                            playback_speed = speed;
+                                        }
+                                        // while guard.has_remaining_samples() {
+                                        //     guard.flush();
+                                        //     info!(
+                                        //         "Buffer is not empty yet, waiting to continue..."
+                                        //     );
+                                        // }
+                                        guard.update_resampler(
+                                            spec,
+                                            current_max_frames,
+                                            playback_speed,
+                                            false,
+                                        );
+                                    }
                                 }
                             }
 
@@ -891,7 +957,10 @@ fn decode_loop(
                                 is_paused = true;
                                 info!("Sending paused state to output");
                                 guard.pause();
-                                let _ = playback_state_sender.send(false);
+                                let _ = playback_state_sender.send(PlaybackState {
+                                    is_playing: true,
+                                    playback_speed,
+                                });
                                 let _ = app_handle.emit("paused", {});
                                 #[cfg(target_os = "macos")]
                                 mediakeys::set_paused();
@@ -958,6 +1027,22 @@ fn decode_loop(
                                                 wake_all(decoding_active.as_ref());
                                             }
                                         }
+                                        PlayerControlEvent::ChangePlaybackSpeed(request) => {
+                                            info!("audio: change playback speed! {:?}", request);
+                                            if let Some(speed) = request.playback_speed {
+                                                playback_speed = speed;
+                                            }
+                                            // while guard.has_remaining_samples() {
+                                            //     guard.flush();
+                                            //     info!("Buffer is not empty yet, waiting to continue...");
+                                            // }
+                                            guard.update_resampler(
+                                                spec,
+                                                current_max_frames,
+                                                playback_speed,
+                                                false,
+                                            );
+                                        }
                                     }
                                 }
 
@@ -970,7 +1055,10 @@ fn decode_loop(
                                 break Ok(());
                             }
 
-                            let _ = playback_state_sender.send(true);
+                            let _ = playback_state_sender.send(PlaybackState {
+                                is_playing: true,
+                                playback_speed,
+                            });
                             let _ = app_handle.emit("playing", {});
                             #[cfg(target_os = "macos")]
                             mediakeys::set_playing();
@@ -1043,9 +1131,14 @@ fn decode_loop(
                                             delta = duration - seeked_to;
                                         }
 
-                                        if transition_time.elapsed().as_secs_f64()
-                                            >= BUFFER_SIZE - delta
+                                        if transition_time.elapsed().as_secs_f64() * playback_speed
+                                            >= (BUFFER_SIZE - delta + (resampler_delay))
                                         {
+                                            info!(
+                                                "transition complete after {:.2}s, with {:.2}s delay",
+                                                transition_time.elapsed().as_secs_f64(),
+                                                resampler_delay
+                                            );
                                             if end_pos.is_some() {
                                                 let _ =
                                                     sender_sample_offset.send(SampleOffsetEvent {
@@ -1124,6 +1217,7 @@ fn decode_loop(
                                 if let Some(request) = next_track {
                                     if let Some(path) = request.path.clone() {
                                         is_transition = true;
+                                        resampler_delay = guard.get_resampler_delay();
                                         info!("player: next track received! {:?}", request);
                                         path_str.replace(path);
                                         prev_seek = seek.unwrap_or(0.0);

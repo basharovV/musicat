@@ -1,9 +1,32 @@
 import type { TagType } from "src/App";
 
 function inverse(obj) {
-    var retobj = {};
-    for (var key in obj) {
-        retobj[obj[key]] = key;
+    const retobj = {};
+    for (const key in obj) {
+        const value = obj[key];
+        if (Array.isArray(value)) {
+            for (const val of value) {
+                if (retobj[val]) {
+                    if (Array.isArray(retobj[val])) {
+                        retobj[val].push(key);
+                    } else {
+                        retobj[val] = [retobj[val], key];
+                    }
+                } else {
+                    retobj[val] = key;
+                }
+            }
+        } else {
+            if (retobj[value]) {
+                if (Array.isArray(retobj[value])) {
+                    retobj[value].push(key);
+                } else {
+                    retobj[value] = [retobj[value], key];
+                }
+            } else {
+                retobj[value] = key;
+            }
+        }
     }
     return retobj;
 }
@@ -16,19 +39,18 @@ interface TagFieldMap {
     composer?: string;
     performer?: string;
     genre: string;
-    date: string;
+    year: string;
     copyright?: string;
     publisher?: string;
     trackNumber: string;
+    trackTotal?: string[];
     license?: string;
-    location?: string;
     isrc?: string;
     bpm?: string;
     compilation?: string;
     discNumber?: string;
+    discTotal?: string[];
     encodingTool?: string;
-    gapless?: string;
-    normalization?: string;
 }
 
 const genericToVorbisMap: TagFieldMap = {
@@ -38,17 +60,18 @@ const genericToVorbisMap: TagFieldMap = {
     albumArtist: "ALBUMARTIST",
     composer: "COMPOSER",
     genre: "GENRE",
-    date: "DATE",
-    trackNumber: "TRACKNUMBER",
+    year: "DATE",
     compilation: "COMPILATION",
+    trackNumber: "TRACKNUMBER",
+    trackTotal: ["TRACKTOTAL", "TOTALTRACKS"],
     discNumber: "DISCNUMBER",
+    discTotal: ["DISCTOTAL", "TOTALDISCS"],
     copyright: "COPYRIGHT",
     publisher: "PUBLISHER",
     performer: "PERFORMER",
     license: "LICENSE",
-    location: "LOCATION",
     isrc: "ISRC",
-    bpm: "BPM"
+    bpm: "BPM",
 };
 
 const vorbisToGenericMap = inverse(genericToVorbisMap);
@@ -63,8 +86,8 @@ const genericToId3v1Map: TagFieldMap = {
     artist: "artist",
     album: "album",
     genre: "genre",
-    date: "year",
-    trackNumber: "track"
+    year: "year",
+    trackNumber: "track",
 };
 
 const id3v1ToGenericMap = inverse(genericToId3v1Map);
@@ -81,14 +104,16 @@ const genericToId3v22Map: TagFieldMap = {
     albumArtist: "TP2",
     composer: "TCM",
     genre: "TCO",
-    date: "TYE",
-    trackNumber: "TRK",
+    year: "TYE",
     compilation: "TCP",
+    trackNumber: "TRK",
+    trackTotal: ["TRK"],
     discNumber: "TPA",
+    discTotal: ["TPA"],
     copyright: "TCR",
     publisher: "TPB",
     isrc: "TRC",
-    bpm: "TBP"
+    bpm: "TBP",
 };
 
 const id3v22ToGenericMap = inverse(genericToId3v22Map);
@@ -105,14 +130,16 @@ const genericToId3v23Map: TagFieldMap = {
     albumArtist: "TPE2",
     composer: "TCOM",
     genre: "TCON",
-    date: "TDAT",
-    trackNumber: "TRCK",
+    year: "TDAT",
     compilation: "TCMP",
+    trackNumber: "TRCK",
+    trackTotal: ["TRCK"],
     discNumber: "TPOS",
+    discTotal: ["TPOS"],
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v23ToGenericMap = inverse(genericToId3v23Map);
@@ -129,14 +156,16 @@ const genericToId3v24Map: TagFieldMap = {
     albumArtist: "TPE2",
     composer: "TCOM",
     genre: "TCON",
-    date: "TDRC",
-    trackNumber: "TRCK",
+    year: "TDRC",
     compilation: "TCMP",
+    trackNumber: "TRCK",
+    trackTotal: ["TRCK"],
     discNumber: "TPOS",
+    discTotal: ["TPOS"],
     copyright: "TCOP",
     publisher: "TPUB",
     isrc: "TSRC",
-    bpm: "TBPM"
+    bpm: "TBPM",
 };
 
 const id3v24ToGenericMap = inverse(genericToId3v24Map);
@@ -154,19 +183,21 @@ const genericToiTunesMap: TagFieldMap = {
     albumArtist: "aART",
     composer: "©wrt",
     genre: "gnre",
-    date: "©day",
+    year: "©day",
+    compilation: "cpil",
     trackNumber: "trkn",
+    trackTotal: ["trkn"],
+    discNumber: "disk",
+    discTotal: ["disk"],
     copyright: "cprt",
     encodingTool: "©too",
-    gapless: "----:com.apple.iTunes:iTunSMPB",
-    normalization: "----:com.apple.iTunes:iTunNORM"
 };
 
 const iTunesToGenericMap = inverse(genericToiTunesMap);
 
 function getMapForTagType(
     tagType: TagType,
-    fromGeneric: boolean = true
+    fromGeneric: boolean = true,
 ): object | null {
     switch (tagType) {
         case "vorbis":
@@ -194,7 +225,7 @@ function getMapForTagType(
 const codecToTagTypeMap = {
     FLAC: "Vorbis",
     MPEG: "ID3v2.4",
-    "MPEG 1 Layer 3": "ID3v2.4"
+    "MPEG 1 Layer 3": "ID3v2.4",
 };
 
 function getTagTypeFromCodec(codec) {

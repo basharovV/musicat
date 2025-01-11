@@ -4,26 +4,14 @@
     import { open as fileOpen } from "@tauri-apps/plugin-shell";
 
     import hotkeys from "hotkeys-js";
-    import { cloneDeep, isEqual, uniqBy } from "lodash-es";
-    import type {
-        Album,
-        MetadataEntry,
-        Song,
-        TagType,
-        ToImport,
-    } from "src/App";
+    import type { Song } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { fade, fly } from "svelte/transition";
-    import { getMapForTagType } from "../../data/LabelMap";
-    import { readMappedMetadataFromSong } from "../../data/LibraryUtils";
     import { db } from "../../data/db";
     import {
-        current,
-        lastWrittenSongs,
         os,
-        playerTime,
         popupOpen,
         rightClickedTrack,
         rightClickedTracks,
@@ -31,14 +19,8 @@
     import { focusTrap } from "../../utils/FocusTrap";
     import "../tippy.css";
     import Input from "../ui/Input.svelte";
-    import { optionalTippy } from "../ui/TippyAction";
 
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-    import {
-        ENCODINGS,
-        decodeLegacy,
-        encodeUtf8,
-    } from "../../utils/EncodingUtils";
     import {
         fetchAlbumArt,
         findCountryByArtist,
@@ -49,111 +31,15 @@
     import { Image } from "@tauri-apps/api/image";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
-    import audioPlayer from "../player/AudioPlayer";
-    import { get } from "svelte/store";
+    import MetadataSection from "./MetadataSection.svelte";
     // optional
 
-    const ALBUM_FIELDS = [
-        "album",
-        "albumArtist",
-        "artist",
-        "date",
-        "genre",
-        "compilation",
-    ];
-
-    function onClose() {
-        $popupOpen = null;
-    }
-
-    function addDefaults(metadata: MetadataEntry[], format: TagType) {
-        // Map eg. 'TITLE' (FLAC/Vorbis) -> title (Musicat generic identifier)
-        const map = getMapForTagType(format, false);
-        // Add empty default fields
-        const defaults: MetadataEntry[] = [];
-        const others: MetadataEntry[] = [];
-        console.log("map", map);
-        if (!map) return { defaults, others };
-        for (const field of Object.entries(map)) {
-            // Check if this default field already exists in the file
-            const existingField = metadata?.find(
-                (m) => field[1] === m.genericId,
-            );
-
-            defaults.push({
-                id: field[0],
-                genericId: field[1],
-                value: existingField ? existingField.value : null,
-            });
-        }
-
-        for (const field of metadata) {
-            const inDefaults = defaults.find(
-                (t) => t.genericId === field.genericId,
-            );
-            if (!inDefaults) {
-                others.push({
-                    id: field.id,
-                    genericId: field.genericId,
-                    value: field.value,
-                });
-            }
-        }
-        return { defaults, others };
-    }
-
-    let isUnsupportedFormat = false;
-
-    function mergeDefault(
-        metadata: MetadataEntry[],
-        format: TagType,
-    ): MetadataEntry[] {
-        if (
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
-            "WAV"
-        ) {
-            isUnsupportedFormat = true;
-            return []; // UNSUPPORTED FORMAT, for now...
-        }
-
-        console.log("adding defaults", metadata, format);
-        if (!format) return [];
-
-        isUnsupportedFormat = false;
-        const cloned = cloneDeep(metadata);
-        const { defaults, others } = addDefaults(cloned, format);
-        return uniqBy(
-            [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
-            "id",
-        );
-    }
-
-    // console.log("track", ($rightClickedTrack || $rightClickedTracks[0]));
-    let metadata: { mappedMetadata: MetadataEntry[]; tagType: TagType } = {
-        mappedMetadata: [],
-        tagType: null,
-    };
-    let metadataFromFile: MetadataEntry[] = [];
-    // let metadata: MetadataEntry[] = cloneDeep(($rightClickedTrack || $rightClickedTracks[0]).metadata);
-
-    function getDurationText(durationInSeconds: number) {
-        return `${(~~(
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration /
-            60
-        ))
-            .toString()
-            .padStart(2, "0")}:${(~~(
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration %
-            60
-        ))
-            .toString()
-            .padStart(2, "0")}`;
-    }
-
     // The artwork for this track(s)
-    let artworkFormat;
     let artworkBuffer: Buffer;
+    let artworkFocused = false;
+    let artworkFormat;
     let artworkSrc;
+    let foundArtwork;
 
     // When scrolling through tracks, re-use artworks
     let previousArtworkFormat;
@@ -166,12 +52,23 @@
     let isArtworkSet: "delete" | "replace" | false = false;
     let artworkFileToSet = null;
 
-    let foundArtwork;
+    let unlisten;
 
-    $: hasChanges =
-        isArtworkSet || !isEqual(metadata?.mappedMetadata, metadataFromFile);
+    let previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
 
-    let artworkFocused = false;
+    let metadata: MetadataSection;
+    let hasMetadataChanges: false;
+
+    $: hasChanges = !!isArtworkSet || hasMetadataChanges;
+
+    function completeMetadataEvent(event) {
+        event.artwork_file = artworkFileToSet ? artworkFileToSet : "";
+        event.artwork_data = artworkToSetData ?? [];
+        event.artwork_data_mime_type = artworkToSetFormat;
+        event.delete_artwork = isArtworkSet === "delete";
+
+        return event;
+    }
 
     async function getArtwork() {
         if ($rightClickedTrack === null && !$rightClickedTracks.length) {
@@ -190,7 +87,7 @@
                     `Error reading file ${path}. Check permissions, or if the file is used by another program.`,
                     { className: "app-toast" },
                 );
-                metadata = { mappedMetadata: [], tagType: null };
+                metadata.data = { mappedMetadata: [], tagType: null };
             }
 
             if (songWithArtwork?.artwork) {
@@ -228,171 +125,29 @@
         }
     }
 
-    /**
-     * Send an event to the backend to write the new metadata, overwriting any existing tags.
-     */
-    async function writeMetadata() {
-        let toImport: ToImport;
-        if ($rightClickedTrack) {
-            const toWrite = metadata?.mappedMetadata
-                .filter((m) => m.value !== null)
-                .map((t) => ({ id: t.id, value: t.value }));
-            console.log("Writing: ", toWrite);
-
-            const event = {
-                tracks: [
-                    {
-                        song_id: $rightClickedTrack.id,
-                        metadata: toWrite,
-                        tag_type: metadata.tagType,
-                        file_path: $rightClickedTrack.path,
-                        artwork_file: artworkFileToSet ? artworkFileToSet : "",
-                        artwork_data: artworkToSetData ?? [],
-                        artwork_data_mime_type: artworkToSetFormat,
-                        delete_artwork: isArtworkSet === "delete",
-                    },
-                ],
-            };
-            // console.log("event: ", event);
-
-            toImport = await invoke<ToImport>("write_metadatas", { event });
-        } else if ($rightClickedTracks?.length) {
-            console.log("Writing album");
-            toImport = await invoke<ToImport>("write_metadatas", {
-                event: {
-                    tracks: await Promise.all(
-                        $rightClickedTracks.map(async (track) => {
-                            const fileMetadata =
-                                await readMappedMetadataFromSong(track);
-                            return {
-                                song_id: track.id,
-                                metadata: [
-                                    ...fileMetadata?.mappedMetadata,
-                                    ...metadata?.mappedMetadata
-                                        .filter(
-                                            (m) =>
-                                                m.value !== null &&
-                                                ALBUM_FIELDS.includes(
-                                                    m.genericId,
-                                                ),
-                                        )
-                                        .map((t) => ({
-                                            id: t.id,
-                                            value: t.value,
-                                        })),
-                                ],
-                                tag_type: fileMetadata.tagType,
-                                file_path: track.path,
-                                artwork_file: artworkFileToSet
-                                    ? artworkFileToSet
-                                    : "",
-                                artwork_data: artworkToSetData ?? [],
-                                artwork_data_mime_type: artworkToSetFormat,
-                                delete_artwork: isArtworkSet === "delete",
-                            };
-                        }),
-                    ),
-                },
-            });
-        }
-        console.log($rightClickedTrack || $rightClickedTracks[0]);
-        console.log(toImport);
-        if (toImport) {
-            if (toImport.error) {
-                // Show error
-                toast.error(toImport.error);
-                // Roll back to current artwork
-                artworkToSetFormat = null;
-                artworkToSetSrc = null;
-                artworkToSetData = null;
-            } else {
-                await reImportTracks(toImport.songs);
-            }
-        }
-
-        if (toImport.albums.length) {
-            for (const album of toImport.albums) {
-                await reImportAlbum(album);
-            }
-        }
-
-        toast.success("Successfully written metadata!", {
-            position: "top-right",
-        });
-
-        $lastWrittenSongs = $rightClickedTrack
-            ? [$rightClickedTrack]
-            : $rightClickedTracks;
-
-        // If we changed the artwork tag, this offsets the audio data in the file,
-        // so we need to reload the song and seek to the current position
-        // (will cause audible gap)
-        const writtenTracks = $rightClickedTrack
-            ? [$rightClickedTrack]
-            : $rightClickedTracks;
-        if (
-            (artworkFileToSet || artworkToSetData) &&
-            writtenTracks.map((t) => t.id).includes($current.song.id)
-        ) {
-            audioPlayer.playCurrent(get(playerTime));
-        }
-
-        await reset();
+    function getDurationText(durationInSeconds: number) {
+        return `${(~~(
+            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration /
+            60
+        ))
+            .toString()
+            .padStart(2, "0")}:${(~~(
+            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration %
+            60
+        ))
+            .toString()
+            .padStart(2, "0")}`;
     }
 
-    async function reImportAlbum(album: Album) {
-        const existingAlbum = await db.albums.get(album.id);
-        if (existingAlbum) {
-            existingAlbum.tracksIds = [
-                ...existingAlbum.tracksIds,
-                ...album.tracksIds,
-            ];
-            await db.albums.put(existingAlbum);
-        }
+    function hasArtworkToSet() {
+        return (
+            artworkFileToSet || artworkToSetData || isArtworkSet === "delete"
+        );
     }
 
-    async function reImportTracks(songs: Song[]) {
-        await db.songs.bulkPut(songs);
+    function onClose() {
+        $popupOpen = null;
     }
-
-    /**
-     * @param {String} imageData a uint8 array
-     * @param {String} format the image format eg. image/jpeg
-     */
-    function setBlockPictureTag(imageData: string, format) {
-        const blockPicture = {
-            colour_depth: 24,
-            data: imageData,
-            description: "",
-            format,
-            height: 500,
-            indexed_color: 0,
-            type: "Cover (front)",
-            width: 500,
-        };
-        // metadata.push({
-        //     id: "METADATA_BLOCK_PICTURE",
-        //     value: blockPicture
-        // });
-    }
-
-    const imageUrlToBase64 = async (url): Promise<string> => {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return new Promise((onSuccess, onError) => {
-            try {
-                const reader = new FileReader();
-                reader.onload = function () {
-                    onSuccess(this.result as string);
-                };
-                reader.readAsDataURL(blob);
-            } catch (e) {
-                onError(e);
-            }
-        });
-    };
-
-    let unlisten;
 
     async function onImageClick(evt) {
         console.log("clicked", artworkFocused);
@@ -437,20 +192,20 @@
         }
     }
 
-    /**
-     * Grabs the existing tags from the file, and adds in the defaults for that file format
-     */
-    async function getMetadataFromFile(song: Song): Promise<MetadataEntry[]> {
-        // Get metadata from file
-        const { mappedMetadata, tagType } =
-            await readMappedMetadataFromSong(song);
-
-        const result = mergeDefault(mappedMetadata, tagType);
-        metadataFromFile = cloneDeep(result);
-        return result;
+    async function reset() {
+        updateArtwork();
+        previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
+        originCountry =
+            ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
+        originCountryEdited = originCountry;
+        metadata?.resetMetadata();
     }
 
-    let previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
+    function rollbackArtwork() {
+        artworkToSetFormat = null;
+        artworkToSetSrc = null;
+        artworkToSetData = null;
+    }
 
     async function updateArtwork() {
         artworkFormat = null;
@@ -465,30 +220,11 @@
         await getArtwork();
     }
 
-    async function reset() {
-        updateArtwork();
-        containsError = null;
-        previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
-        const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
-            $rightClickedTrack || $rightClickedTracks[0],
-        );
-        metadata = {
-            mappedMetadata: mergeDefault(mappedMetadata, tagType),
-            tagType,
-        };
-        metadataFromFile = cloneDeep(metadata.mappedMetadata);
-        originCountry =
-            ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
-        originCountryEdited = originCountry;
-        hasChanges = !isEqual(metadata?.mappedMetadata, metadataFromFile);
-        console.log("metadata", metadata);
-    }
-
     // Shortcuts
     let modifier = $os === "macos" ? "cmd" : "ctrl";
-    hotkeys(`${modifier}+enter`, "track-info", function (event, handler) {
+    hotkeys(`${modifier}+enter`, "track-info", (event, handler) => {
         if (hasChanges) {
-            writeMetadata();
+            metadata?.writeMetadata();
         }
     });
     hotkeys("esc", "track-info", () => {
@@ -499,185 +235,6 @@
         if ($rightClickedTrack || $rightClickedTracks[0]) {
             reset();
         }
-    }
-
-    let matchingArtists: string[] = [];
-
-    let distinctArtists;
-
-    let firstMatch: string = null;
-    $: firstMatchRemainder = firstMatch?.startsWith(artistInput)
-        ? firstMatch.substring(artistInput.length, firstMatch.length)
-        : "";
-    $: {
-        console.log(firstMatchRemainder);
-    }
-
-    $: artistInput =
-        metadata?.mappedMetadata?.find((m) => m.genericId === "compilation")
-            ?.value === "1" ||
-        metadata?.mappedMetadata?.find((m) => m.genericId === "albumArtist")
-            ?.value
-            ? ""
-            : metadata?.mappedMetadata?.find((m) => m.genericId === "artist")
-                  ?.value ?? "";
-
-    let artistInputField: HTMLInputElement;
-
-    function onArtistAutocompleteSelected() {
-        if (firstMatch?.length) {
-            console.log("firstMatch", firstMatch);
-            console.log("artistInput", artistInput);
-            const artistField = metadata?.mappedMetadata?.find(
-                (m) => m.genericId === "artist",
-            );
-            if (artistField) {
-                artistField.value = firstMatch;
-                artistInput = firstMatch;
-            }
-            metadata = metadata;
-            firstMatch = null;
-        }
-    }
-
-    async function onArtistUpdated(value) {
-        console.log("artist updated");
-        artistInput = value;
-        const artistField = metadata?.mappedMetadata?.find(
-            (m) => m.genericId === "artist",
-        );
-        if (artistField) {
-            artistField.value = artistInput;
-        }
-        metadata = metadata;
-        let matched = [];
-        const artist = value;
-        if (artist && artist.trim().length > 0) {
-            if (distinctArtists === undefined) {
-                distinctArtists = await db.songs.orderBy("artist").uniqueKeys();
-            }
-            distinctArtists.forEach((a) => {
-                if (a.toLowerCase().startsWith(artist.toLowerCase())) {
-                    matched.push(a);
-                }
-            });
-
-            firstMatch = matched.length && matched[0] ? matched[0] : null;
-        } else {
-            firstMatch = null;
-        }
-    }
-
-    const VALIDATION_STRINGS = {
-        "err:invalid-chars":
-            "Invalid characters in metadata tag (hidden/unicode characters?)",
-        "err:null-chars": "Hidden null characer",
-        "warn:custom-tag":
-            "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead.",
-    };
-
-    type ValidationErrors = "err:invalid-chars" | "err:null-chars";
-    type ValidationWarnings = "warn:custom-tag" | "warn:cyrillic-encoding";
-
-    type Validation = {
-        [key: string]: {
-            errors: ValidationErrors[];
-            warnings: ValidationWarnings[];
-        };
-    };
-
-    /**
-     * Some tags have a \u0000 character dangling at the end.
-     * This prevents the metadata from being read properly, so we can
-     * show a prompt to fix this with the user's permission.
-     */
-    let containsError: ValidationErrors = null;
-
-    function stripNonAsciiChars() {
-        metadata.mappedMetadata = metadata?.mappedMetadata.map((entry) => ({
-            ...entry,
-            id: entry.id?.replace(/(\u0000)/g, "") ?? entry.id,
-        }));
-        console.log("stripped ascii: ", metadata);
-        writeMetadata();
-    }
-
-    // Encodings
-    let selectedEncoding = "placeholder";
-
-    async function fixEncoding() {
-        for (let item of metadata?.mappedMetadata) {
-            if (!item?.value) continue;
-            const decoded = decodeLegacy(item.value, selectedEncoding);
-            const encoded = new TextDecoder().decode(encodeUtf8(decoded));
-            console.log("transformed: ", encoded);
-            item.value = encoded;
-            metadata = metadata;
-        }
-    }
-
-    /**
-     * A map of tag id <-> errors that apply to this tag
-     */
-    $: errors =
-        metadata?.mappedMetadata?.reduce((errors: Validation, currentTag) => {
-            containsError = null;
-            if (!errors[currentTag.id]) {
-                errors[currentTag.id] = {
-                    errors: [],
-                    warnings: [],
-                };
-            }
-            if (!errors[currentTag.id].errors) {
-                errors[currentTag.id].errors = [];
-            }
-            if (!errors[currentTag.id].warnings) {
-                errors[currentTag.id].warnings = [];
-            }
-
-            // Invalid characters - null unicode
-            if (currentTag.id.match(/[\u0000]+/g)) {
-                errors[currentTag.id].errors.push("err:null-chars");
-                containsError = "err:null-chars"; // We want to display a prompt
-            } // Invalid characters
-            else if (!currentTag.id.match(/^[a-zA-Z0-9©_:\-\.]+$/)) {
-                errors[currentTag.id].errors.push("err:invalid-chars");
-            }
-
-            // Custom tag - warning
-            if (currentTag.id.match(/^(TXXX:)/g)) {
-                errors[currentTag.id].warnings.push("warn:custom-tag");
-            }
-
-            // TODO Detect encodings
-            // Tried jschardet but it didn't give good results.
-            // Maybe scrap this entirely?
-
-            // const windows_encodings = ["windows-1251"];
-            // const encoding = jschardet.detect(currentTag.value || "", {
-            //     detectEncodings: ENCODINGS,
-            // });
-            // console.log('encoding detect', encoding);
-            // { encoding: "UTF-8", confidence: 0.9690625 }
-
-            // if (
-            //     windows_encodings.includes(encoding.encoding) &&
-            //     encoding.confidence > 0.5
-            // ) {
-            //     errors[currentTag.id].warnings.push("warn:cyrillic-encoding");
-            // }
-
-            console.log("hasErrors", hasError("err:null-chars"));
-            return errors;
-        }, {}) ?? {};
-
-    function hasError(errorType: ValidationErrors): boolean {
-        return (
-            errors &&
-            Object.values(errors).filter((err) =>
-                err.errors.includes(errorType),
-            ).length > 0
-        );
     }
 
     let originCountry =
@@ -834,22 +391,6 @@
         }
         isFetchingArtwork = false;
     }
-
-    function onTagLabelClick(tag: MetadataEntry) {
-        // Double-clicking on title populates the title from the filename
-        if (tag.genericId === "title") {
-            // Strip file extension from filename if any
-            const filename = $rightClickedTrack.file;
-            const extension = filename.split(".").pop();
-            const filenameWithoutExtension = filename.replace(
-                "." + extension,
-                "",
-            );
-            tag.value = filenameWithoutExtension;
-
-            metadata = metadata;
-        }
-    }
 </script>
 
 <container use:focusTrap>
@@ -861,7 +402,7 @@
         <div class="button-container">
             <ButtonWithIcon
                 disabled={!hasChanges}
-                onClick={writeMetadata}
+                onClick={() => metadata.writeMetadata()}
                 text={`Overwrite file${isMultiMode ? "s" : ""}`}
             />
             <small>Cmd + ENTER</small>
@@ -912,7 +453,7 @@
                             {#each $rightClickedTrack ? [$rightClickedTrack] : $rightClickedTracks as track}
                                 <tr>
                                     <td class="file-path">
-                                        <p
+                                        <div
                                             on:click={() =>
                                                 fileOpen(
                                                     track.path.replace(
@@ -921,25 +462,21 @@
                                                     ),
                                                 )}
                                         >
-                                            <span
-                                                ><Icon
+                                            <span>
+                                                <Icon
                                                     icon="bi:file-earmark-play"
                                                     size={12}
-                                                /></span
-                                            >
+                                                />
+                                            </span>
                                             {track.file}
-                                        </p></td
-                                    >
+                                        </div>
+                                    </td>
                                     <td>
-                                        <p>
-                                            {track.fileInfo.codec}
-                                        </p></td
-                                    >
+                                        <p>{track.fileInfo.codec}</p>
+                                    </td>
                                     <td>
-                                        <p>
-                                            {track.fileInfo.tagType}
-                                        </p></td
-                                    >
+                                        <p>{track.fileInfo.tagType}</p>
+                                    </td>
                                     <td>
                                         <p>
                                             {getDurationText(
@@ -948,10 +485,8 @@
                                         </p>
                                     </td>
                                     <td>
-                                        <p>
-                                            {track.fileInfo.sampleRate} hz
-                                        </p></td
-                                    >
+                                        <p>{track.fileInfo.sampleRate} hz</p>
+                                    </td>
                                     <td>
                                         {#if track.fileInfo.bitDepth}
                                             <p>
@@ -1104,167 +639,53 @@
         </section>
     </div>
     <div class="bottom">
-        <section class="metadata-section boxed">
-            <h5 class="section-title">
-                <Icon icon="fe:music" size={30} />{$LL.trackInfo.metadata()}
-            </h5>
-            {#if $rightClickedTrack || $rightClickedTracks[0]}
-                {#if isUnsupportedFormat}
-                    <p>
-                        {$LL.trackInfo.unsupportedFormat()}
-                    </p>
-                {:else}
-                    {#if containsError === "err:null-chars"}
-                        <div
-                            transition:fly={{ y: -20, duration: 100 }}
-                            class="error-prompt"
-                        >
-                            <Icon icon="ant-design:warning-outlined" />
-                            <p>
-                                {$LL.trackInfo.errors.nullChars()}
-                            </p>
-                            <button on:click={stripNonAsciiChars}
-                                >{$LL.trackInfo.fix()}</button
-                            >
-                        </div>
-                    {/if}
-                    <form>
-                        {#each metadata?.mappedMetadata?.filter((m) => $rightClickedTrack || ($rightClickedTracks.length && ALBUM_FIELDS.includes(m.genericId))) as tag, idx}
-                            {#if tag.genericId === "artist"}
-                                <div class="tag">
-                                    <p class="label">
-                                        {$LL.trackInfo.artist()}
-                                    </p>
-                                    <div class="line" />
-                                    <div
-                                        class="artist-input"
-                                        use:optionalTippy={{
-                                            content:
-                                                $LL.input.enterHintTooltip(),
-                                            placement: "bottom",
-                                            show:
-                                                firstMatch !== null &&
-                                                firstMatch.toLowerCase() !==
-                                                    artistInput?.toLowerCase() &&
-                                                artistInput?.length > 0,
-                                            showOnCreate: true,
-                                            trigger: "manual",
-                                        }}
-                                    >
-                                        <Input
-                                            small
-                                            value={artistInput}
-                                            autoCompleteValue={firstMatch}
-                                            onChange={onArtistUpdated}
-                                            onEnterPressed={onArtistAutocompleteSelected}
-                                            tabBehavesAsEnter
-                                            fullWidth
-                                        />
-                                    </div>
-                                </div>
-                            {:else}
-                                <div
-                                    use:optionalTippy={{
-                                        content: errors[tag.id]?.errors
-                                            .map((e) => VALIDATION_STRINGS[e])
-                                            .concat(
-                                                errors[tag.id]?.warnings.map(
-                                                    (e) =>
-                                                        VALIDATION_STRINGS[e],
-                                                ),
-                                            )
-                                            .join(","),
-                                        placement: "bottom",
-                                        theme: "error",
-                                        show:
-                                            errors[tag.id]?.errors.length > 0 ||
-                                            errors[tag.id]?.warnings.length > 0,
-                                    }}
-                                    class="tag
-                                        {errors[tag.id]?.warnings.length > 0
-                                        ? 'validation-warning'
-                                        : ''}
-                                         {errors[tag.id]?.errors.length > 0
-                                        ? 'validation-error'
-                                        : ''}"
-                                >
-                                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                                    <p
-                                        class="label"
-                                        class:unmapped={tag.genericId ===
-                                            undefined}
-                                        data-tag-id={tag.genericId || tag.id}
-                                        on:click={() => onTagLabelClick(tag)}
-                                        use:optionalTippy={{
-                                            content:
-                                                $LL.trackInfo.setTitleFromFileNameHint(),
-                                            show: tag.genericId === "title",
-                                            placement: "bottom",
-                                        }}
-                                    >
-                                        {tag.genericId ? tag.genericId : tag.id}
-                                    </p>
-                                    <div class="line" />
-                                    <Input
-                                        bind:value={tag.value}
-                                        fullWidth
-                                        small
-                                    />
-                                </div>
-                            {/if}
-                        {/each}
-                    </form>
-                    {#if metadata?.mappedMetadata?.length}
-                        <div class="tools">
-                            <h5 class="section-title">
-                                <Icon
-                                    icon="ri:tools-fill"
-                                />{$LL.trackInfo.tools()}
-                            </h5>
-                            <div class="tool">
-                                <div class="description">
-                                    <p>
-                                        {$LL.trackInfo.fixLegacyEncodings.title()}
-                                    </p>
-                                    <small
-                                        >{$LL.trackInfo.fixLegacyEncodings.body()}</small
-                                    >
-                                </div>
-                                <select bind:value={selectedEncoding}>
-                                    <option value="placeholder"
-                                        >{$LL.trackInfo.fixLegacyEncodings.hint()}</option
-                                    >
-                                    {#each ENCODINGS as encoding}
-                                        <option
-                                            value={encoding}
-                                            class="encoding"
-                                            on:click={() => {
-                                                selectedEncoding = encoding;
-                                            }}
-                                        >
-                                            <p>{encoding}</p>
-                                        </option>
-                                    {/each}
-                                </select>
-                                <ButtonWithIcon
-                                    text={$LL.trackInfo.fix()}
-                                    theme="transparent"
-                                    onClick={fixEncoding}
-                                    disabled={selectedEncoding ===
-                                        "placeholder"}
-                                />
-                            </div>
-                        </div>
-                    {/if}
-                {/if}
-            {:else}
-                <p>{$LL.trackInfo.noMetadata()}</p>
-            {/if}
-        </section>
+        <MetadataSection
+            bind:this={metadata}
+            bind:hasChanges={hasMetadataChanges}
+            completeEvent={completeMetadataEvent}
+            {hasArtworkToSet}
+            {reset}
+            {rollbackArtwork}
+        />
     </div>
 </container>
 
 <style lang="scss">
+    :global {
+        .info {
+            section.boxed {
+                border: 1px solid var(--popup-track-section-border);
+                border-radius: 5px;
+                min-width: 575px;
+                position: relative;
+                background-color: var(--popup-track-section-bg);
+            }
+
+            .section-title {
+                position: absolute;
+                border-radius: 4px;
+                max-height: 2em;
+                display: flex;
+                flex-direction: row;
+                gap: 5px;
+                align-items: center;
+                background-color: var(--popup-track-section-title-bg);
+                z-index: 11;
+                border: 1px solid rgb(from var(--inverse) r g b / 0.08);
+                top: -15px;
+                padding: 0 10px;
+                letter-spacing: 1px;
+                font-weight: 400;
+                left: 3em;
+                right: 0;
+                width: fit-content;
+                margin: 0.5em 0;
+                text-align: start;
+                color: var(--popup-track-section-title-text);
+                text-transform: uppercase;
+            }
+        }
+    }
     :global([data-tippy-root]) {
         white-space: pre-line;
     }
@@ -1515,38 +936,6 @@
         width: 100%;
     }
 
-    section.boxed {
-        border: 1px solid var(--popup-track-section-border);
-        border-radius: 5px;
-        min-width: 575px;
-        position: relative;
-        background-color: var(--popup-track-section-bg);
-    }
-
-    .section-title {
-        position: absolute;
-        border-radius: 4px;
-        max-height: 2em;
-        display: flex;
-        flex-direction: row;
-        gap: 5px;
-        align-items: center;
-        background-color: var(--popup-track-section-title-bg);
-        z-index: 11;
-        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
-        top: -15px;
-        padding: 0 10px;
-        letter-spacing: 1px;
-        font-weight: 400;
-        left: 3em;
-        right: 0;
-        width: fit-content;
-        margin: 0.5em 0;
-        text-align: start;
-        color: var(--popup-track-section-title-text);
-        text-transform: uppercase;
-    }
-
     .file-section {
         padding: 4px;
 
@@ -1679,7 +1068,7 @@
                         display: flex;
                     }
 
-                    p {
+                    & > div {
                         overflow: hidden;
                         text-overflow: ellipsis;
                         white-space: nowrap;
@@ -1777,185 +1166,6 @@
             p {
                 margin-right: 1em;
             }
-        }
-    }
-
-    .metadata-section {
-        margin-top: 2em;
-        border-radius: 5px;
-        position: relative;
-        padding: 2em 1em;
-        color: var(--text);
-        position: relative;
-        width: 100%;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
-
-        font-family:
-            system-ui,
-            -apple-system,
-            Avenir,
-            Helvetica,
-            Arial,
-            sans-serif;
-
-        .section-title {
-            color: var(--popup-track-metadata-title);
-            border: 1px solid
-                rgb(from var(--popup-track-metadata-title) r g b / 0.08);
-        }
-
-        > p {
-            opacity: 0.5;
-        }
-    }
-
-    form {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 3em;
-
-        @media only screen and (max-width: 700px) {
-            grid-template-columns: 1fr;
-            .tag {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                &:nth-child(odd) {
-                    justify-content: center;
-                }
-                &:nth-child(even) {
-                    justify-content: center;
-                }
-            }
-        }
-
-        @media only screen and (min-width: 701px) {
-            .tag {
-                display: flex;
-                align-items: center;
-                &:nth-child(odd) {
-                    justify-content: right;
-                }
-                &:nth-child(even) {
-                    justify-content: left;
-                    flex-direction: row-reverse;
-                }
-            }
-        }
-
-        .tag {
-            display: flex;
-            align-items: center;
-            position: relative;
-            margin: 1px 0;
-            > .label {
-                width: fit-content;
-                margin: 0;
-                font-size: 13px;
-                font-weight: 500;
-                color: var(--text);
-                font-family: monospace;
-                user-select: none;
-                cursor: default;
-                white-space: nowrap;
-                text-transform: uppercase;
-                border: 1px solid transparent;
-
-                &.unmapped {
-                    opacity: 0.5;
-                }
-                &[data-tag-id="title"] {
-                    &:hover {
-                        border: 1px solid
-                            color-mix(
-                                in srgb,
-                                var(--background) 60%,
-                                var(--inverse)
-                            );
-                        cursor: pointer;
-                    }
-                }
-            }
-
-            .line {
-                height: 1px;
-                background-color: color-mix(
-                    in srgb,
-                    var(--background) 60%,
-                    var(--inverse)
-                );
-                width: 40px;
-            }
-
-            &.validation-error {
-                border: 1px solid var(--popup-track-metadata-validation-error);
-            }
-
-            &.validation-warning {
-                border: 1px solid var(--popup-track-metadata-validation-warning);
-            }
-        }
-
-        .artist-input {
-            /* overflow: hidden; */
-        }
-    }
-
-    .tools {
-        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
-        padding: 2em;
-        margin: 2em;
-        position: relative;
-
-        .section-title {
-            color: rgb(from var(--popup-track-section-title-text) r g b / 0.85);
-            border: transparent;
-        }
-
-        .tool {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 5px;
-            color: var(--text);
-            * {
-                color: var(--text);
-            }
-
-            .description {
-                text-align: left;
-                p {
-                    margin: 0;
-                }
-                small {
-                    opacity: 0.7;
-                    line-height: 0.5em;
-                }
-            }
-
-            select {
-                font-size: 20px;
-                padding: 0.2em 1em 0.3em 1em;
-            }
-        }
-    }
-
-    .error-prompt {
-        padding: 0.2em;
-        border-radius: 8px;
-        margin: 1em;
-        background-color: var(--popup-track-metadata-prompt-error);
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        p {
-            margin: 0;
         }
     }
 </style>

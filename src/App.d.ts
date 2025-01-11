@@ -52,6 +52,9 @@ interface Song {
     genre: string[];
     composer: string[];
     trackNumber: number;
+    trackTotal: number;
+    discNumber: number;
+    discTotal: number;
     duration: string;
     metadata: MetadataEntry[];
     fileInfo: FileInfo;

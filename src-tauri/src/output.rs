@@ -25,10 +25,22 @@ pub trait AudioOutput {
     fn pause(&self);
     fn resume(&self);
     fn stop_stream(&mut self);
-    fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool;
+    fn update_resampler(
+        &mut self,
+        spec: SignalSpec,
+        max_frames: u64,
+        playback_speed: f64,
+        is_reset: bool,
+    ) -> bool;
     fn has_remaining_samples(&self) -> bool;
+    fn get_resampler_delay(&self) -> f64;
     fn ramp_down(&mut self, buffer: AudioBufferRef, num_samples: usize);
     fn ramp_up(&mut self, buffer: AudioBufferRef, num_samples: usize);
+}
+
+pub struct PlaybackState {
+    pub is_playing: bool,
+    pub playback_speed: f64,
 }
 
 #[allow(dead_code)]
@@ -49,10 +61,11 @@ mod cpal {
 
     use crate::constants::BUFFER_SIZE;
     use crate::output::{fft, get_device_by_name, ifft};
+    use crate::player::VolumeControlEvent;
     use crate::resampler::Resampler;
-    use crate::{SampleOffsetEvent, VolumeControlEvent};
+    use crate::SampleOffsetEvent;
 
-    use super::{AudioOutput, AudioOutputError, Result};
+    use super::{AudioOutput, AudioOutputError, PlaybackState, Result};
 
     use bytes::Bytes;
     use cpal::Sample;
@@ -92,7 +105,7 @@ mod cpal {
             sample_buf_size: u64,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
-            playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
+            playback_state_receiver: Arc<Mutex<Receiver<PlaybackState>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             device_change_receiver: Arc<Mutex<Receiver<String>>>,
             timestamp_sender: Arc<Mutex<Sender<f64>>>,
@@ -263,6 +276,7 @@ mod cpal {
         resampler: Option<Resampler<T>>,
         sample_rate: u32,
         name: String,
+        time_base: TimeBase,
     }
 
     impl<T: AudioOutputSample + Send + Sync> CpalAudioOutputImpl<T> {
@@ -272,7 +286,7 @@ mod cpal {
             device: &cpal::Device,
             volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
             sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
-            playback_state_receiver: Arc<Mutex<Receiver<bool>>>,
+            playback_state_receiver: Arc<Mutex<Receiver<PlaybackState>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             device_change_receiver: Arc<Mutex<Receiver<String>>>,
             timestamp_sender: Arc<Mutex<Sender<f64>>>,
@@ -298,7 +312,7 @@ mod cpal {
                     .config()
             };
 
-            let time_base = TimeBase {
+            let mut time_base = TimeBase {
                 numer: 1,
                 denom: config.sample_rate.0 * config.channels as u32,
             };
@@ -312,9 +326,12 @@ mod cpal {
             info!("Ring buffer capacity: {:?}", ring_buf.capacity());
             // States
             let volume_state = Arc::new(RwLock::new(vol.unwrap()));
-            let frame_idx_state = Arc::new(RwLock::new(0));
+            let frame_idx_state = Arc::new(RwLock::new(0.0f64));
             let elapsed_time_state = Arc::new(RwLock::new(0));
-            let playback_state = Arc::new(RwLock::new(true));
+            let playback_state: Arc<RwLock<PlaybackState>> = Arc::new(RwLock::new(PlaybackState {
+                is_playing: true,
+                playback_speed: 1.0f64,
+            }));
             let device_state = Arc::new(RwLock::new(
                 device.name().unwrap_or(String::from("Unknown")),
             ));
@@ -354,7 +371,7 @@ mod cpal {
                             if rst {
                                 info!("Got rst: {:?}", rst);
                                 let mut frame_idx = frame_idx_state.write().unwrap();
-                                *frame_idx = 0;
+                                *frame_idx = 0.0;
                                 let mut elapsed_time = elapsed_time_state.write().unwrap();
                                 *elapsed_time = 0;
                                 let _ = app_handle.emit("timestamp", Some(0f64));
@@ -379,13 +396,24 @@ mod cpal {
                     if let Ok(play_lock) = playing {
                         if let Ok(pl) = play_lock.try_recv() {
                             let mut current_playing = playback_state.write().unwrap();
+                            if current_playing.playback_speed != pl.playback_speed {
+                                // Update time base for correct timestamp calculation
+                                // time_base = TimeBase {
+                                //     numer: 1,
+                                //     denom: (config.sample_rate.0 as f64
+                                //         * config.channels as f64
+                                //         * pl.playback_speed)
+                                //         as u32,
+                                // };
+                                info!("Updated time base: {:?}", time_base);
+                            }
                             *current_playing = pl;
                         }
                     }
 
                     // update duration if seconds changed
                     if let Ok(pl_state) = playback_state.try_read() {
-                        if *pl_state {
+                        if pl_state.is_playing {
                             // Write out as many samples as possible from the ring buffer to the audio
                             // output.
                             let written = ring_buf_consumer.read(data).unwrap_or(0);
@@ -396,7 +424,7 @@ mod cpal {
                                     info!("Got sample offset: {:?}", offset);
                                     let mut current_sample_offset =
                                         frame_idx_state.write().unwrap();
-                                    *current_sample_offset = offset.sample_offset.unwrap();
+                                    *current_sample_offset = offset.sample_offset.unwrap() as f64;
                                 }
                             }
 
@@ -420,7 +448,7 @@ mod cpal {
                             // new offset
                             let new_sample_offset = {
                                 let mut sample_offset = frame_idx_state.write().unwrap();
-                                *sample_offset += i;
+                                *sample_offset += i as f64 * pl_state.playback_speed;
                                 *sample_offset
                             };
                             // new duration
@@ -431,7 +459,8 @@ mod cpal {
                             let prev_duration = { *elapsed_time_state.read().unwrap() };
 
                             if prev_duration != next_duration {
-                                let new_duration = Duration::from_secs(next_duration);
+                                let new_duration =
+                                    Duration::from_secs((next_duration as f64) as u64);
 
                                 let _ =
                                     app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
@@ -495,6 +524,7 @@ mod cpal {
                 resampler: None,
                 sample_rate: config.sample_rate.0,
                 name: device.name().unwrap_or(String::from("Unknown")),
+                time_base: time_base.clone(),
             })))
         }
     }
@@ -615,25 +645,87 @@ mod cpal {
             info!("Audio output stopped: {}", self.name);
         }
 
-        fn update_resampler(&mut self, spec: SignalSpec, max_frames: u64) -> bool {
+        fn update_resampler(
+            &mut self,
+            mut spec: SignalSpec,
+            max_frames: u64,
+            playback_speed: f64,
+            is_reset: bool,
+        ) -> bool {
+            // When resampling is required eg. 48khz -> 44.1khz, calculate the target speed ratio.
+            // Optional playback rate adjustment is added on top
+            let adjusted_speed = if spec.rate != self.sample_rate {
+                info!("resampling {} Hz to {} Hz", spec.rate, self.sample_rate);
+                spec.rate as f64 / self.sample_rate as f64 * playback_speed
+            } else {
+                playback_speed
+            };
+
+            info!(
+                "requested speed: {}, adjusted speed: {}",
+                playback_speed, adjusted_speed
+            );
+
+            // Custom speed (slowed down / sped up)
+            if adjusted_speed != 1.0f64 {
+                info!("Resampling for {:.2}x playback speed", adjusted_speed);
+                // spec.rate = (spec.rate as f32 * playback_speed) as u32;
+                if let Some(resampler) = &mut self.resampler {
+                    resampler.set_playback_rate(adjusted_speed as f64);
+                    if is_reset {
+                        resampler.set_playback_pos(0.0);
+                        resampler.flush();
+                    }
+                } else {
+                    self.resampler.replace(Resampler::with_playback_rate(
+                        spec,
+                        max_frames,
+                        adjusted_speed,
+                    ));
+                }
+                return true;
+            } else {
+                // Original speed - 1x
+                if let Some(resampler) = &mut self.resampler {
+                    if resampler.playback_rate != adjusted_speed {
+                        // Back to original speed - ramp back to 1.0
+                        // and keep resampling instead of abruptly switching
+                        resampler.set_playback_rate(adjusted_speed);
+                        return true;
+                    }
+                    // When switching tracks, we can remove the resampler if not required
+                    if is_reset {
+                        if self.sample_rate != spec.rate {
+                            self.resampler.replace(Resampler::new(spec, max_frames));
+                            return true;
+                        } else {
+                            self.resampler.take();
+                            return false;
+                        }
+                    }
+                }
+                return false;
+            }
+
             // If we have a default audio device (we always should, but just in case)
             // we check if the track spec differs from the output device
             // if it does - resample the decoded audio using Symphonia.
-
-            if self.sample_rate != spec.rate {
-                info!("resampling {} Hz to {} Hz", spec.rate, self.sample_rate);
-                self.resampler
-                    .replace(Resampler::new(spec, self.sample_rate as usize, max_frames));
-                return true;
-            } else {
-                self.resampler.take();
-                return false;
-            }
         }
 
         /// Checks if there are any samples left in the buffer that have not been played yet.
         fn has_remaining_samples(&self) -> bool {
             !self.ring_buf.is_empty()
+        }
+
+        fn get_resampler_delay(&self) -> f64 {
+            if let Some(resampler) = &self.resampler {
+                let remaining_samples = resampler.get_remaining_samples();
+                let time = self.time_base.calc_time(remaining_samples);
+                info!("remaining_samples: {}, time: {:?}", remaining_samples, time);
+                time.seconds as f64 + time.frac
+            } else {
+                0.0
+            }
         }
 
         fn ramp_down(&mut self, buffer: AudioBufferRef, num_samples: usize) {
@@ -669,12 +761,12 @@ pub fn try_open(
     spec: SignalSpec,
     sample_buf_size: u64,
     volume_control_receiver: Arc<
-        tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::VolumeControlEvent>>,
+        tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::player::VolumeControlEvent>>,
     >,
     sample_offset_receiver: Arc<
         tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::SampleOffsetEvent>>,
     >,
-    playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
+    playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<PlaybackState>>>,
     reset_control_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     device_change_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<String>>>,
     timestamp_sender: Arc<tokio::sync::Mutex<std::sync::mpsc::Sender<f64>>>,
