@@ -1087,12 +1087,6 @@
                                                 }}
                                             />
                                         {/if}
-                                        {console.log(
-                                            $current.index,
-                                            song?.viewModel?.index,
-                                            song.id,
-                                            $current.song?.id,
-                                        )}
                                         <Text
                                             config={{
                                                 x: fields.title.viewProps.x,
