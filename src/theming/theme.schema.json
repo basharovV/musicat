@@ -133,6 +133,7 @@
             "type": "string"
         },
         "library-clickable-cell-bg": {
+            "description": "Library",
             "type": "string"
         },
         "library-clickable-cell-hover-bg": {
@@ -168,8 +169,13 @@
         "library-playing-text": {
             "type": "string"
         },
-        "library-text-color": {
-            "description": "Library",
+        "library-playing-title": {
+            "type": "string"
+        },
+        "library-text": {
+            "type": "string"
+        },
+        "library-title": {
             "type": "string"
         },
         "link": {
@@ -667,7 +673,9 @@
         "library-playing-bg",
         "library-playing-icon",
         "library-playing-text",
-        "library-text-color",
+        "library-playing-title",
+        "library-text",
+        "library-title",
         "link",
         "link-hover",
         "mapview-region-bg",

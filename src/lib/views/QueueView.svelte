@@ -2,40 +2,26 @@
 
 <script lang="ts">
     import { onMount } from "svelte";
-    import {
-        Group,
-        Layer,
-        Path,
-        Rect,
-        Stage,
-        Text,
-        Label,
-        Tag,
-        type KonvaDragTransformEvent,
-    } from "svelte-konva";
+    import { Group, Layer, Path, Rect, Stage, Text } from "svelte-konva";
 
-    import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { debounce } from "lodash-es";
     import type { Song } from "src/App";
     import { onDestroy } from "svelte";
     import { cubicInOut } from "svelte/easing";
-    import { fade, fly } from "svelte/transition";
+    import { fade } from "svelte/transition";
     import { db } from "../../data/db";
 
     import {
         arrowFocus,
-        columnOrder,
         current,
         draggedAlbum,
         draggedSongs,
         forceRefreshLibrary,
         isDraggingFromQueue,
-        isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
-        isSmartQuerySaveUiOpen,
         popupOpen,
         libraryScrollPos,
         os,
@@ -47,19 +33,9 @@
         shouldFocusFind,
         shuffledQueue,
         singleKeyShortcutsEnabled,
-        smartQuery,
-        smartQueryInitiator,
         uiView,
     } from "../../data/store";
-    import { moveArrayElement } from "../../utils/ArrayUtils";
-    import AudioPlayer from "../player/AudioPlayer";
-    import SmartQueryBuilder from "../smart-query/SmartQueryBuilder.svelte";
-    import SmartQueryMainHeader from "../smart-query/SmartQueryMainHeader.svelte";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
-    import ColumnPicker from "../library/ColumnPicker.svelte";
-    import ImportPlaceholder from "../library/ImportPlaceholder.svelte";
-    import { getQueryPart } from "../smart-query/QueryParts";
-    import { UserQueryPart } from "../smart-query/UserQueryPart";
     import Konva from "konva";
     import audioPlayer from "../player/AudioPlayer";
     import TrackMenu from "../queue/TrackMenu.svelte";
@@ -67,13 +43,11 @@
     import ShadowGradient from "../ui/ShadowGradient.svelte";
     import {
         findQueueIndex,
-        findQueueIndexes,
         setQueue,
         updateQueues,
     } from "../../data/storeHelper";
     import QueueMenu from "../queue/QueueMenu.svelte";
 
-    export let allSongs = null;
     export let dim = false;
     export let isLoading = false;
     export let isInit = true;
@@ -88,56 +62,23 @@
         },
     }));
 
-    const DEFAULT_FIELDS = [
-        {
-            name: "Title",
-            value: "title",
-            show: true,
-            viewProps: {
-                width: 0,
-                x: 0,
-                autoWidth: true,
-            },
-        },
-    ];
-
-    export let fields = DEFAULT_FIELDS;
-
-    let currentSongY = 0;
-    let currentSongInView = false;
-    let currentSongScrollIdx = null;
-
-    let hoveredColumnIdx = null;
     let hoveredSongIdx = null; // Index is slice-specific
     let columnToInsertIdx = null;
     let columnToInsertXPos = 0;
-    let hoveredField = null;
     let isDraggingOver = false;
     let isOver = false;
-
-    $: isOrderChanged =
-        JSON.stringify($columnOrder) !==
-        JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
-
-    let showColumnPicker = false;
-    let columnPickerPos;
-
-    $: displayFields = fields.filter((f) => f.show);
-    $: numColumns = fields.filter((f) => f.show).length;
+    let isHeaderOver = false;
 
     let songsSlice: Song[];
     let songsStartSlice = 0;
     let songsEndSlice = 0;
-    let canvas;
 
     let shouldRender = false;
     let ready = false; // When scroll position is restored (if available), to avoid jump
     let libraryContainer: HTMLDivElement;
     let scrollContainer: HTMLDivElement;
-    let container: HTMLElement;
     let stage;
     let isScrollable = false;
-    let prevScrollPos = 0;
     let scrollPos = 0;
     let scrollOffset = 0;
     let scrollNormalized = 0;
@@ -150,15 +91,11 @@
     let width = 0;
     let viewportHeight = 0;
     let virtualViewportHeight = 0; // With padding
-    let ctx: CanvasRenderingContext2D;
-    let dpr;
 
     // CONSTANTS
     const HEADER_HEIGHT = 22;
-    const ROW_HEIGHT = 26;
+    const ROW_HEIGHT = 48;
     const DROP_HINT_HEIGHT = 2;
-    const BORDER_WIDTH = 1;
-    const SCROLL_PADDING = 200;
     const DUMMY_COUNT = 5;
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
 
@@ -166,20 +103,64 @@
     let BG_COLOR: string;
     let HEADER_BG_COLOR: string;
     let OFFSCREEN_BG_COLOR: string;
-    let HEADER_BG_COLOR_HOVERED: string;
     let TEXT_COLOR: string;
+    let TITLE_COLOR: string;
     let HIGHLIGHT_BG_COLOR: string;
     let ROW_BG_COLOR: string;
     let ROW_BG_COLOR_HOVERED: string;
     let PLAYING_BG_COLOR: string;
     let PLAYING_TEXT_COLOR: string;
+    let PLAYING_TITLE_COLOR: string;
     let COLUMN_INSERT_HINT_COLOR: string;
-    let DROP_HIGHLIGHT_BG_COLOR: string;
-    let CLICKABLE_CELL_BG_COLOR: string;
-    let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
     let DRAGGING_SOURCE_COLOR: string;
 
+    export let fields = {
+        title: {
+            viewProps: {
+                x: 10,
+                y: 1,
+                width: 0,
+                height: HEADER_HEIGHT,
+            },
+        },
+        artist: {
+            viewProps: {
+                x: 10,
+                y: HEADER_HEIGHT + 1,
+                width: 0,
+                height: HEADER_HEIGHT,
+            },
+        },
+        duration: {
+            viewProps: {
+                x: 0,
+                y: 1,
+                width: 40,
+                height: HEADER_HEIGHT,
+            },
+        },
+        favourite: {
+            viewProps: {
+                x: 0,
+                y: HEADER_HEIGHT + 5,
+                width: 18,
+                height: HEADER_HEIGHT,
+            },
+        },
+        playing: {
+            viewProps: {
+                x: 0,
+                y: HEADER_HEIGHT + 5,
+                width: 18,
+                height: HEADER_HEIGHT,
+            },
+        },
+    };
+
     onMount(() => {
+        defaultArtwork = document.createElement("img");
+        defaultArtwork.src = "images/cd-hq.png";
+
         init();
 
         // Check for retina screens
@@ -217,51 +198,33 @@
 
     let contentHeight = HEADER_HEIGHT;
     let scrollableArea = contentHeight;
-
-    let prevSongCount = 0;
-
-    $: counts = liveQuery(() => {
-        return db.transaction("r", db.songs, async () => {
-            const artists = await (
-                await db.songs.orderBy("artist").uniqueKeys()
-            ).length;
-            const albums = await (
-                await db.songs.orderBy("album").uniqueKeys()
-            ).length;
-            const songs = await $allSongs.length;
-            return { songs, artists, albums };
-        });
-    });
+    let defaultArtwork;
 
     $: noSongs = !songs || songs.length === 0;
 
     // Trigger: on songs updated
-    $: if (songs !== undefined && libraryContainer !== undefined) {
-        console.log("Queue::queue updated", songs.length);
-        drawSongDataGrid();
-        prevSongCount = songs.length;
+    $: if (songs && libraryContainer) {
+        (async () => {
+            console.log("Queue::queue updated", songs.length);
+            await drawSongDataGrid();
+        })();
     }
 
     $: if ($currentThemeObject) {
         // COLORS
         BG_COLOR = $currentThemeObject["panel-background"];
+        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
+        DRAGGING_SOURCE_COLOR = "#8a69683e";
         HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
-        OFFSCREEN_BG_COLOR = "#71658e3b";
-        HEADER_BG_COLOR_HOVERED =
-            $currentThemeObject["library-header-active-bg"];
-        TEXT_COLOR = $currentThemeObject["library-text-color"];
         HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
-        ROW_BG_COLOR = "transparent";
-        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
+        OFFSCREEN_BG_COLOR = "#71658e3b";
         PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
         PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
-        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
-        DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
-        CLICKABLE_CELL_BG_COLOR =
-            $currentThemeObject["library-clickable-cell-bg"];
-        CLICKABLE_CELL_BG_COLOR_HOVERED =
-            $currentThemeObject["library-clickable-cell-hover-bg"];
-        DRAGGING_SOURCE_COLOR = "#8a69683e";
+        PLAYING_TITLE_COLOR = $currentThemeObject["library-playing-title"];
+        ROW_BG_COLOR = "transparent";
+        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
+        TEXT_COLOR = $currentThemeObject["library-text"];
+        TITLE_COLOR = $currentThemeObject["library-title"];
     }
 
     // Restore scroll position if any
@@ -298,28 +261,11 @@
         ready = true;
     }
 
-    $: if ($current.index !== null) {
-        let idx = $current.index;
-        currentSongY = idx * ROW_HEIGHT;
-        currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
-    }
-
-    function drawSongDataGrid() {
+    async function drawSongDataGrid() {
         calculateCanvasSize();
         calculateColumns();
-        calculateSongSlice();
+        await calculateSongSlice();
         shouldRender = true;
-        // drawHeaders();
-        // drawRows();
-    }
-
-    function printInfo() {
-        // console.log("fields", fields);
-        // console.log("canvas size", width, virtualViewportHeight);
-        // console.log(
-        //     "widths add up to",
-        //     displayFields.reduce((total, f) => (total += f.viewProps.width), 0)
-        // );
     }
 
     function calculateCanvasSize() {
@@ -348,73 +294,19 @@
     }
 
     function calculateColumns() {
-        let runningX = 0;
-        let previousWidth = 0;
-        const sortedFields = $columnOrder
-            .map((c) => fields.find((f) => f.value === c))
-            .filter(Boolean);
-
-        // Fields visible depending on window width
-        const visibleFields = sortedFields.filter((f) => {
-            switch (f?.value) {
-                case "duration":
-                    return width > 800;
-                case "genre":
-                    return width > 700;
-                case "year":
-                    return width > 650;
-                case "trackNumber":
-                    return width > 500;
-                case "artist":
-                    return width > 300;
-                case "album":
-                    return width > 450;
-                case "albumArtist":
-                    return width > 450;
-                case "composer":
-                    return width > 650;
-                case "originCountry":
-                    return width > 650;
-                default:
-                    return true;
-            }
-        });
-        // console.log(visibleFields);
-
-        // Calculate total width of fixed-width rectangles
-        const fixedWidths = visibleFields
-            .filter((f) => !f.viewProps.autoWidth)
-            .map((f) => f.viewProps.width);
-        const totalFixedWidth = fixedWidths.reduce(
-            (total, width) => total + width,
-            0,
-        );
-        // console.log("width", width, "totalFixedWidth", totalFixedWidth);
-        // Calculate available width for 'auto' size rectangles
-        const availableWidth = width - totalFixedWidth;
-        // console.log("availableWidth", availableWidth);
-        // Calculate the width for each 'auto' size rectangle
-        const autoWidth =
-            availableWidth / (visibleFields.length - fixedWidths.length);
-
-        // Final display fields
-        displayFields = [
-            ...visibleFields.map((f) => {
-                const rectWidth = f.viewProps.autoWidth
-                    ? autoWidth
-                    : f.viewProps.width;
-                f.viewProps.x = runningX += previousWidth;
-                f.viewProps.width = rectWidth;
-                previousWidth = f.viewProps.width;
-                return f;
-            }),
-        ];
-        printInfo();
+        fields.title.viewProps.width =
+            width - fields.title.viewProps.x - fields.duration.viewProps.width;
+        fields.artist.viewProps.width =
+            width - fields.artist.viewProps.x - fields.duration.viewProps.width;
+        fields.duration.viewProps.x = width - fields.duration.viewProps.width;
+        fields.favourite.viewProps.x = width - fields.favourite.viewProps.width;
+        fields.playing.viewProps.x =
+            fields.favourite.viewProps.x - fields.playing.viewProps.width;
     }
 
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
 
-    function calculateSongSlice() {
+    async function calculateSongSlice() {
         if (songs.length === 0) {
             songsSlice = [];
             songsStartSlice = 0;
@@ -542,6 +434,7 @@
             };
 
             // Make sure the window is always filled with the right amount of rows
+
             songsSlice = songs.slice(songsStartSlice, songsEndSlice);
             // console.log("slice", songsStartSlice, songsEndSlice);
             let diff = songsCountViewport - (songsSlice.length - 1);
@@ -567,26 +460,28 @@
                     ),
                 );
             // console.log(songsSlice.length);
-            prevScrollPos = scrollPos;
-            // console.log(songsSlice);
         }
+    }
+
+    async function loadImage(src: string) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
     }
 
     function rememberScrollPos() {
         $libraryScrollPos = scrollNormalized; // 0-1
     }
 
-    function onScroll() {
+    async function onScroll() {
         scrollPos = scrollContainer.scrollTop;
         scrollNormalized = scrollPos / (contentHeight - viewportHeight);
 
         if (scrollContainer && stage) {
-            calculateSongSlice();
-            let idx =
-                currentSongScrollIdx !== null
-                    ? currentSongScrollIdx
-                    : $current.index;
-            currentSongInView = idx >= songsStartSlice && idx <= songsEndSlice;
+            await calculateSongSlice();
         }
 
         // Only save/restore scroll pos in main library view, not on playlists
@@ -594,31 +489,6 @@
             debounce(rememberScrollPos, 100)();
         }
     }
-
-    function scrollToCurrentSong() {
-        // console.log("y", currentSongY);
-
-        let adjustedPos = currentSongY;
-        if (currentSongY > viewportHeight / 2.3) {
-            adjustedPos -= viewportHeight / 2.3;
-        }
-        if ($isPlaying && $current.song) {
-            scrollContainer.scrollTo({
-                top: adjustedPos,
-                behavior: "smooth",
-            });
-        }
-    }
-
-    current.subscribe(async () => {
-        if (isOver) {
-            return;
-        }
-
-        if (scrollContainer && !currentSongInView) {
-            scrollToCurrentSong();
-        }
-    });
 
     // LIBRARY FUNCTIONALITY
 
@@ -658,6 +528,7 @@
 
         showTrackMenu = true;
         menuPos = { x: e.clientX, y: e.clientY };
+        console.log("showTrackMenu", menuPos);
     }
 
     function isSongHighlighted(song: Song) {
@@ -871,6 +742,12 @@
         );
     }
 
+    function onHeaderClick(e) {
+        e.preventDefault();
+        showQueueMenu = true;
+        menuPos = { x: e.detail.evt.clientX, y: e.detail.evt.clientY };
+    }
+
     function onStageClick(e) {
         if (e.detail.evt.button === 2) {
             e.preventDefault();
@@ -996,18 +873,6 @@
         removeEventListener("keyup", onKeyUp);
     });
 
-    // Re-order columns
-
-    $: {
-        displayFields && $columnOrder && calculateColumns();
-    }
-
-    // Sets back to default
-    function resetColumnOrder() {
-        fields = DEFAULT_FIELDS;
-        $columnOrder = DEFAULT_FIELDS.map((f) => f.value);
-    }
-
     // Favourite
 
     async function favouriteSong(song: Song) {
@@ -1016,54 +881,26 @@
         });
 
         song.isFavourite = true;
-        songs = songs;
+
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = true;
         }
+
+        shouldRender = true;
     }
 
     async function unfavouriteSong(song: Song) {
         await db.songs.update(song, {
             isFavourite: false,
         });
+
         song.isFavourite = false;
-        songs = songs;
+
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = false;
         }
-    }
 
-    function filterByField(fieldName: string, fieldValue: any) {
-        let queryPart;
-        // console.log("filter", fieldName, fieldValue);
-        switch (fieldName) {
-            case "genre":
-                queryPart = getQueryPart("CONTAINS_GENRE");
-                $smartQueryInitiator = "library-cell";
-                break;
-            case "year":
-                queryPart = getQueryPart("RELEASED_IN");
-                $smartQueryInitiator = "library-cell";
-                break;
-            case "originCountry":
-                queryPart = getQueryPart("FROM_COUNTRY");
-                $smartQueryInitiator = "library-cell";
-                break;
-            default:
-                return;
-        }
-        if ($uiView.match(/^(smart-query|favourites)/) === null) {
-            $smartQuery.reset();
-        }
-        // console.log("built in query Part", queryPart);
-        const userQueryPart = new UserQueryPart(queryPart);
-        // console.log("built in user query Part", userQueryPart);
-        userQueryPart.userInputs[fieldName].value = fieldValue;
-        $smartQuery.addPart(userQueryPart);
-        $smartQuery.parts = $smartQuery.parts;
-        $isSmartQueryBuilderOpen = true;
-        $isSmartQuerySaveUiOpen = false;
-        $uiView = "smart-query";
+        shouldRender = true;
     }
 
     function isInvalidValue(value) {
@@ -1092,14 +929,6 @@
     bind:showMenu={showTrackMenu}
     bind:pos={menuPos}
     bind:songs={songsHighlighted}
-/>
-<ColumnPicker
-    bind:showMenu={showColumnPicker}
-    bind:pos={columnPickerPos}
-    bind:fields
-    bind:columnOrder={$columnOrder}
-    onResetOrder={resetColumnOrder}
-    {isOrderChanged}
 />
 
 <div
@@ -1136,11 +965,7 @@
 
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <div
-                class="container"
-                bind:this={container}
-                on:contextmenu|preventDefault
-            >
+            <div class="container" on:contextmenu|preventDefault>
                 {#if dim}
                     <div class="dimmer" />
                 {/if}
@@ -1256,160 +1081,167 @@
                                                           : ROW_BG_COLOR,
                                             }}
                                         />
-                                        {#each displayFields as f, idx (f.value)}
-                                            <Text
+                                        {#if hoveredSongIdx === songIdx && $draggedSongs?.length === 0}
+                                            <Path
                                                 config={{
-                                                    x:
-                                                        f.value.match(
-                                                            /^(title|artist|album|track)/,
-                                                        ) !== null
-                                                            ? f.viewProps.x + 10
-                                                            : f.viewProps.x,
-                                                    y: 1,
-                                                    text: validatedValue(
-                                                        song[f.value],
-                                                    ),
+                                                    x: -2,
+                                                    y: 15,
                                                     listening: false,
-                                                    align:
-                                                        f.value.match(
-                                                            /^(title|artist|album|track)/,
-                                                        ) !== null
-                                                            ? "left"
-                                                            : "center",
-                                                    width:
-                                                        idx ===
-                                                        displayFields.length - 1
-                                                            ? f.viewProps
-                                                                  .width - 10
-                                                            : f.value.match(
-                                                                    /^(title|artist|album|track)/,
-                                                                ) !== null
-                                                              ? f.value ===
-                                                                    "title" &&
-                                                                $current.song
-                                                                    ?.id ===
-                                                                    song.id
-                                                                  ? f.viewProps
-                                                                        .width -
-                                                                    38
-                                                                  : f.viewProps
-                                                                        .width -
-                                                                    12
-                                                              : f.viewProps
-                                                                    .width,
-                                                    padding:
-                                                        f.value.match(
-                                                            /^(genre)/,
-                                                        ) !== null
-                                                            ? 10
-                                                            : 2,
-                                                    height: HEADER_HEIGHT,
-                                                    fontSize: 13.5,
-                                                    verticalAlign: "middle",
-                                                    fill:
-                                                        $current.index ===
-                                                            song?.viewModel
-                                                                ?.index &&
-                                                        song.id ===
-                                                            $current.song?.id
-                                                            ? PLAYING_TEXT_COLOR
-                                                            : TEXT_COLOR,
-                                                    ellipsis:
-                                                        f.value.match(
-                                                            /^(title|artist|album|genre)/,
-                                                        ) !== null,
+                                                    scaleX: 0.9,
+                                                    scaleY: 0.9,
+                                                    data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
+                                                    fill: "rgba(255, 255, 255, 0.5)",
                                                 }}
                                             />
-
-                                            {#if hoveredSongIdx === songIdx && $draggedSongs?.length === 0}
-                                                <Path
-                                                    config={{
-                                                        x: -2,
-                                                        y: 6,
-                                                        listening: false,
-                                                        scaleX: 0.9,
-                                                        scaleY: 0.9,
-                                                        data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
-                                                        fill: "rgba(255, 255, 255, 0.5)",
-                                                    }}
-                                                />
-                                            {/if}
-
-                                            {#if f.value === "title"}
-                                                <!-- Now playing icon -->
-                                                {#if $current.index === song?.viewModel?.index && song.id === $current.song?.id}
-                                                    <Path
-                                                        config={{
-                                                            x:
-                                                                f.viewProps
-                                                                    .width - 40,
-                                                            y: 7,
-                                                            listening: false,
-                                                            scaleX: 0.65,
-                                                            scaleY: 0.65,
-                                                            data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
-                                                            fill: $currentThemeObject[
-                                                                "library-playing-icon"
-                                                            ],
-                                                        }}
-                                                    />
-                                                {/if}
-
-                                                <!-- Favourite icon button -->
-                                                {#if song.isFavourite}
-                                                    <Path
-                                                        on:click={() =>
-                                                            unfavouriteSong(
-                                                                song,
-                                                            )}
-                                                        config={{
-                                                            x:
-                                                                f.viewProps
-                                                                    .width - 20,
-                                                            y: 6,
-                                                            scaleX: 0.36,
-                                                            scaleY: 0.36,
-                                                            data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
-                                                            fill:
-                                                                $current.song
-                                                                    ?.id ===
-                                                                song.id
-                                                                    ? $currentThemeObject[
-                                                                          "library-playing-icon"
-                                                                      ]
-                                                                    : $currentThemeObject[
-                                                                          "library-favourite-icon"
-                                                                      ],
-                                                        }}
-                                                    />
-                                                {:else if hoveredSongIdx === songIdx}
-                                                    <Path
-                                                        on:click={() =>
-                                                            favouriteSong(song)}
-                                                        config={{
-                                                            x:
-                                                                f.viewProps
-                                                                    .width - 20,
-                                                            y: 6,
-                                                            scaleX: 0.36,
-                                                            scaleY: 0.36,
-                                                            data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
-                                                            fill: "transparent",
-                                                            stroke:
-                                                                $current.song
-                                                                    ?.id ===
-                                                                song.id
-                                                                    ? $currentThemeObject[
-                                                                          "library-playing-icon"
-                                                                      ]
-                                                                    : $currentThemeObject[
-                                                                          "library-favourite-hover-icon"
-                                                                      ],
-                                                        }}
-                                                    />
-                                                {/if}
-                                            {/if}
-                                        {/each}
+                                        {/if}
+                                        <Text
+                                            config={{
+                                                x: fields.title.viewProps.x,
+                                                y: fields.title.viewProps.y,
+                                                width: fields.title.viewProps
+                                                    .width,
+                                                height: fields.title.viewProps
+                                                    .height,
+                                                text: validatedValue(
+                                                    song.title,
+                                                ),
+                                                listening: false,
+                                                fontSize: 13.5,
+                                                padding: 2,
+                                                align: "left",
+                                                verticalAlign: "middle",
+                                                fill:
+                                                    $current.index ===
+                                                        song?.viewModel
+                                                            ?.index &&
+                                                    song.id ===
+                                                        $current.song?.id
+                                                        ? PLAYING_TITLE_COLOR
+                                                        : TITLE_COLOR,
+                                                fontStyle: "bold",
+                                                ellipsis: true,
+                                            }}
+                                        />
+                                        <Text
+                                            config={{
+                                                x: fields.artist.viewProps.x,
+                                                y: fields.artist.viewProps.y,
+                                                width: fields.artist.viewProps
+                                                    .width,
+                                                height: fields.artist.viewProps
+                                                    .height,
+                                                text: validatedValue(
+                                                    song.artist,
+                                                ),
+                                                listening: false,
+                                                fontSize: 13.5,
+                                                padding: 2,
+                                                align: "left",
+                                                verticalAlign: "middle",
+                                                fill:
+                                                    $current.index ===
+                                                        song?.viewModel
+                                                            ?.index &&
+                                                    song.id ===
+                                                        $current.song?.id
+                                                        ? PLAYING_TEXT_COLOR
+                                                        : TEXT_COLOR,
+                                                ellipsis: true,
+                                            }}
+                                        />
+                                        <Text
+                                            config={{
+                                                x: fields.duration.viewProps.x,
+                                                y: fields.duration.viewProps.y,
+                                                width: fields.duration.viewProps
+                                                    .width,
+                                                height: fields.duration
+                                                    .viewProps.height,
+                                                text: validatedValue(
+                                                    song.duration,
+                                                ),
+                                                listening: false,
+                                                fontSize: 13.5,
+                                                padding: 2,
+                                                align: "left",
+                                                verticalAlign: "middle",
+                                                fill:
+                                                    $current.index ===
+                                                        song?.viewModel
+                                                            ?.index &&
+                                                    song.id ===
+                                                        $current.song?.id
+                                                        ? PLAYING_TEXT_COLOR
+                                                        : TEXT_COLOR,
+                                            }}
+                                        />
+                                        <!-- Now playing icon -->
+                                        {#if $current.index === song?.viewModel?.index && song.id === $current.song?.id}
+                                            <Path
+                                                config={{
+                                                    x: fields.playing.viewProps
+                                                        .x,
+                                                    y: fields.playing.viewProps
+                                                        .y,
+                                                    listening: false,
+                                                    scaleX: 0.65,
+                                                    scaleY: 0.65,
+                                                    data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
+                                                    fill: $currentThemeObject[
+                                                        "library-playing-icon"
+                                                    ],
+                                                }}
+                                            />
+                                        {/if}
+                                        <!-- Favourite icon button -->
+                                        {#if song.isFavourite}
+                                            <Path
+                                                on:click={() =>
+                                                    unfavouriteSong(song)}
+                                                config={{
+                                                    x: fields.favourite
+                                                        .viewProps.x,
+                                                    y: fields.favourite
+                                                        .viewProps.y,
+                                                    scaleX: 0.36,
+                                                    scaleY: 0.36,
+                                                    data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
+                                                    fill:
+                                                        $current.song?.id ===
+                                                        song.id
+                                                            ? $currentThemeObject[
+                                                                  "library-playing-icon"
+                                                              ]
+                                                            : $currentThemeObject[
+                                                                  "library-favourite-icon"
+                                                              ],
+                                                }}
+                                            />
+                                        {:else if hoveredSongIdx === songIdx}
+                                            <Path
+                                                on:click={() =>
+                                                    favouriteSong(song)}
+                                                config={{
+                                                    x: fields.favourite
+                                                        .viewProps.x,
+                                                    y: fields.favourite
+                                                        .viewProps.y,
+                                                    scaleX: 0.36,
+                                                    scaleY: 0.36,
+                                                    data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
+                                                    fill: "transparent",
+                                                    stroke:
+                                                        $current.song?.id ===
+                                                        song.id
+                                                            ? $currentThemeObject[
+                                                                  "library-playing-icon"
+                                                              ]
+                                                            : $currentThemeObject[
+                                                                  "library-favourite-hover-icon"
+                                                              ],
+                                                }}
+                                            />
+                                        {/if}
                                     </Group>
 
                                     {#if hoveredSongIdx === songIdx && $draggedSongs?.length}
@@ -1506,6 +1338,13 @@
                                     y: sandwichTopHeight,
                                     width: width,
                                 }}
+                                on:mouseenter={() => {
+                                    isHeaderOver = true;
+                                }}
+                                on:mouseleave={() => {
+                                    isHeaderOver = false;
+                                }}
+                                on:click={onHeaderClick}
                             >
                                 <Rect
                                     config={{
@@ -1542,6 +1381,21 @@
                                             "-apple-system, Avenir, Helvetica, Arial, sans-serif",
                                         fill: TEXT_COLOR,
                                         listening: false,
+                                    }}
+                                />
+                                <Path
+                                    config={{
+                                        x: width - 16,
+                                        y: 5,
+                                        width: 16,
+                                        height: HEADER_HEIGHT,
+                                        scaleX: 0.8,
+                                        scaleY: 0.8,
+                                        data: "M7.25 2.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 8a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 13.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0",
+                                        fill: "transparent",
+                                        stroke: isHeaderOver
+                                            ? TEXT_COLOR
+                                            : "transparent",
                                     }}
                                 />
                             </Group>

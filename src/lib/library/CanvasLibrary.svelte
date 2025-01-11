@@ -494,7 +494,7 @@
         OFFSCREEN_BG_COLOR = "#71658e3b";
         HEADER_BG_COLOR_HOVERED =
             $currentThemeObject["library-header-active-bg"];
-        TEXT_COLOR = $currentThemeObject["library-text-color"];
+        TEXT_COLOR = $currentThemeObject["library-text"];
         TEXT_COLOR_SECONDARY = $currentThemeObject["text-secondary"];
         HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
         ROW_BG_COLOR = "transparent";
