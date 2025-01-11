@@ -67,6 +67,7 @@
     let columnToInsertXPos = 0;
     let isDraggingOver = false;
     let isOver = false;
+    let isHeaderOver = false;
 
     let songsSlice: Song[];
     let songsStartSlice = 0;
@@ -741,6 +742,12 @@
         );
     }
 
+    function onHeaderClick(e) {
+        e.preventDefault();
+        showQueueMenu = true;
+        menuPos = { x: e.detail.evt.clientX, y: e.detail.evt.clientY };
+    }
+
     function onStageClick(e) {
         if (e.detail.evt.button === 2) {
             e.preventDefault();
@@ -1331,6 +1338,13 @@
                                     y: sandwichTopHeight,
                                     width: width,
                                 }}
+                                on:mouseenter={() => {
+                                    isHeaderOver = true;
+                                }}
+                                on:mouseleave={() => {
+                                    isHeaderOver = false;
+                                }}
+                                on:click={onHeaderClick}
                             >
                                 <Rect
                                     config={{
@@ -1367,6 +1381,21 @@
                                             "-apple-system, Avenir, Helvetica, Arial, sans-serif",
                                         fill: TEXT_COLOR,
                                         listening: false,
+                                    }}
+                                />
+                                <Path
+                                    config={{
+                                        x: width - 16,
+                                        y: 5,
+                                        width: 16,
+                                        height: HEADER_HEIGHT,
+                                        scaleX: 0.8,
+                                        scaleY: 0.8,
+                                        data: "M7.25 2.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 8a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 13.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0",
+                                        fill: "transparent",
+                                        stroke: isHeaderOver
+                                            ? TEXT_COLOR
+                                            : "transparent",
                                     }}
                                 />
                             </Group>
