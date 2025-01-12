@@ -11,11 +11,13 @@ use objc2_foundation::{CGSize, NSDictionary, NSNumber, NSObject, NSString, NSUIn
 
 use crate::metadata::{Artwork, Song};
 extern "C" {
-    static MPMediaItemPropertyTitle: *const NSString;
-    static MPMediaItemPropertyArtist: *const NSString;
     static MPMediaItemPropertyAlbumTitle: *const NSString;
-    static MPMediaItemPropertyPlaybackDuration: *const NSString;
+    static MPMediaItemPropertyArtist: *const NSString;
     static MPMediaItemPropertyArtwork: *const NSString;
+    static MPMediaItemPropertyPlaybackDuration: *const NSString;
+    static MPMediaItemPropertyTitle: *const NSString;
+    static MPNowPlayingInfoPropertyElapsedPlaybackTime: *const NSString;
+    static MPNowPlayingInfoPropertyPlaybackRate: *const NSString;
 }
 /// Sets the now playing information using an immutable `NSDictionary`.
 pub fn set_now_playing_info(song: &Song) {
@@ -79,6 +81,20 @@ pub fn set_paused() {
         const PAUSED: NSUInteger = 0;
         let info_center: *mut NSObject = msg_send![class!(MPNowPlayingInfoCenter), defaultCenter];
         let _: () = msg_send![info_center, setPlaybackState: PAUSED];
+    }
+}
+
+pub fn boot() {
+    unsafe {
+        let info_center: *mut NSObject = msg_send![class!(MPNowPlayingInfoCenter), defaultCenter];
+        let now_playing_info: *mut NSObject = msg_send![info_center, nowPlayingInfo];
+        let mutable_now_playing_info: *mut NSObject =
+            msg_send![class!(NSMutableDictionary), dictionaryWithDictionary: now_playing_info];
+
+        // set default playback rate so that the initial song can be shown (should be paused just after)
+        let default_rate: *mut NSObject = msg_send![class!(NSNumber), numberWithFloat: 1_f32];
+        let _: () = msg_send![mutable_now_playing_info, setObject: default_rate forKey: MPNowPlayingInfoPropertyPlaybackRate];
+        let _: () = msg_send![info_center, setNowPlayingInfo: mutable_now_playing_info];
     }
 }
 
