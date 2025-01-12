@@ -73,6 +73,10 @@ const en = {
             valid: "query is valid",
             invalid: "query is invalid",
             parts: {
+                byAlbumArtist: {
+                    title: "by album artist",
+                    example: "eg. by Charlie Parker",
+                },
                 byArtist: {
                     title: "by artist",
                     example: "eg. by Charlie Parker",

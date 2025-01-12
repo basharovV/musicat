@@ -11,9 +11,7 @@ export default class SmartQuery {
 
     constructor(savedQuery?: SavedSmartQuery) {
         if (savedQuery) {
-            this.parts = savedQuery.queryParts.map((p) => {
-                return new UserQueryPart(p);
-            });
+            this.parts = savedQuery.queryParts.map((p) => new UserQueryPart(p));
             this.name = savedQuery.name;
         }
     }
@@ -91,8 +89,8 @@ export default class SmartQuery {
                 values: Object.entries(p.userInputs).reduce((obj, current) => {
                     obj[current[0]] = current[1].value;
                     return obj;
-                }, {})
-            }))
+                }, {}),
+            })),
         });
     }
 }
