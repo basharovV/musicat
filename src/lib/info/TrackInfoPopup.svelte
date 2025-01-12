@@ -191,9 +191,6 @@
     async function reset() {
         updateArtwork();
         previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
-        originCountry =
-            ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
-        originCountryEdited = originCountry;
         metadata?.resetMetadata();
     }
 

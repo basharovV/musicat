@@ -3,14 +3,15 @@
     import { db } from "../../data/db";
     import { findCountryByArtist } from "../data/LibraryEnrichers";
     import Icon from "../ui/Icon.svelte";
-    import Input from "../ui/Input.svelte";
-    import { rightClickedTrack, rightClickedTracks } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
+    import { rightClickedTrack, rightClickedTracks } from "../../data/store";
+    import Svelecte from "svelecte";
     import tippy from "svelte-tippy";
+    import list from "../../data/countries.json";
 
     let isFetchingOriginCountry = false;
     let originCountry =
-        ($rightClickedTrack || $rightClickedTracks[0]).originCountry || "";
+        ($rightClickedTrack || $rightClickedTracks[0])?.originCountry || null;
     let originCountryEdited = originCountry;
 
     async function fetchFromWikipedia() {
@@ -26,11 +27,6 @@
         isFetchingOriginCountry = false;
     }
 
-    function onOriginCountryUpdated(event) {
-        const country = event.target.value;
-        originCountryEdited = country;
-    }
-
     async function saveTrack() {
         ($rightClickedTrack || $rightClickedTracks[0]).originCountry =
             originCountryEdited;
@@ -40,9 +36,12 @@
             .where("artist")
             .equals(($rightClickedTrack || $rightClickedTracks[0]).artist)
             .toArray();
+
         artistSongs.forEach((s) => {
             db.songs.update(s.id, { originCountry: originCountryEdited });
         });
+
+        originCountry = originCountryEdited;
     }
 </script>
 
@@ -62,13 +61,14 @@
         </div>
     </div>
     <div class="country">
-        <Input
-            fullWidth
-            value={originCountryEdited}
+        <Svelecte
+            options={list}
+            max={1}
+            clearable={true}
+            bind:value={originCountryEdited}
             placeholder={isFetchingOriginCountry
                 ? $LL.trackInfo.fetchingOriginCountry()
                 : ""}
-            onChange={onOriginCountryUpdated}
         />
         <ButtonWithIcon
             onClick={saveTrack}
@@ -129,6 +129,8 @@
             align-items: center;
             width: fit-content;
             gap: 5px;
+            width: 100%;
+
             p {
                 margin-right: 1em;
             }

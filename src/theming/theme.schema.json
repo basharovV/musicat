@@ -129,7 +129,13 @@
         "input-bg": {
             "type": "string"
         },
+        "input-focus-bg": {
+            "type": "string"
+        },
         "input-focus-outline": {
+            "type": "string"
+        },
+        "input-placeholder-text": {
             "type": "string"
         },
         "library-clickable-cell-bg": {
@@ -660,7 +666,9 @@
         "icon-tertiary-hover",
         "input-alt-focus-outline",
         "input-bg",
+        "input-focus-bg",
         "input-focus-outline",
+        "input-placeholder-text",
         "library-clickable-cell-bg",
         "library-clickable-cell-hover-bg",
         "library-favourite-hover-icon",
