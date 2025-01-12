@@ -20,7 +20,9 @@ button-bg: "#282b2c"
 button-text: "#ede8f0"
 input-alt-focus-outline: "1px solid #c4c7c8"
 input-bg: "#86808066"
+input-focus-bg: "#999999"
 input-focus-outline: "2px solid #7171bb"
+input-placeholder-text: "#ffffff99"
 header-opacity: 0.2
 header-text: var(--text)
 link: "#2c33ff"

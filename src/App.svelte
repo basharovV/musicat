@@ -69,6 +69,7 @@
     import WikiView from "./lib/views/WikiView.svelte";
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
     import { startMenuListener } from "./window/EventListener";
+    import { resetDraggedSongs } from "./data/storeHelper";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -192,8 +193,8 @@
     }
 
     function onMouseUp() {
-        $draggedSongs = [];
-        $draggedAlbum = null;
+        resetDraggedSongs();
+
         mouseX = 0;
         mouseY = 0;
     }
@@ -711,5 +712,41 @@
         z-index: 30;
         display: flex;
         background-color: rgba(30, 26, 31, 0.824);
+    }
+
+    :global(.svelecte-control) {
+        --sv-bg: var(--input-bg);
+        --sv-disabled-bg: #eee;
+        --sv-border: 1px solid
+            color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
+        --sv-control-bg: var(--sv-bg);
+        --sv-item-selected-bg: #efefef;
+        --sv-item-btn-color: #000;
+        --sv-item-btn-color-hover: var(--icon-secondary-hover);
+        --sv-item-btn-bg: #efefef;
+        --sv-item-btn-bg-hover: #ddd;
+        --sv-icon-color: var(--icon-secondary);
+        --sv-icon-color-hover: var(--icon-secondary-hover);
+        --sv-icon-bg: transparent;
+        --sv-separator-bg: var(--icon-secondary);
+        --sv-dropdown-bg: rgb(from var(--input-bg) r g b / 0.95);
+        --sv-dropdown-border: 1px solid rgba(0, 0, 0, 0.15);
+        --sv-dropdown-shadow: 0 6px 12px #0000002d;
+        --sv-dropdown-active-bg: var(--input-focus-bg);
+        --sv-dropdown-selected-bg: #ecf3f9;
+        --sv-create-kbd-border: 1px solid #efefef;
+        --sv-create-kbd-bg: #fff;
+        --sv-create-disabled-bg: #fcbaba;
+        --sv-loader-border: 2px solid #ccc;
+    }
+    :global(.sv-control) {
+        min-height: 36px !important;
+        max-height: 36px !important;
+    }
+    :global(.sv_dropdown) {
+        z-index: 20 !important;
+    }
+    :global(.sv-input--text::placeholder) {
+        color: var(--input-placeholder-text);
     }
 </style>

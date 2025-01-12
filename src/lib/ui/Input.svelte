@@ -91,11 +91,7 @@
         color: var(--text);
         &:focus {
             outline: var(--input-focus-outline);
-            background-color: color-mix(
-                in srgb,
-                vvar(--input-bg) 60%,
-                var(--inverse)
-            );
+            background-color: var(--input-focus-bg);
         }
 
         &.padding {
@@ -123,8 +119,7 @@
             line-height: 0.9em;
         }
         &::placeholder {
-            opacity: 0.5;
-            color: var(--text);
+            color: var(--input-placeholder-text);
         }
     }
 

@@ -2,6 +2,8 @@
     import { liveQuery } from "dexie";
     import type { Song } from "src/App";
     import { get } from "svelte/store";
+    import { songMatchesQuery } from "../../data/LibraryUtils";
+    import { parsePlaylist } from "../../data/M3UUtils";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -14,7 +16,6 @@
         isTagOrCondition,
         queriedSongs,
         query,
-        queue,
         queueMirrorsSearch,
         selectedPlaylistFile,
         selectedSmartQuery,
@@ -25,11 +26,10 @@
         toDeletePlaylist,
         uiView,
     } from "../../data/store";
+    import { setQueue } from "../../data/storeHelper";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
-    import { parsePlaylist } from "../../data/M3UUtils";
-    import { setQueue } from "../../data/storeHelper";
 
     let isLoading = true;
 
@@ -70,17 +70,8 @@
             isIndexed = false;
             // Filter within playlist
             if ($query.query.length) {
-                results = results.filter(
-                    (song) =>
-                        song.title
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
-                        song.artist
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
-                        song.album
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()),
+                results = results.filter((song) =>
+                    songMatchesQuery(song, $query.query),
                 );
             }
         } else if ($uiView === "smart-query" || $uiView === "favourites") {
@@ -126,27 +117,7 @@
                           ? "[album+trackNumber]"
                           : $query.orderBy,
                 )
-                .and(
-                    (song) =>
-                        song.title
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
-                        song.artist
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
-                        song.album
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
-                        song.genre.some((g) =>
-                            g
-                                .toLowerCase()
-                                .includes($query.query.toLowerCase()),
-                        ) ||
-                        song.tags
-                            ?.map((t) => t.toLowerCase())
-                            .join(" ")
-                            .includes($query.query.toLowerCase()),
-                );
+                .and((song) => songMatchesQuery(song, $query.query));
         } else {
             results = db.songs.orderBy(
                 $query.orderBy === "artist"
@@ -280,5 +251,9 @@
         overflow: hidden;
         border-top: 0.7px solid var(--panel-primary-border-main);
         border-bottom: 0.7px solid var(--panel-primary-border-accent1);
+
+        &:has(.library-container.dragover) {
+            border-color: var(--accent-secondary);
+        }
     }
 </style>

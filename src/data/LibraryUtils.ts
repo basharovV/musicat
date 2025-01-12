@@ -429,3 +429,17 @@ function getAlbumId(track: Song) {
         `${track.path.replace(`/${track.file}`, "")} - ${track.album}`.toLowerCase(),
     );
 }
+
+export function songMatchesQuery(song: Song, query: string) {
+    return (
+        song.title.toLowerCase().includes(query.toLowerCase()) ||
+        song.artist.toLowerCase().includes(query.toLowerCase()) ||
+        song.albumArtist?.toLowerCase().includes(query.toLowerCase()) ||
+        song.album.toLowerCase().includes(query.toLowerCase()) ||
+        song.genre.some((g) => g.toLowerCase().includes(query.toLowerCase())) ||
+        song.tags
+            ?.map((t) => t.toLowerCase())
+            .join(" ")
+            .includes(query.toLowerCase())
+    );
+}
