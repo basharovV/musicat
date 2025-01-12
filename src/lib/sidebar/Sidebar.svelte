@@ -15,9 +15,10 @@
     import { fade, fly } from "svelte/transition";
     import type { PlaylistFile, Song } from "../../App";
     import {
-        addSongsToPlaylists,
+        addSongsToPlaylist,
         createNewPlaylistFile,
         deletePlaylistFile,
+        parsePlaylist,
         renamePlaylist,
     } from "../../data/M3UUtils";
     import SmartQueries from "../../data/SmartQueries";
@@ -27,8 +28,9 @@
         currentIAFile,
         currentSongArtworkSrc,
         draggedAlbum,
+        draggedPlaylist,
         draggedSongs,
-        isDraggingFromQueue,
+        draggedSource,
         isFindFocused,
         isMiniPlayer,
         isPlaying,
@@ -72,6 +74,13 @@
     import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import MenuDivider from "../menu/MenuDivider.svelte";
+    import {
+        resetDraggedSongs,
+        setDraggedPlaylist,
+        setDraggedSongs,
+        setQueue,
+    } from "../../data/storeHelper";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -441,6 +450,7 @@
     let draggingOverPlaylist: PlaylistFile = null;
     let hoveringOverPlaylistId: string = null;
     let isRenamingPlaylist = false;
+    let activePlaylist: PlaylistFile = null;
 
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
@@ -466,6 +476,11 @@
         isConfirmingPlaylistDelete = false;
     }
 
+    async function playPlaylist(playlist: PlaylistFile) {
+        const songs = await parsePlaylist(playlist);
+        setQueue(songs, 0);
+    }
+
     async function onRenamePlaylist(playlist: PlaylistFile) {
         await renamePlaylist(playlist, updatedPlaylistName);
         updatedPlaylistName = "";
@@ -473,7 +488,7 @@
         isRenamingPlaylist = false;
     }
 
-    function onMouseOverPlaylist(playlist: PlaylistFile) {
+    function onMouseEnterPlaylist(playlist: PlaylistFile) {
         if (
             $draggedSongs.length &&
             draggingOverPlaylist?.title !== playlist?.title
@@ -485,9 +500,73 @@
         }
     }
 
-    function onMouseLeavePlaylist() {
+    async function onMouseLeavePlaylist(e) {
         draggingOverPlaylist = null;
         hoveringOverPlaylistId = null;
+
+        if (activePlaylist) {
+            const songs = await parsePlaylist(activePlaylist);
+
+            setDraggedPlaylist(activePlaylist, songs, "Sidebar");
+
+            activePlaylist = null;
+        }
+    }
+
+    function onMouseDownPlaylist(playlist: PlaylistFile) {
+        if (!$draggedSongs.length) {
+            activePlaylist = playlist;
+        }
+    }
+
+    async function onMouseUpPlaylist(playlist: PlaylistFile) {
+        if ($draggedPlaylist?.title === playlist.title) {
+            resetDraggedSongs();
+
+            return;
+        }
+
+        if ($draggedSongs.length) {
+            console.log("[Sidebar] Adding to playlist: ", playlist);
+            await addSongsToPlaylist(playlist, $draggedSongs);
+            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
+            toast.success(
+                `${
+                    $draggedSongs.length > 1
+                        ? $draggedSongs.length + " songs"
+                        : $draggedSongs[0].title
+                } added to ${playlist.path}`,
+                {
+                    position: "bottom-center",
+                },
+            );
+
+            resetDraggedSongs();
+        }
+
+        activePlaylist = null;
+    }
+
+    function onClickPlaylist(e, playlist) {
+        $uiView = "playlists";
+        // Opening a playlist will reset the query
+        $query = {
+            ...$query,
+            orderBy: "none",
+            reverse: false,
+            query: "",
+        };
+        $selectedPlaylistFile = playlist;
+        $selectedSmartQuery = null;
+
+        activePlaylist = null;
+    }
+
+    function onClickPlaylistOptions(e, playlist) {
+        menuX = e.clientX;
+        menuY = e.clientY;
+        playlistToEdit = playlist;
+        showPlaylistMenu = !showPlaylistMenu;
     }
 
     // $: {
@@ -526,33 +605,12 @@
         console.log("queries", userQueries);
     }
 
-    function onMouseOverSmartPlaylist(queryId: number | string) {
+    function onMouseEnterSmartPlaylist(queryId: number | string) {
         hoveringOverSmartPlaylistId = queryId;
     }
 
     function onMouseLeaveSmartPlaylist() {
         hoveringOverSmartPlaylistId = null;
-    }
-
-    async function onDropSongsToPlaylist(playlist: PlaylistFile) {
-        if ($draggedSongs.length) {
-            console.log("[Sidebar] Adding to playlist: ", playlist);
-            await addSongsToPlaylists(playlist, $draggedSongs);
-            $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
-            toast.success(
-                `${
-                    $draggedSongs.length > 1
-                        ? $draggedSongs.length + " songs"
-                        : $draggedSongs[0].title
-                } added to ${playlist.path}`,
-                {
-                    position: "bottom-center",
-                },
-            );
-            $draggedSongs = [];
-            $draggedAlbum = null;
-            $isDraggingFromQueue = false;
-        }
     }
 
     async function favouriteCurrentSong() {
@@ -1075,24 +1133,24 @@
                                                 playlist?.title}
                                             class:selected={$selectedPlaylistFile?.path ===
                                                 playlist.path}
-                                            on:click={() => {
-                                                $uiView = "playlists";
-                                                // Opening a playlist will reset the query
-                                                $query = {
-                                                    ...$query,
-                                                    orderBy: "none",
-                                                    reverse: false,
-                                                    query: "",
-                                                };
-                                                $selectedPlaylistFile =
-                                                    playlist;
-                                                $selectedSmartQuery = null;
-                                            }}
-                                            on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
+                                            on:contextmenu|preventDefault={(
+                                                e,
+                                            ) =>
+                                                onClickPlaylistOptions(
+                                                    e,
+                                                    playlist,
+                                                )}
+                                            on:click={(e) =>
+                                                onClickPlaylist(e, playlist)}
+                                            on:dblclick={() =>
+                                                playPlaylist(playlist)}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
-                                                onMouseOverPlaylist(playlist)}
+                                                onMouseEnterPlaylist(playlist)}
+                                            on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
+                                            on:mousedown|preventDefault|stopPropagation={() =>
+                                                onMouseDownPlaylist(playlist)}
                                             on:mouseup|preventDefault|stopPropagation={() =>
-                                                onDropSongsToPlaylist(playlist)}
+                                                onMouseUpPlaylist(playlist)}
                                         >
                                             {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                                 <Input
@@ -1129,14 +1187,11 @@
                                                         icon="charm:menu-kebab"
                                                         color="#898989"
                                                         size={14}
-                                                        onClick={(e) => {
-                                                            menuX = e.clientX;
-                                                            menuY = e.clientY;
-                                                            playlistToEdit =
-                                                                playlist;
-                                                            showPlaylistMenu =
-                                                                !showPlaylistMenu;
-                                                        }}
+                                                        onClick={(e) =>
+                                                            onClickPlaylistOptions(
+                                                                e,
+                                                                playlist,
+                                                            )}
                                                     />
                                                 </div>
                                             {/if}
@@ -1200,7 +1255,7 @@
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseOverSmartPlaylist(
+                                            onMouseEnterSmartPlaylist(
                                                 smartQuery.value,
                                             )}
                                     >
@@ -1224,7 +1279,7 @@
                                         }}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseOverSmartPlaylist(query.id)}
+                                            onMouseEnterSmartPlaylist(query.id)}
                                     >
                                         {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Input
@@ -1377,6 +1432,14 @@
                 fixed
             >
                 <MenuOption
+                    onClick={() => {
+                        playPlaylist(playlistToEdit);
+                        showPlaylistMenu = !showPlaylistMenu;
+                    }}
+                    text="Play playlist"
+                />
+                <MenuDivider />
+                <MenuOption
                     isDestructive={true}
                     isConfirming={isConfirmingPlaylistDelete}
                     onClick={deletePlaylist}
@@ -1488,7 +1551,7 @@
                         <div
                             class="marquee-container"
                             on:mousedown={() => {
-                                $draggedSongs = [song];
+                                setDraggedSongs([song], "Player");
                             }}
                         >
                             <canvas

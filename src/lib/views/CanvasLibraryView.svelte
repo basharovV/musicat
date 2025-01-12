@@ -251,5 +251,9 @@
         overflow: hidden;
         border-top: 0.7px solid var(--panel-primary-border-main);
         border-bottom: 0.7px solid var(--panel-primary-border-accent1);
+
+        &:has(.library-container.dragover) {
+            border-color: var(--accent-secondary);
+        }
     }
 </style>
