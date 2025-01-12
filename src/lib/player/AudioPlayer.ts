@@ -7,6 +7,7 @@ import {
     currentSongArtworkSrc,
     isPlaying,
     isShuffleEnabled,
+    isSongReady,
     nextUpSong,
     playerTime,
     queue,
@@ -219,6 +220,34 @@ class AudioPlayer {
                 },
             });
             localStorage.setItem("volume", String(vol));
+        });
+
+        isSongReady.subscribe(async () => {
+            if (this.currentSong) {
+                if (
+                    !this.webRTCReceiver.dataChannel ||
+                    this.webRTCReceiver.dataChannel.readyState !== "open"
+                ) {
+                    // Try to reconnect
+                    this.webRTCReceiver.playerConnection?.close();
+                    this.webRTCReceiver.remoteConnection?.close();
+                    this.webRTCReceiver.dataChannel?.close();
+                    this.webRTCReceiver.init();
+                }
+
+                // If the WebRTC receiver is ready to receive data, invoke the streamer
+                this.webRTCReceiver.prepareForNewStream();
+
+                invoke("stream_file", {
+                    event: {
+                        path: this.currentSong.path,
+                        seek: 0,
+                        file_info: this.currentSong.fileInfo,
+                        volume: get(volume),
+                        boot: true,
+                    },
+                });
+            }
         });
 
         appWindow.listen("song_change", async (event: Event<Song>) => {
