@@ -476,12 +476,9 @@
         isConfirmingPlaylistDelete = false;
     }
 
-    async function playPlaylist() {
-        const songs = await parsePlaylist(playlistToEdit);
-
+    async function playPlaylist(playlist: PlaylistFile) {
+        const songs = await parsePlaylist(playlist);
         setQueue(songs, 0);
-
-        showPlaylistMenu = !showPlaylistMenu;
     }
 
     async function onRenamePlaylist(playlist: PlaylistFile) {
@@ -1145,6 +1142,8 @@
                                                 )}
                                             on:click={(e) =>
                                                 onClickPlaylist(e, playlist)}
+                                            on:dblclick={() =>
+                                                playPlaylist(playlist)}
                                             on:mouseenter|preventDefault|stopPropagation={() =>
                                                 onMouseEnterPlaylist(playlist)}
                                             on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
@@ -1432,7 +1431,13 @@
                 }}
                 fixed
             >
-                <MenuOption onClick={playPlaylist} text="Play playlist" />
+                <MenuOption
+                    onClick={() => {
+                        playPlaylist(playlistToEdit);
+                        showPlaylistMenu = !showPlaylistMenu;
+                    }}
+                    text="Play playlist"
+                />
                 <MenuDivider />
                 <MenuOption
                     isDestructive={true}
