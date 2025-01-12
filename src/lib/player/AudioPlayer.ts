@@ -8,6 +8,7 @@ import {
     isPlaying,
     isShuffleEnabled,
     nextUpSong,
+    os,
     playerTime,
     queue,
     seekTime,
@@ -22,6 +23,8 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import WebRTCReceiver from "./WebRTCReceiver";
 import webAudioPlayer, { isIAPlaying } from "./WebAudioPlayer";
 const appWindow = getCurrentWebviewWindow();
+import { listen } from "@tauri-apps/api/event";
+import { TauriEvent } from "@tauri-apps/api/event";
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
@@ -122,11 +125,12 @@ class AudioPlayer {
             this.setNextUpSong();
         });
 
-        current.subscribe(async ({ song }) => {
-            this.seek = 0;
-
+        current.subscribe(async ({ song, position }) => {
             if (song) {
                 this.currentSong = song;
+                this.seek = position || 0;
+            } else {
+                this.seek = 0;
             }
         });
 
@@ -262,9 +266,17 @@ class AudioPlayer {
             });
         });
 
-        appWindow.listen("close", () => {
-            current.set({ ...get(current), position: get(playerTime) });
-        });
+        if (get(os) === "macos") {
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "q" && e.metaKey) {
+                    current.set({ ...get(current), position: get(playerTime) });
+                }
+            });
+        } else {
+            listen(TauriEvent.WINDOW_CLOSE_REQUESTED, async () => {
+                current.set({ ...get(current), position: get(playerTime) });
+            });
+        }
 
         appWindow.listen("toggle_play", async (event: any) => {
             console.log("toggle_play");
