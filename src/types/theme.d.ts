@@ -30,7 +30,9 @@ export interface Theme {
     "button-text": string;
     "input-alt-focus-outline": string;
     "input-bg": string;
+    "input-focus-bg": string;
     "input-focus-outline": string;
+    "input-placeholder-text": string;
     "header-opacity": number;
     "header-text": string;
     link: string;

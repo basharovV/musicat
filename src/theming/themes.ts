@@ -32,7 +32,10 @@ export const DEFAULT_THEME: Theme = {
     "button-text": "#ffffff",
     "input-alt-focus-outline": "1px solid #c4c7c8",
     "input-bg": "#4d494966",
+    "input-focus-bg":
+        "background-color: color-mix(in srgb, var(--input-bg) 60%, var(--inverse))",
     "input-focus-outline": "2px solid #7171bb",
+    "input-placeholder-text": "rgb(from var(--text) r g b / 0.5)",
     "header-opacity": 0.2,
     "header-text": "var(--text)",
     link: "#acafff",
