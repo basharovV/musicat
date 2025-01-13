@@ -46,6 +46,7 @@
         query,
         queue,
         rightClickedTrack,
+        rightClickedTracks,
         seekTime,
         selectedPlaylistFile,
         selectedSmartQuery,
@@ -1753,6 +1754,7 @@
                         icon="mdi:information"
                         onClick={() => {
                             $rightClickedTrack = song;
+                            $rightClickedTracks = [];
                             $popupOpen = "track-info";
                         }}
                     />
