@@ -86,7 +86,11 @@ export async function scanPlaylists() {
             });
         }
     }
-    userPlaylists.set(m3uFiles);
+    userPlaylists.set(
+        m3uFiles.sort((a, b) => {
+            return a.title.localeCompare(b.title);
+        }),
+    );
     console.log("[M3U]: Playlists: ", m3uFiles);
 }
 

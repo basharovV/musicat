@@ -95,10 +95,8 @@
                 console.log("selected query: ", $selectedSmartQuery);
                 if ($selectedSmartQuery.startsWith("~usq:")) {
                     // Run the query from the user-built blocks
-                    const queryName = Number($selectedSmartQuery.substring(5));
-                    const savedQuery = await db.smartQueries.get(queryName);
-                    const query = new SmartQuery(savedQuery);
-                    results = await query.run();
+                    results =
+                        await SmartQuery.listSongsFromUQI($selectedSmartQuery);
                     console.log("results query: ", results);
                     isIndexed = false;
                 } else {
