@@ -63,7 +63,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         comparison: "is-equal",
         description: "smartPlaylists.builder.parts.byAlbumArtist.title",
         example: "smartPlaylists.builder.parts.byAlbumArtist.example",
-        prompt: "by {albumArtist}",
+        prompt: "by album artist {albumArtist}",
         name: QUERY_PARTS.BY_ALBUM_ARTIST,
         inputRequired: {
             albumArtist: {

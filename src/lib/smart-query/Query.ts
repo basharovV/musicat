@@ -6,11 +6,13 @@ import { UserQueryPart } from "./UserQueryPart";
 export default class SmartQuery {
     parts: UserQueryPart[] = [];
 
+    id: number = null;
     name: string = null;
     userInput: string = "";
 
     constructor(savedQuery?: SavedSmartQuery) {
         if (savedQuery) {
+            this.id = savedQuery.id;
             this.parts = savedQuery.queryParts.map((p) => new UserQueryPart(p));
             this.name = savedQuery.name;
         }
@@ -82,15 +84,36 @@ export default class SmartQuery {
     }
 
     async save() {
-        return await db.smartQueries.put({
-            name: this.name,
-            queryParts: this.parts.map((p) => ({
-                ...p.queryPart,
-                values: Object.entries(p.userInputs).reduce((obj, current) => {
-                    obj[current[0]] = current[1].value;
-                    return obj;
-                }, {}),
-            })),
-        });
+        if (this.id) {
+            await db.smartQueries.update(this.id, {
+                name: this.name,
+                queryParts: this.parts.map((p) => ({
+                    ...p.queryPart,
+                    values: Object.entries(p.userInputs).reduce(
+                        (obj, current) => {
+                            obj[current[0]] = current[1].value;
+                            return obj;
+                        },
+                        {},
+                    ),
+                })),
+            });
+
+            return this.id;
+        } else {
+            return await db.smartQueries.put({
+                name: this.name,
+                queryParts: this.parts.map((p) => ({
+                    ...p.queryPart,
+                    values: Object.entries(p.userInputs).reduce(
+                        (obj, current) => {
+                            obj[current[0]] = current[1].value;
+                            return obj;
+                        },
+                        {},
+                    ),
+                })),
+            });
+        }
     }
 }

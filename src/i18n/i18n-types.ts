@@ -362,6 +362,7 @@ type RootTranslation = {
                 };
             };
         };
+        editSmartPlaylist: string;
         /**
          * N​e​w​ ​s​m​a​r​t​ ​p​l​a​y​l​i​s​t
          */
@@ -1170,6 +1171,7 @@ export type TranslationFunctions = {
                 };
             };
         };
+        editSmartPlaylist: () => LocalizedString;
         /**
          * New smart playlist
          */

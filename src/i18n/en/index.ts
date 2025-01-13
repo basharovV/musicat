@@ -119,6 +119,7 @@ const en = {
                 },
             },
         },
+        editSmartPlaylist: "Edit smart playlist",
         newSmartPlaylist: "New smart playlist",
         libraryPlaceholder: {
             title: "Smart playlist results will appear here",
