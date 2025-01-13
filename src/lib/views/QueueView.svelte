@@ -522,10 +522,9 @@
     }
 
     function onRightClick(e, song, idx) {
-        songsHighlighted = [song];
-        highlightedSongIdx = idx;
-        $rightClickedTracks = [];
-        $rightClickedTrack = song;
+        if (!songsHighlighted.find((s) => s.viewModel.index === idx)) {
+            highlightSong(song, idx, false);
+        }
 
         showTrackMenu = true;
         menuPos = { x: e.clientX, y: e.clientY };
