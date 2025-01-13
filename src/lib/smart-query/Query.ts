@@ -14,7 +14,7 @@ export default class SmartQuery {
             this.parts = savedQuery.queryParts.map((p) => {
                 return new UserQueryPart(p);
             });
-            this.name = savedQuery.name;
+            this.name = savedQuery?.name || null;
         }
     }
 
@@ -91,8 +91,8 @@ export default class SmartQuery {
                 values: Object.entries(p.userInputs).reduce((obj, current) => {
                     obj[current[0]] = current[1].value;
                     return obj;
-                }, {})
-            }))
+                }, {}),
+            })),
         });
     }
 }
