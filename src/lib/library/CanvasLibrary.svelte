@@ -1003,8 +1003,18 @@
         } else {
             $rightClickedTrack = song;
         }
+
+        // reposition menu if in a virtual-list
+        const list = e.target.closest(".virtual-list-inner");
+        if (list) {
+            var rect = list.getBoundingClientRect();
+
+            menuPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        } else {
+            menuPos = { x: e.clientX, y: e.clientY };
+        }
+
         showTrackMenu = true;
-        menuPos = { x: e.clientX, y: e.clientY };
     }
 
     /**
