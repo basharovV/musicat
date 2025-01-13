@@ -140,8 +140,8 @@ class AudioPlayer {
         });
 
         queue.subscribe(async (queue) => {
+            this.queue = queue;
             if (queue.length === 0) {
-                this.queue = queue;
                 this.currentSongIdx = -1;
                 return;
             }
