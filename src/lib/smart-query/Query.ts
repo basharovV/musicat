@@ -10,12 +10,11 @@ export default class SmartQuery {
     name: string = null;
     userInput: string = "";
 
-    static async listSongsFromUQI(queryId: string): Promise<Song[]> {
+    static async loadWithUQI(queryId: string): Promise<SmartQuery> {
         // Run the query from the user-built blocks
         const queryName = Number(queryId.substring(5));
         const savedQuery = await db.smartQueries.get(queryName);
-        const query = new SmartQuery(savedQuery);
-        return await query.run();
+        return new SmartQuery(savedQuery);
     }
 
     constructor(savedQuery?: SavedSmartQuery) {

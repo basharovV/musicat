@@ -27,10 +27,9 @@
         current,
         currentIAFile,
         currentSongArtworkSrc,
-        draggedAlbum,
-        draggedPlaylist,
+        draggedOrigin,
         draggedSongs,
-        draggedSource,
+        draggedTitle,
         isFindFocused,
         isMiniPlayer,
         isPlaying,
@@ -78,6 +77,7 @@
     import {
         resetDraggedSongs,
         setDraggedPlaylist,
+        setDraggedSmartPlaylist,
         setDraggedSongs,
         setQueue,
     } from "../../data/storeHelper";
@@ -453,6 +453,7 @@
     let hoveringOverPlaylistId: string = null;
     let isRenamingPlaylist = false;
     let activePlaylist: PlaylistFile = null;
+    let activeSmartPlaylist: string = null;
 
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
@@ -522,13 +523,9 @@
     }
 
     async function onMouseUpPlaylist(playlist: PlaylistFile) {
-        if ($draggedPlaylist?.title === playlist.title) {
+        if ($draggedOrigin === "Playlist" && $draggedTitle === playlist.title) {
             resetDraggedSongs();
-
-            return;
-        }
-
-        if ($draggedSongs.length) {
+        } else if ($draggedSongs.length) {
             console.log("[Sidebar] Adding to playlist: ", playlist);
             await addSongsToPlaylist(playlist, $draggedSongs);
             $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
@@ -586,17 +583,18 @@
         $selectedSmartQuery = smartQuery;
     }
 
-    function onClickSmartPlaylistOptions(e, query) {
+    function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
         menuX = e.clientX;
         menuY = e.clientY;
         smartPlaylistToEdit = query;
         showSmartPlaylistMenu = !showSmartPlaylistMenu;
     }
 
-    async function playSmartPlaylist(query) {
-        const songs = query.startsWith("~usq:")
-            ? await SmartQuery.listSongsFromUQI(query)
-            : await BuiltInQueries[query].query();
+    async function playSmartPlaylist(queryId: string) {
+        const query = queryId.startsWith("~usq:")
+            ? await SmartQuery.loadWithUQI(queryId)
+            : BuiltInQueries[queryId];
+        const songs = await query.run();
 
         setQueue(songs, 0);
     }
@@ -631,8 +629,33 @@
         hoveringOverSmartPlaylistId = queryId;
     }
 
-    function onMouseLeaveSmartPlaylist() {
+    async function onMouseLeaveSmartPlaylist() {
         hoveringOverSmartPlaylistId = null;
+
+        if (activeSmartPlaylist) {
+            const query = activeSmartPlaylist.startsWith("~usq:")
+                ? await SmartQuery.loadWithUQI(activeSmartPlaylist)
+                : BuiltInQueries[activeSmartPlaylist];
+            const songs = await query.run();
+
+            setDraggedSmartPlaylist(query, songs, "Sidebar");
+
+            activeSmartPlaylist = null;
+        }
+    }
+
+    function onMouseDownSmartPlaylist(query: string) {
+        if (!$draggedSongs.length) {
+            activeSmartPlaylist = query;
+        }
+    }
+
+    function onMouseUpSmartPlaylist() {
+        if ($draggedSongs.length) {
+            resetDraggedSongs();
+        }
+
+        activeSmartPlaylist = null;
     }
 
     async function favouriteCurrentSong() {
@@ -1268,6 +1291,11 @@
                                             onMouseEnterSmartPlaylist(
                                                 smartQuery.value,
                                             )}
+                                        on:mousedown|preventDefault|stopPropagation={() =>
+                                            onMouseDownSmartPlaylist(
+                                                smartQuery.value,
+                                            )}
+                                        on:mouseup|preventDefault|stopPropagation={onMouseUpSmartPlaylist}
                                     >
                                         <p>{smartQuery.name}</p>
                                     </div>
@@ -1301,6 +1329,11 @@
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseEnterSmartPlaylist(query.id)}
+                                        on:mousedown|preventDefault|stopPropagation={() =>
+                                            onMouseDownSmartPlaylist(
+                                                `~usq:${query.id}`,
+                                            )}
+                                        on:mouseup|preventDefault|stopPropagation={onMouseUpSmartPlaylist}
                                     >
                                         {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Input
