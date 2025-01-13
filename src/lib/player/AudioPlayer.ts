@@ -226,7 +226,9 @@ class AudioPlayer {
             if (this.currentSong) {
                 if (
                     !this.webRTCReceiver.dataChannel ||
-                    this.webRTCReceiver.dataChannel.readyState !== "open"
+                    (this.webRTCReceiver.dataChannel.readyState !== "open" &&
+                        this.webRTCReceiver.playerConnection.signalingState !==
+                            "stable")
                 ) {
                     // Try to reconnect
                     this.webRTCReceiver.playerConnection?.close();
