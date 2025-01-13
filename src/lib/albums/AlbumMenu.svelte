@@ -11,10 +11,14 @@
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
-    import { fetchAlbumArt } from "../data/LibraryEnrichers";
+    import {
+        enrichArtistCountry,
+        fetchAlbumArt,
+    } from "../data/LibraryEnrichers";
     import { rescanAlbumArtwork } from "../../data/LibraryUtils";
     import type { Album, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api/core";
+    import { writable } from "svelte/store";
 
     export let position = { x: 0, y: 0 };
     export let showMenu = false;
@@ -103,6 +107,15 @@
     }
 
     // Enrichers
+    let isFetchingOriginCountry = writable(false);
+
+    async function fetchingOriginCountry() {
+        await enrichArtistCountry(
+            $rightClickedTracks[0],
+            isFetchingOriginCountry,
+        );
+    }
+
     let isFetchingArtwork = false;
     let artworkResult: { success?: string; error?: string };
     let artworkResultForAlbum: String;
@@ -147,56 +160,71 @@
                 $rightClickedAlbum.title} by {$rightClickedAlbum.artist}"
         />
         <MenuOption
+            onClick={reImportAlbum}
+            text="Re-import album"
+            isLoading={isReimporting}
+        />
+        <MenuDivider />
+        <MenuOption text="⚡️ Enrich" isDisabled />
+        {#if $rightClickedTracks[0].artist}
+            <MenuOption
+                onClick={fetchingOriginCountry}
+                text={!$rightClickedTracks[0].originCountry
+                    ? $isFetchingOriginCountry
+                        ? "Looking online..."
+                        : "Origin country"
+                    : "Origin country ✅"}
+                description="from Wikipedia"
+            />
+        {/if}
+        <MenuOption
+            onClick={fetchArtwork}
+            isLoading={isFetchingArtwork}
+            text="Fetch artwork"
+            description={isFetchingArtwork
+                ? "Fetching from Wikipedia..."
+                : "Save to folder as cover.jpg"}
+        />
+        {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
+            <MenuOption
+                text={artworkResult.error || artworkResult.success}
+                isDisabled
+            />
+        {/if}
+        <MenuOption
+            onClick={rescanLocalArtwork}
+            text="Scan existing artwork"
+            description="Check encoded art in tracks / folder image"
+        />
+        <MenuOption
+            onClick={searchArtworkOnBrave}
+            text="Search for artwork on Brave"
+        />
+        {#if $rightClickedTracks[0].artist}
+            <MenuDivider />
+            <MenuOption
+                onClick={searchArtistOnYouTube}
+                text="YouTube: <i>{$rightClickedTracks[0].artist}</i>"
+            />
+            <MenuOption
+                onClick={searchArtistOnWikipedia}
+                text="Wikipedia: <i>{$rightClickedTracks[0].artist}</i>"
+            />
+            <MenuOption
+                onClick={searchArtistOnWikipedia}
+                text="Wiki panel: <i>{$rightClickedTracks[0].artist}</i>"
+            />
+        {/if}
+        <MenuDivider />
+        <MenuOption
             isDestructive={true}
             isConfirming={isConfirmingDelete}
             onClick={deleteAlbum}
             text="Remove album from library"
             confirmText="Click again to confirm"
         />
-        {#if $rightClickedAlbum}
-            <MenuOption
-                onClick={reImportAlbum}
-                text="Re-import album"
-                isLoading={isReimporting}
-            />
-            <MenuDivider />
-            <MenuOption text="⚡️ Enrich" isDisabled />
-            <MenuOption
-                onClick={fetchArtwork}
-                isLoading={isFetchingArtwork}
-                text="Fetch artwork"
-                description={isFetchingArtwork
-                    ? "Fetching from Wikipedia..."
-                    : "Save to folder as cover.jpg"}
-            />
-            {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
-                <MenuOption
-                    text={artworkResult.error || artworkResult.success}
-                    isDisabled
-                />
-            {/if}
-            <MenuOption
-                onClick={rescanLocalArtwork}
-                text="Scan existing artwork"
-                description="Check encoded art in tracks / folder image"
-            />
-            <MenuOption
-                onClick={searchArtworkOnBrave}
-                text="Search for artwork on Brave"
-            />
-            <MenuDivider />
-            <MenuOption
-                onClick={searchArtistOnYouTube}
-                text="Search for artist on YouTube"
-            />
-            <MenuOption
-                onClick={searchArtistOnWikipedia}
-                text="Search for artist on Wikipedia"
-            />
-            <MenuDivider />
-
-            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
-            <MenuOption onClick={openInfo} text="Info & metadata" />
-        {/if}
+        <MenuDivider />
+        <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
+        <MenuOption onClick={openInfo} text="Info & metadata" />
     </Menu>
 {/if}

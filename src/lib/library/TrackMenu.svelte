@@ -21,7 +21,10 @@
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
-    import { findCountryByArtist } from "../data/LibraryEnrichers";
+    import {
+        enrichArtistCountry,
+        findCountryByArtist,
+    } from "../data/LibraryEnrichers";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuInput from "../menu/MenuInput.svelte";
@@ -29,6 +32,7 @@
     import Icon from "../ui/Icon.svelte";
     import { deleteFromLibrary } from "../../data/LibraryUtils";
     import { liveQuery } from "dexie";
+    import { writable } from "svelte/store";
 
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
@@ -245,26 +249,10 @@
     }
     // Enrichers
 
-    let isFetchingOriginCountry = false;
+    let isFetchingOriginCountry = writable(false);
 
-    async function enrichArtistCountry() {
-        isFetchingOriginCountry = true;
-        const country = await findCountryByArtist($rightClickedTrack.artist);
-        console.log("country", country);
-        if (country) {
-            $rightClickedTrack.originCountry = country;
-
-            // Find all songs with this artist
-            const artistSongs = await db.songs
-                .where("artist")
-                .equals($rightClickedTrack.artist)
-                .toArray();
-            artistSongs.forEach((s) => {
-                s.originCountry = country;
-                db.songs.update(s.id, s);
-            });
-        }
-        isFetchingOriginCountry = false;
+    async function fetchingOriginCountry() {
+        await enrichArtistCountry($rightClickedTrack, isFetchingOriginCountry);
     }
 
     let isReimporting = false;
@@ -423,28 +411,27 @@
                 onEscPressed={closeMenu}
                 small
             />
-
-            <MenuDivider />
-            <MenuOption text="Enrich" isDisabled />
-            <MenuOption
-                onClick={enrichArtistCountry}
-                text={!$rightClickedTrack.originCountry
-                    ? isFetchingOriginCountry
-                        ? "Looking online..."
-                        : "Origin country"
-                    : "Origin country ✅"}
-                description="from Wikipedia"
-            />
-            <MenuDivider />
-            <MenuOption
-                onClick={searchArtistOnWikipedia}
-                text="Open wiki panel for {$rightClickedTrack.artist}"
-            />
-            <MenuDivider />
-            <!-- <MenuOption onClick={lookUpChords} text="Look up chords" />
+            {#if $rightClickedTrack.artist}
+                <MenuDivider />
+                <MenuOption text="⚡️ Enrich" isDisabled />
+                <MenuOption
+                    onClick={fetchingOriginCountry}
+                    text={!$rightClickedTrack.originCountry
+                        ? $isFetchingOriginCountry
+                            ? "Looking online..."
+                            : "Origin country"
+                        : "Origin country ✅"}
+                    description="from Wikipedia"
+                />
+                <MenuDivider />
+                <MenuOption
+                    onClick={searchArtistOnWikipedia}
+                    text="Wiki panel: <i>{$rightClickedTrack.artist}</i>"
+                />
+            {/if}
+            <!-- <MenuDivider />
+            <MenuOption onClick={lookUpChords} text="Look up chords" />
             <MenuOption onClick={lookUpLyrics} text="Look up lyrics" /> -->
-
-            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
         {:else if $rightClickedTracks.length}
             <MenuDivider />
 
@@ -525,6 +512,9 @@
         />
         <MenuDivider />
 
+        {#if $rightClickedTrack}
+            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
+        {/if}
         <MenuOption onClick={openInfo} text="Info & metadata" />
     </Menu>
 {/if}

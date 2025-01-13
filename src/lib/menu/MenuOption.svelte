@@ -48,7 +48,7 @@
     <div class="bg" style={color ? `background-color: ${color}` : ""} />
     {#if text}
         <span>
-            <p>{isConfirming ? confirmText : text}</p>
+            <p>{@html isConfirming ? confirmText : text}</p>
             {#if description}
                 <small>
                     {description}
@@ -171,6 +171,14 @@
                 display: block;
                 opacity: 0.7;
                 text-align: left;
+            }
+
+            :global(u) {
+                text-underline-offset: 3px;
+            }
+
+            :global(i) {
+                font-size: 12.5px;
             }
         }
     }
