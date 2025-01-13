@@ -29,7 +29,7 @@ export default class WebRTCReceiver {
     createDataChannel() {
         this.dataChannel = this.playerConnection.createDataChannel("data", {
             maxRetransmits: 0,
-            ordered: false
+            ordered: false,
         });
     }
 
@@ -88,7 +88,7 @@ export default class WebRTCReceiver {
                         // Calculate
                         let totalBytes = this.throughputSample.reduce(
                             (sum, p) => (sum += p),
-                            0
+                            0,
                         );
                         let timeToSend =
                             performance.now() - this.lastSnapshotTime;
@@ -100,7 +100,7 @@ export default class WebRTCReceiver {
                             ((totalBytes * 8) / timeToSend) * 1000;
                         streamInfo.update((s) => ({
                             ...s,
-                            receiveRate: receiveBitrate
+                            receiveRate: receiveBitrate,
                         }));
 
                         this.packetCount = 0;
@@ -110,7 +110,7 @@ export default class WebRTCReceiver {
                     }
                     streamInfo.update((s) => ({
                         ...s,
-                        bytesReceived: s.bytesReceived + event.data.byteLength
+                        bytesReceived: s.bytesReceived + event.data.byteLength,
                     }));
                 }
             });
@@ -120,13 +120,13 @@ export default class WebRTCReceiver {
             (event) => {
                 console.log(
                     "webrtc::Connectionstatechange",
-                    this.playerConnection.connectionState
+                    this.playerConnection.connectionState,
                 );
                 if (this.playerConnection.connectionState === "disconnected") {
                     // Try to re-establish
                     this.init();
                 }
-            }
+            },
         );
     }
 
@@ -139,11 +139,11 @@ export default class WebRTCReceiver {
     async createLocalOffer() {
         try {
             const localOffer = await this.playerConnection.createOffer({
-                iceRestart: true
+                iceRestart: true,
             });
+            await this.handleLocalDescription(localOffer);
             this.listenForAnswer();
             await this.sendOfferToRemote(localOffer);
-            await this.handleLocalDescription(localOffer);
         } catch (e) {
             console.error("webrtc::Failed to create session description: ", e);
         }
@@ -155,12 +155,13 @@ export default class WebRTCReceiver {
                 "webrtc-answer",
                 async (event) => {
                     console.log("webrtc::answer", event);
-
-                    await this.playerConnection.setRemoteDescription(
-                        new RTCSessionDescription(event.payload)
-                    );
-                    unlisten();
-                }
+                    if (this.playerConnection?.signalingState !== "stable") {
+                        await this.playerConnection.setRemoteDescription(
+                            event.payload as any,
+                        );
+                        unlisten();
+                    }
+                },
             );
         } catch (e) {
             console.error(e);
@@ -175,7 +176,7 @@ export default class WebRTCReceiver {
                     console.log("webrtc::icecandidate-client", event);
                     this.playerConnection.addIceCandidate(event.payload);
                     unlisten();
-                }
+                },
             );
         } catch (e) {
             console.error(e);
@@ -221,7 +222,7 @@ export default class WebRTCReceiver {
             bytesReceived: 0,
             receiveRate: 0,
             playedSamples: 0,
-            bufferedSamples: 0
+            bufferedSamples: 0,
         }));
     }
 
@@ -233,8 +234,8 @@ export default class WebRTCReceiver {
             // Pause decoding for a bit
             invoke("decode_control", {
                 event: {
-                    decoding_active: false
-                }
+                    decoding_active: false,
+                },
             });
             this.isFillingBuffer = false;
         } else if (
@@ -244,8 +245,8 @@ export default class WebRTCReceiver {
             // Resume decoding again
             invoke("decode_control", {
                 event: {
-                    decoding_active: true
-                }
+                    decoding_active: true,
+                },
             });
             this.isFillingBuffer = true;
         }
