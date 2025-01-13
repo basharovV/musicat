@@ -126,11 +126,15 @@ class AudioPlayer {
         });
 
         current.subscribe(async ({ song, position }) => {
+            if (this.currentSong) {
+                if (this.currentSong !== song) {
+                    this.seek = 0;
+                }
+            } else {
+                this.seek = position || 0;
+            }
             if (song) {
                 this.currentSong = song;
-                this.seek = position || 0;
-            } else {
-                this.seek = 0;
             }
         });
 
@@ -504,7 +508,9 @@ class AudioPlayer {
             this.currentSong = song;
             console.log("play", play, this.shouldPlay);
             if (play) {
-                await this.play(false);
+                this.isStopped = false;
+                this.onPlay();
+
                 playerTime.set(position);
                 console.log(
                     "audioplayer::datachannel::",

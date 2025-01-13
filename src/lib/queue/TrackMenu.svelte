@@ -3,7 +3,12 @@
     import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
     import { db } from "../../data/db";
-    import { isShuffleEnabled, popupOpen } from "../../data/store";
+    import {
+        isShuffleEnabled,
+        popupOpen,
+        rightClickedTrack,
+        rightClickedTracks,
+    } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
@@ -123,6 +128,14 @@
         open(`https://duckduckgo.com/?q=${query}`);
     }
     function openInfo() {
+        if (songs.length === 1) {
+            $rightClickedTracks = [];
+            $rightClickedTrack = song;
+        } else {
+            $rightClickedTracks = songs;
+            $rightClickedTrack = null;
+        }
+
         closeMenu();
         $popupOpen = "track-info";
     }
