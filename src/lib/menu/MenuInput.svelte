@@ -50,6 +50,7 @@
         <span>
             <Input
                 bind:value
+                disabled={isDisabled}
                 {onEnterPressed}
                 {onEscPressed}
                 fullWidth

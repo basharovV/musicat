@@ -42,7 +42,7 @@
             : `background-color: ${$currentThemeObject["menu-item-highlight-bg"]};`
         : ""}
     on:click|stopPropagation={(e) => {
-        onClick && onClick();
+        !isDisabled && onClick && onClick();
     }}
 >
     <div class="bg" style={color ? `background-color: ${color}` : ""} />
@@ -140,7 +140,7 @@
             }
         }
         &.destructive {
-            &:hover {
+            &:hover:not(.disabled) {
                 background: var(--menu-item-destructive-hover-bg);
                 color: var(--menu-item-destructive-hover-text);
             }

@@ -30,9 +30,15 @@
     import { deleteFromLibrary } from "../../data/LibraryUtils";
     import { liveQuery } from "dexie";
 
+    type RemoveType = "remove" | "remove_from_playlist" | "delete";
+
     export let pos = { x: 0, y: 0 };
     export let showMenu = false;
+
     let explorerName: string;
+    let isDestructiveConfirmType: RemoveType = null;
+    let isLoading: RemoveType = null;
+    let songId;
 
     onMount(async () => {
         const os = await type();
@@ -43,16 +49,11 @@
             case "windows":
                 explorerName = "Explorer";
                 break;
-            case "Linux":
+            case "linux":
                 explorerName = "File manager";
                 break;
         }
     });
-
-    let songId;
-    let isDestructiveConfirmType: "remove" | "remove_from_playlist" | "delete" =
-        null;
-    let isConfirmingRemoveFromPlaylist = false;
 
     $: {
         if (
@@ -60,21 +61,19 @@
             songId !== $rightClickedTrack?.id
         ) {
             isDestructiveConfirmType = null;
-            isConfirmingRemoveFromPlaylist = false;
         }
     }
 
     function closeMenu() {
         showMenu = false;
         isDestructiveConfirmType = null;
-        isConfirmingRemoveFromPlaylist = false;
     }
 
     /**
      * Playlists are M3U files, and in special cases (like the to-delete playlist, a separate table)
      * @param tracks
      */
-    async function deleteTracksFromPlaylists(tracks: Song[]) {
+    async function deleteTracksFromPlaylist(tracks: Song[]) {
         // Delete from playlist
         if ($selectedPlaylistFile) {
             // Delete directly from M3U file
@@ -102,98 +101,58 @@
         });
     }
 
+    function removeSongs(
+        type: RemoveType,
+        action: (songs: Song[]) => Promise<void>,
+    ): () => Promise<void> {
+        return async () => {
+            if (isLoading) {
+                return;
+            }
+
+            if (isDestructiveConfirmType !== type) {
+                songId = $rightClickedTrack?.id;
+                isDestructiveConfirmType = type;
+                return;
+            }
+
+            isLoading = "remove";
+            isDestructiveConfirmType = null;
+
+            const tracksToRemove = $rightClickedTracks.length
+                ? $rightClickedTracks
+                : [$rightClickedTrack];
+
+            await action(tracksToRemove);
+
+            closeMenu();
+
+            // Reset
+            $rightClickedTracks = [];
+            $rightClickedTrack = null;
+            isLoading = null;
+        };
+    }
+
     /**
      * Removes track from the library - but not from disk!
      * i.e from songs DB, playlists
      */
-    async function removeTrackFromLibrary() {
-        console.log("[Track menu] Remove from library");
-        if (isDestructiveConfirmType !== "remove") {
-            songId = $rightClickedTrack?.id;
-            isDestructiveConfirmType = "remove";
-            return;
-        }
-
-        let tracksToRemove = [];
-        if ($rightClickedTracks.length) {
-            tracksToRemove = $rightClickedTracks;
-        } else if ($rightClickedTrack) {
-            tracksToRemove.push($rightClickedTrack);
-        }
-
-        closeMenu();
-
-        // Delete
-        await deleteTracksFromPlaylists(tracksToRemove);
-        await deleteFromLibrary(tracksToRemove);
-
-        // Reset
-        if ($rightClickedTracks.length) {
-            $rightClickedTracks = [];
-        } else if ($rightClickedTrack) {
-            $rightClickedTrack = null;
-        }
-        isDestructiveConfirmType = null;
+    async function removeFromLibrary(songs: Song[]) {
+        await deleteFromLibrary(songs);
     }
 
-    async function removeFromPlaylist() {
-        if (isDestructiveConfirmType !== "remove_from_playlist") {
-            isDestructiveConfirmType = "remove_from_playlist";
-            songId = $rightClickedTrack?.id;
-            isConfirmingRemoveFromPlaylist = true;
-            return;
-        }
-
-        let tracksToRemove = [];
-        if ($rightClickedTracks.length) {
-            tracksToRemove = $rightClickedTracks;
-        } else if ($rightClickedTrack) {
-            tracksToRemove.push($rightClickedTrack);
-        }
-
-        closeMenu();
-        await deleteTracksFromPlaylists(tracksToRemove);
-
-        // Reset
-        if ($rightClickedTracks.length) {
-            $rightClickedTracks = [];
-        } else if ($rightClickedTrack) {
-            $rightClickedTrack = null;
-        }
-        isDestructiveConfirmType = null;
+    async function removeFromPlaylist(songs: Song[]) {
+        await deleteTracksFromPlaylist(songs);
     }
 
     /**
      * Moves the files(s) to the system trash / Recycle bin
      * Also performs deletion from DB
      */
-    async function deleteFile() {
-        console.log("delete");
-        if (isDestructiveConfirmType !== "delete") {
-            songId = $rightClickedTrack?.id;
-            isDestructiveConfirmType = "delete";
-            return;
-        }
-
-        let tracksToRemove = [];
-        if ($rightClickedTracks.length) {
-            tracksToRemove = $rightClickedTracks;
-        } else if ($rightClickedTrack) {
-            tracksToRemove.push($rightClickedTrack);
-        }
-
-        closeMenu();
-        await deleteTracksFromFileSystem(tracksToRemove);
-        await deleteTracksFromPlaylists(tracksToRemove);
-        await deleteFromLibrary(tracksToRemove);
-
-        // Reset
-        if ($rightClickedTracks.length) {
-            $rightClickedTracks = [];
-        } else if ($rightClickedTrack) {
-            $rightClickedTrack = null;
-        }
-        isDestructiveConfirmType = null;
+    async function removeFromSystem(songs: Song[]) {
+        await deleteTracksFromFileSystem(songs);
+        await deleteFromLibrary(songs);
     }
 
     function searchArtistOnYouTube() {
@@ -385,6 +344,7 @@
                 ? "Re-import track"
                 : `Re-import ${$rightClickedTracks.length} tracks`}
             isLoading={isReimporting}
+            isDisabled={!!isLoading}
         />
         {#if $rightClickedTrack}
             <MenuDivider />
@@ -421,6 +381,7 @@
                 onEnterPressed={addTagToContextItem}
                 placeholder="Add a tag"
                 onEscPressed={closeMenu}
+                isDisabled={!!isLoading}
                 small
             />
 
@@ -434,17 +395,23 @@
                         : "Origin country"
                     : "Origin country ✅"}
                 description="from Wikipedia"
+                isDisabled={!!isLoading}
             />
             <MenuDivider />
             <MenuOption
                 onClick={searchArtistOnWikipedia}
                 text="Open wiki panel for {$rightClickedTrack.artist}"
+                isDisabled={!!isLoading}
             />
             <MenuDivider />
             <!-- <MenuOption onClick={lookUpChords} text="Look up chords" />
             <MenuOption onClick={lookUpLyrics} text="Look up lyrics" /> -->
 
-            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
+            <MenuOption
+                onClick={openInFinder}
+                text="Open in {explorerName}"
+                isDisabled={!!isLoading}
+            />
         {:else if $rightClickedTracks.length}
             <MenuDivider />
 
@@ -483,6 +450,7 @@
                 autoFocus
                 placeholder="Add a tag"
                 onEscPressed={closeMenu}
+                isDisabled={!!isLoading}
                 small
             />
         {/if}
@@ -491,41 +459,58 @@
         {#if $selectedPlaylistFile || $uiView === "to-delete"}
             <MenuOption
                 isDestructive={true}
+                isLoading={isLoading === "remove_from_playlist"}
                 isConfirming={isDestructiveConfirmType ===
                     "remove_from_playlist"}
-                onClick={removeFromPlaylist}
+                isDisabled={!!isLoading && isLoading !== "remove_from_playlist"}
+                onClick={removeSongs(
+                    "remove_from_playlist",
+                    removeFromPlaylist,
+                )}
                 text={$rightClickedTrack
                     ? "Remove from playlist"
                     : `Remove  ${$rightClickedTracks.length} tracks from playlist`}
                 confirmText="Click again to confirm"
+                description={isLoading === "remove"
+                    ? "Removing from playlist..."
+                    : ""}
             />
         {/if}
         <MenuOption
             isDestructive={true}
+            isLoading={isLoading === "remove"}
             isConfirming={isDestructiveConfirmType === "remove"}
-            onClick={() => {
-                removeTrackFromLibrary();
-            }}
+            isDisabled={!!isLoading && isLoading !== "remove"}
+            onClick={removeSongs("remove", removeFromLibrary)}
             text={$LL.trackMenu.removeFromLibrary(
                 $rightClickedTracks.length ? $rightClickedTracks.length : 1,
             )}
             confirmText="Click again to confirm"
+            description={isLoading === "remove"
+                ? "Removing from library..."
+                : ""}
         />
         <MenuOption
             isDestructive={true}
+            isLoading={isLoading === "delete"}
             isConfirming={isDestructiveConfirmType === "delete"}
-            onClick={() => {
-                deleteFile();
-            }}
-            description={$LL.trackMenu.deleteFileHint()}
+            isDisabled={!!isLoading && isLoading !== "delete"}
+            onClick={removeSongs("delete", removeFromSystem)}
             text={$LL.trackMenu.deleteFile(
                 $rightClickedTracks.length ? $rightClickedTracks.length : 1,
             )}
             confirmText="Click again to confirm"
+            description={isLoading === "remove"
+                ? "Moving to Trash / Recycle bin..."
+                : $LL.trackMenu.deleteFileHint()}
         />
         <MenuDivider />
 
-        <MenuOption onClick={openInfo} text="Info & metadata" />
+        <MenuOption
+            isDisabled={!!isLoading}
+            onClick={openInfo}
+            text="Info & metadata"
+        />
     </Menu>
 {/if}
 
