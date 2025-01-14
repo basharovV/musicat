@@ -11,6 +11,7 @@ export default class WebRTCReceiver {
     remoteConnection: RTCPeerConnection;
     dataChannel: RTCDataChannel;
     onSampleData: (samples: Uint8Array) => void;
+    shouldProcessData = true;
     shouldRestart = false;
     throughputSample: number[] = Array(THROUGHPUT_SAMPLE_SIZE).fill(0);
     lastSnapshotTime;
@@ -77,7 +78,7 @@ export default class WebRTCReceiver {
             // on event
             this.dataChannel.addEventListener("message", (event) => {
                 // console.log("webrtc::Data channel message", event);
-                if (event.data) {
+                if (this.shouldProcessData && event.data) {
                     this.onSampleData && this.onSampleData(event.data);
 
                     // Calculate throughput

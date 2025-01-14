@@ -313,6 +313,18 @@ class AudioPlayer {
             });
         }
 
+        listen(TauriEvent.WINDOW_BLUR, async () => {
+            if (this.webRTCReceiver) {
+                this.webRTCReceiver.shouldProcessData = false;
+            }
+        });
+
+        listen(TauriEvent.WINDOW_FOCUS, async () => {
+            if (this.webRTCReceiver) {
+                this.webRTCReceiver.shouldProcessData = true;
+            }
+        });
+
         appWindow.listen("toggle_play", async (event: any) => {
             console.log("toggle_play");
             this.togglePlay();
