@@ -38,7 +38,7 @@ export default class SmartQuery {
     }
 
     get isNameSet() {
-        return this.name !== null && this.name.length > 0;
+        return this.name?.length > 0;
     }
 
     get isEmpty() {
