@@ -140,6 +140,7 @@
      */
     async function removeFromLibrary(songs: Song[]) {
         await deleteFromLibrary(songs);
+        await deleteTracksFromPlaylist(songs);
     }
 
     async function removeFromPlaylist(songs: Song[]) {
@@ -153,6 +154,7 @@
     async function removeFromSystem(songs: Song[]) {
         await deleteTracksFromFileSystem(songs);
         await deleteFromLibrary(songs);
+        await deleteTracksFromPlaylist(songs);
     }
 
     function searchArtistOnYouTube() {
