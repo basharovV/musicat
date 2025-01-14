@@ -11,8 +11,11 @@
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
     import MenuOption from "../menu/MenuOption.svelte";
-    import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import { rescanAlbumArtwork } from "../../data/LibraryUtils";
+    import {
+        type EnricherResult,
+        fetchAlbumArt,
+        rescanAlbumArtwork,
+    } from "../data/LibraryEnrichers";
     import type { Album, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api/core";
 
@@ -103,19 +106,32 @@
     }
 
     // Enrichers
-    let isFetchingArtwork = false;
-    let artworkResult: { success?: string; error?: string };
-    let artworkResultForAlbum: String;
+    let fetchArtworkLoading = false;
+    let fetchArtworkResult: EnricherResult;
+    let fetchArtworkAlbumId: String;
+
     async function fetchArtwork() {
-        artworkResult = null;
-        isFetchingArtwork = true;
-        artworkResultForAlbum = $rightClickedAlbum.id;
-        artworkResult = await fetchAlbumArt($rightClickedAlbum);
-        isFetchingArtwork = false;
+        fetchArtworkLoading = true;
+        fetchArtworkResult = null;
+        fetchArtworkAlbumId = $rightClickedAlbum.id;
+
+        fetchArtworkResult = await fetchAlbumArt($rightClickedAlbum);
+
+        fetchArtworkLoading = false;
     }
 
+    let rescanLocalArtworkLoading = false;
+    let rescanLocalArtworkResult: EnricherResult;
+    let rescanLocalArtworkAlbumId: String;
+
     async function rescanLocalArtwork() {
-        rescanAlbumArtwork($rightClickedAlbum);
+        rescanLocalArtworkLoading = true;
+        rescanLocalArtworkResult = null;
+        rescanLocalArtworkAlbumId = $rightClickedAlbum.id;
+
+        rescanLocalArtworkResult = await rescanAlbumArtwork($rightClickedAlbum);
+
+        rescanLocalArtworkLoading = false;
     }
 
     let isReimporting = false;
@@ -163,23 +179,34 @@
             <MenuOption text="⚡️ Enrich" isDisabled />
             <MenuOption
                 onClick={fetchArtwork}
-                isLoading={isFetchingArtwork}
+                isLoading={fetchArtworkLoading}
                 text="Fetch artwork"
-                description={isFetchingArtwork
+                description={fetchArtworkLoading
                     ? "Fetching from Wikipedia..."
                     : "Save to folder as cover.jpg"}
             />
-            {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
+            {#if fetchArtworkResult && fetchArtworkAlbumId === $rightClickedAlbum.id}
                 <MenuOption
-                    text={artworkResult.error || artworkResult.success}
+                    text={fetchArtworkResult.error ||
+                        fetchArtworkResult.success}
                     isDisabled
                 />
             {/if}
             <MenuOption
                 onClick={rescanLocalArtwork}
+                isLoading={rescanLocalArtworkLoading}
                 text="Scan existing artwork"
-                description="Check encoded art in tracks / folder image"
+                description={rescanLocalArtworkLoading
+                    ? "Rescanning..."
+                    : "Check encoded art in tracks / folder image"}
             />
+            {#if rescanLocalArtworkResult && rescanLocalArtworkAlbumId === $rightClickedAlbum.id}
+                <MenuOption
+                    text={rescanLocalArtworkResult.error ||
+                        rescanLocalArtworkResult.success}
+                    isDisabled
+                />
+            {/if}
             <MenuOption
                 onClick={searchArtworkOnBrave}
                 text="Search for artwork on Brave"

@@ -339,21 +339,6 @@ export async function openTauriImportDialog() {
     }
 }
 
-export async function rescanAlbumArtwork(album: Album) {
-    // console.log("adding artwork from song", song, newAlbum);
-
-    const response = await invoke<ToImport>("scan_paths", {
-        event: {
-            paths: [album.path],
-            recursive: false,
-            process_albums: true,
-            is_async: false,
-        },
-    });
-
-    // TODO: Write updated album with updated artwork to DB
-}
-
 export async function runScan() {
     const settings = get(userSettings);
 
