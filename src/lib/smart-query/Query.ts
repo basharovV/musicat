@@ -21,7 +21,7 @@ export default class SmartQuery {
         if (savedQuery) {
             this.id = savedQuery.id;
             this.parts = savedQuery.queryParts.map((p) => new UserQueryPart(p));
-            this.name = savedQuery.name;
+            this.name = savedQuery?.name || null;
         }
     }
 

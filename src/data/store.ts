@@ -47,6 +47,7 @@ interface Query {
 }
 
 export const isInit = writable(true);
+export const isSongReady = writable(false);
 export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable({
     orderBy: "artist",
@@ -78,6 +79,8 @@ async function restoreCurrentSong() {
             playerTime.set(data.position);
         }
     }
+
+    isSongReady.set(true);
 }
 
 export const current: Writable<PlayingSong> = writable(

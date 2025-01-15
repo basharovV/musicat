@@ -17,7 +17,6 @@ use std::error::Error;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
-use symphonia::core::units::TimeBase;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener};
 use tauri::{Manager, State};
@@ -132,6 +131,7 @@ pub struct StreamFileRequest {
     file_info: Option<FileInfo>,
     volume: Option<f64>, // 0 to 1
     output_device: Option<String>,
+    boot: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -148,10 +148,24 @@ struct GetWaveformResponse {
 #[tauri::command]
 fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Stream file {:?}", event);
+
+    let boot = event.boot.clone();
+
     let _ = state
         .player_control_sender
         .send(player::PlayerControlEvent::StreamFile(event));
-    state.resume();
+
+    match boot {
+        Some(true) => {
+            #[cfg(target_os = "macos")]
+            mediakeys::boot();
+
+            state.pause();
+        }
+        _ => {
+            state.resume();
+        }
+    }
 }
 
 #[tauri::command]
@@ -451,7 +465,7 @@ async fn main() {
 
             #[cfg(target_os = "windows")]
             {
-                window_builder = window_builder.transparent(true);
+                window_builder = window_builder.transparent(false);
             }
 
             #[cfg(target_os = "linux")]
