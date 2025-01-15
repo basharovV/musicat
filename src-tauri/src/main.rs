@@ -465,7 +465,7 @@ async fn main() {
 
             #[cfg(target_os = "windows")]
             {
-                window_builder = window_builder.transparent(true);
+                window_builder = window_builder.transparent(false);
             }
 
             #[cfg(target_os = "linux")]
