@@ -15,6 +15,7 @@
     export let padding = true;
     export let small = false;
     export let alt = false;
+    export let disabled = false;
 
     function onKeyDown(evt) {
         if (evt.keyCode === 13) {
@@ -68,6 +69,7 @@
         on:keydown={onKeyDown}
         spellcheck="false"
         autocomplete="off"
+        {disabled}
     />
 
     {#if autoCompleteValue && autoCompleteValue?.toLowerCase() !== value?.toLowerCase()}

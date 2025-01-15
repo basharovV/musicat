@@ -389,6 +389,9 @@
     let ctx: CanvasRenderingContext2D;
     let dpr;
 
+    // if cursor over the library
+    let isOver = false;
+
     // drag-n-drop
     let isDraggingOver = false;
 
@@ -1248,6 +1251,16 @@
     });
 
     function onKeyDown(event) {
+        if (
+            isOver &&
+            event.keyCode === 65 &&
+            (($os === "macos" && event.metaKey) || event.ctrlKey)
+        ) {
+            event.preventDefault();
+
+            songsHighlighted = [...songs];
+        }
+
         if ($arrowFocus !== "library") return;
 
         if (event.keyCode === 16) {
@@ -1738,10 +1751,12 @@
             class:ready
             bind:this={scrollContainer}
             on:mouseenter={() => {
+                isOver = true;
                 isDraggingOver =
                     $selectedPlaylistFile && $draggedSongs?.length > 0;
             }}
             on:mouseleave={() => {
+                isOver = false;
                 isDraggingOver = false;
             }}
         >
