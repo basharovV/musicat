@@ -10,7 +10,7 @@ export default class SmartQuery {
     name: string = null;
     userInput: string = "";
 
-    static async loadWithUQI(queryId: string): Promise<SmartQuery> {
+    static async loadWithUQI(queryId: `~usq:${string}`): Promise<SmartQuery> {
         // Run the query from the user-built blocks
         const queryName = Number(queryId.substring(5));
         const savedQuery = await db.smartQueries.get(queryName);
