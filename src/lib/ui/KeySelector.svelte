@@ -1,6 +1,6 @@
 <script lang="ts">
     import { autoWidth } from "../../utils/AutoWidth";
-    import Menu from "../menu/Menu.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
     import isDarkColor from "is-dark-color";
     import type { MenuItem, MenuSection } from "../../App";
     import { currentThemeObject } from "../../theming/store";

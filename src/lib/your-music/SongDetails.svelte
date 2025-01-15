@@ -32,8 +32,8 @@
         hoveredFiles,
     } from "../../data/store";
     import { getContentFileType } from "../../utils/FileUtils";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
     import KeySelector from "../ui/KeySelector.svelte";

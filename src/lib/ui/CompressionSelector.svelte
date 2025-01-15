@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { Compression } from "../../App";
     import { compressionSelected } from "../../data/store";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import Icon from "./Icon.svelte";
 
     let COMPRESSION_OPTIONS: { value: Compression; label: string }[] = [

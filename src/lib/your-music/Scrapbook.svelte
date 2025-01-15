@@ -23,13 +23,13 @@
     import FileBlock from "./FileBlock.svelte";
     import LinkBlock from "./LinkBlock.svelte";
     import { onMount } from "svelte";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import { flip } from "svelte/animate";
     import { quadInOut } from "svelte/easing";
     import { getLinkItemWithData } from "../../utils/URLMetadata";
     import TagCloud from "./TagCloud.svelte";
-    import MenuInput from "../menu/MenuInput.svelte";
+    import MenuInput from "../ui/menu/MenuInput.svelte";
     import hotkeys from "hotkeys-js";
     import Icon from "../ui/Icon.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";

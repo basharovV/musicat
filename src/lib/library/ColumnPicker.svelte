@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Menu from "../menu/Menu.svelte";
-    import MenuDivider from "../menu/MenuDivider.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
 
     export let columnOrder;
     export let fields;

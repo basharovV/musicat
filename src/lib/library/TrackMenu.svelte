@@ -21,14 +21,11 @@
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
-    import {
-        enrichArtistCountry,
-        findCountryByArtist,
-    } from "../data/LibraryEnrichers";
-    import Menu from "../menu/Menu.svelte";
-    import MenuDivider from "../menu/MenuDivider.svelte";
-    import MenuInput from "../menu/MenuInput.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import { enrichArtistCountry } from "../data/LibraryEnrichers";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuInput from "../ui/menu/MenuInput.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
     import { deleteFromLibrary } from "../../data/LibraryUtils";
     import { liveQuery } from "dexie";

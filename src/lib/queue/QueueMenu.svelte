@@ -5,11 +5,11 @@
         smartQueryResults,
         uiView,
     } from "../../data/store";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import { setQueue } from "../../data/storeHelper";
-    import MenuDivider from "../menu/MenuDivider.svelte";
-    import MenuInput from "../menu/MenuInput.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuInput from "../ui/menu/MenuInput.svelte";
     import { createNewPlaylistFile } from "../../data/M3UUtils";
 
     export let pos = { x: 0, y: 0 };

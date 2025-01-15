@@ -1,6 +1,6 @@
 <script lang="ts">
     import isDarkColor from "is-dark-color";
-    import { currentThemeObject } from "../../theming/store";
+    import { currentThemeObject } from "../../../theming/store";
 
     export let isDisabled = false;
     export let isDestructive = false;
@@ -18,7 +18,7 @@
     export let autoCompleteValue = "";
     export let small = false;
     import { createEventDispatcher } from "svelte";
-    import Input from "../ui/Input.svelte";
+    import Input from "../Input.svelte";
     const dispatch = createEventDispatcher();
 
     $: {

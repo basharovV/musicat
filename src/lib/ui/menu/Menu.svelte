@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { fade } from "svelte/transition";
-    import type { MenuItem, MenuSection } from "../../App";
-    import { clickOutside } from "../../utils/ClickOutside";
+    import type { MenuItem, MenuSection } from "../../../App";
+    import { clickOutside } from "../../../utils/ClickOutside";
     import MenuOption from "./MenuOption.svelte";
 
     export let x = 0;

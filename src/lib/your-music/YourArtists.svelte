@@ -17,8 +17,8 @@
     import { loadArtistsFromSongbook } from "../../data/ArtistsToolkitData";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
     import Icon from "../ui/Icon.svelte";

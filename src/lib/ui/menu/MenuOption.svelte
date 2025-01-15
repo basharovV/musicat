@@ -1,7 +1,7 @@
 <script lang="ts">
     import isDarkColor from "is-dark-color";
-    import Icon from "../ui/Icon.svelte";
-    import { currentThemeObject } from "../../theming/store";
+    import Icon from "../Icon.svelte";
+    import { currentThemeObject } from "../../../theming/store";
 
     export let isDisabled = false;
     export let isDestructive = false;

@@ -4,8 +4,8 @@
     import { onMount } from "svelte";
     import { flip } from "svelte/animate";
     import { quadInOut } from "svelte/easing";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import FileBlock from "./FileBlock.svelte";
     import LinkBlock from "./LinkBlock.svelte";
     import { open } from "@tauri-apps/plugin-dialog";
