@@ -2,13 +2,15 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 import WBK from "wikibase-sdk";
 import { getImageFormat } from "../../utils/FileUtils";
 import { db } from "../../data/db";
-import type { Album, Song } from "../../App";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import type { Album, Song, ToImport } from "../../App";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import md5 from "md5";
 import { addOriginCountryStatus, userSettings } from "../../data/store";
 import { path } from "@tauri-apps/api";
 import { get, type Writable } from "svelte/store";
 import { fetch } from "@tauri-apps/plugin-http";
+
+export type EnricherResult = { success?: string; error?: string };
 
 export async function findCountryByArtist(artistName) {
     if (!artistName?.length) return null;
@@ -60,7 +62,7 @@ export async function findCountryByArtist(artistName) {
 export async function fetchAlbumArt(
     album: Album = null,
     song: Song = null,
-): Promise<{ success?: string; error?: string }> {
+): Promise<EnricherResult> {
     if (!album) {
         const albumPath = song.path.replace(`/${song.file}`, "");
         album = await db.albums.get(
@@ -103,7 +105,7 @@ export async function fetchAlbumArt(
 
 async function fetchAlbumArtWithWikipedia(
     album: Album,
-): Promise<{ success?: string; error?: string }> {
+): Promise<EnricherResult> {
     try {
         const ecArtist = encodeURIComponent(album.artist);
         const dbpediaResult = await (
@@ -170,7 +172,7 @@ async function fetchAlbumArtWithWikipedia(
 async function fetchAlbumArtWithGenius(
     album: Album,
     geniusApiKey: string,
-): Promise<{ success?: string; error?: string }> {
+): Promise<EnricherResult> {
     try {
         const query = encodeURIComponent(
             `${album.displayTitle} - ${album.artist}`,
@@ -229,7 +231,7 @@ async function fetchAlbumArtWithGenius(
 async function fetchAlbumArtWithDiscogs(
     album: Album,
     discogsApiKey: string,
-): Promise<{ success?: string; error?: string }> {
+): Promise<EnricherResult> {
     try {
         const ecRelease = encodeURIComponent(album.displayTitle);
 
@@ -285,7 +287,7 @@ async function fetchAlbumArtWithDiscogs(
 
 async function fetchAlbumArtWithMusicBrainz(
     album: Album,
-): Promise<{ success?: string; error?: string }> {
+): Promise<EnricherResult> {
     try {
         const ecRelease = encodeURIComponent(album.displayTitle);
         const ecArtist = encodeURIComponent(album.artist);
@@ -439,10 +441,41 @@ export async function enrichArtistCountry(
             .where("artist")
             .equals(song.artist)
             .toArray();
-        artistSongs.forEach((s) => {
-            s.originCountry = country;
-            db.songs.update(s.id, s);
-        });
+
+        db.songs.bulkPut(
+            artistSongs.map((s) => {
+                s.originCountry = country;
+                return s;
+            }),
+        );
     }
     isFetching.set(false);
+}
+
+export async function rescanAlbumArtwork(
+    album: Album,
+): Promise<EnricherResult> {
+    // console.log("adding artwork from song", album);
+    const response = await invoke<ToImport>("scan_paths", {
+        event: {
+            paths: [album.path],
+            recursive: false,
+            process_albums: true,
+            is_async: false,
+        },
+    });
+
+    if (response?.albums?.length === 1 && response.albums[0].artwork) {
+        album.artwork = response.albums[0].artwork;
+
+        await db.albums.put(album, album.id);
+
+        return {
+            success: "Artwork saved!",
+        };
+    }
+
+    return {
+        error: "No artwork found!",
+    };
 }
