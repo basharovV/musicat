@@ -122,13 +122,15 @@
     <!-- TODO -->
 </div>
 {#if !$isSmartQueryBuilderOpen}
-    <ButtonWithIcon
-        size="small"
-        icon="material-symbols:edit-outline"
-        onClick={editSmartPlaylist}
-        text={$LL.smartPlaylists.editSmartPlaylist()}
-        theme="active"
-    />
+    {#if $selectedSmartQuery.startsWith("~usq:")}
+        <ButtonWithIcon
+            size="small"
+            icon="material-symbols:edit-outline"
+            onClick={editSmartPlaylist}
+            text={$LL.smartPlaylists.editSmartPlaylist()}
+            theme="active"
+        />
+    {/if}
     <ButtonWithIcon
         size="small"
         icon="material-symbols:add"
