@@ -56,7 +56,7 @@
 
         await enrichSongCountry(song);
 
-        loadingType = "country";
+        loadingType = null;
     }
 </script>
 
