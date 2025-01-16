@@ -103,6 +103,8 @@
         getWiki($wikiArtist);
     }
 
+    $: _$encodeURIComponent = encodeURIComponent;
+
     let albumMentions: Mention<Album>[] = [];
     let songMentions: Mention<Song>[] = [];
     let artistMentions: Mention<string>[] = [];
@@ -484,7 +486,7 @@
                 <ul>
                     <li>
                         <a
-                            href="https://en.wikipedia.org/w/index.php?search={encodeURIComponent(
+                            href="https://en.wikipedia.org/w/index.php?search={_$encodeURIComponent(
                                 previousArtist,
                             )}"
                             target="_blank"
@@ -494,7 +496,7 @@
                     </li>
                     <li>
                         <a
-                            href="https://search.brave.com/search?q=site%3Awikipedia.org+{encodeURIComponent(
+                            href="https://search.brave.com/search?q=site%3Awikipedia.org+{_$encodeURIComponent(
                                 previousArtist,
                             )}"
                             target="_blank"
