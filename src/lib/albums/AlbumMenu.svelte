@@ -24,6 +24,7 @@
         searchArtistOnYouTube,
         searchArtworkOnBrave,
     } from "../menu/search";
+    import { removeQueuedSongs } from "../../data/storeHelper";
 
     type ActionType =
         | "artwork-local"
@@ -109,6 +110,7 @@
 
             await db.songs.bulkDelete(album.tracksIds);
             await db.albums.delete(album.id);
+            await removeQueuedSongs(album.tracksIds);
 
             loadingType = null;
 

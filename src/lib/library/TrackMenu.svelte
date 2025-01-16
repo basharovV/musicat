@@ -28,6 +28,7 @@
     import { liveQuery } from "dexie";
     import { searchArtistOnWikiPanel } from "../menu/search";
     import { openInFinder } from "../menu/file";
+    import { removeQueuedSongs } from "../../data/storeHelper";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
@@ -160,10 +161,12 @@
     async function removeFromLibrary(songs: Song[]) {
         await deleteFromLibrary(songs);
         await deleteTracksFromPlaylist(songs);
+        await removeQueuedSongs(songs.map(({ id }) => id));
     }
 
     async function removeFromPlaylist(songs: Song[]) {
         await deleteTracksFromPlaylist(songs);
+        await removeQueuedSongs(songs.map(({ id }) => id));
     }
 
     /**
@@ -174,6 +177,7 @@
         await deleteTracksFromFileSystem(songs);
         await deleteFromLibrary(songs);
         await deleteTracksFromPlaylist(songs);
+        await removeQueuedSongs(songs.map(({ id }) => id));
     }
 
     function openInfo() {
