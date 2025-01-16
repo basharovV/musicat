@@ -142,6 +142,7 @@
     async function fetchArtwork() {
         loadingType = "artwork-online";
         resultType = "artwork-online";
+        result = null;
 
         result = await fetchAlbumArt(album);
 
@@ -151,6 +152,7 @@
     async function rescanLocalArtwork() {
         loadingType = "artwork-local";
         resultType = "artwork-local";
+        result = null;
 
         result = await rescanAlbumArtwork(album);
 
