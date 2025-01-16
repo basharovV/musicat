@@ -27,10 +27,9 @@
         current,
         currentIAFile,
         currentSongArtworkSrc,
-        draggedAlbum,
-        draggedPlaylist,
+        draggedOrigin,
         draggedSongs,
-        draggedSource,
+        draggedTitle,
         isFindFocused,
         isMiniPlayer,
         isPlaying,
@@ -79,9 +78,12 @@
     import {
         resetDraggedSongs,
         setDraggedPlaylist,
+        setDraggedSmartPlaylist,
         setDraggedSongs,
         setQueue,
     } from "../../data/storeHelper";
+    import SmartQuery from "../smart-query/Query";
+    import BuiltInQueries from "../../data/SmartQueries";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -452,6 +454,7 @@
     let hoveringOverPlaylistId: string = null;
     let isRenamingPlaylist = false;
     let activePlaylist: PlaylistFile = null;
+    let activeSmartPlaylist: string = null;
 
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
@@ -521,13 +524,9 @@
     }
 
     async function onMouseUpPlaylist(playlist: PlaylistFile) {
-        if ($draggedPlaylist?.title === playlist.title) {
+        if ($draggedOrigin === "Playlist" && $draggedTitle === playlist.title) {
             resetDraggedSongs();
-
-            return;
-        }
-
-        if ($draggedSongs.length) {
+        } else if ($draggedSongs.length) {
             console.log("[Sidebar] Adding to playlist: ", playlist);
             await addSongsToPlaylist(playlist, $draggedSongs);
             $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
@@ -570,19 +569,40 @@
         showPlaylistMenu = !showPlaylistMenu;
     }
 
-    // $: {
-    //     if ($draggedSongs.length === 0) {
-    //         draggingOverPlaylist = null;
-    //     }
-    // }
-
     $: savedSmartQueries = liveQuery(async () => {
-        return db.smartQueries.toArray();
+        const queries = await db.smartQueries.toArray();
+        return queries.sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    async function onRenameSmartPlaylist(smartQuery: SavedSmartQuery) {
-        smartQuery.name = updatedSmartPlaylistName;
-        await db.smartQueries.put(smartQuery);
+    function onClickSmartPlaylist(e, smartQuery, reset) {
+        $selectedPlaylistFile = null;
+        $uiView = "smart-query";
+        if (reset) {
+            $query.orderBy = "none";
+            $query.reverse = false;
+        }
+        $selectedSmartQuery = smartQuery;
+    }
+
+    function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
+        menuX = e.clientX;
+        menuY = e.clientY;
+        smartPlaylistToEdit = query;
+        showSmartPlaylistMenu = !showSmartPlaylistMenu;
+    }
+
+    async function playSmartPlaylist(queryId: string) {
+        const query = queryId.startsWith("~usq:")
+            ? await SmartQuery.loadWithUQI(queryId)
+            : BuiltInQueries[queryId];
+        const songs = await query.run();
+
+        setQueue(songs, 0);
+    }
+
+    async function onRenameSmartPlaylist(query: SavedSmartQuery) {
+        query.name = updatedSmartPlaylistName;
+        await db.smartQueries.put(query);
         updatedSmartPlaylistName = "";
         isRenamingSmartPlaylist = false;
     }
@@ -610,8 +630,33 @@
         hoveringOverSmartPlaylistId = queryId;
     }
 
-    function onMouseLeaveSmartPlaylist() {
+    async function onMouseLeaveSmartPlaylist() {
         hoveringOverSmartPlaylistId = null;
+
+        if (activeSmartPlaylist) {
+            const query = activeSmartPlaylist.startsWith("~usq:")
+                ? await SmartQuery.loadWithUQI(activeSmartPlaylist)
+                : BuiltInQueries[activeSmartPlaylist];
+            const songs = await query.run();
+
+            setDraggedSmartPlaylist(query, songs, "Sidebar");
+
+            activeSmartPlaylist = null;
+        }
+    }
+
+    function onMouseDownSmartPlaylist(query: string) {
+        if (!$draggedSongs.length) {
+            activeSmartPlaylist = query;
+        }
+    }
+
+    function onMouseUpSmartPlaylist() {
+        if ($draggedSongs.length) {
+            resetDraggedSongs();
+        }
+
+        activeSmartPlaylist = null;
     }
 
     async function favouriteCurrentSong() {
@@ -1118,87 +1163,75 @@
 
                         {#if isPlaylistsExpanded}
                             <div class="playlists">
-                                {#if $userPlaylists.sort((a, b) => {
-                                    return a.title.localeCompare(b.title);
-                                })}
-                                    {#each $userPlaylists as playlist (playlist.path)}
-                                        <div
-                                            animate:flip={{
-                                                duration: 300,
-                                                easing: cubicInOut,
-                                            }}
-                                            class="playlist"
-                                            class:dragover={draggingOverPlaylist ===
-                                                playlist}
-                                            class:hover={hoveringOverPlaylistId ===
-                                                playlist?.title}
-                                            class:selected={$selectedPlaylistFile?.path ===
-                                                playlist.path}
-                                            on:contextmenu|preventDefault={(
-                                                e,
-                                            ) =>
-                                                onClickPlaylistOptions(
-                                                    e,
-                                                    playlist,
-                                                )}
-                                            on:click={(e) =>
-                                                onClickPlaylist(e, playlist)}
-                                            on:dblclick={() =>
-                                                playPlaylist(playlist)}
-                                            on:mouseenter|preventDefault|stopPropagation={() =>
-                                                onMouseEnterPlaylist(playlist)}
-                                            on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
-                                            on:mousedown|preventDefault|stopPropagation={() =>
-                                                onMouseDownPlaylist(playlist)}
-                                            on:mouseup|preventDefault|stopPropagation={() =>
-                                                onMouseUpPlaylist(playlist)}
-                                        >
-                                            {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
-                                                <Input
-                                                    bind:value={updatedPlaylistName}
-                                                    onEnterPressed={() => {
-                                                        onRenamePlaylist(
-                                                            playlist,
-                                                        );
-                                                    }}
-                                                    fullWidth
-                                                    minimal
-                                                    autoFocus
-                                                />
-                                            {:else}
-                                                <p>{playlist.title}</p>
-                                            {/if}
-                                            {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
+                                {#each $userPlaylists as playlist (playlist.path)}
+                                    <div
+                                        animate:flip={{
+                                            duration: 300,
+                                            easing: cubicInOut,
+                                        }}
+                                        class="playlist"
+                                        class:dragover={draggingOverPlaylist ===
+                                            playlist}
+                                        class:hover={hoveringOverPlaylistId ===
+                                            playlist?.title}
+                                        class:selected={$selectedPlaylistFile?.path ===
+                                            playlist.path}
+                                        on:contextmenu|preventDefault={(e) =>
+                                            onClickPlaylistOptions(e, playlist)}
+                                        on:click={(e) =>
+                                            onClickPlaylist(e, playlist)}
+                                        on:dblclick={() =>
+                                            playPlaylist(playlist)}
+                                        on:mouseenter|preventDefault|stopPropagation={() =>
+                                            onMouseEnterPlaylist(playlist)}
+                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
+                                        on:mousedown|preventDefault|stopPropagation={() =>
+                                            onMouseDownPlaylist(playlist)}
+                                        on:mouseup|preventDefault|stopPropagation={() =>
+                                            onMouseUpPlaylist(playlist)}
+                                    >
+                                        {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
+                                            <Input
+                                                bind:value={updatedPlaylistName}
+                                                onEnterPressed={() => {
+                                                    onRenamePlaylist(playlist);
+                                                }}
+                                                fullWidth
+                                                minimal
+                                                autoFocus
+                                            />
+                                        {:else}
+                                            <p>{playlist.title}</p>
+                                        {/if}
+                                        {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
+                                            <Icon
+                                                icon="mingcute:close-circle-fill"
+                                                size={14}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    isRenamingPlaylist = false;
+                                                }}
+                                            />
+                                        {:else}
+                                            <div
+                                                class="playlist-options"
+                                                class:visible={showPlaylistMenu &&
+                                                    playlistToEdit === playlist}
+                                            >
                                                 <Icon
-                                                    icon="mingcute:close-circle-fill"
+                                                    icon="charm:menu-kebab"
+                                                    color="#898989"
                                                     size={14}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        isRenamingPlaylist = false;
-                                                    }}
+                                                    onClick={(e) =>
+                                                        onClickPlaylistOptions(
+                                                            e,
+                                                            playlist,
+                                                        )}
                                                 />
-                                            {:else}
-                                                <div
-                                                    class="playlist-options"
-                                                    class:visible={showPlaylistMenu &&
-                                                        playlistToEdit ===
-                                                            playlist}
-                                                >
-                                                    <Icon
-                                                        icon="charm:menu-kebab"
-                                                        color="#898989"
-                                                        size={14}
-                                                        onClick={(e) =>
-                                                            onClickPlaylistOptions(
-                                                                e,
-                                                                playlist,
-                                                            )}
-                                                    />
-                                                </div>
-                                            {/if}
-                                        </div>
-                                    {/each}
-                                {/if}
+                                            </div>
+                                        {/if}
+                                    </div>
+                                {/each}
                                 <div class="new-playlist">
                                     <Input
                                         bind:value={newPlaylistTitle}
@@ -1246,19 +1279,24 @@
                                             smartQuery.value}
                                         class:selected={$selectedSmartQuery ===
                                             smartQuery.value}
-                                        on:click={() => {
-                                            $uiView = "smart-query";
-                                            $query.orderBy = "none";
-                                            $query.reverse = false;
-                                            $selectedSmartQuery =
-                                                smartQuery.value;
-                                            $selectedPlaylistFile = null;
-                                        }}
+                                        on:click={(e) =>
+                                            onClickSmartPlaylist(
+                                                e,
+                                                smartQuery.value,
+                                                true,
+                                            )}
+                                        on:dblclick={() =>
+                                            playSmartPlaylist(smartQuery.value)}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseEnterSmartPlaylist(
                                                 smartQuery.value,
                                             )}
+                                        on:mousedown|preventDefault|stopPropagation={() =>
+                                            onMouseDownSmartPlaylist(
+                                                smartQuery.value,
+                                            )}
+                                        on:mouseup|preventDefault|stopPropagation={onMouseUpSmartPlaylist}
                                     >
                                         <p>{smartQuery.name}</p>
                                     </div>
@@ -1274,13 +1312,29 @@
                                             `~usq:${query.id}`}
                                         class:hover={hoveringOverSmartPlaylistId ===
                                             query.id}
-                                        on:click={() => {
-                                            $uiView = "smart-query";
-                                            $selectedSmartQuery = `~usq:${query.id}`;
-                                        }}
+                                        on:contextmenu|preventDefault={(e) =>
+                                            onClickSmartPlaylistOptions(
+                                                e,
+                                                query,
+                                            )}
+                                        on:click={(e) =>
+                                            onClickSmartPlaylist(
+                                                e,
+                                                `~usq:${query.id}`,
+                                                false,
+                                            )}
+                                        on:dblclick={() =>
+                                            playSmartPlaylist(
+                                                `~usq:${query.id}`,
+                                            )}
                                         on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
                                             onMouseEnterSmartPlaylist(query.id)}
+                                        on:mousedown|preventDefault|stopPropagation={() =>
+                                            onMouseDownSmartPlaylist(
+                                                `~usq:${query.id}`,
+                                            )}
+                                        on:mouseup|preventDefault|stopPropagation={onMouseUpSmartPlaylist}
                                     >
                                         {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Input
@@ -1317,14 +1371,11 @@
                                                     icon="charm:menu-kebab"
                                                     color="#898989"
                                                     size={14}
-                                                    onClick={(e) => {
-                                                        menuX = e.clientX;
-                                                        menuY = e.clientY;
-                                                        smartPlaylistToEdit =
-                                                            query;
-                                                        showSmartPlaylistMenu =
-                                                            !showSmartPlaylistMenu;
-                                                    }}
+                                                    onClick={(e) =>
+                                                        onClickSmartPlaylistOptions(
+                                                            e,
+                                                            query,
+                                                        )}
                                                 />
                                             </div>
                                         {/if}
@@ -1435,7 +1486,7 @@
                 <MenuOption
                     onClick={() => {
                         playPlaylist(playlistToEdit);
-                        showPlaylistMenu = !showPlaylistMenu;
+                        showPlaylistMenu = false;
                     }}
                     text="Play playlist"
                 />
@@ -1470,6 +1521,14 @@
                 }}
                 fixed
             >
+                <MenuOption
+                    onClick={() => {
+                        playSmartPlaylist(`~usq:${smartPlaylistToEdit.id}`);
+                        showSmartPlaylistMenu = false;
+                    }}
+                    text="Play playlist"
+                />
+                <MenuDivider />
                 <MenuOption
                     isDestructive={true}
                     isConfirming={isConfirmingSmartPlaylistDelete}

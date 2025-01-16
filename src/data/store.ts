@@ -227,11 +227,12 @@ export const isTagOrCondition = writable(false);
 
 // Playlists
 export type DragSource = "Library" | "Player" | "Queue" | "Sidebar";
+export type SongOrigin = "Album" | "Playlist" | "SmartPlaylist";
 export const selectedPlaylistFile: Writable<PlaylistFile> = writable(null);
-export const draggedAlbum: Writable<Album> = writable(null);
-export const draggedPlaylist: Writable<PlaylistFile> = writable(null);
+export const draggedOrigin: Writable<SongOrigin> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
 export const draggedSource: Writable<DragSource> = writable(null);
+export const draggedTitle: Writable<string> = writable(null);
 export const dragGhostReset = writable(false);
 
 // Settings

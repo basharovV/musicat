@@ -164,18 +164,8 @@
                     status.state.previousAlbum = s?.album;
                     status.state.previousArtist = s?.artist;
 
-                    // Highlighted songs indexes might need to be updated
-                    if (idx === songsArray.length - 1) {
-                        if (songsHighlighted.length > 0) {
-                            songsHighlighted = songsHighlighted.map((s) => {
-                                s.viewModel.index = songsArray?.find(
-                                    (song) => song.id === s.id,
-                                )?.viewModel?.index;
-                                highlightedSongIdx = s.viewModel.index;
-                                return s;
-                            });
-                        }
-                    }
+                    // Putting this in a separate function to avoid the reactivity loop
+                    updateHighlights(songsArray, idx);
 
                     return {
                         songs: songsArray,
@@ -1039,14 +1029,14 @@
     export let songsHighlighted: Song[] = [];
     export let onSongsHighlighted = null;
 
-    function isSongHighlighted(song: Song) {
-        return songsHighlighted.map((s) => s?.id).includes(song?.id);
+    function isSongIdxHighlighted(songIdx: number) {
+        return songsHighlighted.find((s) => s?.viewModel?.index === songIdx);
     }
 
     function toggleHighlight(song, idx, isKeyboardArrows = false) {
         if (!song) song = songs[0];
         highlightedSongIdx = idx;
-        if (isSongHighlighted(song)) {
+        if (isSongIdxHighlighted(idx)) {
             if (songsHighlighted.length) {
                 songsHighlighted = [];
                 highlightSong(song, idx, isKeyboardArrows);
@@ -1146,6 +1136,21 @@
             songsHighlighted.length > 1
         ) {
             highlightSong(songs[0], 0, false, true);
+        }
+    }
+
+    function updateHighlights(songs: Song[], idx: number) {
+        // Highlighted songs indexes might need to be updated
+        if (idx === songs.length - 1) {
+            if (songsHighlighted.length > 0) {
+                songsHighlighted = songsHighlighted.map((s) => {
+                    s.viewModel.index = songs?.find(
+                        (song) => song.id === s.id,
+                    )?.viewModel?.index;
+                    highlightedSongIdx = s.viewModel.index;
+                    return s;
+                });
+            }
         }
     }
 
@@ -1892,8 +1897,8 @@
                                                             song?.id
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
-                                                              isSongHighlighted(
-                                                                  song,
+                                                              isSongIdxHighlighted(
+                                                                  idx,
                                                               )
                                                             ? HIGHLIGHT_BG_COLOR
                                                             : hoveredSongIdx ===

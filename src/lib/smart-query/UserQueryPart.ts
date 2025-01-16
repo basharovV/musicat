@@ -2,13 +2,13 @@ import type {
     InputType,
     QueryPartInput,
     QueryPartStruct,
-    QueryPartStructWithValues
+    QueryPartStructWithValues,
 } from "./QueryPart";
 import "../string.extensions";
 import type { Song } from "src/App";
 
 function instanceOfQueryPartStructWithValues(
-    object: any
+    object: any,
 ): object is QueryPartStructWithValues {
     return typeof object === "object" && "values" in object;
 }
@@ -43,18 +43,24 @@ export class UserQueryPart {
     }
 
     constructor(queryPart: QueryPartStruct | QueryPartStructWithValues) {
+        this.queryPart = queryPart;
+        this.fieldKey = queryPart.fieldKey;
+
         if (instanceOfQueryPartStructWithValues(queryPart)) {
             this.queryPartWithValues = queryPart;
-        } else {
-            this.queryPart = queryPart;
 
+            Object.entries(queryPart.inputRequired).forEach((p) => {
+                this.userInputs[p[0]] = {
+                    ...p[1],
+                    value: queryPart.values[p[0]],
+                };
+            });
+        } else {
             // Prepare inputs, with null value
             Object.entries(queryPart.inputRequired).forEach((p) => {
                 this.userInputs[p[0]] = { ...p[1], value: null };
             });
         }
-
-        this.fieldKey = queryPart.fieldKey;
     }
 
     run(song: Song): boolean {
@@ -64,7 +70,7 @@ export class UserQueryPart {
                 ? this.queryPartWithValues.values[
                       Object.keys(this.queryPartWithValues.inputRequired)[0]
                   ]
-                : Object.values(this.userInputs)[0].value
+                : Object.values(this.userInputs)[0].value,
         ).toLowerCase();
         const rhs2 = String(
             this.queryPartWithValues
@@ -72,8 +78,8 @@ export class UserQueryPart {
                       Object.keys(this.queryPartWithValues.inputRequired)[1]
                   ]
                 : Object.values(this.userInputs).length > 1
-                ? Object.values(this.userInputs)[1].value
-                : null
+                  ? Object.values(this.userInputs)[1].value
+                  : null,
         ).toLowerCase();
 
         const comparison = this.queryPartWithValues

@@ -1,19 +1,20 @@
 import type { Album, PlaylistFile, Song } from "src/App";
 import {
+    type DragSource,
     current,
-    draggedAlbum,
+    draggedOrigin,
     draggedSongs,
     draggedSource,
+    draggedTitle,
     isShuffleEnabled,
     queue,
     queueDuration,
     shuffledQueue,
-    type DragSource,
-    draggedPlaylist,
 } from "./store";
 import AudioPlayer from "../lib/player/AudioPlayer";
 import { get } from "svelte/store";
 import { remove } from "lodash-es";
+import type SmartQuery from "src/lib/smart-query/Query";
 
 export function findQueueIndex({ id }: Song): number {
     return get(queue).findIndex((song) => song.id === id);
@@ -34,10 +35,10 @@ export function removeQueuedSongs(songs: string[]) {
 
 export function resetDraggedSongs() {
     if (get(draggedSongs).length) {
-        draggedAlbum.set(null);
-        draggedPlaylist.set(null);
+        draggedOrigin.set(null);
         draggedSongs.set([]);
         draggedSource.set(null);
+        draggedTitle.set(null);
     }
 }
 
@@ -46,10 +47,10 @@ export function setDraggedAlbum(
     songs: Song[],
     source: DragSource,
 ) {
-    draggedAlbum.set(album);
-    draggedPlaylist.set(null);
+    draggedOrigin.set("Album");
     draggedSongs.set(songs);
     draggedSource.set(source);
+    draggedTitle.set(album.displayTitle ?? album.title);
 }
 
 export function setDraggedPlaylist(
@@ -57,17 +58,28 @@ export function setDraggedPlaylist(
     songs: Song[],
     source: DragSource,
 ) {
-    draggedAlbum.set(null);
-    draggedPlaylist.set(playlist);
+    draggedOrigin.set("Playlist");
     draggedSongs.set(songs);
     draggedSource.set(source);
+    draggedTitle.set(playlist.title);
+}
+
+export function setDraggedSmartPlaylist(
+    playlist: SmartQuery,
+    songs: Song[],
+    source: DragSource,
+) {
+    draggedOrigin.set("SmartPlaylist");
+    draggedSongs.set(songs);
+    draggedSource.set(source);
+    draggedTitle.set(playlist.name);
 }
 
 export function setDraggedSongs(songs: Song[], source: DragSource) {
-    draggedAlbum.set(null);
-    draggedPlaylist.set(null);
+    draggedOrigin.set(null);
     draggedSongs.set(songs);
     draggedSource.set(source);
+    draggedTitle.set(null);
 }
 
 export function setQueue(

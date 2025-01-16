@@ -150,17 +150,31 @@ fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle:
     info!("Stream file {:?}", event);
 
     let boot = event.boot.clone();
+    let waiting_for_boot = state
+        .waiting_for_boot
+        .load(std::sync::atomic::Ordering::Relaxed);
 
-    let _ = state
-        .player_control_sender
-        .send(player::PlayerControlEvent::StreamFile(event));
-
+    // Developer experience niceness
+    // Make sure this is an actual boot / app cold start,
+    // not a hot reload / manual reload of the UI (playback continues)
+    info!("Waiting for boot: {}", waiting_for_boot);
+    if !(boot.is_some() && !waiting_for_boot) {
+        info!("Sending stream file event");
+        let _ = state
+            .player_control_sender
+            .send(player::PlayerControlEvent::StreamFile(event));
+    }
     match boot {
         Some(true) => {
-            #[cfg(target_os = "macos")]
-            mediakeys::boot();
+            if waiting_for_boot {
+                #[cfg(target_os = "macos")]
+                mediakeys::boot();
 
-            state.pause();
+                state.pause();
+                state
+                    .waiting_for_boot
+                    .swap(false, std::sync::atomic::Ordering::Relaxed);
+            }
         }
         _ => {
             state.resume();
@@ -465,7 +479,7 @@ async fn main() {
 
             #[cfg(target_os = "windows")]
             {
-                window_builder = window_builder.transparent(true);
+                window_builder = window_builder.transparent(false);
             }
 
             #[cfg(target_os = "linux")]

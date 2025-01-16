@@ -6,7 +6,7 @@ use std::time::Instant;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::Arc;
 
 use atomic_wait::wake_all;
@@ -151,6 +151,7 @@ pub struct AudioPlayer<'a> {
     pub decoding_active: Arc<AtomicU32>,
     pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
     pub volume_control_sender: Sender<VolumeControlEvent>,
+    pub waiting_for_boot: Arc<AtomicBool>,
     phantom: PhantomData<&'a RTCPeerConnection>,
     phantom2: PhantomData<&'a RTCDataChannel>,
 }
@@ -177,6 +178,7 @@ impl<'a> AudioPlayer<'a> {
             decoding_active: Arc::new(AtomicU32::new(ACTIVE)),
             volume_control_receiver: Arc::new(Mutex::new(receiver_vol)),
             volume_control_sender: sender_vol,
+            waiting_for_boot: Arc::new(AtomicBool::new(true)),
             phantom: PhantomData,
             phantom2: PhantomData,
         })

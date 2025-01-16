@@ -6,15 +6,22 @@ import { UserQueryPart } from "./UserQueryPart";
 export default class SmartQuery {
     parts: UserQueryPart[] = [];
 
+    id: number = null;
     name: string = null;
     userInput: string = "";
 
+    static async loadWithUQI(queryId: `~usq:${string}`): Promise<SmartQuery> {
+        // Run the query from the user-built blocks
+        const queryName = Number(queryId.substring(5));
+        const savedQuery = await db.smartQueries.get(queryName);
+        return new SmartQuery(savedQuery);
+    }
+
     constructor(savedQuery?: SavedSmartQuery) {
         if (savedQuery) {
-            this.parts = savedQuery.queryParts.map((p) => {
-                return new UserQueryPart(p);
-            });
-            this.name = savedQuery.name;
+            this.id = savedQuery.id;
+            this.parts = savedQuery.queryParts.map((p) => new UserQueryPart(p));
+            this.name = savedQuery?.name || null;
         }
     }
 
@@ -31,7 +38,7 @@ export default class SmartQuery {
     }
 
     get isNameSet() {
-        return this.name !== null && this.name.length > 0;
+        return this.name?.length > 0;
     }
 
     get isEmpty() {
@@ -84,15 +91,36 @@ export default class SmartQuery {
     }
 
     async save() {
-        return await db.smartQueries.put({
-            name: this.name,
-            queryParts: this.parts.map((p) => ({
-                ...p.queryPart,
-                values: Object.entries(p.userInputs).reduce((obj, current) => {
-                    obj[current[0]] = current[1].value;
-                    return obj;
-                }, {})
-            }))
-        });
+        if (this.id) {
+            await db.smartQueries.update(this.id, {
+                name: this.name,
+                queryParts: this.parts.map((p) => ({
+                    ...p.queryPart,
+                    values: Object.entries(p.userInputs).reduce(
+                        (obj, current) => {
+                            obj[current[0]] = current[1].value;
+                            return obj;
+                        },
+                        {},
+                    ),
+                })),
+            });
+
+            return this.id;
+        } else {
+            return await db.smartQueries.put({
+                name: this.name,
+                queryParts: this.parts.map((p) => ({
+                    ...p.queryPart,
+                    values: Object.entries(p.userInputs).reduce(
+                        (obj, current) => {
+                            obj[current[0]] = current[1].value;
+                            return obj;
+                        },
+                        {},
+                    ),
+                })),
+            });
+        }
     }
 }
