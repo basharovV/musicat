@@ -31,6 +31,7 @@
     let wikiSong: Song;
     $: sections = wtfResult?.sections();
     async function getWiki(artist: string) {
+        console.log(artist);
         if (!artist) return;
         isLoading = true;
         try {
@@ -43,6 +44,7 @@
             console.log("result", wikiResult);
             error = null;
         } catch (err) {
+            wikiResult = { html: "" };
             error = err;
         } finally {
             isLoading = false;
@@ -77,8 +79,10 @@
 
     onMount(() => {
         isMounted = true;
-        $current.song?.artist && getWiki($wikiArtist || $current.song.artist);
-        // $current.song?.artist && getWikiWtf($current.song.artist);
+
+        if ($current.song?.artist && !$wikiArtist) {
+            getWiki($current.song.artist);
+        }
     });
 
     onDestroy(() => {
@@ -92,6 +96,10 @@
         $current.song
     ) {
         enrichLinks();
+    }
+
+    $: if ($wikiArtist) {
+        getWiki($wikiArtist);
     }
 
     let albumMentions: Mention<Album>[] = [];
@@ -345,13 +353,13 @@
                     <p>{previousArtist}</p>
                 {/if}
             </div>
-            {#if previousArtist && previousArtist !== $current.song?.artist}
+            {#if previousArtist && $current.song && previousArtist !== $current.song.artist}
                 <div class="info-playing">
                     <small>Current artist: </small>
                     <ButtonWithIcon
                         size="small"
-                        text="→ {$current.song?.artist}"
-                        onClick={() => getWiki($current.song?.artist)}
+                        text="→ {$current.song.artist}"
+                        onClick={() => getWiki($current.song.artist)}
                     />
                 </div>
             {/if}
