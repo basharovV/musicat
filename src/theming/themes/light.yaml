@@ -29,6 +29,8 @@ link: "#2c33ff"
 link-hover: "#8186ff"
 title: "#7dffee"
 # Album
+album-hover-info-bg: "#f1f1f1cc"
+album-hover-info-text: var(--text)
 album-playing-pause-bg: var(--album-playing-play-bg)
 album-playing-pause-border: var(--album-playing-play-border)
 album-playing-pause-icon: var(--album-playing-play-icon)

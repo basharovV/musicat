@@ -119,6 +119,16 @@
                         <!-- <small>No art</small> -->
                     </div>
                 {/if}
+                {#if isHovered && !showInfo}
+                    <div class="hover-info">
+                        <p class="title">
+                            {album.displayTitle ?? album.title}
+                        </p>
+                        {#if album.artist}
+                            <p class="artist">{album.artist}</p>
+                        {/if}
+                    </div>
+                {/if}
                 {#if isHovered || isPlayingCurrentAlbum}
                     <div
                         class={$isPlaying && isPlayingCurrentAlbum
@@ -144,7 +154,7 @@
     {#if showInfo}
         <div class="info-container">
             <p class="title">{album.displayTitle ?? album.title}</p>
-            <p class="artist">{album?.artist}</p>
+            <p class="artist">{album.artist}</p>
             <div class="info">
                 {#if album?.year > 0}
                     <small>{album.year}</small>
@@ -275,8 +285,6 @@
         justify-content: flex-start;
         position: relative;
         transition: all 0.6s cubic-bezier(0.075, 0.82, 0.165, 1);
-        &:hover {
-        }
         * {
             cursor: default;
             user-select: none;
@@ -497,6 +505,32 @@
                     z-index: -1;
                     .artwork {
                         width: 100%;
+                    }
+                }
+
+                .hover-info {
+                    position: absolute;
+                    align-self: center;
+                    display: inline-flex;
+                    z-index: 10;
+                    width: 100%;
+                    height: 100%;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: end;
+
+                    p {
+                        width: 100%;
+                        margin: 0;
+                        padding: 0.5em;
+                        background-color: var(--album-hover-info-bg);
+                        color: var(--album-hover-info-text);
+                        border-radius: 0;
+                        opacity: 1;
+                    }
+
+                    p + p {
+                        padding-top: 0;
                     }
                 }
             }
