@@ -33,7 +33,7 @@
     }
 
     function resetToLibrary() {
-        if ($uiView === "smart-query") {
+        if ($uiView.startsWith("smart-query")) {
             setQueue($smartQueryResults, 0);
         } else {
             setQueue($queriedSongs, 0);

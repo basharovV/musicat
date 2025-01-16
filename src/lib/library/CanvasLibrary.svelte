@@ -970,7 +970,7 @@
             });
 
             setQueue(tracks, song.viewModel.index);
-        } else if ($uiView === "smart-query") {
+        } else if ($uiView === "smart-query:list") {
             setQueue($smartQueryResults, song.viewModel.index);
         } else {
             setQueue($queriedSongs, song.viewModel.index);
@@ -1607,7 +1607,7 @@
         $smartQuery.parts = $smartQuery.parts;
         $isSmartQueryBuilderOpen = true;
         $isSmartQuerySaveUiOpen = false;
-        $uiView = "smart-query";
+        $uiView = "smart-query:list";
     }
 
     function isInvalidValue(value) {

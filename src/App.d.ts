@@ -47,6 +47,7 @@ interface Song {
     title: string;
     artist: string;
     album: string;
+    albumId?: string;
     albumArtist?: string;
     year: number;
     genre: string[];
@@ -203,7 +204,8 @@ type Comparison =
 type UiView =
     | "library"
     | "favourites"
-    | "smart-query"
+    | "smart-query:icon"
+    | "smart-query:list"
     | "your-music"
     | "albums"
     | "playlists"

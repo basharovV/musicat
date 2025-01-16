@@ -358,7 +358,7 @@
                 <div class="content" data-tauri-drag-region>
                     <ToDeleteHeader />
                 </div>
-            {:else if $uiView === "smart-query" || $uiView === "favourites"}
+            {:else if $uiView.startsWith("smart-query") || $uiView === "favourites"}
                 <div class="content" data-tauri-drag-region>
                     {#await selectedQuery then query}
                         <SmartPlaylistHeader selectedQuery={query} />
@@ -383,7 +383,7 @@
                 >
                     <TagCloud />
                 </div>
-            {:else if $uiView.match(/^(smart-query)/)}
+            {:else if $uiView.startsWith("smart-query")}
                 {#if $isSmartQueryBuilderOpen}
                     <div
                         class="content"
@@ -400,11 +400,9 @@
         </div>
 
         <div class="panel">
-            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites|to-delete)/)}
+            {#if $uiView === "library" || $uiView === "favourites" || $uiView === "playlists" || $uiView === "smart-query:list" || $uiView === "to-delete"}
                 <CanvasLibraryView />
-            {:else if $uiView === "playlists" || $uiView === "to-delete"}
-                <CanvasLibraryView />
-            {:else if $uiView === "albums"}
+            {:else if $uiView === "albums" || $uiView === "smart-query:icon"}
                 <AlbumView />
             {:else if $uiView === "your-music"}
                 <ArtistsToolkitView />

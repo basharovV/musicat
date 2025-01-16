@@ -2,7 +2,7 @@
     import { liveQuery } from "dexie";
     import md5 from "md5";
     import { onMount } from "svelte";
-    import type { Album } from "../../App";
+    import type { Album, Song } from "../../App";
     import { db } from "../../data/db";
     import {
         compressionSelected,
@@ -10,6 +10,7 @@
         isPlaying,
         query,
         queue,
+        selectedSmartQuery,
         uiPreferences,
         uiView,
     } from "../../data/store";
@@ -23,6 +24,8 @@
     import { debounce } from "lodash-es";
     import { getAlbumDetailsHeight } from "../albums/util";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import SmartQuery from "../smart-query/Query";
+    import BuiltInQueries from "../../data/SmartQueries";
 
     const PADDING = 14;
 
@@ -47,18 +50,52 @@
     let virtualList;
 
     $: albums = liveQuery(async () => {
-        let albums = await db.albums.toArray();
+        let albums: Album[];
 
-        if ($compressionSelected === "lossless") {
-            albums = albums.filter(
-                ({ title, lossless }) => title.length && lossless,
-            );
-        } else if ($compressionSelected === "lossy") {
-            albums = albums.filter(
-                ({ title, lossless }) => title.length && !lossless,
-            );
+        if ($uiView === "smart-query:icon") {
+            let songs: Song[];
+
+            if ($selectedSmartQuery.startsWith("~usq:")) {
+                // Run the query from the user-built blocks
+                const query = await SmartQuery.loadWithUQI($selectedSmartQuery);
+                songs = await query.run();
+            } else {
+                // Run the query from built-in functions
+                songs = await BuiltInQueries[$selectedSmartQuery].run();
+            }
+
+            const byAlbumIds = {};
+
+            for (const song of songs) {
+                if (song.albumId) {
+                    if (byAlbumIds[song.albumId]) {
+                        byAlbumIds[song.albumId].push(song);
+                    } else {
+                        byAlbumIds[song.albumId] = [song];
+                    }
+                }
+            }
+
+            albums = await db.albums.bulkGet(Object.keys(byAlbumIds));
+
+            albums = albums.map((album) => ({
+                ...album,
+                tracksIds: byAlbumIds[album.id].map(({ id }) => id),
+            }));
         } else {
-            albums = albums.filter(({ title }) => title.length);
+            albums = await db.albums.toArray();
+
+            if ($compressionSelected === "lossless") {
+                albums = albums.filter(
+                    ({ title, lossless }) => title.length && lossless,
+                );
+            } else if ($compressionSelected === "lossy") {
+                albums = albums.filter(
+                    ({ title, lossless }) => title.length && !lossless,
+                );
+            } else {
+                albums = albums.filter(({ title }) => title.length);
+            }
         }
 
         if ($uiPreferences.albumsViewSortBy === "title") {
