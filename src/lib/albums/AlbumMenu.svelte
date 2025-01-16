@@ -1,26 +1,50 @@
 <script lang="ts">
     import { type } from "@tauri-apps/plugin-os";
-    import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
     import { db } from "../../data/db";
     import {
         popupOpen,
-        rightClickedAlbum,
+        rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
-    import Menu from "../menu/Menu.svelte";
-    import MenuDivider from "../menu/MenuDivider.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
-    import { fetchAlbumArt } from "../data/LibraryEnrichers";
-    import { rescanAlbumArtwork } from "../../data/LibraryUtils";
-    import type { Album, ToImport } from "../../App";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
+    import {
+        type EnricherResult,
+        enrichSongCountry,
+        fetchAlbumArt,
+        rescanAlbumArtwork,
+    } from "../data/LibraryEnrichers";
+    import type { Album, Song, ToImport } from "../../App";
     import { invoke } from "@tauri-apps/api/core";
+    import { openInFinder } from "../menu/file";
+    import {
+        searchArtistOnWikiPanel,
+        searchArtistOnYouTube,
+        searchArtworkOnBrave,
+    } from "../menu/search";
+    import { removeQueuedSongs } from "../../data/storeHelper";
 
-    export let position = { x: 0, y: 0 };
-    export let showMenu = false;
-    export let onClose;
+    type ActionType =
+        | "artwork-local"
+        | "artwork-online"
+        | "country"
+        | "delete"
+        | "re-import";
 
+    export let onClose: () => void;
+
+    let album: Album;
+    let confirmingType: ActionType = null;
     let explorerName: string;
+    let loadingType: ActionType = null;
+    let position = { x: 0, y: 0 };
+    let result: EnricherResult;
+    let resultType: ActionType;
+    let showMenu = false;
+    let song: Song;
+    let songs: Song[];
 
     onMount(async () => {
         const os = await type();
@@ -37,94 +61,112 @@
         }
     });
 
-    let albumId;
-    let isConfirmingDelete = false;
+    export function open(
+        _album: Album,
+        _songs: Song[],
+        _position: { x: number; y: number },
+    ) {
+        album = _album;
+        song = _songs[0];
+        songs = _songs;
+        position = _position;
 
-    $: {
-        if (albumId !== $rightClickedAlbum?.id) {
-            isConfirmingDelete = false;
-        }
+        confirmingType = null;
+        resultType = null;
+        result = null;
+
+        showMenu = true;
     }
 
-    function closeMenu() {
+    function close() {
         showMenu = false;
-        isConfirmingDelete = false;
-        artworkResult = null;
+
         onClose && onClose();
     }
 
+    function compose(action, ...args) {
+        return () => {
+            close();
+
+            action(...args);
+        };
+    }
+
+    $: isConfirming = (type: ActionType): boolean => confirmingType === type;
+    $: isDisabled = (type?: ActionType): boolean =>
+        !!loadingType && loadingType !== type;
+    $: isLoading = (type: ActionType): boolean => loadingType === type;
+    $: hasResult = (type: ActionType) => result && resultType === type;
+
     async function deleteAlbum() {
         console.log("delete");
-        if (!isConfirmingDelete) {
-            albumId = $rightClickedAlbum?.id;
-            isConfirmingDelete = true;
+        if (confirmingType !== "delete") {
+            confirmingType = "delete";
             return;
         }
-        if ($rightClickedAlbum) {
-            closeMenu();
-            await db.songs.bulkDelete($rightClickedAlbum.tracksIds);
-            await db.albums.delete($rightClickedAlbum.id);
-            $rightClickedAlbum = null;
-            isConfirmingDelete = false;
+
+        if (album) {
+            loadingType = "delete";
+
+            await db.songs.bulkDelete(album.tracksIds);
+            await db.albums.delete(album.id);
+            await removeQueuedSongs(album.tracksIds);
+
+            loadingType = null;
+
+            close();
         }
     }
 
-    function searchArtistOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent($rightClickedAlbum.artist);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchSongOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent(
-            $rightClickedAlbum.displayTitle ?? $rightClickedAlbum.title,
-        );
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchArtistOnWikipedia() {
-        closeMenu();
-        const query = encodeURIComponent($rightClickedAlbum.artist);
-        open(`https://en.wikipedia.org/wiki/${query}`);
-    }
-    function searchArtworkOnBrave() {
-        closeMenu();
-        const query = encodeURIComponent(
-            `${$rightClickedAlbum.artist} - ${$rightClickedAlbum.title}`,
-        );
-        open(`https://search.brave.com/images?q=${query}`);
-    }
-    function openInFinder() {
-        closeMenu();
-        open($rightClickedAlbum.path);
-    }
     function openInfo() {
-        closeMenu();
+        if (songs.length === 1) {
+            $rightClickedTracks = [];
+            $rightClickedTrack = song;
+        } else {
+            $rightClickedTracks = songs;
+            $rightClickedTrack = null;
+        }
+
+        close();
+
         $popupOpen = "track-info";
     }
 
     // Enrichers
-    let isFetchingArtwork = false;
-    let artworkResult: { success?: string; error?: string };
-    let artworkResultForAlbum: String;
+    async function fetchingOriginCountry() {
+        loadingType = "country";
+
+        await enrichSongCountry(songs[0]);
+
+        loadingType = null;
+    }
+
     async function fetchArtwork() {
-        artworkResult = null;
-        isFetchingArtwork = true;
-        artworkResultForAlbum = $rightClickedAlbum.id;
-        artworkResult = await fetchAlbumArt($rightClickedAlbum);
-        isFetchingArtwork = false;
+        loadingType = "artwork-online";
+        resultType = "artwork-online";
+        result = null;
+
+        result = await fetchAlbumArt(album);
+
+        loadingType = null;
     }
 
     async function rescanLocalArtwork() {
-        rescanAlbumArtwork($rightClickedAlbum);
+        loadingType = "artwork-local";
+        resultType = "artwork-local";
+        result = null;
+
+        result = await rescanAlbumArtwork(album);
+
+        loadingType = null;
     }
 
-    let isReimporting = false;
-
     async function reImportAlbum() {
-        isReimporting = true;
+        loadingType = "re-import";
+
         const response = await invoke<ToImport>("scan_paths", {
             event: {
-                paths: [$rightClickedAlbum.path],
+                paths: [album.path],
                 recursive: false,
                 process_albums: true,
                 is_async: false,
@@ -135,68 +177,86 @@
             await db.songs.bulkPut(response.songs);
             await db.albums.bulkPut(response.albums);
         });
-        isReimporting = false;
+
+        loadingType = null;
     }
 </script>
 
 {#if showMenu}
-    <Menu {...position} onClickOutside={closeMenu}>
+    <Menu {...position} onClickOutside={close}>
         <MenuOption
             isDisabled={true}
-            text="{$rightClickedAlbum.displayTitle ??
-                $rightClickedAlbum.title} by {$rightClickedAlbum.artist}"
+            text="{album.displayTitle ?? album.title} by {album.artist}"
         />
         <MenuOption
+            isLoading={isLoading("re-import")}
+            onClick={reImportAlbum}
+            text="Re-import album"
+        />
+        <MenuDivider />
+        <MenuOption text="⚡️ Enrich" isDisabled />
+        {#if song.artist}
+            <MenuOption
+                isLoading={isLoading("country")}
+                onClick={fetchingOriginCountry}
+                text={!songs[0].originCountry
+                    ? isLoading("country")
+                        ? "Looking online..."
+                        : "Origin country"
+                    : "Origin country ✅"}
+                description="from Wikipedia"
+            />
+        {/if}
+        <MenuOption
+            isLoading={isLoading("artwork-online")}
+            onClick={fetchArtwork}
+            text="Fetch artwork"
+            description={isLoading("artwork-online")
+                ? "Fetching from Wikipedia..."
+                : "Save to folder as cover.jpg"}
+        />
+        {#if hasResult("artwork-online")}
+            <MenuOption text={result.error || result.success} isDisabled />
+        {/if}
+        <MenuOption
+            isLoading={isLoading("artwork-local")}
+            onClick={rescanLocalArtwork}
+            text="Scan existing artwork"
+            description={isLoading("artwork-local")
+                ? "Rescanning..."
+                : "Check encoded art in tracks / folder image"}
+        />
+        {#if hasResult("artwork-local")}
+            <MenuOption text={result.error || result.success} isDisabled />
+        {/if}
+        <MenuOption
+            onClick={compose(searchArtworkOnBrave, song)}
+            text="Search for artwork on Brave"
+        />
+        {#if song.artist}
+            <MenuDivider />
+            <MenuOption
+                onClick={compose(searchArtistOnYouTube, song)}
+                text="YouTube: <i>{song.artist}</i>"
+            />
+            <MenuOption
+                onClick={compose(searchArtistOnWikiPanel, song)}
+                text="Wiki panel: <i>{song.artist}</i>"
+            />
+        {/if}
+        <MenuDivider />
+        <MenuOption
             isDestructive={true}
-            isConfirming={isConfirmingDelete}
+            isConfirming={isConfirming("delete")}
             onClick={deleteAlbum}
             text="Remove album from library"
             confirmText="Click again to confirm"
         />
-        {#if $rightClickedAlbum}
-            <MenuOption
-                onClick={reImportAlbum}
-                text="Re-import album"
-                isLoading={isReimporting}
-            />
-            <MenuDivider />
-            <MenuOption text="⚡️ Enrich" isDisabled />
-            <MenuOption
-                onClick={fetchArtwork}
-                isLoading={isFetchingArtwork}
-                text="Fetch artwork"
-                description={isFetchingArtwork
-                    ? "Fetching from Wikipedia..."
-                    : "Save to folder as cover.jpg"}
-            />
-            {#if artworkResult && artworkResultForAlbum === $rightClickedAlbum.id}
-                <MenuOption
-                    text={artworkResult.error || artworkResult.success}
-                    isDisabled
-                />
-            {/if}
-            <MenuOption
-                onClick={rescanLocalArtwork}
-                text="Scan existing artwork"
-                description="Check encoded art in tracks / folder image"
-            />
-            <MenuOption
-                onClick={searchArtworkOnBrave}
-                text="Search for artwork on Brave"
-            />
-            <MenuDivider />
-            <MenuOption
-                onClick={searchArtistOnYouTube}
-                text="Search for artist on YouTube"
-            />
-            <MenuOption
-                onClick={searchArtistOnWikipedia}
-                text="Search for artist on Wikipedia"
-            />
-            <MenuDivider />
-
-            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
-            <MenuOption onClick={openInfo} text="Info & metadata" />
-        {/if}
+        <MenuDivider />
+        <MenuOption
+            onClick={compose(openInFinder, song)}
+            text="Open in {explorerName}"
+        />
+        <MenuOption onClick={openInfo} text="Info & metadata" />
     </Menu>
 {/if}

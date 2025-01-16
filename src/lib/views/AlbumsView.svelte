@@ -10,9 +10,6 @@
         isPlaying,
         query,
         queue,
-        rightClickedAlbum,
-        rightClickedTrack,
-        rightClickedTracks,
         uiPreferences,
         uiView,
     } from "../../data/store";
@@ -30,6 +27,7 @@
     const PADDING = 14;
 
     let activeAlbums: Album[] = [];
+    let albumMenu: AlbumMenu;
     let columnWidth = 0;
     let container: HTMLDivElement;
     let currentAlbum: Album;
@@ -44,10 +42,8 @@
     let isLoading = true;
     let itemSizes = [];
     let lastOffset = 0;
-    let position;
     let rowCount = 0;
     let rowHeight = 0;
-    let showAlbumMenu = false;
     let virtualList;
 
     $: albums = liveQuery(async () => {
@@ -245,14 +241,12 @@
 
     async function onRightClick(e, album) {
         highlightedAlbum = album.id;
-        $rightClickedAlbum = album;
-        const tracks = (await db.songs.bulkGet(album.tracksIds)).sort(
+
+        const songs = (await db.songs.bulkGet(album.tracksIds)).sort(
             (a, b) => a.trackNumber - b.trackNumber,
         );
-        $rightClickedTrack = null;
-        $rightClickedTracks = tracks;
-        showAlbumMenu = true;
-        position = { x: e.clientX, y: e.clientY };
+
+        albumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
     }
 
     async function onLeftClick(e, album, index) {
@@ -323,8 +317,7 @@
 </script>
 
 <AlbumMenu
-    bind:showMenu={showAlbumMenu}
-    bind:position
+    bind:this={albumMenu}
     onClose={() => {
         highlightedAlbum = null;
     }}

@@ -2,7 +2,6 @@
     import { invoke } from "@tauri-apps/api/core";
     import type { Album, GetHTMLResponse, Song } from "../../App";
     import wtf, { type Document } from "wtf_wikipedia";
-    import type { Section } from "wtf_wikipedia";
     import wtfHtml from "wtf-plugin-html";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
     import { getWikipediaUrlForArtist } from "../../data/WikipediaAPI";
@@ -21,6 +20,8 @@
     import LL from "../../i18n/i18n-svelte";
     import { setQueue } from "../../data/storeHelper";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import { open } from "@tauri-apps/plugin-shell";
+
     wtf.extend(wtfHtml);
 
     let wikiResult: GetHTMLResponse;
@@ -31,6 +32,7 @@
     let wikiSong: Song;
     $: sections = wtfResult?.sections();
     async function getWiki(artist: string) {
+        console.log(artist);
         if (!artist) return;
         isLoading = true;
         try {
@@ -43,6 +45,7 @@
             console.log("result", wikiResult);
             error = null;
         } catch (err) {
+            wikiResult = null;
             error = err;
         } finally {
             isLoading = false;
@@ -77,8 +80,10 @@
 
     onMount(() => {
         isMounted = true;
-        $current.song?.artist && getWiki($wikiArtist || $current.song.artist);
-        // $current.song?.artist && getWikiWtf($current.song.artist);
+
+        if ($current.song?.artist && !$wikiArtist) {
+            getWiki($current.song.artist);
+        }
     });
 
     onDestroy(() => {
@@ -93,6 +98,12 @@
     ) {
         enrichLinks();
     }
+
+    $: if ($wikiArtist) {
+        getWiki($wikiArtist);
+    }
+
+    $: _$encodeURIComponent = encodeURIComponent;
 
     let albumMentions: Mention<Album>[] = [];
     let songMentions: Mention<Song>[] = [];
@@ -339,19 +350,21 @@
             />
             <div class="info-wiki">
                 {#if isLoading}
-                    <p transition:fade={{ duration: 200 }}>Loading...</p>
+                    <small transition:fade={{ duration: 200 }}
+                        >Searching wiki for:
+                    </small>
                 {:else}
-                    <small>Viewing wiki for: </small>
-                    <p>{previousArtist}</p>
+                    <small>Viewing wiki for:</small>
                 {/if}
+                <p>{previousArtist}</p>
             </div>
-            {#if previousArtist && previousArtist !== $current.song?.artist}
+            {#if previousArtist && $current.song && previousArtist !== $current.song.artist}
                 <div class="info-playing">
                     <small>Current artist: </small>
                     <ButtonWithIcon
                         size="small"
-                        text="→ {$current.song?.artist}"
-                        onClick={() => getWiki($current.song?.artist)}
+                        text="→ {$current.song.artist}"
+                        onClick={() => getWiki($current.song.artist)}
                     />
                 </div>
             {/if}
@@ -457,6 +470,41 @@
                             {/each}
                         {/each}
                     {/each} -->
+            </div>
+        {:else}
+            <div
+                class="no-result"
+                transition:fly={{
+                    duration: 300,
+                    y: -20,
+                    opacity: 0.4,
+                }}
+            >
+                <p>No result found.</p>
+                <p></p>
+                <p>Search <i>{previousArtist}</i> for:</p>
+                <ul>
+                    <li>
+                        <a
+                            href="https://en.wikipedia.org/w/index.php?search={_$encodeURIComponent(
+                                previousArtist,
+                            )}"
+                            target="_blank"
+                        >
+                            a Wiki article with Wikipedia
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="https://search.brave.com/search?q=site%3Awikipedia.org+{_$encodeURIComponent(
+                                previousArtist,
+                            )}"
+                            target="_blank"
+                        >
+                            a Wiki article with Brave
+                        </a>
+                    </li>
+                </ul>
             </div>
         {/if}
     </div>
@@ -715,5 +763,17 @@
         //     padding: 0.5em 1em;
         //     border-radius: 10px;
         // }
+    }
+
+    .no-result {
+        padding: 1em;
+        text-align: start;
+        background-color: var(--wiki-bg);
+        color: var(--text);
+        max-width: 100%;
+
+        ul {
+            padding-inline-start: 2em;
+        }
     }
 </style>

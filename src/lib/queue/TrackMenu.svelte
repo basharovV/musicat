@@ -1,26 +1,35 @@
 <script lang="ts">
     import { type } from "@tauri-apps/plugin-os";
-    import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
-    import { db } from "../../data/db";
     import {
         isShuffleEnabled,
         popupOpen,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
-    import Menu from "../menu/Menu.svelte";
-    import MenuDivider from "../menu/MenuDivider.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
-    import { findCountryByArtist } from "../data/LibraryEnrichers";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import type { Song } from "../../App";
     import { findQueueIndexes, updateQueues } from "../../data/storeHelper";
+    import { openInFinder } from "../menu/file";
+    import Icon from "../ui/Icon.svelte";
+    import ToolsMenu from "./ToolsMenu.svelte";
 
-    export let pos = { x: 0, y: 0 };
-    export let showMenu = false;
-    export let songs: Song[] = [];
+    type ActionType = "delete";
+
+    export let onUnselect: () => void;
+
+    let confirmingType: ActionType = null;
+    let loadingType: ActionType = null;
+    let position = { x: 0, y: 0 };
+    let showMenu = false;
 
     let explorerName: string;
+    let menu;
+    let song: Song | null = null;
+    let songs: Song[] = [];
+    let toolsMenu: ToolsMenu;
 
     onMount(async () => {
         const os = await type();
@@ -37,39 +46,73 @@
         }
     });
 
-    let song: Song | null = null;
-    let isConfirmingDelete = false;
-    let confirmingLength = -1;
-    let confirmingHash = "";
-
-    $: if (
-        songs.length !== confirmingLength ||
-        songs[0].id !== confirmingHash
-    ) {
-        isConfirmingDelete = false;
-    }
-
-    $: if (songs.length === 1) {
-        song = songs[0];
-    } else {
-        song = null;
-    }
-
-    function closeMenu() {
+    export function close() {
         showMenu = false;
-        isConfirmingDelete = false;
+    }
+
+    export function isOpen() {
+        return showMenu;
+    }
+
+    export function open(_songs: Song[], _position: { x: number; y: number }) {
+        songs = _songs;
+        position = _position;
+
+        if (songs.length === 1) {
+            song = songs[0];
+        } else {
+            song = null;
+        }
+
+        confirmingType = null;
+
+        showMenu = true;
+    }
+
+    function compose(action, ...args) {
+        return () => {
+            close();
+
+            action(...args);
+        };
+    }
+
+    $: isConfirming = (type: ActionType): boolean => confirmingType === type;
+    $: isDisabled = (type?: ActionType): boolean =>
+        !!loadingType && loadingType !== type;
+    $: isLoading = (type: ActionType): boolean => loadingType === type;
+
+    function openInfo() {
+        if (songs.length === 1) {
+            $rightClickedTracks = [];
+            $rightClickedTrack = song;
+        } else {
+            $rightClickedTracks = songs;
+            $rightClickedTrack = null;
+        }
+
+        close();
+        $popupOpen = "track-info";
+    }
+
+    function onMoreToolsClick(e) {
+        var optionRect = e.target.getBoundingClientRect();
+        var menuRect = menu.getBoundingClientRect();
+
+        toolsMenu.open(song, {
+            x: position.x + menuRect.width,
+            y: optionRect.y,
+        });
     }
 
     async function removeFromQueue() {
         console.log("delete");
-        if (!isConfirmingDelete) {
-            confirmingLength = songs.length;
-            confirmingHash = songs[0].id;
-            isConfirmingDelete = true;
+        if (confirmingType !== "delete") {
+            confirmingType = "delete";
             return;
         }
 
-        closeMenu();
+        close();
 
         const indexes = songs.map((t) => t.viewModel.index);
 
@@ -88,134 +131,48 @@
                 }
             });
         }
-
-        songs = [];
-        isConfirmingDelete = false;
-    }
-
-    function searchArtistOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent(song.artist);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchSongOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent(song.title);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchArtistOnWikipedia() {
-        closeMenu();
-        const query = encodeURIComponent(song.artist);
-        open(`https://en.wikipedia.org/wiki/${query}`);
-    }
-    function openInFinder() {
-        closeMenu();
-        const query = song.path.replace(song.file, "");
-        open(query);
-    }
-    function lookUpChords() {
-        closeMenu();
-        const query = encodeURIComponent(
-            song.artist + " " + song.title + " chords",
-        );
-        open(`https://duckduckgo.com/?q=${query}`);
-    }
-    function lookUpLyrics() {
-        closeMenu();
-        const query = encodeURIComponent(
-            song.artist + " " + song.title + " lyrics",
-        );
-        open(`https://duckduckgo.com/?q=${query}`);
-    }
-    function openInfo() {
-        if (songs.length === 1) {
-            $rightClickedTracks = [];
-            $rightClickedTrack = song;
-        } else {
-            $rightClickedTracks = songs;
-            $rightClickedTrack = null;
-        }
-
-        closeMenu();
-        $popupOpen = "track-info";
-    }
-    // Enrichers
-
-    let isFetchingOriginCountry = false;
-
-    async function enrichArtistCountry() {
-        isFetchingOriginCountry = true;
-        const country = await findCountryByArtist(song.artist);
-        console.log("country", country);
-        if (country) {
-            song.originCountry = country;
-
-            // Find all songs with this artist
-            const artistSongs = await db.songs
-                .where("artist")
-                .equals(song.artist)
-                .toArray();
-            artistSongs.forEach((s) => {
-                s.originCountry = country;
-                db.songs.update(s.id, s);
-            });
-        }
-        isFetchingOriginCountry = false;
     }
 
     function unselect() {
-        closeMenu();
-        songs.length = 0;
+        close();
+
+        onUnselect && onUnselect();
     }
 </script>
 
+<ToolsMenu bind:this={toolsMenu} />
+
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu} fixed>
+    <Menu {...position} onClickOutside={close} fixed bind:this={menu}>
         <MenuOption
             isDisabled={true}
             text={song ? song.title : songs.length + " tracks"}
         />
+        {#if song}
+            <MenuDivider />
+            <MenuOption onClick={onMoreToolsClick}>
+                More Tools <Icon icon="lucide:chevron-right" class="right" />
+            </MenuOption>
+            <MenuDivider />
+        {/if}
         {#if songs.length > 1}
             <MenuOption onClick={unselect} text="Unselect all" />
         {/if}
         <MenuOption
             isDestructive={true}
-            isConfirming={isConfirmingDelete}
+            isConfirming={isConfirming("delete")}
             onClick={removeFromQueue}
             text={song ? "Remove track from queue" : "Remove tracks from queue"}
             confirmText="Click again to confirm"
         />
-        {#if song}
-            <MenuDivider />
-            <MenuOption text="Enrich" isDisabled />
-            <MenuOption
-                onClick={enrichArtistCountry}
-                text={!song.originCountry
-                    ? isFetchingOriginCountry
-                        ? "Looking online..."
-                        : "Origin country"
-                    : "Origin country ✅"}
-                description="from Wikipedia"
-            />
-            <MenuDivider />
-            <MenuOption
-                onClick={searchSongOnYouTube}
-                text="Search for song on YouTube"
-            />
-            <MenuOption
-                onClick={searchArtistOnYouTube}
-                text="Search for artist on YouTube"
-            />
-            <MenuOption
-                onClick={searchArtistOnWikipedia}
-                text="Search for artist on Wikipedia"
-            />
-            <MenuDivider />
-            <MenuOption onClick={lookUpChords} text="Look up chords" />
-            <MenuOption onClick={lookUpLyrics} text="Look up lyrics" />
-            <MenuDivider />
 
-            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
+        <MenuDivider />
+
+        {#if song}
+            <MenuOption
+                onClick={compose(openInFinder, song)}
+                text="Open in {explorerName}"
+            />
         {/if}
 
         <MenuOption onClick={openInfo} text="Info & metadata" />

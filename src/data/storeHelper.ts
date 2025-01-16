@@ -13,6 +13,7 @@ import {
 } from "./store";
 import AudioPlayer from "../lib/player/AudioPlayer";
 import { get } from "svelte/store";
+import { remove } from "lodash-es";
 import type SmartQuery from "src/lib/smart-query/Query";
 
 export function findQueueIndex({ id }: Song): number {
@@ -23,6 +24,13 @@ export function findQueueIndexes(songs: Song[]): number[] {
     const q = get(queue);
 
     return songs.map(({ id }) => q.findIndex((song) => song.id === id));
+}
+
+export function removeQueuedSongs(songs: string[]) {
+    const olds = get(queue);
+    const news = remove(olds, ({ id }) => !songs.includes(id));
+
+    setQueue(news, false);
 }
 
 export function resetDraggedSongs() {

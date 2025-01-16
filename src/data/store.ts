@@ -139,7 +139,6 @@ export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
-export const rightClickedAlbum: Writable<Album> = writable(null);
 export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);

@@ -10,7 +10,7 @@
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { autoWidth } from "../../utils/AutoWidth";
-    import Menu from "../menu/Menu.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
     import Icon from "../ui/Icon.svelte";
     import type { QueryPartStruct } from "./QueryPart";
     import { BUILT_IN_QUERY_PARTS } from "./QueryParts";

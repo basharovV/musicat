@@ -62,8 +62,8 @@
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import { isIAPlaying } from "../player/WebAudioPlayer";
     import type { SavedSmartQuery } from "../smart-query/QueryPart";
@@ -74,7 +74,7 @@
     import { optionalTippy } from "../ui/TippyAction";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
     import Seekbar from "./Seekbar.svelte";
-    import MenuDivider from "../menu/MenuDivider.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import {
         resetDraggedSongs,
         setDraggedPlaylist,
