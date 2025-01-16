@@ -2,13 +2,7 @@
     import { fade } from "svelte/transition";
     import type { Album } from "../../App";
     import { db } from "../../data/db";
-    import {
-        current,
-        draggedAlbum,
-        draggedSongs,
-        draggedSource,
-        isPlaying,
-    } from "../../data/store";
+    import { current, isPlaying } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import LL from "../../i18n/i18n-svelte";

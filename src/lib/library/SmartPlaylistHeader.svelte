@@ -1,7 +1,5 @@
 <script lang="ts">
-    import type { Playlist } from "../../App";
     import { db } from "../../data/db";
-    import { findQuery } from "../../data/SmartQueries";
     import {
         forceRefreshLibrary,
         isQueueOpen,
@@ -17,6 +15,7 @@
         uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
+    import SmartQuery from "../smart-query/Query";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
@@ -24,10 +23,43 @@
     export let selectedQuery;
 
     let durationText;
+
     $: if ($queueDuration) {
         durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
+    }
+
+    function closeSmartPlaylist() {
+        if ($smartQueryInitiator === "library-cell") {
+            $forceRefreshLibrary = true;
+            $isSmartQueryBuilderOpen = false;
+            $uiView = "library";
+        } else {
+            $isSmartQueryBuilderOpen = false;
+            // $uiView = "smart-query";
+
+            if ($smartQueryInitiator.startsWith("smart-query:")) {
+                $selectedSmartQuery = $smartQueryInitiator.substring(12);
+            }
+        }
+    }
+
+    async function editSmartPlaylist() {
+        $smartQuery = new SmartQuery(selectedQuery);
+
+        $isSmartQueryValid = true;
+        $isSmartQueryBuilderOpen = true;
+        $isSmartQuerySaveUiOpen = false;
+    }
+
+    function newSmartPlaylist() {
+        $smartQueryInitiator = `smart-query:${$selectedSmartQuery}`;
+        $selectedSmartQuery = null;
+        $smartQuery = new SmartQuery();
+        $isSmartQueryValid = false;
+        $isSmartQueryBuilderOpen = true;
+        $isSmartQuerySaveUiOpen = false;
     }
 
     // For playlists header only
@@ -90,28 +122,27 @@
     <!-- TODO -->
 </div>
 {#if !$isSmartQueryBuilderOpen}
-    <div class="button-container">
-        <button
-            on:click={() => {
-                $isSmartQueryBuilderOpen = true;
-                $isSmartQuerySaveUiOpen = false;
-            }}>{$LL.smartPlaylists.newSmartPlaylist()}</button
-        >
-    </div>
+    {#if $selectedSmartQuery.startsWith("~usq:")}
+        <ButtonWithIcon
+            size="small"
+            icon="material-symbols:edit-outline"
+            onClick={editSmartPlaylist}
+            text={$LL.smartPlaylists.editSmartPlaylist()}
+            theme="active"
+        />
+    {/if}
+    <ButtonWithIcon
+        size="small"
+        icon="material-symbols:add"
+        onClick={newSmartPlaylist}
+        text={$LL.smartPlaylists.newSmartPlaylist()}
+        theme="active"
+    />
 {:else}
     <ButtonWithIcon
         size="small"
         icon="material-symbols:close"
-        onClick={() => {
-            if ($smartQueryInitiator === "library-cell") {
-                $forceRefreshLibrary = true;
-                $isSmartQueryBuilderOpen = false;
-                $uiView = "library";
-            } else {
-                $isSmartQueryBuilderOpen = false;
-                // $uiView = "smart-query";
-            }
-        }}
+        onClick={closeSmartPlaylist}
         text={$LL.smartPlaylists.builder.close()}
         theme="transparent"
     />
@@ -187,24 +218,6 @@
         &::before {
             content: "•";
             margin-right: 0.4em;
-        }
-    }
-
-    .button-container {
-        padding: 5px;
-    }
-    button {
-        background-color: var(--smart-playlist-button-bg);
-        border-radius: 4px;
-        height: auto;
-        padding: 0.3em 1em;
-        p {
-            margin: 0;
-        }
-
-        &:disabled {
-            background-color: var(--smart-playlist-button-disabled-bg);
-            color: var(--smart-playlist-button-disabled);
         }
     }
 </style>

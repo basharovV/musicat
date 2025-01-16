@@ -74,13 +74,13 @@ const BUILT_IN_QUERIES = {
     favourites: {
         name: "Favourites",
         value: "favourites",
-        query: favourites
+        run: favourites,
     },
     recentlyAdded: {
         name: "Recently Added",
         value: "recentlyAdded",
-        query: recentlyAdded
-    }
+        run: recentlyAdded,
+    },
 };
 
 export default BUILT_IN_QUERIES;
