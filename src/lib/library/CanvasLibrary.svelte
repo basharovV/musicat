@@ -997,7 +997,7 @@
         // reposition menu if in a virtual-list
         const list = e.target.closest(".virtual-list-inner");
         if (list) {
-            var rect = list.getBoundingClientRect();
+            const rect = list.getBoundingClientRect();
 
             trackMenu.open(
                 songsHighlighted.length > 1 ? songsHighlighted : song,
@@ -1491,6 +1491,30 @@
         }
         console.log("columnToInsertIdx", columnToInsertIdx);
         console.log("dropidx", dropColumnIdx);
+    }
+
+    function onGroupClick(ev) {
+        if (ev.detail.evt.button === 0) updateOrderBy(f.value);
+        else if (ev.detail.evt.button === 2) {
+            if ($uiView === "albums") {
+                const list = ev.detail.evt.target.closest(
+                    ".virtual-list-inner",
+                );
+                const rect = list.getBoundingClientRect();
+
+                columnPickerPos = {
+                    x: ev.detail.evt.clientX - rect.left,
+                    y: ev.detail.evt.clientY - rect.top + 300,
+                };
+                console.log(columnPickerPos);
+            } else {
+                columnPickerPos = {
+                    x: ev.detail.evt.clientX,
+                    y: 15,
+                };
+            }
+            showColumnPicker = !showColumnPicker;
+        }
     }
 
     function resetColumnOrderUi() {
@@ -2411,25 +2435,7 @@
                                             return handleColumnDrag(pos, idx);
                                         },
                                     }}
-                                    on:click={(ev) => {
-                                        if (ev.detail.evt.button === 0)
-                                            updateOrderBy(f.value);
-                                        else if (ev.detail.evt.button === 2) {
-                                            if ($uiView.match(/^(albums)/)) {
-                                                columnPickerPos = {
-                                                    x: ev.detail.evt.clientX,
-                                                    y: ev.detail.evt.clientY,
-                                                };
-                                            } else {
-                                                columnPickerPos = {
-                                                    x: ev.detail.evt.clientX,
-                                                    y: 15,
-                                                };
-                                            }
-                                            showColumnPicker =
-                                                !showColumnPicker;
-                                        }
-                                    }}
+                                    on:click={onGroupClick}
                                     on:mouseenter={() => {
                                         hoveredColumnIdx = idx;
                                     }}
