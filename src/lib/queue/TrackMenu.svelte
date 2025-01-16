@@ -10,20 +10,13 @@
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
-    import { enrichSongCountry } from "../data/LibraryEnrichers";
     import type { Song } from "../../App";
     import { findQueueIndexes, updateQueues } from "../../data/storeHelper";
-    import {
-        searchArtistOnWikiPanel,
-        searchArtistOnWikipedia,
-        searchArtistOnYouTube,
-        searchChords,
-        searchLyrics,
-        searchSongOnYouTube,
-    } from "../menu/search";
     import { openInFinder } from "../menu/file";
+    import Icon from "../ui/Icon.svelte";
+    import ToolsMenu from "./ToolsMenu.svelte";
 
-    type ActionType = "country" | "delete";
+    type ActionType = "delete";
 
     export let onUnselect: () => void;
 
@@ -31,10 +24,12 @@
     let loadingType: ActionType = null;
     let position = { x: 0, y: 0 };
     let showMenu = false;
-    let song: Song | null = null;
-    let songs: Song[] = [];
 
     let explorerName: string;
+    let menu;
+    let song: Song | null = null;
+    let songs: Song[] = [];
+    let toolsMenu: ToolsMenu;
 
     onMount(async () => {
         const os = await type();
@@ -87,6 +82,29 @@
         !!loadingType && loadingType !== type;
     $: isLoading = (type: ActionType): boolean => loadingType === type;
 
+    function openInfo() {
+        if (songs.length === 1) {
+            $rightClickedTracks = [];
+            $rightClickedTrack = song;
+        } else {
+            $rightClickedTracks = songs;
+            $rightClickedTrack = null;
+        }
+
+        close();
+        $popupOpen = "track-info";
+    }
+
+    function onMoreToolsClick(e) {
+        var optionRect = e.target.getBoundingClientRect();
+        var menuRect = menu.getBoundingClientRect();
+
+        toolsMenu.open(song, {
+            x: position.x + menuRect.width,
+            y: optionRect.y,
+        });
+    }
+
     async function removeFromQueue() {
         console.log("delete");
         if (confirmingType !== "delete") {
@@ -115,28 +133,6 @@
         }
     }
 
-    function openInfo() {
-        if (songs.length === 1) {
-            $rightClickedTracks = [];
-            $rightClickedTrack = song;
-        } else {
-            $rightClickedTracks = songs;
-            $rightClickedTrack = null;
-        }
-
-        close();
-        $popupOpen = "track-info";
-    }
-    // Enrichers
-
-    async function fetchingOriginCountry() {
-        loadingType = "country";
-
-        await enrichSongCountry(song);
-
-        loadingType = "country";
-    }
-
     function unselect() {
         close();
 
@@ -144,56 +140,20 @@
     }
 </script>
 
+<ToolsMenu bind:this={toolsMenu} />
+
 {#if showMenu}
-    <Menu {...position} onClickOutside={close} fixed>
+    <Menu {...position} onClickOutside={close} fixed bind:this={menu}>
         <MenuOption
             isDisabled={true}
             text={song ? song.title : songs.length + " tracks"}
         />
         {#if song}
-            {#if song.artist}
-                <MenuDivider />
-                <MenuOption text="⚡️ Enrich" isDisabled />
-                <MenuOption
-                    isLoading={isLoading("country")}
-                    onClick={fetchingOriginCountry}
-                    text={!song.originCountry
-                        ? isLoading("country")
-                            ? "Looking online..."
-                            : "Origin country"
-                        : "Origin country ✅"}
-                    description="from Wikipedia"
-                />
-            {/if}
             <MenuDivider />
-            <MenuOption
-                onClick={compose(searchSongOnYouTube, song)}
-                text="YouTube: <i>{song.title}</i>"
-            />
-            <MenuOption
-                onClick={compose(searchChords, song)}
-                text="Chords: <i>{song.title}</i>"
-            />
-            <MenuOption
-                onClick={compose(searchLyrics, song)}
-                text="Lyrics: <i>{song.title}</i>"
-            />
+            <MenuOption onClick={onMoreToolsClick}>
+                More Tools <Icon icon="lucide:chevron-right" class="right" />
+            </MenuOption>
             <MenuDivider />
-            {#if song.artist}
-                <MenuOption
-                    onClick={compose(searchArtistOnYouTube, song)}
-                    text="YouTube: <i>{song.artist}</i>"
-                />
-                <MenuOption
-                    onClick={compose(searchArtistOnWikipedia, song)}
-                    text="Wikipedia: <i>{song.artist}</i>"
-                />
-                <MenuOption
-                    onClick={compose(searchArtistOnWikiPanel, song)}
-                    text="Wiki panel: <i>{song.artist}</i>"
-                />
-                <MenuDivider />
-            {/if}
         {/if}
         {#if songs.length > 1}
             <MenuOption onClick={unselect} text="Unselect all" />

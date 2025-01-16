@@ -42,7 +42,7 @@
             : `background-color: ${$currentThemeObject["menu-item-highlight-bg"]};`
         : ""}
     on:click|stopPropagation={(e) => {
-        !isDisabled && onClick && onClick();
+        !isDisabled && onClick && onClick(e);
     }}
 >
     <div class="bg" style={color ? `background-color: ${color}` : ""} />
@@ -180,6 +180,10 @@
             :global(i) {
                 font-size: 12.5px;
             }
+        }
+
+        :global(.right) {
+            margin: 0 0 0 auto;
         }
     }
 
