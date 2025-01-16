@@ -1,5 +1,6 @@
 use artwork_cacher::look_for_art;
 use chksum_md5::MD5;
+use image::ImageFormat;
 use lofty::config::WriteOptions;
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
 use lofty::picture::{MimeType, Picture};
@@ -13,8 +14,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::{self, File};
+use std::io::Cursor;
 use std::io::{BufReader, ErrorKind};
-use std::ops::{Deref, Mul};
+use std::ops::Mul;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -736,11 +738,33 @@ pub fn extract_metadata(
                         if tagged_file.primary_tag().is_some() {
                             if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first()
                             {
-                                artwork = Some(Artwork {
-                                    data: pic.data().to_vec(),
-                                    src: None,
-                                    format: pic.mime_type().unwrap().to_string(),
-                                })
+                                let format = match pic.mime_type().unwrap().as_str() {
+                                    "image/jpeg" => Some(ImageFormat::Jpeg),
+                                    "image/png" => Some(ImageFormat::Png),
+                                    _ => None,
+                                };
+
+                                if format.is_some() {
+                                    let cursor = Cursor::new(pic.data());
+
+                                    match image::load(cursor, format.unwrap()) {
+                                        Ok(_) => {
+                                            artwork = Some(Artwork {
+                                                data: pic.data().to_vec(),
+                                                src: None,
+                                                format: pic.mime_type().unwrap().to_string(),
+                                            })
+                                        }
+                                        Err(e) => {
+                                            info!("Error decoding for artwork: {}", e);
+                                        }
+                                    }
+                                } else {
+                                    info!(
+                                        "Unknown mime type: {}",
+                                        pic.mime_type().unwrap().to_string()
+                                    );
+                                }
                             }
                         }
 
