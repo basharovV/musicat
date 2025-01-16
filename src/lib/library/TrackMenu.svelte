@@ -177,7 +177,7 @@
     }
 
     function openInfo() {
-        if (songs.length === 1) {
+        if (song) {
             $rightClickedTracks = [];
             $rightClickedTrack = song;
         } else {
@@ -186,8 +186,10 @@
         }
 
         close();
+
         $popupOpen = "track-info";
     }
+
     // Enrichers
 
     async function fetchingOriginCountry() {
@@ -216,7 +218,7 @@
         isReimporting = true;
         const response = await invoke<ToImport>("scan_paths", {
             event: {
-                paths: songs.map((t) => t.path),
+                paths: song ? [song.path] : songs.map((t) => t.path),
                 recursive: false,
                 process_albums: true,
                 is_async: false,
