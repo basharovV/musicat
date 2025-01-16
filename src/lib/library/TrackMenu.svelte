@@ -32,6 +32,8 @@
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
+    export let onUnselect: () => void;
+
     let confirmingType: ActionType = null;
     let explorerName: string;
     let loadingType: ActionType = null;
@@ -149,6 +151,8 @@
             await action(tracksToRemove);
 
             loadingType = null;
+
+            onUnselect && onUnselect();
 
             close();
         };

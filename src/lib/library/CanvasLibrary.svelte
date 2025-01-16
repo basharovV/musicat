@@ -1707,7 +1707,10 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<TrackMenu bind:this={trackMenu} />
+<TrackMenu
+    bind:this={trackMenu}
+    onUnselect={() => (songsHighlighted.length = 0)}
+/>
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
