@@ -26,8 +26,7 @@
     import Icon from "../ui/Icon.svelte";
     import { deleteFromLibrary } from "../../data/LibraryUtils";
     import { liveQuery } from "dexie";
-    import { writable } from "svelte/store";
-    import { searchArtistOnWikipedia } from "../menu/search";
+    import { searchArtistOnWikiPanel } from "../menu/search";
     import { openInFinder } from "../menu/file";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
@@ -371,7 +370,7 @@
                 <MenuDivider />
                 <MenuOption
                     isDisabled={isDisabled()}
-                    onClick={compose(searchArtistOnWikipedia, song)}
+                    onClick={compose(searchArtistOnWikiPanel, song)}
                     text="Wiki panel: <i>{song.artist}</i>"
                 />
             {/if}

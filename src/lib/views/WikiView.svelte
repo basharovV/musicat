@@ -2,7 +2,6 @@
     import { invoke } from "@tauri-apps/api/core";
     import type { Album, GetHTMLResponse, Song } from "../../App";
     import wtf, { type Document } from "wtf_wikipedia";
-    import type { Section } from "wtf_wikipedia";
     import wtfHtml from "wtf-plugin-html";
     import ShadowGradient from "../ui/ShadowGradient.svelte";
     import { getWikipediaUrlForArtist } from "../../data/WikipediaAPI";
@@ -21,6 +20,8 @@
     import LL from "../../i18n/i18n-svelte";
     import { setQueue } from "../../data/storeHelper";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import { open } from "@tauri-apps/plugin-shell";
+
     wtf.extend(wtfHtml);
 
     let wikiResult: GetHTMLResponse;
@@ -44,7 +45,7 @@
             console.log("result", wikiResult);
             error = null;
         } catch (err) {
-            wikiResult = { html: "" };
+            wikiResult = null;
             error = err;
         } finally {
             isLoading = false;
@@ -347,11 +348,13 @@
             />
             <div class="info-wiki">
                 {#if isLoading}
-                    <p transition:fade={{ duration: 200 }}>Loading...</p>
+                    <small transition:fade={{ duration: 200 }}
+                        >Searching wiki for:
+                    </small>
                 {:else}
-                    <small>Viewing wiki for: </small>
-                    <p>{previousArtist}</p>
+                    <small>Viewing wiki for:</small>
                 {/if}
+                <p>{previousArtist}</p>
             </div>
             {#if previousArtist && $current.song && previousArtist !== $current.song.artist}
                 <div class="info-playing">
@@ -465,6 +468,41 @@
                             {/each}
                         {/each}
                     {/each} -->
+            </div>
+        {:else}
+            <div
+                class="no-result"
+                transition:fly={{
+                    duration: 300,
+                    y: -20,
+                    opacity: 0.4,
+                }}
+            >
+                <p>No result found.</p>
+                <p></p>
+                <p>Search <i>{previousArtist}</i> for:</p>
+                <ul>
+                    <li>
+                        <a
+                            href="https://en.wikipedia.org/w/index.php?search={encodeURIComponent(
+                                previousArtist,
+                            )}"
+                            target="_blank"
+                        >
+                            a Wiki article with Wikipedia
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="https://search.brave.com/search?q=site%3Awikipedia.org+{encodeURIComponent(
+                                previousArtist,
+                            )}"
+                            target="_blank"
+                        >
+                            a Wiki article with Brave
+                        </a>
+                    </li>
+                </ul>
             </div>
         {/if}
     </div>
@@ -723,5 +761,17 @@
         //     padding: 0.5em 1em;
         //     border-radius: 10px;
         // }
+    }
+
+    .no-result {
+        padding: 1em;
+        text-align: start;
+        background-color: var(--wiki-bg);
+        color: var(--text);
+        max-width: 100%;
+
+        ul {
+            padding-inline-start: 2em;
+        }
     }
 </style>

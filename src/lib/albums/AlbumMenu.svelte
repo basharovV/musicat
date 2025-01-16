@@ -21,7 +21,6 @@
     import { openInFinder } from "../menu/file";
     import {
         searchArtistOnWikiPanel,
-        searchArtistOnWikipedia,
         searchArtistOnYouTube,
         searchArtworkOnBrave,
     } from "../menu/search";
@@ -235,10 +234,6 @@
             <MenuOption
                 onClick={compose(searchArtistOnYouTube, song)}
                 text="YouTube: <i>{song.artist}</i>"
-            />
-            <MenuOption
-                onClick={compose(searchArtistOnWikipedia, song)}
-                text="Wikipedia: <i>{song.artist}</i>"
             />
             <MenuOption
                 onClick={compose(searchArtistOnWikiPanel, song)}

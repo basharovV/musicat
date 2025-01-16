@@ -6,7 +6,6 @@
     import type { Song } from "../../App";
     import {
         searchArtistOnWikiPanel,
-        searchArtistOnWikipedia,
         searchArtistOnYouTube,
         searchChords,
         searchLyrics,
@@ -94,10 +93,6 @@
             <MenuOption
                 onClick={compose(searchArtistOnYouTube, song)}
                 text="YouTube: <i>{song.artist}</i>"
-            />
-            <MenuOption
-                onClick={compose(searchArtistOnWikipedia, song)}
-                text="Wikipedia: <i>{song.artist}</i>"
             />
             <MenuOption
                 onClick={compose(searchArtistOnWikiPanel, song)}
