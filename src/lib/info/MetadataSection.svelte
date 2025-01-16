@@ -357,7 +357,7 @@
                     (m) => m.genericId === "artist",
                 )?.value;
 
-                if (artist.length) {
+                if (artist?.length) {
                     for (let i = 1; i < $rightClickedTracks.length; i += 1) {
                         const { mappedMetadata } =
                             await readMappedMetadataFromSong(
