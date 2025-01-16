@@ -29,6 +29,9 @@
             "allow": [
                 {
                     "path": "$HOME/**"
+                },
+                {
+                    "path": "$APPCONFIG/**"
                 }
             ]
         },
@@ -40,6 +43,22 @@
                 },
                 {
                     "path": "$APPCONFIG/log.txt"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-write-file",
+            "allow": [
+                {
+                    "path": "$APPCONFIG/*.db"
+                }
+            ]
+        },
+        {
+            "identifier": "fs:allow-read-file",
+            "allow": [
+                {
+                    "path": "$APPCONFIG/*.db"
                 }
             ]
         },
@@ -61,6 +80,8 @@
             ]
         },
         "dialog:allow-open",
+        "dialog:allow-save",
+        "dialog:default",
         "http:default",
         {
             "identifier": "http:allow-fetch",

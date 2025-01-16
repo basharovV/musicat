@@ -155,8 +155,11 @@ export const isFullScreenVisualiser = writable(false);
 export const userPlaylists: Writable<PlaylistFile[]> = writable([]);
 export const toDeletePlaylist = liveQuery(async () => {
     try {
-        const toDeletePlaylist = await db.internalPlaylists.get("todelete");
-        return toDeletePlaylist;
+        if (!db.hasBeenClosed()) {
+            const toDeletePlaylist = await db.internalPlaylists.get("todelete");
+            return toDeletePlaylist;
+        }
+        return null;
     } catch (e) {
         console.error("Error fetching todelete playlist", e);
     }
@@ -482,4 +485,8 @@ export const webPlayerBufferedRanges: Writable<TimeRanges> = writable(null);
 export const webPlayerVolume: Writable<number> = writable(0.6);
 export const webPlayerIsLoading = writable(false);
 export const fileToDownload: Writable<IAFile> = writable(null);
+
+// Dev/debug
+export const isDev = writable(process.env.NODE_ENV === "development");
+
 init();
