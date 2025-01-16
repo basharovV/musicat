@@ -43,7 +43,6 @@
         importStatus,
         isPlaying,
         isQueueOpen,
-        isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
@@ -65,7 +64,6 @@
         smartQueryInitiator,
         smartQueryResults,
         uiView,
-        draggedSource,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -954,8 +952,7 @@
     let rangeStartSongIdx = null;
     let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
-    let showTrackMenu = false;
-    let menuPos;
+    let trackMenu: TrackMenu;
     let currentSongInView = false;
     let currentSongScrollIdx = null;
 
@@ -1012,12 +1009,16 @@
         if (list) {
             var rect = list.getBoundingClientRect();
 
-            menuPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            trackMenu.open(
+                songsHighlighted.length > 1 ? songsHighlighted : song,
+                { x: e.clientX - rect.left, y: e.clientY - rect.top },
+            );
         } else {
-            menuPos = { x: e.clientX, y: e.clientY };
+            trackMenu.open(
+                songsHighlighted.length > 1 ? songsHighlighted : song,
+                { x: e.clientX, y: e.clientY },
+            );
         }
-
-        showTrackMenu = true;
     }
 
     /**
@@ -1242,8 +1243,8 @@
                         "input")) &&
             document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
-            if (showTrackMenu) {
-                showTrackMenu = false;
+            if (trackMenu.isOpen()) {
+                trackMenu.close();
             } else {
                 songsHighlighted = [];
             }
@@ -1706,7 +1707,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<TrackMenu bind:showMenu={showTrackMenu} bind:pos={menuPos} />
+<TrackMenu bind:this={trackMenu} />
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
@@ -2101,19 +2102,19 @@
                                                                     e,
                                                                 ) => {
                                                                     // TODO: Show overflowed tags in menu
-                                                                    menuPos = {
-                                                                        x: e
-                                                                            .detail
-                                                                            .evt
-                                                                            .clientX,
-                                                                        y: e
-                                                                            .detail
-                                                                            .evt
-                                                                            .clientY,
-                                                                    };
-                                                                    $rightClickedTrack =
-                                                                        song;
-                                                                    showTrackMenu = true;
+                                                                    trackMenu.open(
+                                                                        song,
+                                                                        {
+                                                                            x: e
+                                                                                .detail
+                                                                                .evt
+                                                                                .clientX,
+                                                                            y: e
+                                                                                .detail
+                                                                                .evt
+                                                                                .clientY,
+                                                                        },
+                                                                    );
                                                                 }}
                                                             >
                                                                 <Tag

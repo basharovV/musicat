@@ -426,11 +426,26 @@ export async function addCountryDataAllSongs() {
     });
 }
 
-export async function enrichArtistCountry(
-    song: Song,
-    isFetching: Writable<boolean>,
-): Promise<void> {
-    isFetching.set(true);
+export async function enrichArtistCountry(artist: string): Promise<void> {
+    const country = await findCountryByArtist(artist);
+    console.log("country", country);
+    if (country) {
+        // Find all songs with this artist
+        const artistSongs = await db.songs
+            .where("artist")
+            .equals(artist)
+            .toArray();
+
+        db.songs.bulkPut(
+            artistSongs.map((s) => {
+                s.originCountry = country;
+                return s;
+            }),
+        );
+    }
+}
+
+export async function enrichSongCountry(song: Song): Promise<void> {
     const country = await findCountryByArtist(song.artist);
     console.log("country", country);
     if (country) {
@@ -449,7 +464,6 @@ export async function enrichArtistCountry(
             }),
         );
     }
-    isFetching.set(false);
 }
 
 export async function rescanAlbumArtwork(

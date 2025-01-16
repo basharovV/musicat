@@ -1,7 +1,6 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import { type } from "@tauri-apps/plugin-os";
-    import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
     import type { Album, Song, ToImport } from "../../App";
     import { db } from "../../data/db";
@@ -9,7 +8,6 @@
     import {
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
-        isWikiOpen,
         popupOpen,
         rightClickedTrack,
         rightClickedTracks,
@@ -17,11 +15,10 @@
         selectedTags,
         toDeletePlaylist,
         uiView,
-        wikiArtist,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
-    import { enrichArtistCountry } from "../data/LibraryEnrichers";
+    import { enrichSongCountry } from "../data/LibraryEnrichers";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuInput from "../ui/menu/MenuInput.svelte";
@@ -30,16 +27,18 @@
     import { deleteFromLibrary } from "../../data/LibraryUtils";
     import { liveQuery } from "dexie";
     import { writable } from "svelte/store";
+    import { searchArtistOnWikipedia } from "../menu/search";
+    import { openInFinder } from "../menu/file";
 
-    type RemoveType = "remove" | "remove_from_playlist" | "delete";
+    type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
-    export let pos = { x: 0, y: 0 };
-    export let showMenu = false;
-
+    let confirmingType: ActionType = null;
     let explorerName: string;
-    let isDestructiveConfirmType: RemoveType = null;
-    let isLoading: RemoveType = null;
-    let songId;
+    let loadingType: ActionType = null;
+    let position = { x: 0, y: 0 };
+    let showMenu = false;
+    let song: Song;
+    let songs: Song[];
 
     onMount(async () => {
         const os = await type();
@@ -56,19 +55,45 @@
         }
     });
 
-    $: {
-        if (
-            $rightClickedTracks?.map((s) => s.id).includes(songId) ||
-            songId !== $rightClickedTrack?.id
-        ) {
-            isDestructiveConfirmType = null;
-        }
+    export function close() {
+        showMenu = false;
     }
 
-    function closeMenu() {
-        showMenu = false;
-        isDestructiveConfirmType = null;
+    export function isOpen() {
+        return showMenu;
     }
+
+    export function open(
+        _songs: Song | Song[],
+        _position: { x: number; y: number },
+    ) {
+        position = _position;
+
+        if (Array.isArray(_songs)) {
+            song = null;
+            songs = _songs;
+        } else {
+            song = _songs;
+            songs = [];
+        }
+
+        confirmingType = null;
+
+        showMenu = true;
+    }
+
+    function compose(action, ...args) {
+        return () => {
+            close();
+
+            action(...args);
+        };
+    }
+
+    $: isConfirming = (type: ActionType): boolean => confirmingType === type;
+    $: isDisabled = (type?: ActionType): boolean =>
+        !!loadingType && loadingType !== type;
+    $: isLoading = (type: ActionType): boolean => loadingType === type;
 
     /**
      * Playlists are M3U files, and in special cases (like the to-delete playlist, a separate table)
@@ -103,35 +128,29 @@
     }
 
     function removeSongs(
-        type: RemoveType,
+        type: ActionType,
         action: (songs: Song[]) => Promise<void>,
     ): () => Promise<void> {
         return async () => {
-            if (isLoading) {
+            if (loadingType) {
                 return;
             }
 
-            if (isDestructiveConfirmType !== type) {
-                songId = $rightClickedTrack?.id;
-                isDestructiveConfirmType = type;
+            if (confirmingType !== type) {
+                confirmingType = type;
                 return;
             }
 
-            isLoading = "remove";
-            isDestructiveConfirmType = null;
+            loadingType = "remove";
+            confirmingType = null;
 
-            const tracksToRemove = $rightClickedTracks.length
-                ? $rightClickedTracks
-                : [$rightClickedTrack];
+            const tracksToRemove = songs.length ? songs : [song];
 
             await action(tracksToRemove);
 
-            closeMenu();
+            loadingType = null;
 
-            // Reset
-            $rightClickedTracks = [];
-            $rightClickedTrack = null;
-            isLoading = null;
+            close();
         };
     }
 
@@ -158,59 +177,26 @@
         await deleteTracksFromPlaylist(songs);
     }
 
-    function searchArtistOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent($rightClickedTrack.artist);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchSongOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent($rightClickedTrack.title);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchArtistOnWikipedia() {
-        $wikiArtist = $rightClickedTrack.artist;
-        $isWikiOpen = !$isWikiOpen;
-        closeMenu();
-    }
-    function openInFinder() {
-        closeMenu();
-        const query = $rightClickedTrack.path.replace(
-            $rightClickedTrack.file,
-            "",
-        );
-        open(query);
-    }
-    function lookUpChords() {
-        closeMenu();
-        const query = encodeURIComponent(
-            $rightClickedTrack.artist +
-                " " +
-                $rightClickedTrack.title +
-                " chords",
-        );
-        open(`https://duckduckgo.com/?q=${query}`);
-    }
-    function lookUpLyrics() {
-        closeMenu();
-        const query = encodeURIComponent(
-            $rightClickedTrack.artist +
-                " " +
-                $rightClickedTrack.title +
-                " lyrics",
-        );
-        open(`https://duckduckgo.com/?q=${query}`);
-    }
     function openInfo() {
-        closeMenu();
+        if (songs.length === 1) {
+            $rightClickedTracks = [];
+            $rightClickedTrack = song;
+        } else {
+            $rightClickedTracks = songs;
+            $rightClickedTrack = null;
+        }
+
+        close();
         $popupOpen = "track-info";
     }
     // Enrichers
 
-    let isFetchingOriginCountry = writable(false);
-
     async function fetchingOriginCountry() {
-        await enrichArtistCountry($rightClickedTrack, isFetchingOriginCountry);
+        loadingType = "country";
+
+        await enrichSongCountry(song);
+
+        loadingType = null;
     }
 
     let isReimporting = false;
@@ -231,7 +217,7 @@
         isReimporting = true;
         const response = await invoke<ToImport>("scan_paths", {
             event: {
-                paths: $rightClickedTracks.map((t) => t.path),
+                paths: songs.map((t) => t.path),
                 recursive: false,
                 process_albums: true,
                 is_async: false,
@@ -263,50 +249,51 @@
         if (tagAutoCompleteValue?.length) {
             tagUserInput = tagAutoCompleteValue;
         }
-        if ($rightClickedTracks.length > 1) {
+        if (songs.length > 1) {
             await Promise.all(
-                $rightClickedTracks.map(async (t) => {
+                songs.map(async (t) => {
                     t.tags = t.tags
                         ? [...t.tags, tagUserInput.toLowerCase().trim()]
                         : [tagUserInput.toLowerCase().trim()];
                     await db.songs.put(t);
                 }),
             );
-            $rightClickedTracks = $rightClickedTracks;
+
+            songs = songs;
         } else {
-            await db.songs.update($rightClickedTrack.id, {
-                tags: $rightClickedTrack.tags
-                    ? [
-                          ...$rightClickedTrack.tags,
-                          tagUserInput.toLowerCase().trim(),
-                      ]
+            await db.songs.update(song.id, {
+                tags: song.tags
+                    ? [...song.tags, tagUserInput.toLowerCase().trim()]
                     : [tagUserInput.toLowerCase().trim()],
             });
-            $rightClickedTrack = await db.songs.get($rightClickedTrack.id);
+
+            song = await db.songs.get(song.id);
         }
         tagUserInput = "";
     }
 
     async function deleteTag(tag) {
         console.log("delete");
-        if ($rightClickedTracks.length > 1) {
+        if (songs.length > 1) {
             await Promise.all(
-                $rightClickedTracks.map(async (t) => {
+                songs.map(async (t) => {
                     t.tags = t.tags.filter((t) => t !== tag);
                     await db.songs.put(t);
                 }),
             );
-            $rightClickedTracks = $rightClickedTracks;
+
+            songs = songs;
         } else {
-            $rightClickedTrack.tags.splice(
-                $rightClickedTrack.tags.findIndex((t) => t === tag),
+            song.tags.splice(
+                song.tags.findIndex((t) => t === tag),
                 1,
             );
-            $rightClickedTrack = $rightClickedTrack;
-            db.songs.update($rightClickedTrack.id, {
-                tags: $rightClickedTrack.tags,
+
+            db.songs.update(song.id, {
+                tags: song.tags,
             });
-            $rightClickedTrack = await db.songs.get($rightClickedTrack.id);
+
+            song = await db.songs.get(song.id);
         }
     }
 
@@ -317,29 +304,25 @@
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu} fixed>
+    <Menu {...position} onClickOutside={close} fixed>
         <MenuOption
             isDisabled={true}
-            text={$rightClickedTrack
-                ? $rightClickedTrack.title
-                : $rightClickedTracks.length + " tracks"}
+            text={song ? song.title : songs.length + " tracks"}
         />
         <MenuOption
             onClick={reImportTracks}
             description="Will also re-import albums"
-            text={$rightClickedTrack
-                ? "Re-import track"
-                : `Re-import ${$rightClickedTracks.length} tracks`}
+            text={song ? "Re-import track" : `Re-import ${songs.length} tracks`}
             isLoading={isReimporting}
-            isDisabled={!!isLoading}
+            isDisabled={isDisabled()}
         />
-        {#if $rightClickedTrack}
+        {#if song}
             <MenuDivider />
 
             <MenuOption isDisabled={true} text="Edit tags" />
-            {#if $rightClickedTrack.tags}
+            {#if song.tags}
                 <div class="tags">
-                    {#each $rightClickedTrack.tags as tag}
+                    {#each song.tags as tag}
                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                         <div
                             class="tag"
@@ -349,7 +332,7 @@
                                 $uiView = "library";
                                 $selectedTags.add(tag);
                                 $selectedTags = $selectedTags;
-                                closeMenu();
+                                close();
                             }}
                         >
                             <p>{tag}</p>
@@ -367,18 +350,19 @@
                 autoCompleteValue={tagAutoCompleteValue}
                 onEnterPressed={addTagToContextItem}
                 placeholder="Add a tag"
-                onEscPressed={closeMenu}
-                isDisabled={!!isLoading}
+                onEscPressed={close}
+                isDisabled={isDisabled()}
                 small
             />
-            {#if $rightClickedTrack.artist}
+            {#if song.artist}
                 <MenuDivider />
                 <MenuOption text="⚡️ Enrich" isDisabled />
                 <MenuOption
-                    isDisabled={!!isLoading}
+                    isDisabled={isDisabled()}
+                    isLoading={isLoading("country")}
                     onClick={fetchingOriginCountry}
-                    text={!$rightClickedTrack.originCountry
-                        ? $isFetchingOriginCountry
+                    text={!song.originCountry
+                        ? isLoading("country")
                             ? "Looking online..."
                             : "Origin country"
                         : "Origin country ✅"}
@@ -386,19 +370,19 @@
                 />
                 <MenuDivider />
                 <MenuOption
-                    isDisabled={!!isLoading}
-                    onClick={searchArtistOnWikipedia}
-                    text="Wiki panel: <i>{$rightClickedTrack.artist}</i>"
+                    isDisabled={isDisabled()}
+                    onClick={compose(searchArtistOnWikipedia, song)}
+                    text="Wiki panel: <i>{song.artist}</i>"
                 />
             {/if}
             <!-- <MenuDivider />
             <MenuOption onClick={lookUpChords} text="Look up chords" />
             <MenuOption onClick={lookUpLyrics} text="Look up lyrics" /> -->
-        {:else if $rightClickedTracks.length}
+        {:else if songs.length}
             <MenuDivider />
 
             <MenuOption isDisabled={true} text="Edit tags" />
-            {#await commonTagsBetweenTracks($rightClickedTracks) then tags}
+            {#await commonTagsBetweenTracks(songs) then tags}
                 {#if tags}
                     <div class="tags">
                         {#each tags as tag}
@@ -411,7 +395,7 @@
                                     $uiView = "library";
                                     $selectedTags.add(tag);
                                     $selectedTags = $selectedTags;
-                                    closeMenu();
+                                    close();
                                 }}
                             >
                                 <p>{tag}</p>
@@ -431,8 +415,8 @@
                 onEnterPressed={addTagToContextItem}
                 autoFocus
                 placeholder="Add a tag"
-                onEscPressed={closeMenu}
-                isDisabled={!!isLoading}
+                onEscPressed={close}
+                isDisabled={isDisabled()}
                 small
             />
         {/if}
@@ -441,61 +425,56 @@
         {#if $selectedPlaylistFile || $uiView === "to-delete"}
             <MenuOption
                 isDestructive={true}
-                isLoading={isLoading === "remove_from_playlist"}
-                isConfirming={isDestructiveConfirmType ===
-                    "remove_from_playlist"}
-                isDisabled={!!isLoading && isLoading !== "remove_from_playlist"}
+                isConfirming={isConfirming("remove_from_playlist")}
+                isDisabled={isDisabled("remove_from_playlist")}
+                isLoading={isLoading("remove_from_playlist")}
                 onClick={removeSongs(
                     "remove_from_playlist",
                     removeFromPlaylist,
                 )}
-                text={$rightClickedTrack
+                text={song
                     ? "Remove from playlist"
-                    : `Remove  ${$rightClickedTracks.length} tracks from playlist`}
+                    : `Remove  ${songs.length} tracks from playlist`}
                 confirmText="Click again to confirm"
-                description={isLoading === "remove"
+                description={isLoading("remove_from_playlist")
                     ? "Removing from playlist..."
                     : ""}
             />
         {/if}
         <MenuOption
             isDestructive={true}
-            isLoading={isLoading === "remove"}
-            isConfirming={isDestructiveConfirmType === "remove"}
-            isDisabled={!!isLoading && isLoading !== "remove"}
+            isConfirming={isConfirming("remove")}
+            isDisabled={isDisabled("remove")}
+            isLoading={isLoading("remove")}
             onClick={removeSongs("remove", removeFromLibrary)}
             text={$LL.trackMenu.removeFromLibrary(
-                $rightClickedTracks.length ? $rightClickedTracks.length : 1,
+                songs.length ? songs.length : 1,
             )}
             confirmText="Click again to confirm"
-            description={isLoading === "remove"
-                ? "Removing from library..."
-                : ""}
+            description={isLoading("remove") ? "Removing from library..." : ""}
         />
         <MenuOption
             isDestructive={true}
-            isLoading={isLoading === "delete"}
-            isConfirming={isDestructiveConfirmType === "delete"}
-            isDisabled={!!isLoading && isLoading !== "delete"}
+            isConfirming={isConfirming("delete")}
+            isDisabled={isDisabled("delete")}
+            isLoading={isLoading("delete")}
             onClick={removeSongs("delete", removeFromSystem)}
-            text={$LL.trackMenu.deleteFile(
-                $rightClickedTracks.length ? $rightClickedTracks.length : 1,
-            )}
+            text={$LL.trackMenu.deleteFile(songs.length ? songs.length : 1)}
             confirmText="Click again to confirm"
-            description={isLoading === "remove"
+            description={isLoading("delete")
                 ? "Moving to Trash / Recycle bin..."
                 : $LL.trackMenu.deleteFileHint()}
         />
         <MenuDivider />
-        {#if $rightClickedTrack}
+        {#if song}
             <MenuOption
-                isDisabled={!!isLoading}
-                onClick={openInFinder}
+                isDisabled={isDisabled()}
+                onClick={compose(openInFinder, song)}
                 text="Open in {explorerName}"
             />
         {/if}
         <MenuOption
-            isDisabled={!!isLoading}
+            isDisabled={isDisabled()}
             onClick={openInfo}
             text="Info & metadata"
         />

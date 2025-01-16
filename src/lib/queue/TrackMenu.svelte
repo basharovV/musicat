@@ -1,8 +1,6 @@
 <script lang="ts">
     import { type } from "@tauri-apps/plugin-os";
-    import { open } from "@tauri-apps/plugin-shell";
     import { onMount } from "svelte";
-    import { db } from "../../data/db";
     import {
         isShuffleEnabled,
         popupOpen,
@@ -12,17 +10,29 @@
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
-    import {
-        enrichArtistCountry,
-        findCountryByArtist,
-    } from "../data/LibraryEnrichers";
+    import { enrichSongCountry } from "../data/LibraryEnrichers";
     import type { Song } from "../../App";
     import { findQueueIndexes, updateQueues } from "../../data/storeHelper";
-    import { writable } from "svelte/store";
+    import {
+        searchArtistOnWikiPanel,
+        searchArtistOnWikipedia,
+        searchArtistOnYouTube,
+        searchChords,
+        searchLyrics,
+        searchSongOnYouTube,
+    } from "../menu/search";
+    import { openInFinder } from "../menu/file";
 
-    export let pos = { x: 0, y: 0 };
-    export let showMenu = false;
-    export let songs: Song[] = [];
+    type ActionType = "country" | "delete";
+
+    export let onUnselect: () => void;
+
+    let confirmingType: ActionType = null;
+    let loadingType: ActionType = null;
+    let position = { x: 0, y: 0 };
+    let showMenu = false;
+    let song: Song | null = null;
+    let songs: Song[] = [];
 
     let explorerName: string;
 
@@ -41,39 +51,50 @@
         }
     });
 
-    let song: Song | null = null;
-    let isConfirmingDelete = false;
-    let confirmingLength = -1;
-    let confirmingHash = "";
-
-    $: if (
-        songs.length !== confirmingLength ||
-        songs[0].id !== confirmingHash
-    ) {
-        isConfirmingDelete = false;
-    }
-
-    $: if (songs.length === 1) {
-        song = songs[0];
-    } else {
-        song = null;
-    }
-
-    function closeMenu() {
+    export function close() {
         showMenu = false;
-        isConfirmingDelete = false;
     }
+
+    export function isOpen() {
+        return showMenu;
+    }
+
+    export function open(_songs: Song[], _position: { x: number; y: number }) {
+        songs = _songs;
+        position = _position;
+
+        if (songs.length === 1) {
+            song = songs[0];
+        } else {
+            song = null;
+        }
+
+        confirmingType = null;
+
+        showMenu = true;
+    }
+
+    function compose(action, ...args) {
+        return () => {
+            close();
+
+            action(...args);
+        };
+    }
+
+    $: isConfirming = (type: ActionType): boolean => confirmingType === type;
+    $: isDisabled = (type?: ActionType): boolean =>
+        !!loadingType && loadingType !== type;
+    $: isLoading = (type: ActionType): boolean => loadingType === type;
 
     async function removeFromQueue() {
         console.log("delete");
-        if (!isConfirmingDelete) {
-            confirmingLength = songs.length;
-            confirmingHash = songs[0].id;
-            isConfirmingDelete = true;
+        if (confirmingType !== "delete") {
+            confirmingType = "delete";
             return;
         }
 
-        closeMenu();
+        close();
 
         const indexes = songs.map((t) => t.viewModel.index);
 
@@ -92,45 +113,8 @@
                 }
             });
         }
-
-        songs = [];
-        isConfirmingDelete = false;
     }
 
-    function searchArtistOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent(song.artist);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchSongOnYouTube() {
-        closeMenu();
-        const query = encodeURIComponent(song.title);
-        open(`https://www.youtube.com/results?search_query=${query}`);
-    }
-    function searchArtistOnWikipedia() {
-        closeMenu();
-        const query = encodeURIComponent(song.artist);
-        open(`https://en.wikipedia.org/wiki/${query}`);
-    }
-    function openInFinder() {
-        closeMenu();
-        const query = song.path.replace(song.file, "");
-        open(query);
-    }
-    function lookUpChords() {
-        closeMenu();
-        const query = encodeURIComponent(
-            song.artist + " " + song.title + " chords",
-        );
-        open(`https://duckduckgo.com/?q=${query}`);
-    }
-    function lookUpLyrics() {
-        closeMenu();
-        const query = encodeURIComponent(
-            song.artist + " " + song.title + " lyrics",
-        );
-        open(`https://duckduckgo.com/?q=${query}`);
-    }
     function openInfo() {
         if (songs.length === 1) {
             $rightClickedTracks = [];
@@ -140,25 +124,28 @@
             $rightClickedTrack = null;
         }
 
-        closeMenu();
+        close();
         $popupOpen = "track-info";
     }
     // Enrichers
 
-    let isFetchingOriginCountry = writable(false);
-
     async function fetchingOriginCountry() {
-        await enrichArtistCountry(song, isFetchingOriginCountry);
+        loadingType = "country";
+
+        await enrichSongCountry(song);
+
+        loadingType = "country";
     }
 
     function unselect() {
-        closeMenu();
-        songs.length = 0;
+        close();
+
+        onUnselect && onUnselect();
     }
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu} fixed>
+    <Menu {...position} onClickOutside={close} fixed>
         <MenuOption
             isDisabled={true}
             text={song ? song.title : songs.length + " tracks"}
@@ -168,9 +155,10 @@
                 <MenuDivider />
                 <MenuOption text="⚡️ Enrich" isDisabled />
                 <MenuOption
+                    isLoading={isLoading("country")}
                     onClick={fetchingOriginCountry}
                     text={!song.originCountry
-                        ? $isFetchingOriginCountry
+                        ? isLoading("country")
                             ? "Looking online..."
                             : "Origin country"
                         : "Origin country ✅"}
@@ -179,29 +167,29 @@
             {/if}
             <MenuDivider />
             <MenuOption
-                onClick={searchSongOnYouTube}
+                onClick={compose(searchSongOnYouTube, song)}
                 text="YouTube: <i>{song.title}</i>"
             />
             <MenuOption
-                onClick={lookUpChords}
+                onClick={compose(searchChords, song)}
                 text="Chords: <i>{song.title}</i>"
             />
             <MenuOption
-                onClick={lookUpLyrics}
+                onClick={compose(searchLyrics, song)}
                 text="Lyrics: <i>{song.title}</i>"
             />
             <MenuDivider />
             {#if song.artist}
                 <MenuOption
-                    onClick={searchArtistOnYouTube}
+                    onClick={compose(searchArtistOnYouTube, song)}
                     text="YouTube: <i>{song.artist}</i>"
                 />
                 <MenuOption
-                    onClick={searchArtistOnWikipedia}
+                    onClick={compose(searchArtistOnWikipedia, song)}
                     text="Wikipedia: <i>{song.artist}</i>"
                 />
                 <MenuOption
-                    onClick={searchArtistOnWikipedia}
+                    onClick={compose(searchArtistOnWikiPanel, song)}
                     text="Wiki panel: <i>{song.artist}</i>"
                 />
                 <MenuDivider />
@@ -212,7 +200,7 @@
         {/if}
         <MenuOption
             isDestructive={true}
-            isConfirming={isConfirmingDelete}
+            isConfirming={isConfirming("delete")}
             onClick={removeFromQueue}
             text={song ? "Remove track from queue" : "Remove tracks from queue"}
             confirmText="Click again to confirm"
@@ -221,7 +209,10 @@
         <MenuDivider />
 
         {#if song}
-            <MenuOption onClick={openInFinder} text="Open in {explorerName}" />
+            <MenuOption
+                onClick={compose(openInFinder, song)}
+                text="Open in {explorerName}"
+            />
         {/if}
 
         <MenuOption onClick={openInfo} text="Info & metadata" />

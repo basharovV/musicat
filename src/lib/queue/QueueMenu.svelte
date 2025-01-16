@@ -12,19 +12,24 @@
     import MenuInput from "../ui/menu/MenuInput.svelte";
     import { createNewPlaylistFile } from "../../data/M3UUtils";
 
-    export let pos = { x: 0, y: 0 };
-    export let showMenu = false;
-
     let playlistInput = "";
+    let position = { x: 0, y: 0 };
+    let showMenu = false;
+
+    export function close() {
+        showMenu = false;
+    }
+
+    export function open(_position: { x: number; y: number }) {
+        position = _position;
+
+        showMenu = true;
+    }
 
     function clearQueue() {
         setQueue([]);
 
-        closeMenu();
-    }
-
-    function closeMenu() {
-        showMenu = false;
+        close();
     }
 
     function resetToLibrary() {
@@ -34,7 +39,7 @@
             setQueue($queriedSongs, 0);
         }
 
-        closeMenu();
+        close();
     }
 
     function saveAsPlaylist() {
@@ -42,12 +47,12 @@
 
         playlistInput = "";
 
-        closeMenu();
+        close();
     }
 </script>
 
 {#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu} fixed>
+    <Menu {...position} onClickOutside={close} fixed>
         <MenuOption onClick={clearQueue} text="Clear the queue" />
         <MenuOption
             onClick={resetToLibrary}
@@ -59,7 +64,7 @@
             bind:value={playlistInput}
             onEnterPressed={saveAsPlaylist}
             placeholder="New playlist"
-            onEscPressed={closeMenu}
+            onEscPressed={close}
             small
         />
     </Menu>
