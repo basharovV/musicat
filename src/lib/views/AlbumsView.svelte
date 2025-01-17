@@ -276,6 +276,10 @@
     }
 
     async function onRightClick(e, album) {
+        if (e.button !== 2) {
+            return;
+        }
+
         highlightedAlbum = album.id;
 
         const songs = (await db.songs.bulkGet(album.tracksIds)).sort(
