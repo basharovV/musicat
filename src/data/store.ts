@@ -493,7 +493,4 @@ export const webPlayerVolume: Writable<number> = writable(0.6);
 export const webPlayerIsLoading = writable(false);
 export const fileToDownload: Writable<IAFile> = writable(null);
 
-// Dev/debug
-export const isDev = writable(process.env.NODE_ENV === "development");
-
 init();
