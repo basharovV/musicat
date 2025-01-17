@@ -8,7 +8,7 @@
 
 import { path } from "@tauri-apps/api";
 import { appDataDir } from "@tauri-apps/api/path";
-import { remove } from "@tauri-apps/plugin-fs";
+import { exists, remove } from "@tauri-apps/plugin-fs";
 
 // // function createDir(dir: string, options: object = {}): Promise<unknown> {
 // //     return invokeTauriCommand({
@@ -103,14 +103,17 @@ export const CACHE_DIR =
 /**
  * Deletes the cache directory if it exists
  *
- * @returns {Promise<void>} A promise that resolves when the cache directory is created.
+ * @returns {Promise<void>} A promise that resolves when the cache directory is deleted.
  */
 export const deleteCacheDirectory = async () => {
     try {
         const dataDir = await appDataDir();
-        await remove(await path.join(dataDir, CACHE_DIR), {
-            recursive: true
-        });
+        const toDelete = await path.join(dataDir, CACHE_DIR);
+        if (await exists(toDelete)) {
+            await remove(await path.join(dataDir, CACHE_DIR), {
+                recursive: true,
+            });
+        }
     } catch (error) {
         throw new Error("Error deleting cache directory: " + error);
     }

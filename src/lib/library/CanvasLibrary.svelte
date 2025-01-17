@@ -43,7 +43,6 @@
         importStatus,
         isPlaying,
         isQueueOpen,
-        isShuffleEnabled,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
@@ -65,7 +64,6 @@
         smartQueryInitiator,
         smartQueryResults,
         uiView,
-        draggedSource,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -378,6 +376,9 @@
     let virtualViewportHeight = 0; // With padding
     let ctx: CanvasRenderingContext2D;
     let dpr;
+
+    // if cursor over the library
+    let isOver = false;
 
     // drag-n-drop
     let isDraggingOver = false;
@@ -941,8 +942,7 @@
     let rangeStartSongIdx = null;
     let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
-    let showTrackMenu = false;
-    let menuPos;
+    let trackMenu: TrackMenu;
     let currentSongInView = false;
     let currentSongScrollIdx = null;
 
@@ -993,8 +993,22 @@
         } else {
             $rightClickedTrack = song;
         }
-        showTrackMenu = true;
-        menuPos = { x: e.clientX, y: e.clientY };
+
+        // reposition menu if in a virtual-list
+        const list = e.target.closest(".virtual-list-inner");
+        if (list) {
+            var rect = list.getBoundingClientRect();
+
+            trackMenu.open(
+                songsHighlighted.length > 1 ? songsHighlighted : song,
+                { x: e.clientX - rect.left, y: e.clientY - rect.top },
+            );
+        } else {
+            trackMenu.open(
+                songsHighlighted.length > 1 ? songsHighlighted : song,
+                { x: e.clientX, y: e.clientY },
+            );
+        }
     }
 
     /**
@@ -1234,8 +1248,8 @@
                         "input")) &&
             document.activeElement.tagName.toLowerCase() !== "textarea"
         ) {
-            if (showTrackMenu) {
-                showTrackMenu = false;
+            if (trackMenu.isOpen()) {
+                trackMenu.close();
             } else {
                 songsHighlighted = [];
             }
@@ -1243,6 +1257,16 @@
     });
 
     function onKeyDown(event) {
+        if (
+            isOver &&
+            event.keyCode === 65 &&
+            (($os === "macos" && event.metaKey) || event.ctrlKey)
+        ) {
+            event.preventDefault();
+
+            songsHighlighted = [...songs];
+        }
+
         if ($arrowFocus !== "library") return;
 
         if (event.keyCode === 16) {
@@ -1688,7 +1712,10 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<TrackMenu bind:showMenu={showTrackMenu} bind:pos={menuPos} />
+<TrackMenu
+    bind:this={trackMenu}
+    onUnselect={() => (songsHighlighted.length = 0)}
+/>
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
@@ -1733,10 +1760,12 @@
             class:ready
             bind:this={scrollContainer}
             on:mouseenter={() => {
+                isOver = true;
                 isDraggingOver =
                     $selectedPlaylistFile && $draggedSongs?.length > 0;
             }}
             on:mouseleave={() => {
+                isOver = false;
                 isDraggingOver = false;
             }}
         >
@@ -2081,19 +2110,19 @@
                                                                     e,
                                                                 ) => {
                                                                     // TODO: Show overflowed tags in menu
-                                                                    menuPos = {
-                                                                        x: e
-                                                                            .detail
-                                                                            .evt
-                                                                            .clientX,
-                                                                        y: e
-                                                                            .detail
-                                                                            .evt
-                                                                            .clientY,
-                                                                    };
-                                                                    $rightClickedTrack =
-                                                                        song;
-                                                                    showTrackMenu = true;
+                                                                    trackMenu.open(
+                                                                        song,
+                                                                        {
+                                                                            x: e
+                                                                                .detail
+                                                                                .evt
+                                                                                .clientX,
+                                                                            y: e
+                                                                                .detail
+                                                                                .evt
+                                                                                .clientY,
+                                                                        },
+                                                                    );
                                                                 }}
                                                             >
                                                                 <Tag

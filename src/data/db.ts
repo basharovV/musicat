@@ -1,12 +1,16 @@
 // db.ts
+import { appConfigDir, BaseDirectory } from "@tauri-apps/api/path";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import Dexie, { type Table } from "dexie";
+import { exportDB, importInto } from "dexie-export-import";
 import type {
     Album,
     ArtistProject,
     ContentItem,
     Playlist,
     Song,
-    SongProject
+    SongProject,
 } from "src/App";
 import type { SavedSmartQuery } from "src/lib/smart-query/QueryPart";
 
@@ -30,7 +34,7 @@ export class MySubClassedDexie extends Dexie {
             artistProjects: "name",
             songProjects: "++id, title, artist, album",
             scrapbook: "id, name",
-            playlists: "++id, title"
+            playlists: "++id, title",
         });
         this.version(19)
             .stores({
@@ -40,7 +44,7 @@ export class MySubClassedDexie extends Dexie {
                 artistProjects: "++id, name",
                 songProjects: "++id, title, artist, album",
                 scrapbook: "++id, name",
-                playlists: "++id, title"
+                playlists: "++id, title",
             })
             .upgrade(async (trans) => {
                 await trans
@@ -60,7 +64,7 @@ export class MySubClassedDexie extends Dexie {
             songProjects: "++id, title, artist, album",
             scrapbook: "++id, name",
             playlists: "++id, title",
-            internalPlaylists: "id, title"
+            internalPlaylists: "id, title",
         });
 
         this.version(21).stores({
@@ -71,9 +75,64 @@ export class MySubClassedDexie extends Dexie {
             songProjects: "++id, title, artist, album",
             scrapbook: "++id, name",
             playlists: "++id, title",
-            internalPlaylists: "id, title"
+            internalPlaylists: "id, title",
         });
     }
 }
 
 export const db = new MySubClassedDexie();
+
+export async function exportDatabase() {
+    const blob = await exportDB(db);
+    // Get config dir
+    const configDir = await appConfigDir();
+    const bytes = await blob.arrayBuffer();
+    const selected = await save({
+        defaultPath:
+            configDir +
+            `/${process.env.NODE_ENV === "development" ? "musicat-dev.db" : "musicat.db"}`,
+        filters: [
+            {
+                extensions: ["db"],
+                name: "Database",
+            },
+        ],
+    });
+    // WRite to file
+    await writeFile(selected, new Uint8Array(bytes), {
+        baseDir: BaseDirectory.AppConfig,
+    });
+}
+
+export async function importDatabase() {
+    const selected = await open({
+        directory: false,
+        filters: [
+            {
+                extensions: ["db"],
+                name: "Database",
+            },
+        ],
+        multiple: false,
+        defaultPath: await appConfigDir(),
+    });
+    if (!selected) {
+        return;
+    }
+    const dbToImport = await readFile(selected);
+    const blob = new Blob([dbToImport]);
+    await db.delete({ disableAutoOpen: false });
+    await importInto(db, blob);
+}
+
+export async function deleteDatabase() {
+    await db.songs.clear();
+    await db.albums.clear();
+    await db.smartQueries.clear();
+    await db.internalPlaylists.clear();
+    await db.songProjects.clear();
+    await db.artistProjects.clear();
+    await db.scrapbook.clear();
+    await db.playlists.clear();
+    await db.delete();
+}

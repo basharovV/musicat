@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Menu from "../menu/Menu.svelte";
-    import MenuOption from "../menu/MenuOption.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import Icon from "./Icon.svelte";
 
     export let selected;

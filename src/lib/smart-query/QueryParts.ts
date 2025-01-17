@@ -1,23 +1,24 @@
 import type { QueryPartStruct } from "./QueryPart";
 
 export enum QUERY_PARTS {
+    BY_ALBUM_ARTIST = "by {albumArtist}",
     BY_ARTIST = "by {artist}",
-    RELEASED_BETWEEN = "released-between",
-    RELEASED_AFTER = "released-after",
-    TITLE_CONTAINS = "title-contains",
-    LONGER_THAN = "longer-than",
-    CONTAINS_GENRE = "contains-genre",
-    RELEASED_IN = "released-in",
-    FROM_COUNTRY = "from-country",
     BY_COMPOSER = "by-composer",
-    CONTAINS_TAG = "contains-tag"
+    CONTAINS_GENRE = "contains-genre",
+    CONTAINS_TAG = "contains-tag",
+    FROM_COUNTRY = "from-country",
+    LONGER_THAN = "longer-than",
+    RELEASED_AFTER = "released-after",
+    RELEASED_BETWEEN = "released-between",
+    RELEASED_IN = "released-in",
+    TITLE_CONTAINS = "title-contains",
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
 
 export function getQueryPart(queryPartName: QUERY_PART) {
     return BUILT_IN_QUERY_PARTS.find(
-        (q) => q.name === QUERY_PARTS[queryPartName]
+        (q) => q.name === QUERY_PARTS[queryPartName],
     );
 }
 
@@ -35,9 +36,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
+                type: "string",
+            },
+        },
     },
     {
         dataType: "song",
@@ -52,9 +53,26 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
+                type: "string",
+            },
+        },
+    },
+    {
+        dataType: "song",
+        fieldKey: "albumArtist",
+        comparison: "is-equal",
+        description: "smartPlaylists.builder.parts.byAlbumArtist.title",
+        example: "smartPlaylists.builder.parts.byAlbumArtist.example",
+        prompt: "by album artist {albumArtist}",
+        name: QUERY_PARTS.BY_ALBUM_ARTIST,
+        inputRequired: {
+            albumArtist: {
+                defaultVal: "",
+                isFieldKey: true,
+                isRequired: true,
+                type: "string",
+            },
+        },
     },
     {
         dataType: "song",
@@ -69,15 +87,15 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: 1940,
                 isFieldKey: false,
                 isRequired: true,
-                type: "number"
+                type: "number",
             },
             endYear: {
                 defaultVal: 1960,
                 isFieldKey: false,
                 isRequired: true,
-                type: "number"
-            }
-        }
+                type: "number",
+            },
+        },
     },
     {
         dataType: "song",
@@ -92,9 +110,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: 1940,
                 isFieldKey: false,
                 isRequired: true,
-                type: "number"
-            }
-        }
+                type: "number",
+            },
+        },
     },
     {
         dataType: "song",
@@ -109,9 +127,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
+                type: "string",
+            },
+        },
     },
     {
         dataType: "song",
@@ -126,9 +144,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
+                type: "string",
+            },
+        },
     },
     {
         dataType: "song",
@@ -143,9 +161,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "number"
-            }
-        }
+                type: "number",
+            },
+        },
     },
     {
         dataType: "song",
@@ -160,9 +178,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
+                type: "string",
+            },
+        },
     },
     {
         dataType: "song",
@@ -177,9 +195,9 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
+                type: "string",
+            },
+        },
     },
     {
         dataType: "song",
@@ -194,8 +212,8 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 defaultVal: "",
                 isFieldKey: true,
                 isRequired: true,
-                type: "string"
-            }
-        }
-    }
+                type: "string",
+            },
+        },
+    },
 ];

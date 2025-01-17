@@ -3,7 +3,6 @@
     import { Toaster } from "svelte-french-toast";
     import {
         bottomBarNotification,
-        draggedAlbum,
         draggedScrapbookItems,
         draggedSongs,
         droppedFiles,

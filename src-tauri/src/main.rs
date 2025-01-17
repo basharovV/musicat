@@ -664,7 +664,9 @@ async fn main() {
             if cfg!(dev) {
                 let devtools_submenu = SubmenuBuilder::new(app, "DevTools")
                     .items(&[
-                        &MenuItemBuilder::with_id("clear-db", "Clear DB").build(app)?,
+                        &MenuItemBuilder::with_id("clear-data", "Clear data").build(app)?,
+                        &MenuItemBuilder::with_id("import-db", "Import DB").build(app)?,
+                        &MenuItemBuilder::with_id("export-db", "Export DB").build(app)?,
                         &MenuItemBuilder::with_id("open-cache", "Open cache directory")
                             .build(app)?,
                         &MenuItemBuilder::with_id("open-config", "Open config directory")

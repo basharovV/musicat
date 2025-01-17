@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { fade } from "svelte/transition";
-    import type { MenuItem, MenuSection } from "../../App";
-    import { clickOutside } from "../../utils/ClickOutside";
+    import type { MenuItem, MenuSection } from "../../../App";
+    import { clickOutside } from "../../../utils/ClickOutside";
     import MenuOption from "./MenuOption.svelte";
 
     export let x = 0;
@@ -15,6 +15,7 @@
     export let maxHeight: number = null; // If this exists, we wrap the contents
     export let padding = 0;
     export let sections: MenuSection[] = null;
+    export let submenu = false;
 
     export let hoveredSection = sections !== null ? 0 : null;
 
@@ -23,6 +24,10 @@
         hoveredSection !== null
             ? sections[hoveredSection].items.length
             : items.length;
+
+    export function getBoundingClientRect() {
+        return menuEl.getBoundingClientRect();
+    }
 
     function onKeyUp() {
         if (hoveredItemIdx > 0) {
@@ -133,6 +138,7 @@
 <menu
     class:fixed
     class:relative={position === "relative"}
+    class:submenu
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
     use:clickOutside={() => {
@@ -206,6 +212,9 @@
         }
         &.relative {
             position: relative;
+        }
+        &.submenu {
+            margin: -8px 0 0 8px;
         }
     }
 

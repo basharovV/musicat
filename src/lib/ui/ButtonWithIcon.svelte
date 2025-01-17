@@ -5,7 +5,8 @@
     export let icon = null;
     export let onClick;
     export let text;
-    export let theme: "solid" | "translucent" | "transparent" = "solid";
+    export let theme: "active" | "solid" | "translucent" | "transparent" =
+        "solid";
     export let size: "small" | "medium" = "medium";
     export let isLoading = false;
     export let disabled = false;
@@ -49,15 +50,14 @@
         height: fit-content;
         align-items: center;
         gap: 5px;
-        /* margin-left: 1em; */
         font-weight: normal;
-        /* background-color: rgba(240, 248, 255, 0.088); */
         border-radius: 6px;
         color: var(--button-text);
         white-space: nowrap;
-        cursor: default;
+        cursor: pointer;
         transition: border-color 0.1s;
         user-select: none;
+
         p {
             margin: 0;
             line-height: normal;
@@ -69,16 +69,32 @@
         &:active {
             opacity: 0.8;
         }
-        &:hover {
+        &:hover:not(.disabled) {
             background-color: rgba(240, 248, 255, 0.088);
         }
-
         &:focus,
         &:focus-visible {
             outline: 4px auto -webkit-focus-ring-color;
         }
 
         // Themes
+        &.theme-active {
+            font-size: 1em;
+            font-weight: 500;
+            font-family: inherit;
+            background-color: var(--smart-playlist-button-bg);
+            white-space: nowrap;
+
+            &:hover {
+                background-color: var(--smart-playlist-button-disabled-bg);
+            }
+
+            &:disabled {
+                background-color: var(--smart-playlist-button-disabled-bg);
+                color: var(--smart-playlist-button-disabled);
+            }
+        }
+
         &.theme-solid {
             border: 1px solid transparent;
             font-size: 1em;
@@ -86,7 +102,7 @@
             font-family: inherit;
             background-color: var(--button-bg);
             white-space: nowrap;
-            &:hover {
+            &:hover:not(.disabled) {
                 border-color: var(--accent);
                 background-color: color-mix(
                     in srgb,
@@ -104,7 +120,7 @@
             );
             border: 1px solid
                 color-mix(in srgb, var(--inverse) 80%, transparent);
-            &:hover {
+            &:hover:not(.disabled) {
                 border-color: var(--accent);
                 background-color: color-mix(
                     in srgb,
@@ -113,15 +129,16 @@
                 );
             }
         }
+
         &.theme-transparent {
             border: 1px solid
                 color-mix(in srgb, var(--inverse) 10%, transparent);
             color: var(--text);
 
-            &:hover {
+            &:hover:not(.disabled) {
                 background-color: color-mix(
                     in srgb,
-                    var(--inverse) 5%,
+                    var(--inverse) 15%,
                     transparent
                 );
             }

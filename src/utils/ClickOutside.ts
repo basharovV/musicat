@@ -22,6 +22,7 @@ export function clickOutside(element, callbackFunction) {
     // so we need to wait before adding a listener.
     setTimeout(() => {
         document.body.addEventListener("click", onClick);
+        document.body.addEventListener("contextmenu", onClick);
     }, 0);
 
     return {
@@ -30,6 +31,7 @@ export function clickOutside(element, callbackFunction) {
         },
         destroy() {
             document.body.removeEventListener("click", onClick);
-        }
+            document.body.removeEventListener("contextmenu", onClick);
+        },
     };
 }

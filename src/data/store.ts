@@ -139,7 +139,6 @@ export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
-export const rightClickedAlbum: Writable<Album> = writable(null);
 export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);
@@ -156,8 +155,11 @@ export const isFullScreenVisualiser = writable(false);
 export const userPlaylists: Writable<PlaylistFile[]> = writable([]);
 export const toDeletePlaylist = liveQuery(async () => {
     try {
-        const toDeletePlaylist = await db.internalPlaylists.get("todelete");
-        return toDeletePlaylist;
+        if (!db.hasBeenClosed()) {
+            const toDeletePlaylist = await db.internalPlaylists.get("todelete");
+            return toDeletePlaylist;
+        }
+        return null;
     } catch (e) {
         console.error("Error fetching todelete playlist", e);
     }
@@ -228,11 +230,12 @@ export const isTagOrCondition = writable(false);
 
 // Playlists
 export type DragSource = "Library" | "Player" | "Queue" | "Sidebar";
+export type SongOrigin = "Album" | "Playlist" | "SmartPlaylist";
 export const selectedPlaylistFile: Writable<PlaylistFile> = writable(null);
-export const draggedAlbum: Writable<Album> = writable(null);
-export const draggedPlaylist: Writable<PlaylistFile> = writable(null);
+export const draggedOrigin: Writable<SongOrigin> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
 export const draggedSource: Writable<DragSource> = writable(null);
+export const draggedTitle: Writable<string> = writable(null);
 export const dragGhostReset = writable(false);
 
 // Settings
@@ -483,4 +486,5 @@ export const webPlayerBufferedRanges: Writable<TimeRanges> = writable(null);
 export const webPlayerVolume: Writable<number> = writable(0.6);
 export const webPlayerIsLoading = writable(false);
 export const fileToDownload: Writable<IAFile> = writable(null);
+
 init();

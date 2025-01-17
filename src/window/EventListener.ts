@@ -10,8 +10,9 @@ import {
     isQueueOpen,
     shouldFocusFind,
     uiView,
+    queue,
 } from "../data/store";
-import { db } from "../data/db";
+import { db, deleteDatabase, exportDatabase, importDatabase } from "../data/db";
 import type { ToImport } from "../App";
 import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
 import { open } from "@tauri-apps/plugin-shell";
@@ -58,17 +59,19 @@ export function startMenuListener() {
                 uiView.set("prune");
                 break;
             // DevTools
-            case "clear-db":
-                console.log("clear-db");
-                await db.songs.clear();
-                await db.albums.clear();
-                await db.smartQueries.clear();
-                await db.songProjects.clear();
-                await db.artistProjects.clear();
-                await db.scrapbook.clear();
-                await db.playlists.clear();
-                await db.delete();
+            case "clear-data":
+                console.log("clear-data");
+                await deleteDatabase();
                 await deleteCacheDirectory();
+                queue.set([]);
+                break;
+            case "import-db":
+                console.log("import-db");
+                importDatabase();
+                break;
+            case "export-db":
+                console.log("export-db");
+                exportDatabase();
                 break;
             case "open-cache":
                 try {

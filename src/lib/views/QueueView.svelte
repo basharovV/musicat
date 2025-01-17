@@ -497,9 +497,8 @@
     let rangeStartSongIdx = null;
     let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
-    let showQueueMenu = false;
-    let showTrackMenu = false;
-    let menuPos;
+    let queueMenu: QueueMenu;
+    let trackMenu: TrackMenu;
     let shouldProcessDrag = false;
 
     let songsHighlighted: Song[] = [];
@@ -526,9 +525,7 @@
             highlightSong(song, idx, false);
         }
 
-        showTrackMenu = true;
-        menuPos = { x: e.clientX, y: e.clientY };
-        console.log("showTrackMenu", menuPos);
+        trackMenu.open(songsHighlighted, { x: e.clientX, y: e.clientY });
     }
 
     function isSongHighlighted(song: Song) {
@@ -739,15 +736,18 @@
 
     function onHeaderClick(e) {
         e.preventDefault();
-        showQueueMenu = true;
-        menuPos = { x: e.detail.evt.clientX, y: e.detail.evt.clientY };
+
+        queueMenu.open({ x: e.detail.evt.clientX, y: e.detail.evt.clientY });
     }
 
     function onStageClick(e) {
         if (e.detail.evt.button === 2) {
             e.preventDefault();
-            showQueueMenu = true;
-            menuPos = { x: e.detail.evt.clientX, y: e.detail.evt.clientY };
+
+            queueMenu.open({
+                x: e.detail.evt.clientX,
+                y: e.detail.evt.clientY,
+            });
         }
     }
 
@@ -919,11 +919,10 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<QueueMenu bind:showMenu={showQueueMenu} bind:pos={menuPos} />
+<QueueMenu bind:this={queueMenu} />
 <TrackMenu
-    bind:showMenu={showTrackMenu}
-    bind:pos={menuPos}
-    bind:songs={songsHighlighted}
+    bind:this={trackMenu}
+    onUnselect={() => (songsHighlighted.length = 0)}
 />
 
 <div
