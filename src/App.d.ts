@@ -175,6 +175,7 @@ interface UserSettings {
     followSystemOutput: boolean;
     geniusApiKey?: string;
     discogsApiKey?: string;
+    preferredView: "album" | "track";
 }
 
 interface UIPreferences {

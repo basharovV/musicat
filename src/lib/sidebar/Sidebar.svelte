@@ -576,11 +576,18 @@
 
     function onClickSmartPlaylist(e, smartQuery, reset) {
         $selectedPlaylistFile = null;
-        $uiView = "smart-query:list";
+
+        if ($userSettings.preferredView === "track") {
+            $uiView = "smart-query:list";
+        } else {
+            $uiView = "smart-query:icon";
+        }
+
         if (reset) {
             $query.orderBy = "none";
             $query.reverse = false;
         }
+
         $selectedSmartQuery = smartQuery;
     }
 

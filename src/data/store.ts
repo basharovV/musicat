@@ -251,6 +251,7 @@ const defaultSettings: UserSettings = {
     theme: "dark",
     outputDevice: null, // default system device,
     followSystemOutput: true,
+    preferredView: "track",
 };
 
 /**
@@ -414,11 +415,17 @@ async function init() {
         );
     }
 
-    // Get user settings
-    userSettings.set({
+    const settings = {
         ...defaultSettings,
         ...fileSettings,
-    });
+    };
+
+    if (settings.preferredView === "album") {
+        uiView.set("albums");
+    }
+
+    // Get user settings
+    userSettings.set(settings);
 
     // Auto-persist settings
     userSettings.subscribe(async (val) => {
