@@ -207,7 +207,7 @@
 
         updatePlayingAlbumOffset();
 
-        return true;
+        return !!virtualList;
     }
 
     function updatePlayingAlbumOffset() {
