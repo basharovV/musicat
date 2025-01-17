@@ -179,7 +179,7 @@
                         firstSongInPreviousAlbum: null,
                         firstSongInPreviousArtist: null,
                     },
-                    songs: [],
+                    songs: [] as Song[],
                 },
             )?.songs ?? [];
 
@@ -593,8 +593,11 @@
 
         setTimeout(() => {
             width =
-                scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
-            calculateColumns();
+                scrollContainer?.clientWidth ?? libraryContainer?.clientWidth;
+
+            if (width) {
+                calculateColumns();
+            }
         }, 50);
     }
 

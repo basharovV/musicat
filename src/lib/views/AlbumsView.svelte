@@ -7,6 +7,7 @@
     import {
         compressionSelected,
         current,
+        importStatus,
         isPlaying,
         query,
         queue,
@@ -26,6 +27,7 @@
     import ScrollTo from "../ui/ScrollTo.svelte";
     import SmartQuery from "../smart-query/Query";
     import BuiltInQueries from "../../data/SmartQueries";
+    import ImportPlaceholder from "../library/ImportPlaceholder.svelte";
 
     const PADDING = 14;
 
@@ -42,7 +44,6 @@
     let highlightedAlbum;
     let isCurrentAlbumInView = false;
     let isInit = true;
-    let isLoading = true;
     let itemSizes = [];
     let lastOffset = 0;
     let rowCount = 0;
@@ -121,8 +122,6 @@
                 return 0;
             });
         }
-
-        isLoading = false;
 
         return albums;
     });
@@ -361,13 +360,15 @@
 />
 
 <div class="albums-container" bind:this={container}>
-    {#if isLoading}
+    {#if !$albums}
         <!-- <div
             class="loading"
             out:fade={{ duration: 90, easing: cubicInOut }}
         >
             <p>💿 one sec...</p>
         </div> -->
+    {:else if ($importStatus.isImporting && $importStatus.backgroundImport === false) || ($albums.length === 0 && $query.query.length === 0 && !/^(smart-query|favourites|to-delete)/.test($uiView))}
+        <ImportPlaceholder />
     {:else}
         <div class="grid-container">
             <VirtualList
