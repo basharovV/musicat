@@ -1,14 +1,9 @@
 // db.ts
-import { path } from "@tauri-apps/api";
 import { appConfigDir, BaseDirectory } from "@tauri-apps/api/path";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
-import Dexie, { type PromiseExtended, type Table } from "dexie";
-import {
-    importDB,
-    exportDB,
-    importInto,
-    peakImportFile,
-} from "dexie-export-import";
+import Dexie, { type Table } from "dexie";
+import { exportDB, importInto } from "dexie-export-import";
 import type {
     Album,
     ArtistProject,
@@ -18,9 +13,6 @@ import type {
     SongProject,
 } from "src/App";
 import type { SavedSmartQuery } from "src/lib/smart-query/QueryPart";
-import { get } from "svelte/store";
-import { isDev } from "./store";
-import { open, save } from "@tauri-apps/plugin-dialog";
 
 export class MySubClassedDexie extends Dexie {
     // 'songs' is added by dexie when declaring the stores()
@@ -97,7 +89,8 @@ export async function exportDatabase() {
     const bytes = await blob.arrayBuffer();
     const selected = await save({
         defaultPath:
-            configDir + `/${get(isDev) ? "musicat-dev.db" : "musicat.db"}`,
+            configDir +
+            `/${process.env.NODE_ENV === "development" ? "musicat-dev.db" : "musicat.db"}`,
         filters: [
             {
                 extensions: ["db"],
