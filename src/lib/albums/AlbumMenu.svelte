@@ -6,7 +6,7 @@
     import {
         popupOpen,
         rightClickedAlbum,
-        rightClickedTracks,
+        userSettings,
     } from "../../data/store";
     import Menu from "../menu/Menu.svelte";
     import MenuDivider from "../menu/MenuDivider.svelte";
@@ -128,6 +128,7 @@
                 recursive: false,
                 process_albums: true,
                 is_async: false,
+                is_cover_fullcheck: $userSettings.isArtistsToolkitEnabled,
             },
         });
         console.log("response", response);

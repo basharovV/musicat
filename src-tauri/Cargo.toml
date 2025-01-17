@@ -64,7 +64,8 @@ urlencoding = "2.1.3"
 trash = "5.1.1"
 kuchiki = "0.8"
 file-id = "0.2.1"
-image = "0.24"
+zune-jpeg = "0.4.14"
+zune-png = "0.4.10"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.5.2"

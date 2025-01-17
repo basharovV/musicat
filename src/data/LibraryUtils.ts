@@ -120,6 +120,7 @@ export async function importPaths(
             recursive: true,
             process_albums: true,
             is_async: true,
+            is_cover_fullcheck: get(userSettings).isCoverFullCheckEnabled,
         },
     });
 
@@ -348,6 +349,7 @@ export async function rescanAlbumArtwork(album: Album) {
             recursive: false,
             process_albums: true,
             is_async: false,
+            is_cover_fullcheck: get(userSettings).isCoverFullCheckEnabled,
         },
     });
 

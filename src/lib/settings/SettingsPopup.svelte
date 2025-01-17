@@ -332,8 +332,8 @@
                                             >{device.name}</option
                                         >
                                     {/each}
-                                </select></td
-                            >
+                                </select>
+                            </td>
                         </tr>
                         <tr>
                             <td>{$LL.settings.followSystem()}</td>
@@ -343,8 +343,8 @@
                                         type="checkbox"
                                         bind:checked={$userSettings.followSystemOutput}
                                         on:change={onFollowSystemOutputChange}
-                                    /></label
-                                >
+                                    />
+                                </label>
                             </td>
                         </tr>
                     </tbody>
@@ -362,8 +362,8 @@
                                 {#each miniPlayerLocations as location}
                                     <option value={location}>{location}</option>
                                 {/each}
-                            </select></td
-                        >
+                            </select>
+                        </td>
                     </tr>
                     <tr>
                         <td>Theme</td>
@@ -371,34 +371,49 @@
                             <select bind:value={$userSettings.theme}>
                                 <optgroup label="light themes">
                                     {#each Object.entries(lightThemes) as [name, theme]}
-                                        <option value={name}
-                                            >{theme["display-name"]}</option
-                                        >
+                                        <option value={name}>
+                                            {theme["display-name"]}
+                                        </option>
                                     {/each}
                                 </optgroup>
                                 <optgroup label="dark themes">
                                     {#each Object.entries(darkThemes) as [name, theme]}
-                                        <option value={name}
-                                            >{theme["display-name"]}</option
-                                        >
+                                        <option value={name}>
+                                            {theme["display-name"]}
+                                        </option>
                                     {/each}
                                 </optgroup>
-                            </select></td
-                        >
+                            </select>
+                        </td>
                     </tr>
-                </tbody>
-
-                <tbody>
                     <tr>
                         <td>Enable Artist's Toolkit</td>
-                        <td
-                            ><input
+                        <td>
+                            <input
                                 type="checkbox"
                                 bind:checked={$userSettings.isArtistsToolkitEnabled}
-                            /></td
-                        >
+                            />
+                        </td>
                     </tr>
-
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="2">Import</th>
+                    </tr>
+                    <tr>
+                        <td>Enable Cover Art check</td>
+                        <td>
+                            <input
+                                type="checkbox"
+                                bind:checked={$userSettings.isCoverFullCheckEnabled}
+                            />
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="2">Data</th>
+                    </tr>
                     <tr>
                         <td>{$LL.settings.songbookLocation()}</td>
                         <td>

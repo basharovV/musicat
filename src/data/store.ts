@@ -241,6 +241,7 @@ const defaultSettings: UserSettings = {
     albumArtworkFilenames: ["cover.jpg", "artwork.jpg", "folder.jpg"],
     miniPlayerLocation: "bottom-left",
     isArtistsToolkitEnabled: false,
+    isCoverFullCheckEnabled: false,
     scrapbookLocation: null,
     songbookLocation: null,
     downloadLocation: null,

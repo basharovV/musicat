@@ -775,6 +775,7 @@ fn decode_loop(
             let song = crate::metadata::extract_metadata(
                 &Path::new(&p.clone().as_str()),
                 false,
+                false,
                 true,
                 &app_handle,
             );
