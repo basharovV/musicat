@@ -232,7 +232,7 @@
             <MenuOption text={result.error || result.success} isDisabled />
         {/if}
         <MenuOption
-            onClick={compose(searchArtworkOnBrave, song)}
+            onClick={compose(searchArtworkOnBrave, album)}
             text="Search for artwork on Brave"
         />
         {#if song.artist}
