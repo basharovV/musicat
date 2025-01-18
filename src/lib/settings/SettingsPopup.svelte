@@ -407,6 +407,20 @@
                 </tbody>
                 <tbody>
                     <tr>
+                        <th colspan="2">Import</th>
+                    </tr>
+                    <tr>
+                        <td>Enable Cover Art check</td>
+                        <td>
+                            <input
+                                type="checkbox"
+                                bind:checked={$userSettings.isCoverFullCheckEnabled}
+                            />
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
                         <th colspan="2">Data</th>
                     </tr>
                     <tr>

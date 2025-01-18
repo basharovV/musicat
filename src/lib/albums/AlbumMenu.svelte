@@ -4,6 +4,7 @@
     import { db } from "../../data/db";
     import {
         popupOpen,
+        userSettings,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -170,6 +171,7 @@
                 recursive: false,
                 process_albums: true,
                 is_async: false,
+                is_cover_fullcheck: $userSettings.isArtistsToolkitEnabled,
             },
         });
         console.log("response", response);

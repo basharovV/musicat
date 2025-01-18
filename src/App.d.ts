@@ -166,6 +166,7 @@ interface UserSettings {
     albumArtworkFilenames: string[];
     miniPlayerLocation: MiniPlayerLocation;
     isArtistsToolkitEnabled: boolean;
+    isCoverFullCheckEnabled: boolean;
     scrapbookLocation?: string;
     songbookLocation?: string;
     downloadLocation: string;
