@@ -155,7 +155,7 @@ const en = {
         artworkTooltipTitle: "🎨 Artwork priority",
         artworkTooltipBody:
             "<h3 style='margin:0'>🎨 Artwork priority</h3><br/>First, Musicat looks for artwork encoded in the file metadata, which you can overwrite by clicking this square (png and jpg supported). <br/><br/>If there is none, it will look for a file in the album folder called <i>cover.jpg, folder.jpg</i> or <i>artwork.jpg</i> (you can change this list of filenames in Settings).<br/><br/>Otherwise, it will look for any image in the album folder and use that.",
-        encodedInFile: "Encoded in file",
+        encodedInFile: "In metadata",
         bit: "bit",
         noMetadata: "Song has no metadata",
         unsupportedFormat:

@@ -5,6 +5,7 @@
     import {
         popupOpen,
         userSettings,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -123,9 +124,11 @@
         if (songs.length === 1) {
             $rightClickedTracks = [];
             $rightClickedTrack = song;
+            $rightClickedAlbum = null;
         } else {
             $rightClickedTracks = songs;
             $rightClickedTrack = null;
+            $rightClickedAlbum = album;
         }
 
         close();
