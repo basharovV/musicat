@@ -1493,9 +1493,10 @@
         console.log("dropidx", dropColumnIdx);
     }
 
-    function onGroupClick(ev) {
-        if (ev.detail.evt.button === 0) updateOrderBy(f.value);
-        else if (ev.detail.evt.button === 2) {
+    function onGroupClick(ev, field) {
+        if (ev.detail.evt.button === 0) {
+            updateOrderBy(field.value);
+        } else if (ev.detail.evt.button === 2) {
             if ($uiView === "albums") {
                 const list = ev.detail.evt.target.closest(
                     ".virtual-list-inner",
@@ -2435,7 +2436,9 @@
                                             return handleColumnDrag(pos, idx);
                                         },
                                     }}
-                                    on:click={onGroupClick}
+                                    on:click={(ev) => {
+                                        onGroupClick(ev, f);
+                                    }}
                                     on:mouseenter={() => {
                                         hoveredColumnIdx = idx;
                                     }}
