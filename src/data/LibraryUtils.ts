@@ -120,6 +120,7 @@ export async function importPaths(
             recursive: true,
             process_albums: true,
             is_async: true,
+            is_cover_fullcheck: get(userSettings).isCoverFullCheckEnabled,
         },
     });
 

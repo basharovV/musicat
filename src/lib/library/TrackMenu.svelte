@@ -15,6 +15,7 @@
         selectedTags,
         toDeletePlaylist,
         uiView,
+        userSettings,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
@@ -230,6 +231,7 @@
                 recursive: false,
                 process_albums: true,
                 is_async: false,
+                is_cover_fullcheck: $userSettings.isCoverFullCheckEnabled,
             },
         });
         console.log("response", response);

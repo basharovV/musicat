@@ -14,7 +14,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{BufReader, ErrorKind};
-use std::ops::{Deref, Mul};
+use std::ops::Mul;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -51,6 +51,7 @@ pub struct ScanPathsEvent {
     recursive: bool,
     process_albums: bool,
     is_async: bool,
+    is_cover_fullcheck: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -160,6 +161,7 @@ pub async fn write_metadatas(
                     Path::new(&track.file_path),
                     true,
                     false,
+                    false,
                     &_app_handle,
                 ) {
                     if let Some(album) = process_new_album(&song, &_app_handle) {
@@ -223,6 +225,7 @@ pub async fn get_song_metadata(event: GetSongMetadataEvent, app: AppHandle) -> O
         if let Some(song) = crate::metadata::extract_metadata(
             &path,
             event.is_import,
+            false,
             event.include_folder_artwork,
             &app,
         ) {
@@ -249,9 +252,13 @@ pub async fn scan_paths(
 
         if path.is_file() {
             // info!("path is file");
-            if let Some(mut song) =
-                crate::metadata::extract_metadata(&path, true, false, &app_handle)
-            {
+            if let Some(mut song) = crate::metadata::extract_metadata(
+                &path,
+                true,
+                event.is_cover_fullcheck,
+                false,
+                &app_handle,
+            ) {
                 if event.process_albums {
                     if let Some(album) = process_new_album(&song, &app_handle) {
                         info!("Album: {:?}", album);
@@ -275,6 +282,7 @@ pub async fn scan_paths(
                 &albums,
                 event.recursive,
                 event.process_albums,
+                event.is_cover_fullcheck,
                 &app_handle,
             ) {
                 if !sub_results.songs.is_empty() {
@@ -508,6 +516,7 @@ fn process_directory(
     albums: &Arc<std::sync::Mutex<HashMap<String, Album>>>,
     recursive: bool,
     process_albums: bool,
+    is_cover_fullcheck: bool,
     app: &AppHandle,
 ) -> Option<ProcessDirectoryResult> {
     let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
@@ -522,9 +531,13 @@ fn process_directory(
 
                     // info!("{:?}", entry.path());
                     if path.is_file() {
-                        if let Some(mut song) =
-                            crate::metadata::extract_metadata(&path, true, false, &app)
-                        {
+                        if let Some(mut song) = crate::metadata::extract_metadata(
+                            &path,
+                            true,
+                            is_cover_fullcheck,
+                            false,
+                            &app,
+                        ) {
                             if process_albums {
                                 if let Some(album) = process_new_album(&song, app) {
                                     // info!("Album: {:?}", album);
@@ -559,9 +572,15 @@ fn process_directory(
                             subsongs.lock().unwrap().push(song);
                         }
                     } else if path.is_dir() && recursive {
-                        if let Some(sub_results) =
-                            process_directory(&path, songs, albums, true, process_albums, app)
-                        {
+                        if let Some(sub_results) = process_directory(
+                            &path,
+                            songs,
+                            albums,
+                            true,
+                            process_albums,
+                            is_cover_fullcheck,
+                            app,
+                        ) {
                             if !sub_results.songs.is_empty() {
                                 songs.lock().unwrap().extend(sub_results.songs);
                             }
@@ -583,6 +602,7 @@ fn process_directory(
 pub fn extract_metadata(
     file_path: &Path,
     is_import: bool,
+    is_cover_fullcheck: bool,
     include_folder_artwork: bool,
     app: &AppHandle,
 ) -> Option<Song> {
@@ -736,11 +756,37 @@ pub fn extract_metadata(
                         if tagged_file.primary_tag().is_some() {
                             if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first()
                             {
-                                artwork = Some(Artwork {
-                                    data: pic.data().to_vec(),
-                                    src: None,
-                                    format: pic.mime_type().unwrap().to_string(),
-                                })
+                                let mut decoded = false;
+
+                                match pic.mime_type().unwrap().as_str() {
+                                    "image/jpeg" => {
+                                        let mut decoder = zune_jpeg::JpegDecoder::new(pic.data());
+
+                                        decoded = if is_cover_fullcheck {
+                                            decoder.decode().is_ok()
+                                        } else {
+                                            decoder.decode_headers().is_ok()
+                                        };
+                                    }
+                                    "image/png" => {
+                                        let mut decoder = zune_png::PngDecoder::new(pic.data());
+
+                                        decoded = if is_cover_fullcheck {
+                                            decoder.decode().is_ok()
+                                        } else {
+                                            decoder.decode_headers().is_ok()
+                                        };
+                                    }
+                                    _ => {}
+                                };
+
+                                if decoded {
+                                    artwork = Some(Artwork {
+                                        data: pic.data().to_vec(),
+                                        src: None,
+                                        format: pic.mime_type().unwrap().to_string(),
+                                    })
+                                }
                             }
                         }
 

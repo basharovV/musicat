@@ -610,6 +610,7 @@ class AudioPlayer {
                 recursive: false,
                 process_albums: false,
                 is_async: false,
+                is_cover_fullcheck: get(userSettings).isArtistsToolkitEnabled,
             },
         });
         console.log("scan_paths response", response);
