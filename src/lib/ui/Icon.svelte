@@ -255,7 +255,6 @@
 <div
     use:optionalTippy={tooltip}
     on:click={(e) => {
-        console.log("click", onClick);
         if (onClick) {
             e.stopPropagation();
             onClick(e);

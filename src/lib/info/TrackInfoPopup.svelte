@@ -341,20 +341,11 @@
     }
 
     async function save() {
-        metadata.writeMetadata();
-
         if (isArtworkSet === "delete-file" || isArtworkSet === "replace-file") {
             await removeFile(artworkFilePath);
-
-            artworkFileName = null;
-            artworkFilePath = null;
         }
 
-        isArtworkSet = false;
-        artworkToSetFormat = null;
-        artworkToSetSrc = null;
-        artworkToSetData = null;
-        artworkFileToSet = null;
+        await metadata.writeMetadata();
     }
 
     function searchArtwork() {
