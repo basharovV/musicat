@@ -21,6 +21,8 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::{thread, time};
 use tauri::{AppHandle, Emitter};
 
+use crate::store::{load_settings, UserSettings};
+
 mod artwork_cacher;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -150,13 +152,14 @@ pub struct GetSongMetadataEvent {
 #[tauri::command]
 pub async fn write_metadatas(
     event: WriteMetatadasEvent,
-    _app_handle: tauri::AppHandle,
+    app_handle: tauri::AppHandle,
 ) -> ToImportEvent {
     info!("{:?}", event);
     // let payload: &str = event.payload().unwrap();
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
     let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
+    let settings = load_settings(&app_handle).ok();
 
     let mut error: Option<String> = None;
 
@@ -170,9 +173,9 @@ pub async fn write_metadatas(
                     true,
                     false,
                     false,
-                    &_app_handle,
+                    &app_handle,
                 ) {
-                    if let Some(album) = process_new_album(&mut song, &_app_handle) {
+                    if let Some(album) = process_new_album(&mut song, &settings, &app_handle) {
                         info!("Album: {:?}", album);
                         let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
                         if let Some(existing_album) = existing_album {
@@ -253,6 +256,7 @@ pub async fn scan_paths(
     let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
     let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
+    let settings = load_settings(&app_handle).ok();
 
     event.paths.par_iter().for_each(|p| {
         let path = Path::new(p.as_str());
@@ -268,7 +272,7 @@ pub async fn scan_paths(
                 &app_handle,
             ) {
                 if event.process_albums {
-                    if let Some(album) = process_new_album(&mut song, &app_handle) {
+                    if let Some(album) = process_new_album(&mut song, &settings, &app_handle) {
                         info!("Album: {:?}", album);
                         albums
                             .lock()
@@ -445,8 +449,9 @@ pub async fn get_artwork_file(event: GetArtworkEvent, app: AppHandle) -> Option<
     if file_path.is_file() {
         let path = file_path.to_string_lossy().into_owned();
         let file = file_path.file_name()?.to_string_lossy().into_owned();
+        let settings = load_settings(&app).ok()?;
 
-        match look_for_art(&path, &file, &app) {
+        match look_for_art(&path, &file, &settings, &app) {
             Ok(res) => {
                 if let Some(art) = res.clone() {
                     return Some(Artwork {
@@ -492,7 +497,11 @@ pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Op
     None
 }
 
-fn process_new_album(song: &mut Song, app: &tauri::AppHandle) -> Option<Album> {
+fn process_new_album(
+    song: &mut Song,
+    settings: &Option<UserSettings>,
+    app: &tauri::AppHandle,
+) -> Option<Album> {
     let mut artwork_src = String::new();
     let mut artwork_format = String::new();
     // Strip song from path
@@ -504,17 +513,19 @@ fn process_new_album(song: &mut Song, app: &tauri::AppHandle) -> Option<Album> {
     )
     .to_hex_lowercase();
     // info!("album: {} , {}", song.album, album_id);
-    let result = look_for_art(&song.path, &song.file, app);
-    if let Ok(res) = result {
-        if let Some(art) = res.clone() {
-            // info!("Found existing artwork in folder for: {}", song.album);
-            artwork_src = art.artwork_src;
-            artwork_format = art.artwork_format;
+    if let Some(settings) = settings {
+        let result = look_for_art(&song.path, &song.file, settings, app);
+        if let Ok(res) = result {
+            if let Some(art) = res.clone() {
+                // info!("Found existing artwork in folder for: {}", song.album);
+                artwork_src = art.artwork_src;
+                artwork_format = art.artwork_format;
 
-            song.artwork_origin = Some(ArtworkOrigin::File);
+                song.artwork_origin = Some(ArtworkOrigin::File);
+            }
+        } else if let Err(e) = result {
+            info!("Error looking for artwork: {}", e);
         }
-    } else if let Err(e) = result {
-        info!("Error looking for artwork: {}", e);
     }
     info!("artwork found: {}", artwork_src);
     if artwork_src.is_empty() {
@@ -592,6 +603,8 @@ fn process_directory(
     let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
     let subalbums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
+    let settings = load_settings(app).ok();
+
     fs::read_dir(directory_path)
         .par_iter_mut()
         .for_each(|entries| {
@@ -609,7 +622,7 @@ fn process_directory(
                             &app,
                         ) {
                             if process_albums {
-                                if let Some(album) = process_new_album(&mut song, app) {
+                                if let Some(album) = process_new_album(&mut song, &settings, app) {
                                     // info!("Album: {:?}", album);
                                     let existing_album =
                                         albums.lock().unwrap().get_mut(&album.id).cloned();
@@ -865,18 +878,20 @@ pub fn extract_metadata(
                         }
 
                         if include_folder_artwork && artwork.is_none() {
-                            let result = look_for_art(&path, &file, app);
-                            if let Ok(res) = result {
-                                if let Some(art) = res.clone() {
-                                    artwork_origin = Some(ArtworkOrigin::File);
-                                    artwork = Some(Artwork {
-                                        data: vec![],
-                                        src: Some(art.artwork_src),
-                                        format: art.artwork_format,
-                                    })
+                            if let Some(settings) = load_settings(app).ok() {
+                                let result = look_for_art(&path, &file, &settings, app);
+                                if let Ok(res) = result {
+                                    if let Some(art) = res.clone() {
+                                        artwork_origin = Some(ArtworkOrigin::File);
+                                        artwork = Some(Artwork {
+                                            data: vec![],
+                                            src: Some(art.artwork_src),
+                                            format: art.artwork_format,
+                                        })
+                                    }
+                                } else if let Err(e) = result {
+                                    info!("Error looking for artwork: {}", e);
                                 }
-                            } else if let Err(e) = result {
-                                info!("Error looking for artwork: {}", e);
                             }
                         }
 
