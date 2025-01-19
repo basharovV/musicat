@@ -175,7 +175,9 @@ pub async fn write_metadatas(
                     false,
                     &app_handle,
                 ) {
-                    if let Some(album) = process_new_album(&mut song, &settings, &app_handle) {
+                    if let Some(album) =
+                        process_new_album(&mut song, Some(&albums), None, &settings, &app_handle)
+                    {
                         info!("Album: {:?}", album);
                         let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
                         if let Some(existing_album) = existing_album {
@@ -272,7 +274,9 @@ pub async fn scan_paths(
                 &app_handle,
             ) {
                 if event.process_albums {
-                    if let Some(album) = process_new_album(&mut song, &settings, &app_handle) {
+                    if let Some(album) =
+                        process_new_album(&mut song, Some(&albums), None, &settings, &app_handle)
+                    {
                         info!("Album: {:?}", album);
                         albums
                             .lock()
@@ -499,6 +503,8 @@ pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Op
 
 fn process_new_album(
     song: &mut Song,
+    new_albums: Option<&Arc<std::sync::Mutex<HashMap<String, Album>>>>,
+    newest_albums: Option<&Arc<std::sync::Mutex<HashMap<String, Album>>>>,
     settings: &Option<UserSettings>,
     app: &tauri::AppHandle,
 ) -> Option<Album> {
@@ -513,6 +519,23 @@ fn process_new_album(
     )
     .to_hex_lowercase();
     // info!("album: {} , {}", song.album, album_id);
+
+    if let Some(albums) = new_albums {
+        let album = albums.lock().unwrap().get_mut(&album_id).cloned();
+
+        if album.is_some() {
+            return album;
+        }
+    }
+
+    if let Some(albums) = newest_albums {
+        let album = albums.lock().unwrap().get_mut(&album_id).cloned();
+
+        if album.is_some() {
+            return album;
+        }
+    }
+
     if let Some(settings) = settings {
         let result = look_for_art(&song.path, &song.file, settings, app);
         if let Ok(res) = result {
@@ -622,7 +645,13 @@ fn process_directory(
                             &app,
                         ) {
                             if process_albums {
-                                if let Some(album) = process_new_album(&mut song, &settings, app) {
+                                if let Some(album) = process_new_album(
+                                    &mut song,
+                                    Some(albums),
+                                    Some(&subalbums),
+                                    &settings,
+                                    app,
+                                ) {
                                     // info!("Album: {:?}", album);
                                     let existing_album =
                                         albums.lock().unwrap().get_mut(&album.id).cloned();
