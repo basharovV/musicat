@@ -53,8 +53,12 @@
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
     let artworkToSetData: Uint8Array = null;
-    let isArtworkSet: "delete-file" | "delete-metadata" | "replace" | false =
-        false;
+    let isArtworkSet:
+        | "delete-file"
+        | "delete-metadata"
+        | "replace-file"
+        | "replace-metadata"
+        | false = false;
     let artworkFileToSet = null;
 
     let unlisten;
@@ -201,7 +205,10 @@
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
                 artworkSrc = src;
-                isArtworkSet = "replace";
+                isArtworkSet =
+                    isArtworkSet === "delete-file" || artworkFileName
+                        ? "replace-file"
+                        : "replace-metadata";
                 artworkFileToSet = selected;
                 artworkToSetData = null;
                 artworkToSetSrc = src;
@@ -325,7 +332,10 @@
             artworkToSetFormat = mimeType;
             artworkToSetData = new Uint8Array(arrayBuffer);
             artworkFileToSet = null;
-            isArtworkSet = "replace";
+            isArtworkSet =
+                isArtworkSet === "delete-file" || artworkFileName
+                    ? "replace-file"
+                    : "replace-metadata";
         }
         // const src = "asset://localhost/" + folder + artworkFileName;
     }
@@ -333,9 +343,18 @@
     async function save() {
         metadata.writeMetadata();
 
-        if (isArtworkSet === "delete-file") {
+        if (isArtworkSet === "delete-file" || isArtworkSet === "replace-file") {
             await removeFile(artworkFilePath);
+
+            artworkFileName = null;
+            artworkFilePath = null;
         }
+
+        isArtworkSet = false;
+        artworkToSetFormat = null;
+        artworkToSetSrc = null;
+        artworkToSetData = null;
+        artworkFileToSet = null;
     }
 
     function searchArtwork() {
@@ -588,6 +607,11 @@
             >
             <div class="find-art-btn">
                 <ButtonWithIcon
+                    disabled={(!isArtworkSet ||
+                        !isArtworkSet.startsWith("delete")) &&
+                        ((artworkToSetSrc && artworkToSetFormat) ||
+                            (previousArtworkSrc && previousArtworkFormat) ||
+                            (artworkSrc && artworkFormat))}
                     icon={loadingType === "artwork"
                         ? "line-md:loading-loop"
                         : "ic:twotone-downloading"}
