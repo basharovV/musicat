@@ -187,6 +187,12 @@
             directory: false,
             multiple: false,
             defaultPath: $artworkDirectory,
+            filters: [
+                {
+                    name: "default",
+                    extensions: ["jpeg", "jpg", "png"],
+                },
+            ],
         });
         if (Array.isArray(selected)) {
             // user selected multiple files
