@@ -684,6 +684,8 @@ async fn main() {
             metadata::write_metadatas,
             metadata::scan_paths,
             metadata::get_song_metadata,
+            metadata::get_artwork_file,
+            metadata::get_artwork_metadata,
             player::get_devices,
             get_lyrics,
             get_file_size,

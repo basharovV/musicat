@@ -149,47 +149,99 @@
 
             song = current.song;
 
-            const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: {
-                    path: song.path,
-                    isImport: false,
-                    includeFolderArtwork: true,
-                },
-            });
+            if (song.artworkOrigin === "Broken") {
+                console.log("sidebar::current artwork/broken");
 
-            if (!songWithArtwork) {
-                title = "❗️File read error❗️";
-                artist = "Check permissions";
-                album = "in use by another program?";
-                toast.error(
-                    `Error reading file ${song.path}. Check permissions, or if the file is used by another program.`,
-                    { className: "app-toast" },
-                );
-                return;
-            }
-            console.log("sidebar::currentSong listener", songWithArtwork);
-            title = songWithArtwork.title;
-            fileName = song.file;
-            artist = songWithArtwork.artist;
-            album = songWithArtwork.album;
-            codec = songWithArtwork.fileInfo.codec;
-            stereo = songWithArtwork.fileInfo.channels === 2;
-            bitrate = songWithArtwork.fileInfo.bitDepth;
-            sampleRate = songWithArtwork.fileInfo.sampleRate;
-            duration = songWithArtwork.fileInfo.duration;
-            previousArtworkSrc = artworkSrc;
-            if (songWithArtwork.artwork) {
-                artworkFormat = songWithArtwork.artwork.format;
-                if (songWithArtwork.artwork.data?.length) {
-                    artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
+                artworkFormat = null;
+                artworkSrc = null;
+            } else if (song.artworkOrigin === "File") {
+                const artwork = await invoke<{
+                    format: string;
+                    src: string;
+                }>("get_artwork_file", {
+                    event: {
+                        path: song.path,
+                    },
+                });
+
+                if (artwork) {
+                    console.log("sidebar::current get_artwork_file", artwork);
+
+                    artworkFormat = artwork.format;
+                    artworkSrc = convertFileSrc(artwork.src);
+                }
+            } else if (song.artworkOrigin === "Metadata") {
+                const artwork = await invoke<{
+                    format: string;
+                    data: number[];
+                }>("get_artwork_metadata", {
+                    event: {
+                        path: song.path,
+                    },
+                });
+
+                if (artwork) {
+                    console.log(
+                        "sidebar::current get_artwork_metadata",
+                        artwork,
+                    );
+
+                    artworkFormat = artwork.format;
+                    artworkBuffer = Buffer.from(artwork.data);
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                         "base64",
                     )}`;
-                } else if (songWithArtwork.artwork.src) {
-                    artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
                 }
+            } else {
+                const songWithArtwork = await invoke<Song>(
+                    "get_song_metadata",
+                    {
+                        event: {
+                            path: song.path,
+                            isImport: false,
+                            includeFolderArtwork: true,
+                        },
+                    },
+                );
 
+                if (songWithArtwork && songWithArtwork.artwork) {
+                    console.log(
+                        "sidebar::current get_song_metadata",
+                        songWithArtwork,
+                    );
+
+                    artworkFormat = songWithArtwork.artwork.format;
+
+                    if (songWithArtwork.artwork.src) {
+                        artworkSrc = convertFileSrc(
+                            songWithArtwork.artwork.src,
+                        );
+                    } else {
+                        artworkBuffer = Buffer.from(
+                            songWithArtwork.artwork.data,
+                        );
+                        artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
+                            "base64",
+                        )}`;
+                    }
+                }
+            }
+
+            title = song.title;
+            fileName = song.file;
+            artist = song.artist;
+            album = song.album;
+            codec = song.fileInfo.codec;
+            stereo = song.fileInfo.channels === 2;
+            bitrate = song.fileInfo.bitDepth;
+            sampleRate = song.fileInfo.sampleRate;
+            duration = song.fileInfo.duration;
+
+            previousArtworkSrc = artworkSrc;
+
+            if (artworkSrc) {
                 console.log("artworkSrc", artworkSrc);
+
                 $currentSongArtworkSrc = {
                     src: artworkSrc,
                     format: artworkFormat,
@@ -198,8 +250,6 @@
                         height: 200,
                     },
                 };
-            } else {
-                artworkSrc = null;
             }
 
             drawArtwork(previousSongIdx > current.index);

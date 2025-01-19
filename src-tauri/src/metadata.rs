@@ -76,6 +76,13 @@ pub struct Artwork {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+enum ArtworkOrigin {
+    Broken,
+    File,
+    Metadata,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AlbumArtwork {
     src: String,
     format: String,
@@ -102,6 +109,7 @@ pub struct Song {
     duration: String,
     pub file_info: FileInfo,
     pub artwork: Option<Artwork>,
+    artwork_origin: Option<ArtworkOrigin>,
     origin_country: Option<String>,
     date_added: Option<u128>,
 }
@@ -157,14 +165,14 @@ pub async fn write_metadatas(
         let write_result = write_metadata_track(&track.clone());
         match write_result {
             Ok(()) => {
-                if let Some(song) = crate::metadata::extract_metadata(
+                if let Some(mut song) = crate::metadata::extract_metadata(
                     Path::new(&track.file_path),
                     true,
                     false,
                     false,
                     &_app_handle,
                 ) {
-                    if let Some(album) = process_new_album(&song, &_app_handle) {
+                    if let Some(album) = process_new_album(&mut song, &_app_handle) {
                         info!("Album: {:?}", album);
                         let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
                         if let Some(existing_album) = existing_album {
@@ -260,7 +268,7 @@ pub async fn scan_paths(
                 &app_handle,
             ) {
                 if event.process_albums {
-                    if let Some(album) = process_new_album(&song, &app_handle) {
+                    if let Some(album) = process_new_album(&mut song, &app_handle) {
                         info!("Album: {:?}", album);
                         albums
                             .lock()
@@ -424,7 +432,67 @@ pub async fn scan_paths(
     })
 }
 
-fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetArtworkEvent {
+    path: String,
+}
+
+#[tauri::command]
+pub async fn get_artwork_file(event: GetArtworkEvent, app: AppHandle) -> Option<Artwork> {
+    let file_path = Path::new(event.path.as_str());
+
+    if file_path.is_file() {
+        let path = file_path.to_string_lossy().into_owned();
+        let file = file_path.file_name()?.to_string_lossy().into_owned();
+
+        match look_for_art(&path, &file, &app) {
+            Ok(res) => {
+                if let Some(art) = res.clone() {
+                    return Some(Artwork {
+                        data: vec![],
+                        src: Some(art.artwork_src),
+                        format: art.artwork_format,
+                    });
+                }
+            }
+            Err(e) => {
+                info!("Error looking for artwork: {}", e);
+            }
+        }
+    }
+
+    None
+}
+
+#[tauri::command]
+pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Option<Artwork> {
+    let file_path = Path::new(event.path.as_str());
+
+    if file_path.is_file() {
+        match read_from_path(&file_path) {
+            Ok(tagged_file) => {
+                if tagged_file.primary_tag().is_some() {
+                    if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
+                        return Some(Artwork {
+                            data: pic.data().to_vec(),
+                            src: None,
+                            format: pic.mime_type().unwrap().to_string(),
+                        });
+                    }
+                }
+            }
+            Err(e) => {
+                info!("Error reading file: {}", e);
+                return None;
+            }
+        }
+    }
+
+    None
+}
+
+fn process_new_album(song: &mut Song, app: &tauri::AppHandle) -> Option<Album> {
     let mut artwork_src = String::new();
     let mut artwork_format = String::new();
     // Strip song from path
@@ -442,6 +510,8 @@ fn process_new_album(song: &Song, app: &tauri::AppHandle) -> Option<Album> {
             // info!("Found existing artwork in folder for: {}", song.album);
             artwork_src = art.artwork_src;
             artwork_format = art.artwork_format;
+
+            song.artwork_origin = Some(ArtworkOrigin::File);
         }
     } else if let Err(e) = result {
         info!("Error looking for artwork: {}", e);
@@ -539,7 +609,7 @@ fn process_directory(
                             &app,
                         ) {
                             if process_albums {
-                                if let Some(album) = process_new_album(&song, app) {
+                                if let Some(album) = process_new_album(&mut song, app) {
                                     // info!("Album: {:?}", album);
                                     let existing_album =
                                         albums.lock().unwrap().get_mut(&album.id).cloned();
@@ -641,6 +711,7 @@ pub fn extract_metadata(
                         let mut duration = String::new();
                         let file_info;
                         let mut artwork = None;
+                        let mut artwork_origin = None;
 
                         if tagged_file.tags().is_empty() {
                             title = file.to_string();
@@ -781,11 +852,14 @@ pub fn extract_metadata(
                                 };
 
                                 if decoded {
+                                    artwork_origin = Some(ArtworkOrigin::Metadata);
                                     artwork = Some(Artwork {
                                         data: pic.data().to_vec(),
                                         src: None,
                                         format: pic.mime_type().unwrap().to_string(),
                                     })
+                                } else {
+                                    artwork_origin = Some(ArtworkOrigin::Broken);
                                 }
                             }
                         }
@@ -794,6 +868,7 @@ pub fn extract_metadata(
                             let result = look_for_art(&path, &file, app);
                             if let Ok(res) = result {
                                 if let Some(art) = res.clone() {
+                                    artwork_origin = Some(ArtworkOrigin::File);
                                     artwork = Some(Artwork {
                                         data: vec![],
                                         src: Some(art.artwork_src),
@@ -804,6 +879,8 @@ pub fn extract_metadata(
                                 info!("Error looking for artwork: {}", e);
                             }
                         }
+
+                        info!("artwork_origin: {:?}", artwork_origin);
 
                         let start = SystemTime::now();
                         let since_the_epoch = start.duration_since(UNIX_EPOCH).unwrap().as_millis();
@@ -827,6 +904,7 @@ pub fn extract_metadata(
                             duration,
                             file_info,
                             artwork,
+                            artwork_origin,
                             // We default the origin country to "" to allow Dexie to return results when using orderBy,
                             // even if there are zero songs with a non-empty country
                             origin_country: Some(String::from("")),
