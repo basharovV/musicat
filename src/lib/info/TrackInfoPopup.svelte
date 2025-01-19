@@ -607,11 +607,7 @@
             >
             <div class="find-art-btn">
                 <ButtonWithIcon
-                    disabled={(!isArtworkSet ||
-                        !isArtworkSet.startsWith("delete")) &&
-                        ((artworkToSetSrc && artworkToSetFormat) ||
-                            (previousArtworkSrc && previousArtworkFormat) ||
-                            (artworkSrc && artworkFormat))}
+                    disabled={isArtworkSet || artworkSrc}
                     icon={loadingType === "artwork"
                         ? "line-md:loading-loop"
                         : "ic:twotone-downloading"}
