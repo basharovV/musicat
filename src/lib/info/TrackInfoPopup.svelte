@@ -23,7 +23,10 @@
     import "../tippy.css";
 
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-    import { fetchAlbumArt } from "../data/LibraryEnrichers";
+    import {
+        type EnricherResult,
+        fetchAlbumArt,
+    } from "../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
 
@@ -60,6 +63,12 @@
 
     let metadata: MetadataSection;
     let hasMetadataChanges: false;
+
+    type ActionType = "artwork";
+
+    let loadingType: ActionType = null;
+    let result: EnricherResult;
+    let resultType: ActionType;
 
     $: hasChanges = !!isArtworkSet || hasMetadataChanges;
 
@@ -361,25 +370,32 @@
         document.removeEventListener("paste", onPaste);
     });
 
-    let isFetchingArtwork = false;
-    let artworkResult: { success?: string; error?: string };
     async function fetchArtwork() {
-        isFetchingArtwork = true;
-        artworkResult = await fetchAlbumArt(
-            null,
+        if (loadingType === "artwork") {
+            return;
+        }
+
+        loadingType = "artwork";
+        resultType = "artwork";
+        result = null;
+
+        result = await fetchAlbumArt(
+            $rightClickedAlbum,
             $rightClickedTrack || $rightClickedTracks[0],
         );
-        if (artworkResult.success) {
+
+        if (result.success) {
             toast.success("Found album art and written to album!", {
                 position: "top-right",
             });
             updateArtwork();
-        } else if (artworkResult.error) {
+        } else if (result.error) {
             toast.error("Couldn't find album art", {
                 position: "top-right",
             });
         }
-        isFetchingArtwork = false;
+
+        loadingType = null;
     }
 </script>
 
@@ -572,7 +588,9 @@
             >
             <div class="find-art-btn">
                 <ButtonWithIcon
-                    icon="ic:twotone-downloading"
+                    icon={loadingType === "artwork"
+                        ? "line-md:loading-loop"
+                        : "ic:twotone-downloading"}
                     text="Fetch art"
                     theme="transparent"
                     onClick={fetchArtwork}
