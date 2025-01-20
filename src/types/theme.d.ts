@@ -39,6 +39,8 @@ export interface Theme {
     "link-hover": string;
     title: string;
     /** Album */
+    "album-hover-info-bg": string;
+    "album-hover-info-text": string;
     "album-playing-pause-bg": string;
     "album-playing-pause-border": string;
     "album-playing-pause-icon": string;

@@ -1,6 +1,5 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
-    import type { Album } from "../../App";
     import { db } from "../../data/db";
     import Icon from "../ui/Icon.svelte";
     import LL from "../../i18n/i18n-svelte";
@@ -11,18 +10,22 @@
     import { setQueue } from "../../data/storeHelper";
     import { HEADER_HEIGHT, ROW_HEIGHT } from "./util";
 
-    export let album: Album; // to display album data
+    export let albumId: string; // id of the album to display
 
     let canvasHeight = HEADER_HEIGHT;
     let isHovered = false;
 
+    $: album = liveQuery(async () => {
+        return await db.albums.get(albumId);
+    });
+
     $: isPlayingCurrentAlbum =
-        $current.song?.album.toLowerCase() === album.title.toLowerCase();
+        $current.song?.album.toLowerCase() === $album?.title.toLowerCase();
 
     $: songs = liveQuery(async () => {
         var tracks = await db.songs
             .where("id")
-            .anyOf(album.tracksIds)
+            .anyOf($album.tracksIds)
             .toArray();
 
         tracks.sort((a, b) => {
@@ -35,7 +38,7 @@
     });
 
     async function playPauseToggle() {
-        if ($current.song?.album.toLowerCase() === album.title.toLowerCase()) {
+        if ($current.song?.album.toLowerCase() === $album.title.toLowerCase()) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
@@ -49,91 +52,98 @@
     }
 </script>
 
-<div
-    in:fade={{ duration: 150 }}
-    class="container"
-    class:hovered={isHovered && album.artwork}
->
-    <div class="info-container">
-        <div
-            class="artwork-container"
-            on:mouseenter={() => {
-                isHovered = true;
-            }}
-            on:mouseleave={() => {
-                isHovered = false;
-            }}
-        >
-            <!-- svelte-ignore a11y-missing-attribute -->
-            <img
-                class="texture"
-                src="images/textures/soft-wallpaper.png"
-                loading="lazy"
-                async
-            />
-            <div class="artwork-frame">
-                {#if album.artwork}
-                    <img
-                        alt="Artwork"
-                        type={album.artwork.format}
-                        class="artwork"
-                        src={album.artwork.src}
-                        loading="lazy"
-                        async
-                    />
-                {:else}
-                    <!-- svelte-ignore a11y-missing-attribute -->
-                    <div class="artwork-placeholder">
-                        <Icon icon="mdi:music-clef-treble" />
-                        <!-- svelte-ignore a11y-missing-attribute -->
+{#if $album}
+    <div
+        in:fade={{ duration: 150 }}
+        class="container"
+        class:hovered={isHovered && $album.artwork}
+    >
+        <div class="info-container">
+            <div
+                class="artwork-container"
+                on:mouseenter={() => {
+                    isHovered = true;
+                }}
+                on:mouseleave={() => {
+                    isHovered = false;
+                }}
+            >
+                <!-- svelte-ignore a11y-missing-attribute -->
+                <img
+                    class="texture"
+                    src="images/textures/soft-wallpaper.png"
+                    loading="lazy"
+                    async
+                />
+                <div class="artwork-frame">
+                    {#if $album.artwork}
                         <img
-                            class="cd-placeholder"
-                            src="images/cd-hq.png"
+                            alt="Artwork"
+                            type={$album.artwork.format}
+                            class="artwork"
+                            src={$album.artwork.src}
                             loading="lazy"
                             async
                         />
-                        <!-- <small>No art</small> -->
-                    </div>
-                {/if}
-                {#if isHovered}
-                    <div class="play-button-container">
-                        <div
-                            class={$isPlaying && isPlayingCurrentAlbum
-                                ? "pause-button"
-                                : "play-button"}
-                            on:click|stopPropagation={playPauseToggle}
-                        >
-                            <Icon
-                                icon={$isPlaying && isPlayingCurrentAlbum
-                                    ? "fe:pause"
-                                    : "fe:play"}
-                                size={25}
-                                color="white"
+                    {:else}
+                        <!-- svelte-ignore a11y-missing-attribute -->
+                        <div class="artwork-placeholder">
+                            <Icon icon="mdi:music-clef-treble" />
+                            <!-- svelte-ignore a11y-missing-attribute -->
+                            <img
+                                class="cd-placeholder"
+                                src="images/cd-hq.png"
+                                loading="lazy"
+                                async
                             />
+                            <!-- <small>No art</small> -->
                         </div>
-                    </div>
+                    {/if}
+                    {#if isHovered}
+                        <div class="play-button-container">
+                            <div
+                                class={$isPlaying && isPlayingCurrentAlbum
+                                    ? "pause-button"
+                                    : "play-button"}
+                                on:click|stopPropagation={playPauseToggle}
+                            >
+                                <Icon
+                                    icon={$isPlaying && isPlayingCurrentAlbum
+                                        ? "fe:pause"
+                                        : "fe:play"}
+                                    size={25}
+                                    color="white"
+                                />
+                            </div>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+            <div class="info-frame">
+                <p class="title">{$album.displayTitle ?? $album.title}</p>
+                {#if $album.artist}
+                    <p class="artist">{$album.artist}</p>
                 {/if}
+                <div class="info">
+                    {#if $album.year > 0}
+                        <small>{$album.year}</small>
+                        <small>•</small>
+                    {/if}
+                    <small
+                        >{$album.tracksIds.length}
+                        {$LL.albums.item.tracksLabel()}</small
+                    >
+                </div>
             </div>
         </div>
-        <div class="info-frame">
-            <p class="title">{album.displayTitle ?? album.title}</p>
-            <p class="artist">{album?.artist}</p>
-            <div class="info">
-                {#if album?.year > 0}
-                    <small>{album.year}</small>
-                    <small>•</small>
-                {/if}
-                <small
-                    >{album?.tracksIds.length}
-                    {$LL.albums.item.tracksLabel()}</small
-                >
-            </div>
+        <div class="songs" style="height: {canvasHeight}px">
+            <CanvasLibrary
+                bind:columnOrder={$albumColumnOrder}
+                allSongs={songs}
+            />
         </div>
     </div>
-    <div class="songs" style="height: {canvasHeight}px">
-        <CanvasLibrary bind:columnOrder={$albumColumnOrder} allSongs={songs} />
-    </div>
-</div>
+{/if}
 
 <style lang="scss">
     .container {
