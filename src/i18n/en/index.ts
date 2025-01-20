@@ -2,7 +2,8 @@ import type { BaseTranslation } from "../i18n-types";
 
 const en = {
     infoPopup: {
-        buildBy: "Built by ",
+        builtBy: "Built by",
+        andContributors: "and contributors",
         version: "version",
         releaseNotes: "Release Notes",
     },
