@@ -347,7 +347,7 @@
                     {#if index === 0 || index + 1 === rowCount}
                         <div></div>
                     {:else if detailsAlbumRow === index}
-                        <AlbumDetails album={detailsAlbum} />
+                        <AlbumDetails albumId={detailsAlbum.id} />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
                             {@const albumIdx =

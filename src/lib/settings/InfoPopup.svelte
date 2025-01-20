@@ -5,7 +5,6 @@
     import Icon from "../ui/Icon.svelte";
     import ReleaseNotes from "./ReleaseNotes.svelte";
 
-    import { _ } from "svelte-i18n";
     import LL from "../../i18n/i18n-svelte";
     let version = getVersion();
     export let onClickOutside;
@@ -31,11 +30,15 @@
             </div>
             <div class="dev-info">
                 <small
-                    >{$_("infoPopup.buildBy")}<a
-                        href="https://vyacheslavbasharov.com"
-                        target="_blank">Slav</a
-                    ></small
-                >
+                    >{$LL.infoPopup.builtBy()}
+                    <a href="https://vyacheslavbasharov.com" target="_blank"
+                        >Slav
+                    </a>
+                    <a
+                        href="https://github.com/basharovV/musicat/graphs/contributors"
+                        target="_blank">{$LL.infoPopup.andContributors()}</a
+                    >
+                </small>
                 <!-- <br /> -->
                 {#await version then versionValue}<small>
                         {$LL.infoPopup.version()} {versionValue}</small
@@ -65,7 +68,7 @@
                     }
                 }}
             >
-                <h3>{$_("infoPopup.releaseNotes")}</h3>
+                <h3>{$LL.infoPopup.releaseNotes()}</h3>
                 <div class="chevron" class:expanded={isReleaseNotesShown}>
                     <Icon icon="lucide:chevron-down" size={14} />
                 </div>

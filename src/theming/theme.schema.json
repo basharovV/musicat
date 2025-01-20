@@ -17,8 +17,14 @@
         "accent-secondary": {
             "type": "string"
         },
-        "album-playing-pause-bg": {
+        "album-hover-info-bg": {
             "description": "Album",
+            "type": "string"
+        },
+        "album-hover-info-text": {
+            "type": "string"
+        },
+        "album-playing-pause-bg": {
             "type": "string"
         },
         "album-playing-pause-border": {
@@ -630,6 +636,8 @@
     "required": [
         "accent",
         "accent-secondary",
+        "album-hover-info-bg",
+        "album-hover-info-text",
         "album-playing-pause-bg",
         "album-playing-pause-border",
         "album-playing-pause-hover-bg",
