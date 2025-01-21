@@ -242,9 +242,11 @@
     async function onRightClick(e, album) {
         highlightedAlbum = album.id;
 
-        const songs = (await db.songs.bulkGet(album.tracksIds)).sort(
-            (a, b) => a.trackNumber - b.trackNumber,
-        );
+        const songs = (await db.songs.bulkGet(album.tracksIds))
+            // make sure that the song exist
+            .filter((song) => song)
+            // sort by track number
+            .sort((a, b) => a.trackNumber - b.trackNumber);
 
         albumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
     }
