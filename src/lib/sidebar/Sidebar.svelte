@@ -149,12 +149,7 @@
 
             song = current.song;
 
-            if (song.artworkOrigin === "Broken") {
-                console.log("sidebar::current artwork/broken");
-
-                artworkFormat = null;
-                artworkSrc = null;
-            } else if (song.artworkOrigin === "File") {
+            if (song.artworkOrigin === "File") {
                 const artwork = await invoke<{
                     format: string;
                     src: string;
@@ -192,6 +187,16 @@
                         "base64",
                     )}`;
                 }
+            } else if (song.artworkOrigin === "Broken") {
+                console.log("sidebar::current artwork/broken");
+
+                artworkFormat = null;
+                artworkSrc = null;
+            } else if (song.artworkOrigin === "NotFound") {
+                console.log("sidebar::current artwork/not found");
+
+                artworkFormat = null;
+                artworkSrc = null;
             } else {
                 const songWithArtwork = await invoke<Song>(
                     "get_song_metadata",
@@ -216,11 +221,6 @@
                         artworkSrc = convertFileSrc(
                             songWithArtwork.artwork.src,
                         );
-
-                        // don't wait for the update
-                        db.songs.update(song, {
-                            artworkOrigin: "File",
-                        });
                     } else {
                         artworkBuffer = Buffer.from(
                             songWithArtwork.artwork.data,
@@ -228,18 +228,16 @@
                         artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                             "base64",
                         )}`;
-
-                        // don't wait for the update
-                        db.songs.update(song, {
-                            artworkOrigin: "Metadata",
-                        });
                     }
                 } else {
-                    // don't wait for the update
-                    db.songs.update(song, {
-                        artworkOrigin: "Broken",
-                    });
+                    artworkFormat = null;
+                    artworkSrc = null;
                 }
+
+                // don't wait for the update
+                db.songs.update(song, {
+                    artworkOrigin: songWithArtwork.artworkOrigin,
+                });
             }
 
             title = song.title;
