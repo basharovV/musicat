@@ -370,7 +370,6 @@
         previousScope = hotkeys.getScope();
         hotkeys.setScope("track-info");
         document.addEventListener("paste", onPaste);
-        document.getElementsByClassName("artwork-container").focus();
 
         onTableResize();
     });
