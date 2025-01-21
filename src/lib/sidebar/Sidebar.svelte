@@ -216,6 +216,11 @@
                         artworkSrc = convertFileSrc(
                             songWithArtwork.artwork.src,
                         );
+
+                        // don't wait for the update
+                        db.songs.update(song, {
+                            artworkOrigin: "File",
+                        });
                     } else {
                         artworkBuffer = Buffer.from(
                             songWithArtwork.artwork.data,
@@ -223,7 +228,17 @@
                         artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                             "base64",
                         )}`;
+
+                        // don't wait for the update
+                        db.songs.update(song, {
+                            artworkOrigin: "Metadata",
+                        });
                     }
+                } else {
+                    // don't wait for the update
+                    db.songs.update(song, {
+                        artworkOrigin: "Broken",
+                    });
                 }
             }
 
