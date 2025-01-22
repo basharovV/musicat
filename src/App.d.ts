@@ -65,6 +65,7 @@ interface Song {
         viewId?: string; // Either the song ID, or a playlist id (to allow for duplicates in a keyed each)
         timeSinceAdded?: string; // eg 5m ago
     };
+    artworkOrigin?: "Broken" | "File" | "Metadata" | "NotFound";
     // Returned from lofty but only written to db for albums for better grid loading performance
     artwork?: {
         data: number[];

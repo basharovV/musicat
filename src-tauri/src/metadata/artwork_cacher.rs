@@ -131,14 +131,11 @@ fn check_folder_artwork_by_filename(
 pub fn look_for_art(
     song_path: &str,
     song_file_name: &str,
-    app: &AppHandle,
+    settings: &UserSettings,
+    _app: &AppHandle,
 ) -> Result<Option<LookForArtResult>, anyhow::Error> {
     let folder = song_path.replace(song_file_name, "");
-
-    // info!("Looking for artwork in: {}", folder);
-    let settings: UserSettings = load_settings(app)?;
-    // info!("Settings: {:?}", settings);
-    let filenames_to_search = settings.album_artwork_filenames;
+    let filenames_to_search = &settings.album_artwork_filenames;
 
     info!("Looking for artwork in: {}", folder);
     info!("Looking for filenames: {:?}", filenames_to_search);
