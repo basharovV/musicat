@@ -20,7 +20,10 @@
         ToImport,
     } from "src/App";
     import { invoke } from "@tauri-apps/api/core";
-    import { readMappedMetadataFromSong } from "../../data/LibraryUtils";
+    import {
+        getAlbumId,
+        readMappedMetadataFromSong,
+    } from "../../data/LibraryUtils";
     import toast from "svelte-french-toast";
     import { db } from "../../data/db";
     import { get } from "svelte/store";
@@ -314,7 +317,7 @@
         }
     }
 
-    async function reImportAlbum(album: Album) {
+    async function reImportAlbum(album: Album, track2album: {}) {
         const existingAlbum = await db.albums.get(album.id);
         if (existingAlbum) {
             existingAlbum.artist = album.artist;
@@ -329,6 +332,20 @@
             ]);
 
             await db.albums.put(existingAlbum);
+        } else {
+            const oldAlbums = [];
+
+            for await (const trackId of album.tracksIds) {
+                const albumId = track2album[trackId];
+
+                if (albumId && !oldAlbums.includes(albumId)) {
+                    oldAlbums.push(albumId);
+
+                    await db.albums.delete(albumId);
+                }
+            }
+
+            await db.albums.put(album);
         }
     }
 
@@ -421,79 +438,78 @@
         }));
         console.log("Writing: ", toWrite);
 
-        let toImport: ToImport;
-        if ($rightClickedTrack) {
-            const event = {
-                tracks: [
-                    completeEvent({
-                        song_id: $rightClickedTrack.id,
-                        metadata: toWrite,
-                        tag_type: data.tagType,
-                        file_path: $rightClickedTrack.path,
-                    }),
-                ],
-            };
-
-            toImport = await invoke<ToImport>("write_metadatas", { event });
-        } else if ($rightClickedTracks?.length) {
-            console.log("Writing album");
-            toImport = await invoke<ToImport>("write_metadatas", {
-                event: {
-                    tracks: $rightClickedTracks.map((track) =>
-                        completeEvent({
-                            song_id: track.id,
-                            metadata: toWrite,
-                            tag_type: data.tagType,
-                            file_path: track.path,
-                        }),
-                    ),
-                },
-            });
-        }
-        console.log($rightClickedTrack || $rightClickedTracks[0]);
-        console.log(toImport);
-        if (toImport) {
-            if (toImport.error) {
-                // Show error
-                toast.error(toImport.error);
-                // Roll back to current artwork
-                rollbackArtwork();
-            } else {
-                await reImportTracks(toImport.songs);
-            }
-        }
-
-        if (toImport.albums.length) {
-            for (const album of toImport.albums) {
-                await reImportAlbum(album);
-            }
-        }
-
-        toast.success("Successfully written metadata!", {
-            position: "top-right",
-        });
-
         const writtenTracks = $rightClickedTrack
             ? [$rightClickedTrack]
             : $rightClickedTracks;
+        const tracks = [];
+        const track2album = {};
 
-        $lastWrittenSongs = writtenTracks;
+        for (const song of writtenTracks) {
+            tracks.push(
+                completeEvent({
+                    song_id: song.id,
+                    metadata: toWrite,
+                    tag_type: data.tagType,
+                    file_path: song.path,
+                }),
+            );
 
-        const id = $current.song?.id;
-
-        if (id && writtenTracks.some((t) => t.id == id)) {
-            // Update sidebar infos
-            $current = $current;
-
-            // If we changed the artwork tag, this offsets the audio data in the file,
-            // so we need to reload the song and seek to the current position
-            // (will cause audible gap)
-            if (hasArtworkToSet()) {
-                audioPlayer.setSeek(get(playerTime));
-            }
+            track2album[song.id] = getAlbumId(song);
         }
 
-        await reset();
+        if (tracks.length) {
+            const toImport = await invoke<ToImport>("write_metadatas", {
+                event: {
+                    tracks,
+                },
+            });
+
+            console.log($rightClickedTrack || $rightClickedTracks[0]);
+            console.log(toImport);
+
+            if (toImport) {
+                if (toImport.error) {
+                    // Show error
+                    toast.error(toImport.error);
+                    // Roll back to current artwork
+                    rollbackArtwork();
+                } else {
+                    await reImportTracks(toImport.songs);
+                }
+            }
+
+            if (toImport.albums.length) {
+                for (const album of toImport.albums) {
+                    await reImportAlbum(album, track2album);
+                }
+            }
+
+            toast.success("Successfully written metadata!", {
+                position: "top-right",
+            });
+
+            $lastWrittenSongs = writtenTracks;
+
+            const id = $current.song?.id;
+
+            if (id && writtenTracks.some((t) => t.id == id)) {
+                // Update sidebar infos
+                $current = $current;
+
+                // If we changed the artwork tag, this offsets the audio data in the file,
+                // so we need to reload the song and seek to the current position
+                // (will cause audible gap)
+                if (hasArtworkToSet()) {
+                    audioPlayer.setSeek(get(playerTime));
+                }
+            }
+
+            await reset();
+        } else {
+            toast.error("No songs to write metadata into!", {
+                position: "top-right",
+            });
+        }
     }
 
     onMount(async () => {

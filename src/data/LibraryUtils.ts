@@ -410,7 +410,7 @@ export async function deleteFromLibrary(tracks: Song[]) {
     });
 }
 
-function getAlbumId(track: Song) {
+export function getAlbumId(track: Song) {
     return md5(
         `${track.path.replace(`/${track.file}`, "")} - ${track.album}`.toLowerCase(),
     );

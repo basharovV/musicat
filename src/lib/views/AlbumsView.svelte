@@ -282,9 +282,11 @@
 
         highlightedAlbum = album.id;
 
-        const songs = (await db.songs.bulkGet(album.tracksIds)).sort(
-            (a, b) => a.trackNumber - b.trackNumber,
-        );
+        const songs = (await db.songs.bulkGet(album.tracksIds))
+            // make sure that the song exist
+            .filter((song) => song)
+            // sort by track number
+            .sort((a, b) => a.trackNumber - b.trackNumber);
 
         albumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
     }
@@ -389,7 +391,7 @@
                     {#if index === 0 || index + 1 === rowCount}
                         <div></div>
                     {:else if detailsAlbumRow === index}
-                        <AlbumDetails album={detailsAlbum} />
+                        <AlbumDetails albumId={detailsAlbum.id} />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
                             {@const albumIdx =
