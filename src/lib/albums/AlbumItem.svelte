@@ -25,12 +25,15 @@
         if (isPlayingCurrentAlbum) {
             audioPlayer.togglePlay();
         } else {
-            const tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .sortBy("trackNumber");
+            const track = await db.songs.get(album.tracksIds[0]);
 
-            setQueue(tracks, 0);
+            audioPlayer.playSong(track);
+
+            const tracks = await db.songs.bulkGet(album.tracksIds.slice(1));
+
+            tracks.unshift(track);
+
+            setQueue(tracks, false);
         }
     }
 
@@ -62,10 +65,7 @@
             cancel = false;
 
             if (e.button === 0) {
-                const songs = await db.songs
-                    .where("id")
-                    .anyOf(album.tracksIds)
-                    .sortBy("trackNumber");
+                const songs = await db.songs.bulkGet(album.tracksIds);
 
                 if (cancel) {
                     resetDraggedSongs();
