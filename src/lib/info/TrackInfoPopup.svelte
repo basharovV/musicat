@@ -348,7 +348,11 @@
 
     async function save() {
         if (isArtworkSet === "delete-file" || isArtworkSet === "replace-file") {
-            await removeFile(artworkFilePath);
+            await invoke("delete_files", {
+                event: {
+                    files: [artworkFilePath],
+                },
+            });
         }
 
         await metadata.writeMetadata();
