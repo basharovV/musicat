@@ -34,7 +34,6 @@
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
-        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isWaveformOpen,
@@ -51,8 +50,7 @@
         selectedPlaylistFile,
         selectedSmartQuery,
         shouldFocusFind,
-        sidebarManuallyOpened,
-        sidebarTogglePos,
+        sidebar,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         toDeletePlaylist,
@@ -312,9 +310,13 @@
         const topContainer = sidebar?.querySelector(".top");
 
         if (topContainer) {
-            $sidebarTogglePos = {
-                x: topContainer.getBoundingClientRect().right,
-                y: topContainer.getBoundingClientRect().bottom,
+            $sidebar = {
+                ...$sidebar,
+                isOpen: true,
+                tooglePosition: {
+                    x: topContainer.getBoundingClientRect().right,
+                    y: topContainer.getBoundingClientRect().bottom,
+                },
             };
         }
     }
@@ -728,7 +730,7 @@
         await db.songs.put($current.song);
         $current = $current;
     }
-    let sidebar;
+    let sidebarElement;
     let sidebarWidth = 210;
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
@@ -787,12 +789,15 @@
         resetMarquee();
 
         // Get bottom coordinates of top container
-        const topContainer = sidebar.querySelector(".top");
+        const topContainer = sidebarElement.querySelector(".top");
 
         if (topContainer) {
-            $sidebarTogglePos = {
-                x: topContainer.getBoundingClientRect().right - 15,
-                y: topContainer.getBoundingClientRect().bottom - 10,
+            $sidebar = {
+                ...$sidebar,
+                tooglePosition: {
+                    x: topContainer.getBoundingClientRect().right - 15,
+                    y: topContainer.getBoundingClientRect().bottom - 10,
+                },
             };
         }
     }
@@ -1054,9 +1059,9 @@
     class:has-current-song={song}
     class:empty={!song}
     class:hovered={isMiniPlayerHovered}
-    class:visible={$isSidebarOpen}
+    class:visible={$sidebar.isOpen}
     transition:fly={{ duration: 200, x: -200 }}
-    bind:this={sidebar}
+    bind:this={sidebarElement}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
@@ -1627,7 +1632,7 @@
             {#if !$isMiniPlayer}
                 <div
                     class="sidebar-toggle"
-                    class:visible={$isSidebarOpen}
+                    class:visible={$sidebar.isOpen}
                     use:tippy={{
                         content: "Toggle the sidebar.",
                         placement: "right",
@@ -1637,9 +1642,12 @@
                         icon="tabler:layout-sidebar-left-collapse"
                         size={22}
                         onClick={(e) => {
-                            $isSidebarOpen = false;
-                            $sidebarManuallyOpened = false;
-                            $sidebarTogglePos = { x: e.clientX, y: e.clientY };
+                            $sidebar = {
+                                ...$sidebar,
+                                isOpen: false,
+                                how: "None",
+                                tooglePosition: { x: e.clientX, y: e.clientY },
+                            };
                         }}
                     />
                 </div>

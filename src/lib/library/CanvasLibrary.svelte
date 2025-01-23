@@ -43,7 +43,6 @@
         importStatus,
         isPlaying,
         isQueueOpen,
-        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
@@ -59,6 +58,7 @@
         selectedPlaylistFile,
         selectedTags,
         shouldFocusFind,
+        sidebar,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
@@ -2565,7 +2565,7 @@
                                     <Text
                                         config={{
                                             x:
-                                                !$isSidebarOpen &&
+                                                !$sidebar.isOpen &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
@@ -2594,7 +2594,7 @@
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
                                             visible: !(
-                                                !$isSidebarOpen &&
+                                                !$sidebar.isOpen &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0

@@ -437,3 +437,9 @@ interface AudioDevices {
 type PopupType = "info" | "track-info" | "settings";
 
 type SyncedLyrics = { timestamp: number; lyricLine: string };
+
+type SidebarStatus = {
+    isOpen: boolean;
+    tooglePosition: { x: number; y: number };
+    how: "Manual" | "None" | "Resize";
+};

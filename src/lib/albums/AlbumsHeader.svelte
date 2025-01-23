@@ -1,10 +1,5 @@
 <script lang="ts">
-    import {
-        isQueueOpen,
-        isSidebarOpen,
-        os,
-        uiPreferences,
-    } from "../../data/store";
+    import { isQueueOpen, os, sidebar, uiPreferences } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
@@ -35,7 +30,7 @@
 
 <div class="header" data-tauri-drag-region>
     <h1
-        class:window-controls-offset={!$isSidebarOpen &&
+        class:window-controls-offset={!$sidebar.isOpen &&
             !$isQueueOpen &&
             $os === "macos"}
         data-tauri-drag-region

@@ -8,7 +8,6 @@
         current,
         isPlaying,
         isShuffleEnabled,
-        isSidebarOpen,
         popupOpen,
         isWaveformOpen,
         playerTime,
@@ -17,6 +16,7 @@
         rightClickedTrack,
         rightClickedTracks,
         seekTime,
+        sidebar,
         lastWrittenSongs,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
@@ -98,7 +98,7 @@
     }
 </script>
 
-<top-bar data-tauri-drag-region class:sidebar-collapsed={!$isSidebarOpen}>
+<top-bar data-tauri-drag-region class:sidebar-collapsed={!$sidebar.isOpen}>
     <div class="transport" data-tauri-drag-region>
         <div class="shuffle">
             <Icon

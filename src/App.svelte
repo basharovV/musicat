@@ -13,7 +13,6 @@
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
-        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isWaveformOpen,
@@ -22,8 +21,7 @@
         popupOpen,
         selectedPlaylistFile,
         selectedSmartQuery,
-        sidebarManuallyOpened,
-        sidebarTogglePos,
+        sidebar,
         uiView,
     } from "./data/store";
 
@@ -257,27 +255,43 @@
     }
 
     function onResize() {
-        // If sidebar is open and width is below 400px, collapse it
-        if ($isSidebarOpen && window.innerWidth < 400) {
-            if (window.innerHeight <= 210 && window.innerWidth <= 210) {
-                $isSidebarOpen = true;
-            } else {
-                $isSidebarOpen = false;
+        if (window.innerWidth < 400) {
+            // If sidebar is open and width is below 400px, collapse it
+            if ($sidebar.isOpen) {
+                if (window.innerHeight <= 210 && window.innerWidth <= 210) {
+                    $sidebar = {
+                        ...$sidebar,
+                        isOpen: true,
+                        tooglePosition: {
+                            x: 0,
+                            y: window.innerHeight / 2 - 30,
+                        },
+                    };
+                } else {
+                    $sidebar.isOpen = false;
+                }
+            } else if (window.innerHeight <= 210 && window.innerWidth <= 210) {
+                $sidebar = {
+                    ...$sidebar,
+                    isOpen: true,
+                    tooglePosition: {
+                        x: 0,
+                        y: window.innerHeight / 2 - 30,
+                    },
+                };
             }
-        } else if (
-            !$isSidebarOpen &&
-            $sidebarManuallyOpened &&
-            window.innerWidth > 400
-        ) {
-            $isSidebarOpen = true;
-        } else if (window.innerHeight <= 210 && window.innerWidth <= 210) {
-            $isSidebarOpen = true;
+        } else {
+            if (!$sidebar.isOpen && $sidebar.how === "Manual") {
+                $sidebar = {
+                    ...$sidebar,
+                    isOpen: true,
+                    tooglePosition: {
+                        x: 0,
+                        y: window.innerHeight / 2 - 30,
+                    },
+                };
+            }
         }
-
-        $sidebarTogglePos = {
-            x: 0,
-            y: window.innerHeight / 2 - 30,
-        };
     }
 </script>
 
@@ -311,26 +325,26 @@
         class:transparent={$os === "macos"}
         bind:this={container}
     >
-        <div class="window-padding">
-            <!-- {#if !$isSidebarOpen}
-                <div data-tauri-drag-region></div>
-            {/if} -->
-        </div>
-
-        <div class="sidebar" class:visible={$isSidebarOpen}>
-            {#if $isSidebarOpen}
+        <div class="sidebar" class:visible={$sidebar.isOpen}>
+            {#if $sidebar.isOpen}
                 <Sidebar />
             {/if}
         </div>
 
-        {#if !$isSidebarOpen}
-            <div class="sidebar-toggle" style="top: {$sidebarTogglePos.y}px">
+        {#if !$sidebar.isOpen}
+            <div
+                class="sidebar-toggle"
+                style="top: {$sidebar.tooglePosition.y}px"
+            >
                 <Icon
                     icon="tabler:layout-sidebar-left-expand"
                     size={22}
                     onClick={() => {
-                        $isSidebarOpen = true;
-                        $sidebarManuallyOpened = true;
+                        $sidebar = {
+                            ...$sidebar,
+                            isOpen: true,
+                            how: "Manual",
+                        };
                     }}
                 />
             </div>
@@ -453,7 +467,7 @@
         </div>
 
         <div class="bottom-bar">
-            {#if !$isSidebarOpen}
+            {#if !$sidebar.isOpen}
                 <div class="top" in:fly={{ duration: 200, y: 30 }}>
                     <TopBar />
                 </div>

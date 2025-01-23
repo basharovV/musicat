@@ -3,13 +3,13 @@
     import {
         forceRefreshLibrary,
         isQueueOpen,
-        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
+        sidebar,
         smartQuery,
         smartQueryInitiator,
         uiView,
@@ -93,7 +93,7 @@
 {#if $isSmartQueryBuilderOpen}
     <form
         on:submit|preventDefault={save}
-        class:window-padding={!$isSidebarOpen && !$isQueueOpen}
+        class:window-padding={!$sidebar.isOpen && !$isQueueOpen}
     >
         <Input
             bind:value={$smartQuery.name}

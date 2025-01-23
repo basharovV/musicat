@@ -19,7 +19,6 @@
         draggedSource,
         forceRefreshLibrary,
         isShuffleEnabled,
-        isSidebarOpen,
         isSmartQueryBuilderOpen,
         popupOpen,
         libraryScrollPos,
@@ -31,6 +30,7 @@
         rightClickedTracks,
         shouldFocusFind,
         shuffledQueue,
+        sidebar,
         singleKeyShortcutsEnabled,
         uiView,
     } from "../../data/store";
@@ -1360,7 +1360,7 @@
                                 <Text
                                     config={{
                                         x:
-                                            !$isSidebarOpen && $os === "macos"
+                                            !$sidebar.isOpen && $os === "macos"
                                                 ? WINDOW_CONTROLS_WIDTH
                                                 : null,
                                         text: "Queue",
