@@ -267,10 +267,7 @@
                 audioPlayer.play(true);
             }
         } else if (album) {
-            let tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .sortBy("trackNumber");
+            let tracks = await db.songs.bulkGet(album.tracksIds);
 
             setQueue(tracks, 0);
         }

@@ -266,10 +266,7 @@
             const oldRow = detailsAlbumRow;
 
             detailsAlbum = album;
-            detailsAlbumTracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .sortBy("trackNumber");
+            detailsAlbumTracks = await db.songs.bulkGet(album.tracksIds);
             detailsAlbumIndex = index;
             detailsAlbumRow = Math.floor(index / columnCount) + 2;
 
