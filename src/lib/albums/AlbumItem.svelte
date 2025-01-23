@@ -28,11 +28,7 @@
             const tracks = await db.songs
                 .where("id")
                 .anyOf(album.tracksIds)
-                .toArray();
-
-            tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
+                .sortBy("trackNumber");
 
             setQueue(tracks, 0);
         }
@@ -69,11 +65,7 @@
                 const songs = await db.songs
                     .where("id")
                     .anyOf(album.tracksIds)
-                    .toArray();
-
-                songs.sort((a, b) => {
-                    return a.trackNumber - b.trackNumber;
-                });
+                    .sortBy("trackNumber");
 
                 if (cancel) {
                     resetDraggedSongs();

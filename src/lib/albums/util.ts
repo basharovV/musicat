@@ -9,13 +9,15 @@ export async function getAlbumDetailsHeight(album: Album): Promise<number> {
     var tracks = await db.songs
         .where("id")
         .anyOf(album.tracksIds)
-        .toArray();
+        .sortBy("trackNumber");
 
-    tracks.sort((a, b) => {
-        return a.trackNumber - b.trackNumber;
-    });
-
-    const height = PADDING + 300 + HEADER_HEIGHT + tracks.length * ROW_HEIGHT + 8 + PADDING;
+    const height =
+        PADDING +
+        300 +
+        HEADER_HEIGHT +
+        tracks.length * ROW_HEIGHT +
+        8 +
+        PADDING;
 
     return height;
 }

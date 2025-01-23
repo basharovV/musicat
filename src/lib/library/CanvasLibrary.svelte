@@ -963,11 +963,7 @@
             let tracks = await db.songs
                 .where("id")
                 .anyOf(album.tracksIds)
-                .toArray();
-
-            tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
+                .sortBy("trackNumber");
 
             setQueue(tracks, song.viewModel.index);
         } else if ($uiView === "smart-query") {
