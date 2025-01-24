@@ -218,6 +218,7 @@
 
     let showMiniPlayer = window.innerHeight <= 220 && window.innerWidth <= 210;
 
+    $: innerHeight = window.innerHeight;
     $: innerWidth = window.innerWidth;
     $: selectedQuery = findQuery($selectedSmartQuery);
     $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
@@ -225,7 +226,8 @@
     $: showQueue = !showMiniPlayer && (innerWidth < 460 || $isQueueOpen);
     $: showSidebar =
         showMiniPlayer ||
-        ($isSidebarOpen &&
+        (innerHeight >= 650 &&
+            $isSidebarOpen &&
             ((!$isWikiOpen && innerWidth >= 660) ||
                 ($isWikiOpen &&
                     ((!showQueue && innerWidth >= 880) ||
@@ -284,6 +286,7 @@
 
     function onResize() {
         showMiniPlayer = window.innerHeight <= 220 && window.innerWidth <= 210;
+        innerHeight = window.innerHeight;
         innerWidth = window.innerWidth;
     }
 </script>
@@ -317,6 +320,7 @@
         class:mini-player={$isMiniPlayer}
         class:queue-view={!showMainPanel && showQueue}
         class:split-view={isSplitView}
+        class:floating-sidebar={$isFloatingSidebar}
         class:transparent={$os === "macos"}
         bind:this={container}
     >
@@ -346,7 +350,10 @@
                     icon="tabler:layout-sidebar-left-expand"
                     size={22}
                     onClick={() => {
-                        if (!showMiniPlayer && innerWidth < 660) {
+                        if (
+                            !showMiniPlayer &&
+                            (innerWidth < 660 || innerHeight < 650)
+                        ) {
                             $isFloatingSidebar = true;
                         } else {
                             $isSidebarOpen = true;
@@ -740,11 +747,36 @@
             }
         }
 
+        &.floating-sidebar {
+            grid-template-columns: auto 1fr auto auto; // queue, panel, resizer, wiki
+
+            .queue {
+                grid-column: 1;
+            }
+
+            .panel,
+            .header {
+                grid-column: 2;
+            }
+
+            resize-handle {
+                grid-column: 3;
+            }
+
+            .wiki {
+                grid-column: 4;
+            }
+
+            .bottom-bar {
+                grid-column: 1 / -1;
+            }
+        }
+
         &.split-view {
             grid-template-columns: 1fr 1fr; // queue, panel
 
             .queue {
-                grid-column: 1 / 2;
+                grid-column: 1;
 
                 .queue-container {
                     margin: 0 4px;
@@ -753,7 +785,7 @@
 
             .panel,
             .header {
-                grid-column: 2 / 2;
+                grid-column: 2;
             }
 
             .bottom-bar {
