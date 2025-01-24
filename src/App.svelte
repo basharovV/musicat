@@ -10,9 +10,11 @@
         fileToDownload,
         foldersToWatch,
         hoveredFiles,
+        isFloatingSidebar,
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isWaveformOpen,
@@ -21,7 +23,6 @@
         popupOpen,
         selectedPlaylistFile,
         selectedSmartQuery,
-        sidebar,
         uiView,
     } from "./data/store";
 
@@ -214,9 +215,25 @@
         unlistenFolderWatch();
     });
 
-    $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
+    let showMiniPlayer = window.innerHeight <= 220 && window.innerWidth <= 210;
 
+    $: innerWidth = window.innerWidth;
     $: selectedQuery = findQuery($selectedSmartQuery);
+    $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
+    $: showMainPanel = innerWidth >= 300;
+    $: showQueue = !showMiniPlayer && (innerWidth < 460 || $isQueueOpen);
+    $: showSidebar =
+        showMiniPlayer ||
+        ($isSidebarOpen &&
+            ((!$isWikiOpen && innerWidth >= 660) ||
+                ($isWikiOpen &&
+                    ((!showQueue && innerWidth >= 880) ||
+                        (showQueue && innerWidth >= 1000)))));
+    $: showWiki =
+        $isWikiOpen &&
+        ((!showQueue && innerWidth >= 500) || (showQueue && innerWidth >= 660));
+    $: isQueueAutoWidth = !showMiniPlayer && innerWidth < 520;
+    $: isSplitView = showMainPanel && showQueue && innerWidth < 520;
 
     $: if ($bottomBarNotification?.timeout) {
         setTimeout(() => {
@@ -242,56 +259,27 @@
     }
     function startResizeListener() {
         isResizing = true;
+
         container.addEventListener("mousemove", onWikiResize);
         document.addEventListener("mouseup", stopResizeListener);
     }
     function stopResizeListener() {
-        isResizing = false;
-        container.removeEventListener("mousemove", onWikiResize);
-        if (showCloseWikiPrompt) {
-            $isWikiOpen = false;
-            showCloseWikiPrompt = false;
+        if (isResizing) {
+            isResizing = false;
+
+            container.removeEventListener("mousemove", onWikiResize);
+            container.removeEventListener("mouseup", stopResizeListener);
+
+            if (showCloseWikiPrompt) {
+                $isWikiOpen = false;
+                showCloseWikiPrompt = false;
+            }
         }
     }
 
     function onResize() {
-        if (window.innerWidth < 400) {
-            // If sidebar is open and width is below 400px, collapse it
-            if ($sidebar.isOpen) {
-                if (window.innerHeight <= 210 && window.innerWidth <= 210) {
-                    $sidebar = {
-                        ...$sidebar,
-                        isOpen: true,
-                        tooglePosition: {
-                            x: 0,
-                            y: window.innerHeight / 2 - 30,
-                        },
-                    };
-                } else {
-                    $sidebar.isOpen = false;
-                }
-            } else if (window.innerHeight <= 210 && window.innerWidth <= 210) {
-                $sidebar = {
-                    ...$sidebar,
-                    isOpen: true,
-                    tooglePosition: {
-                        x: 0,
-                        y: window.innerHeight / 2 - 30,
-                    },
-                };
-            }
-        } else {
-            if (!$sidebar.isOpen && $sidebar.how === "Manual") {
-                $sidebar = {
-                    ...$sidebar,
-                    isOpen: true,
-                    tooglePosition: {
-                        x: 0,
-                        y: window.innerHeight / 2 - 30,
-                    },
-                };
-            }
-        }
+        showMiniPlayer = window.innerHeight <= 220 && window.innerWidth <= 210;
+        innerWidth = window.innerWidth;
     }
 </script>
 
@@ -322,41 +310,54 @@
 
     <main
         class:mini-player={$isMiniPlayer}
+        class:queue-view={!showMainPanel && showQueue}
+        class:split-view={isSplitView}
         class:transparent={$os === "macos"}
         bind:this={container}
     >
-        <div class="sidebar" class:visible={$sidebar.isOpen}>
-            {#if $sidebar.isOpen}
-                <Sidebar />
+        <div
+            class="sidebar"
+            class:visible={showSidebar || $isFloatingSidebar}
+            class:floating={$isFloatingSidebar}
+        >
+            {#if showSidebar || $isFloatingSidebar}
+                <Sidebar floating={$isFloatingSidebar} />
             {/if}
         </div>
 
-        {#if !$sidebar.isOpen}
-            <div
-                class="sidebar-toggle"
-                style="top: {$sidebar.tooglePosition.y}px"
-            >
+        {#if $isFloatingSidebar}
+            <div class="sidebar-collapse">
+                <Icon
+                    icon="tabler:layout-sidebar-left-collapse"
+                    size={22}
+                    onClick={() => {
+                        $isFloatingSidebar = false;
+                    }}
+                />
+            </div>
+        {:else if !showSidebar}
+            <div class="sidebar-expand">
                 <Icon
                     icon="tabler:layout-sidebar-left-expand"
                     size={22}
                     onClick={() => {
-                        $sidebar = {
-                            ...$sidebar,
-                            isOpen: true,
-                            how: "Manual",
-                        };
+                        if (!showMiniPlayer && innerWidth < 660) {
+                            $isFloatingSidebar = true;
+                        } else {
+                            $isSidebarOpen = true;
+                        }
                     }}
                 />
             </div>
         {/if}
 
         <div class="queue">
-            {#if $isQueueOpen}
+            {#if showQueue}
                 <div
                     class="queue-container"
                     transition:fly={{ duration: 200, x: -200 }}
                 >
-                    <QueueView />
+                    <QueueView autoWidth={isQueueAutoWidth} />
                 </div>
             {/if}
         </div>
@@ -413,25 +414,27 @@
             {/if}
         </div>
 
-        <div class="panel">
-            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites|to-delete)/)}
-                <CanvasLibraryView />
-            {:else if $uiView === "playlists" || $uiView === "to-delete"}
-                <CanvasLibraryView />
-            {:else if $uiView === "albums"}
-                <AlbumView />
-            {:else if $uiView === "your-music"}
-                <ArtistsToolkitView />
-            {:else if $uiView === "map"}
-                <MapView />
-            {:else if $uiView === "analytics"}
-                <AnalyticsView />
-            {:else if $uiView === "internet-archive"}
-                <InternetArchiveView />
-            {:else if $uiView === "prune"}
-                <PrunePopup />
-            {/if}
-        </div>
+        {#if showMainPanel}
+            <div class="panel">
+                {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites|to-delete)/)}
+                    <CanvasLibraryView />
+                {:else if $uiView === "playlists" || $uiView === "to-delete"}
+                    <CanvasLibraryView />
+                {:else if $uiView === "albums"}
+                    <AlbumView />
+                {:else if $uiView === "your-music"}
+                    <ArtistsToolkitView />
+                {:else if $uiView === "map"}
+                    <MapView />
+                {:else if $uiView === "analytics"}
+                    <AnalyticsView />
+                {:else if $uiView === "internet-archive"}
+                    <InternetArchiveView />
+                {:else if $uiView === "prune"}
+                    <PrunePopup />
+                {/if}
+            </div>
+        {/if}
 
         {#if $isLyricsOpen}
             <div class="lyrics" transition:fade={{ duration: 150 }}>
@@ -447,7 +450,7 @@
         </div>
 
         <div class="wiki">
-            {#if $isWikiOpen}
+            {#if showWiki}
                 <div
                     class="wiki-container"
                     style={`width: ${wikiPanelSize}px;`}
@@ -467,7 +470,7 @@
         </div>
 
         <div class="bottom-bar">
-            {#if !$sidebar.isOpen}
+            {#if !showSidebar}
                 <div class="top" in:fly={{ duration: 200, y: 30 }}>
                     <TopBar />
                 </div>
@@ -481,7 +484,7 @@
             <DownloadPopup />
         {/if}
 
-        {#if $isWikiOpen}
+        {#if showWiki}
             <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
             <resize-handle
                 role="separator"
@@ -539,17 +542,34 @@
             &.visible {
                 width: 210px;
             }
+            &.floating {
+                z-index: 15;
+                background-color: rgb(from var(--background) r g b / 1);
+            }
         }
 
-        .sidebar-toggle {
+        .sidebar-expand,
+        .sidebar-collapse {
             position: absolute;
-            left: -12px;
             margin: auto;
             z-index: 20;
             transition: all 0.1s ease-in-out;
+            top: 50%;
+        }
+
+        .sidebar-expand {
+            left: -12px;
 
             &:hover {
-                transform: translateX(5px);
+                transform: scale(1.3) translateX(5px);
+            }
+        }
+
+        .sidebar-collapse {
+            left: 198px;
+
+            &:hover {
+                transform: scale(1.3);
             }
         }
 
@@ -712,6 +732,36 @@
             &:hover,
             &.resizing {
                 background-color: var(--accent-secondary);
+            }
+        }
+
+        &.split-view {
+            grid-template-columns: 1fr 1fr; // queue, panel
+
+            .queue {
+                grid-column: 1 / 2;
+
+                .queue-container {
+                    margin: 0 4px;
+                }
+            }
+
+            .panel {
+                grid-column: 2 / 2;
+            }
+
+            .bottom-bar {
+                grid-column: 1 / -1;
+            }
+        }
+
+        &.queue-view {
+            .queue {
+                grid-column: 1 / -1;
+
+                .queue-container {
+                    margin: 0 4px;
+                }
             }
         }
     }

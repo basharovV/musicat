@@ -26,7 +26,6 @@ import type {
     UserSettings,
     WaveformPlayerState,
     PlayingSong,
-    SidebarStatus,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
@@ -368,29 +367,13 @@ export const isWikiOpen = writable(false);
 export const wikiArtist: Writable<string> = writable(null);
 
 // Sidebar
-async function restoreSidebar() {
-    const item = localStorage.getItem("sidebar");
-    console.log(item);
-
-    if (item) {
-        sidebar.set({
-            isOpen: true,
-            tooglePosition: { x: 0, y: 0 },
-            how: "None",
-            ...JSON.parse(item),
-        });
-    }
-}
-
-export const sidebar: Writable<SidebarStatus> = writable(
-    { isOpen: true, tooglePosition: { x: 0, y: 0 }, how: "None" },
-    () => {
-        restoreSidebar();
-    },
+export const isSidebarOpen: Writable<boolean> = writable(
+    localStorage.getItem("isSidebarOpen") === "true",
 );
-sidebar.subscribe((data) => {
-    localStorage.setItem("sidebar", JSON.stringify(data));
-});
+isSidebarOpen.subscribe((val) =>
+    localStorage.setItem("isSidebarOpen", String(val)),
+);
+export const isFloatingSidebar = writable(false);
 
 export const isWaveformOpen: Writable<boolean> = writable(
     localStorage.getItem("isWaveformOpen") === "true",

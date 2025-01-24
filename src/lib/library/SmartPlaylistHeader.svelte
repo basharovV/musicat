@@ -6,10 +6,10 @@
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
+        isSidebarOpen,
         queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
-        sidebar,
         smartQuery,
         smartQueryInitiator,
         uiView,
@@ -93,7 +93,7 @@
 {#if $isSmartQueryBuilderOpen}
     <form
         on:submit|preventDefault={save}
-        class:window-padding={!$sidebar.isOpen && !$isQueueOpen}
+        class:window-padding={!$isSidebarOpen && !$isQueueOpen}
     >
         <Input
             bind:value={$smartQuery.name}

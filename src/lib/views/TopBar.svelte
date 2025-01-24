@@ -9,6 +9,7 @@
         isPlaying,
         isShuffleEnabled,
         popupOpen,
+        isSidebarOpen,
         isWaveformOpen,
         playerTime,
         queriedSongs,
@@ -16,7 +17,6 @@
         rightClickedTrack,
         rightClickedTracks,
         seekTime,
-        sidebar,
         lastWrittenSongs,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
@@ -98,7 +98,7 @@
     }
 </script>
 
-<top-bar data-tauri-drag-region class:sidebar-collapsed={!$sidebar.isOpen}>
+<top-bar data-tauri-drag-region class:sidebar-collapsed={!$isSidebarOpen}>
     <div class="transport" data-tauri-drag-region>
         <div class="shuffle">
             <Icon
@@ -243,10 +243,6 @@
         @media screen and (max-width: 600px) {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto 40px;
-        }
-
-        &.sidebar-collapsed {
-            /* margin-left: 70px; */
         }
 
         p {

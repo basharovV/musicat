@@ -43,6 +43,7 @@
         importStatus,
         isPlaying,
         isQueueOpen,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
@@ -58,7 +59,6 @@
         selectedPlaylistFile,
         selectedTags,
         shouldFocusFind,
-        sidebar,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
@@ -593,7 +593,9 @@
 
         setTimeout(() => {
             width =
-                scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
+                scrollContainer?.clientWidth ??
+                libraryContainer?.clientWidth ??
+                0;
             calculateColumns();
         }, 50);
     }
@@ -2565,7 +2567,7 @@
                                     <Text
                                         config={{
                                             x:
-                                                !$sidebar.isOpen &&
+                                                !$isSidebarOpen &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
@@ -2594,7 +2596,7 @@
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
                                             visible: !(
-                                                !$sidebar.isOpen &&
+                                                !$isSidebarOpen &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0

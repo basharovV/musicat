@@ -31,9 +31,11 @@
         draggedSongs,
         draggedTitle,
         isFindFocused,
+        isFloatingSidebar,
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isWaveformOpen,
@@ -50,7 +52,6 @@
         selectedPlaylistFile,
         selectedSmartQuery,
         shouldFocusFind,
-        sidebar,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         toDeletePlaylist,
@@ -84,6 +85,8 @@
     import BuiltInQueries from "../../data/SmartQueries";
 
     const appWindow = tauriWindow.getCurrentWindow();
+
+    export let floating = false;
 
     // What to show in the sidebar
     let song: Song;
@@ -304,20 +307,6 @@
             $isMiniPlayer = false;
             console.log("setting to true");
             // await appWindow.setDecorations(true);
-        }
-
-        // Get bottom coordinates of top container
-        const topContainer = sidebar?.querySelector(".top");
-
-        if (topContainer) {
-            $sidebar = {
-                ...$sidebar,
-                isOpen: true,
-                tooglePosition: {
-                    x: topContainer.getBoundingClientRect().right,
-                    y: topContainer.getBoundingClientRect().bottom,
-                },
-            };
         }
     }
 
@@ -623,6 +612,7 @@
         };
         $selectedPlaylistFile = playlist;
         $selectedSmartQuery = null;
+        $isFloatingSidebar = false;
 
         activePlaylist = null;
     }
@@ -647,6 +637,7 @@
             $query.reverse = false;
         }
         $selectedSmartQuery = smartQuery;
+        $isFloatingSidebar = false;
     }
 
     function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
@@ -787,19 +778,6 @@
             titleElement?.scrollWidth > titleElement?.clientWidth;
 
         resetMarquee();
-
-        // Get bottom coordinates of top container
-        const topContainer = sidebarElement.querySelector(".top");
-
-        if (topContainer) {
-            $sidebar = {
-                ...$sidebar,
-                tooglePosition: {
-                    x: topContainer.getBoundingClientRect().right - 15,
-                    y: topContainer.getBoundingClientRect().bottom - 10,
-                },
-            };
-        }
     }
 
     function clearMarquee() {
@@ -1059,7 +1037,8 @@
     class:has-current-song={song}
     class:empty={!song}
     class:hovered={isMiniPlayerHovered}
-    class:visible={$sidebar.isOpen}
+    class:visible={$isSidebarOpen}
+    class:floating
     transition:fly={{ duration: 200, x: -200 }}
     bind:this={sidebarElement}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
@@ -1134,6 +1113,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
+                                $isFloatingSidebar = false;
                             }}
                         >
                             <Icon
@@ -1151,6 +1131,7 @@
                                 $uiView = "albums";
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
+                                $isFloatingSidebar = false;
                             }}
                         >
                             <Icon
@@ -1170,6 +1151,7 @@
                                 $selectedSmartQuery = null;
                                 $selectedSmartQuery =
                                     SmartQueries.favourites.value;
+                                $isFloatingSidebar = false;
                             }}
                         >
                             <Icon
@@ -1189,6 +1171,7 @@
                                     $query.orderBy = "none";
                                     $query.reverse = false;
                                     $selectedSmartQuery = null;
+                                    $isFloatingSidebar = false;
                                 }}
                             >
                                 <Icon
@@ -1467,6 +1450,7 @@
                                     $isTagCloudOpen = false;
                                     $selectedPlaylistFile = null;
                                     $selectedSmartQuery = null;
+                                    $isFloatingSidebar = false;
                                 }}
                             >
                                 <Icon
@@ -1484,6 +1468,7 @@
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $uiView = "internet-archive";
+                                $isFloatingSidebar = false;
                             }}
                         >
                             <Icon
@@ -1501,6 +1486,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "map";
+                                $isFloatingSidebar = false;
                             }}
                         >
                             <Icon
@@ -1518,6 +1504,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "analytics";
+                                $isFloatingSidebar = false;
                             }}
                         >
                             <Icon
@@ -1623,233 +1610,237 @@
             </p>
         </div>
     {/if}
-    <div class="track-info">
-        <!-- <hr /> -->
+    {#if !floating}
+        <div class="track-info">
+            <!-- <hr /> -->
 
-        <div class="track-info-content">
-            <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+            <div class="track-info-content">
+                <!-- svelte-ignore a11y-mouse-events-have-key-events -->
 
-            {#if !$isMiniPlayer}
+                {#if !$isMiniPlayer}
+                    <div
+                        class="sidebar-toggle"
+                        class:visible={$isSidebarOpen}
+                        use:tippy={{
+                            content: "Toggle the sidebar.",
+                            placement: "right",
+                        }}
+                    >
+                        <Icon
+                            icon="tabler:layout-sidebar-left-collapse"
+                            size={22}
+                            onClick={(e) => {
+                                $isSidebarOpen = false;
+                            }}
+                        />
+                    </div>
+                {/if}
+
+                <!-- svelte-ignore a11y-mouse-events-have-key-events -->
                 <div
-                    class="sidebar-toggle"
-                    class:visible={$sidebar.isOpen}
+                    bind:this={miniToggleBtn}
+                    class="mini-toggle"
+                    class:hovered={isMiniToggleHovered}
+                    on:mouseover={onMiniToggleMouseOver}
+                    on:mouseout={onMiniToggleMouseOut}
                     use:tippy={{
-                        content: "Toggle the sidebar.",
+                        theme: $isMiniPlayer ? "hidden" : "",
+                        content: "Toggle the mini player.",
                         placement: "right",
                     }}
                 >
                     <Icon
-                        icon="tabler:layout-sidebar-left-collapse"
-                        size={22}
-                        onClick={(e) => {
-                            $sidebar = {
-                                ...$sidebar,
-                                isOpen: false,
-                                how: "None",
-                                tooglePosition: { x: e.clientX, y: e.clientY },
-                            };
-                        }}
+                        icon={$isMiniPlayer
+                            ? "gg:arrows-expand-up-right"
+                            : "gg:arrows-expand-down-left"}
+                        onClick={() => toggleMiniPlayer()}
+                        boxed
                     />
                 </div>
-            {/if}
+                <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
 
-            <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-            <div
-                bind:this={miniToggleBtn}
-                class="mini-toggle"
-                class:hovered={isMiniToggleHovered}
-                on:mouseover={onMiniToggleMouseOver}
-                on:mouseout={onMiniToggleMouseOut}
-                use:tippy={{
-                    theme: $isMiniPlayer ? "hidden" : "",
-                    content: "Toggle the mini player.",
-                    placement: "right",
-                }}
-            >
-                <Icon
-                    icon={$isMiniPlayer
-                        ? "gg:arrows-expand-up-right"
-                        : "gg:arrows-expand-down-left"}
-                    onClick={() => toggleMiniPlayer()}
-                    boxed
-                />
-            </div>
-            <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
+                <div class="info">
+                    {#if song}
+                        {#if sidebarWidth && displayTitle}
+                            <div
+                                class="marquee-container"
+                                on:mousedown={() => {
+                                    setDraggedSongs([song], "Player");
+                                }}
+                            >
+                                <canvas
+                                    class="show"
+                                    bind:this={canvas}
+                                    width={sidebarWidth * 2.5}
+                                    height="50"
+                                ></canvas>
+                            </div>
+                        {/if}
+                        {#if artist}
+                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                            <p
+                                class="artist"
+                                on:click={() => {
+                                    $isWikiOpen = !$isWikiOpen;
+                                }}
+                                use:optionalTippy={{
+                                    show: !$isMiniPlayer,
+                                    content: $LL.sidebar.openWikiTooltip({
+                                        artist,
+                                    }),
+                                    placement: "right",
+                                }}
+                            >
+                                {artist}
+                            </p>
+                        {/if}
+                        {#if !title && !album && !artist}
+                            <button
+                                class="add-metadata-btn"
+                                on:click={openTrackInfo}
+                                >{$LL.sidebar.addMetadataHint()}</button
+                            >
+                        {/if}
+                        {#if album}
+                            <small>{album}</small>
+                        {/if}
+                    {:else}
+                        <p class="is-placeholder">
+                            {$LL.sidebar.takeControl()}
+                        </p>
+                    {/if}
 
-            <div class="info">
-                {#if song}
-                    {#if sidebarWidth && displayTitle}
+                    {#if codec}
                         <div
-                            class="marquee-container"
-                            on:mousedown={() => {
-                                setDraggedSongs([song], "Player");
-                            }}
+                            class="file"
+                            class:empty={!title && !album && !artist}
                         >
-                            <canvas
-                                class="show"
-                                bind:this={canvas}
-                                width={sidebarWidth * 2.5}
-                                height="50"
-                            ></canvas>
+                            <p>{codec}</p>
+                            <!-- {#if bitrate}<p>{bitrate} bit</p>{/if} -->
+                            <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
+                            <p class="with-icon">
+                                <span>
+                                    <Icon
+                                        icon={stereo
+                                            ? "fad:stereo"
+                                            : "fad:mono"}
+                                        size={12}
+                                    /></span
+                                >{stereo ? "stereo" : "mono"}
+                            </p>
                         </div>
                     {/if}
-                    {#if artist}
-                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                        <p
-                            class="artist"
-                            on:click={() => {
-                                $isWikiOpen = !$isWikiOpen;
-                            }}
-                            use:optionalTippy={{
-                                show: !$isMiniPlayer,
-                                content: $LL.sidebar.openWikiTooltip({
-                                    artist,
-                                }),
-                                placement: "right",
-                            }}
-                        >
-                            {artist}
-                        </p>
-                    {/if}
-                    {#if !title && !album && !artist}
-                        <button
-                            class="add-metadata-btn"
-                            on:click={openTrackInfo}
-                            >{$LL.sidebar.addMetadataHint()}</button
-                        >
-                    {/if}
-                    {#if album}
-                        <small>{album}</small>
-                    {/if}
-                {:else}
-                    <p class="is-placeholder">{$LL.sidebar.takeControl()}</p>
-                {/if}
-
-                {#if codec}
-                    <div class="file" class:empty={!title && !album && !artist}>
-                        <p>{codec}</p>
-                        <!-- {#if bitrate}<p>{bitrate} bit</p>{/if} -->
-                        <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
-                        <p class="with-icon">
-                            <span>
-                                <Icon
-                                    icon={stereo ? "fad:stereo" : "fad:mono"}
-                                    size={12}
-                                /></span
-                            >{stereo ? "stereo" : "mono"}
-                        </p>
-                    </div>
-                {/if}
+                </div>
             </div>
         </div>
-    </div>
-
-    {#if song}
-        <div class="artwork-container">
-            <div class="artwork-frame">
-                <canvas
-                    class="artwork"
-                    bind:this={artworkCanvas}
-                    width={210}
-                    height={210}
+        {#if song}
+            <div class="artwork-container">
+                <div class="artwork-frame">
+                    <canvas
+                        class="artwork"
+                        bind:this={artworkCanvas}
+                        width={210}
+                        height={210}
+                    />
+                </div>
+            </div>
+        {/if}
+        <div class="bottom" data-tauri-drag-region>
+            <div class="seekbar">
+                <Seekbar
+                    {duration}
+                    onSeek={(time) => seekTime.set(time)}
+                    playerTime={$playerTime}
                 />
+                <div
+                    class="time-controls"
+                    class:speed-control-expanded={isPlaybackSpeedControlOpen}
+                >
+                    <p class="elapsed-time">
+                        <span class="elapsed">{elapsedTime} </span>
+                    </p>
+                    <PlaybackSpeed bind:selected={isPlaybackSpeedControlOpen} />
+                    <p class="elapsed-time">
+                        <span class="elapsed">{durationText} </span>
+                    </p>
+                </div>
+                <transport>
+                    <Icon
+                        class="transport-side shuffle {$isShuffleEnabled
+                            ? 'active'
+                            : 'inactive'}"
+                        icon="ph:shuffle-bold"
+                        onClick={() => {
+                            $isShuffleEnabled = !$isShuffleEnabled;
+                        }}
+                    />
+                    <Icon
+                        class="transport-middle"
+                        icon="fe:backward"
+                        size={36}
+                        disabled={$current.index <= 0}
+                        onClick={() => audioPlayer.playPrevious()}
+                    />
+                    <Icon
+                        class="transport-middle"
+                        size={42}
+                        onClick={() => audioPlayer.togglePlay()}
+                        icon={$isPlaying ? "fe:pause" : "fe:play"}
+                    />
+                    <Icon
+                        class="transport-middle"
+                        size={36}
+                        icon="fe:forward"
+                        disabled={$queue.length === 0 ||
+                            $current.index === $queue?.length - 1}
+                        onClick={() => audioPlayer.playNext()}
+                    />
+                    <Icon
+                        class="transport-side favourite {$current.song
+                            ?.isFavourite
+                            ? 'active'
+                            : 'inactive'}"
+                        icon={$current.song?.isFavourite
+                            ? "clarity:heart-solid"
+                            : "clarity:heart-line"}
+                        onClick={() => {
+                            favouriteCurrentSong();
+                        }}
+                    />
+                </transport>
+
+                <div class="other-controls">
+                    <div class="track-info-icon">
+                        <Icon
+                            icon="mdi:information"
+                            onClick={() => {
+                                $rightClickedTrack = song;
+                                $rightClickedTracks = [];
+                                $popupOpen = "track-info";
+                            }}
+                        />
+                    </div>
+
+                    <VolumeSlider />
+
+                    <div
+                        class="visualizer-icon"
+                        use:tippy={{
+                            content: "waveform, loop region, marker editor",
+                            placement: "top",
+                        }}
+                    >
+                        <Icon
+                            class={$isWaveformOpen ? "active" : "inactive"}
+                            icon="ph:wave-sine-duotone"
+                            onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     {/if}
-    <div class="bottom" data-tauri-drag-region>
-        <div class="seekbar">
-            <Seekbar
-                {duration}
-                onSeek={(time) => seekTime.set(time)}
-                playerTime={$playerTime}
-            />
-            <div
-                class="time-controls"
-                class:speed-control-expanded={isPlaybackSpeedControlOpen}
-            >
-                <p class="elapsed-time">
-                    <span class="elapsed">{elapsedTime} </span>
-                </p>
-                <PlaybackSpeed bind:selected={isPlaybackSpeedControlOpen} />
-                <p class="elapsed-time">
-                    <span class="elapsed">{durationText} </span>
-                </p>
-            </div>
-            <transport>
-                <Icon
-                    class="transport-side shuffle {$isShuffleEnabled
-                        ? 'active'
-                        : 'inactive'}"
-                    icon="ph:shuffle-bold"
-                    onClick={() => {
-                        $isShuffleEnabled = !$isShuffleEnabled;
-                    }}
-                />
-                <Icon
-                    class="transport-middle"
-                    icon="fe:backward"
-                    size={36}
-                    disabled={$current.index <= 0}
-                    onClick={() => audioPlayer.playPrevious()}
-                />
-                <Icon
-                    class="transport-middle"
-                    size={42}
-                    onClick={() => audioPlayer.togglePlay()}
-                    icon={$isPlaying ? "fe:pause" : "fe:play"}
-                />
-                <Icon
-                    class="transport-middle"
-                    size={36}
-                    icon="fe:forward"
-                    disabled={$queue.length === 0 ||
-                        $current.index === $queue?.length - 1}
-                    onClick={() => audioPlayer.playNext()}
-                />
-                <Icon
-                    class="transport-side favourite {$current.song?.isFavourite
-                        ? 'active'
-                        : 'inactive'}"
-                    icon={$current.song?.isFavourite
-                        ? "clarity:heart-solid"
-                        : "clarity:heart-line"}
-                    onClick={() => {
-                        favouriteCurrentSong();
-                    }}
-                />
-            </transport>
-
-            <div class="other-controls">
-                <div class="track-info-icon">
-                    <Icon
-                        icon="mdi:information"
-                        onClick={() => {
-                            $rightClickedTrack = song;
-                            $rightClickedTracks = [];
-                            $popupOpen = "track-info";
-                        }}
-                    />
-                </div>
-
-                <VolumeSlider />
-
-                <div
-                    class="visualizer-icon"
-                    use:tippy={{
-                        content: "waveform, loop region, marker editor",
-                        placement: "top",
-                    }}
-                >
-                    <Icon
-                        class={$isWaveformOpen ? "active" : "inactive"}
-                        icon="ph:wave-sine-duotone"
-                        onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                    />
-                </div>
-            </div>
-        </div>
-    </div></sidebar
->
+</sidebar>
 
 <style lang="scss">
     $mini_y_breakpoint: 460px;
@@ -1909,6 +1900,12 @@
         min-width: 210px;
         /* border-right: 1px solid #ececec1c; */
         background-color: $sidebar_primary_color;
+
+        &.floating {
+            .top {
+                border: 0;
+            }
+        }
     }
 
     hr {
