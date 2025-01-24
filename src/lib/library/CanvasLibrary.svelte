@@ -1732,8 +1732,6 @@
     }
 </script>
 
-<!-- <svelte:window on:resize={debounce(onResize, 5)} /> -->
-
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 

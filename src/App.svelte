@@ -746,7 +746,8 @@
                 }
             }
 
-            .panel {
+            .panel,
+            .header {
                 grid-column: 2 / 2;
             }
 
