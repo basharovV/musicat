@@ -1345,13 +1345,8 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if (!showTrackMenu && songsHighlighted.length) {
+            if (!trackMenu.isOpen && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
-                if (songsHighlighted.length > 1) {
-                    $rightClickedTracks = songsHighlighted;
-                } else {
-                    $rightClickedTrack = songsHighlighted[0];
-                }
 
                 const topTrack = songsHighlighted[0];
                 // Get the y position of the top track by calculating the offset using the index in the slice
@@ -1365,8 +1360,11 @@
                     HEADER_HEIGHT +
                     10;
                 console.log("top track y", topTrackY);
-                menuPos = { x: 250, y: topTrackY };
-                showTrackMenu = true;
+
+                trackMenu.open(
+                    songsHighlighted.length > 1 ? songsHighlighted : topTrack,
+                    { x: 250, y: topTrackY },
+                );
             }
         } else if (
             event.keyCode === 13 &&
