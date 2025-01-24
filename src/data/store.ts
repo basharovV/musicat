@@ -490,4 +490,7 @@ export const webPlayerVolume: Writable<number> = writable(0.6);
 export const webPlayerIsLoading = writable(false);
 export const fileToDownload: Writable<IAFile> = writable(null);
 
+// Info Popup
+export const canShowInfoPopup = writable(true);
+
 init();

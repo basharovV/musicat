@@ -3,6 +3,7 @@
     import { Toaster } from "svelte-french-toast";
     import {
         bottomBarNotification,
+        canShowInfoPopup,
         draggedScrapbookItems,
         draggedSongs,
         droppedFiles,
@@ -239,6 +240,10 @@
         setTimeout(() => {
             $bottomBarNotification = null;
         }, $bottomBarNotification.timeout);
+    }
+
+    $: {
+        canShowInfoPopup.set(innerWidth >= 750);
     }
 
     let container: HTMLElement;
