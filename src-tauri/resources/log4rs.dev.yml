@@ -3,14 +3,14 @@ appenders:
         kind: console
         encoder:
             pattern: "{d(%+)(utc)} [{f}:{L}] {h({l})} {M}:{m}{n}"
-        filters:
-            - kind: threshold
-              level: info
     file:
         kind: file
         path: "$ENV{MUSICAT_LOG_DIR}/file.log"
         encoder:
             pattern: "[{d(%Y-%m-%dT%H:%M:%S%.6f)} {h({l}):<5.5} {M}] {m}{n}"
+loggers:
+    app::frontend:
+        level: error
 root:
     level: info
     appenders:

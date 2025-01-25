@@ -66,6 +66,7 @@ kuchiki = "0.8"
 file-id = "0.2.1"
 zune-jpeg = "0.4.14"
 zune-png = "0.4.10"
+serde_repr = "0.1.19"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.5.2"
