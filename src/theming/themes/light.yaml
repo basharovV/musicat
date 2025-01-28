@@ -4,7 +4,10 @@ type: light
 accent: "#5d00fff3"
 accent-secondary: "#da69ff"
 background: "#e8e1e1"
-button-bg: "#282b2c"
+button-active-bg: "#624dd4"
+button-active-disabled-bg: "#4935b8"
+button-active-disabled-text: "#747272"
+button-solid-bg: "#282b2c"
 button-text: "#ede8f0"
 header-opacity: 0.2
 header-text: var(--text)
@@ -179,9 +182,6 @@ smart-playlist-builder-block-bg: "#56beb556"
 smart-playlist-builder-block-focused-bg: "#569abe99"
 smart-playlist-builder-block-input-bg: "#1b474d6f"
 smart-playlist-builder-block-input-text: "#ffffffde"
-smart-playlist-button-bg: "#624dd4"
-smart-playlist-button-disabled: "#747272"
-smart-playlist-button-disabled-bg: "#4935b8"
 # Play, pause, next, previous
 transport-control: "#333135"
 transport-control-hover: rgb(from var(--transport-control) r g b / 0.5)

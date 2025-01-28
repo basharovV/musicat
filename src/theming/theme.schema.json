@@ -93,7 +93,17 @@
             "description": "Window background (will be made more translucent on macOS)",
             "type": "string"
         },
-        "button-bg": {
+        "button-active-bg": {
+            "description": "Buttons",
+            "type": "string"
+        },
+        "button-active-disabled-bg": {
+            "type": "string"
+        },
+        "button-active-disabled-text": {
+            "type": "string"
+        },
+        "button-solid-bg": {
             "type": "string"
         },
         "button-text": {
@@ -109,6 +119,7 @@
             "type": "string"
         },
         "icon-boxed-hover-bg": {
+            "description": "Icons",
             "type": "string"
         },
         "icon-disabled": {
@@ -130,6 +141,7 @@
             "type": "string"
         },
         "input-alt-focus-outline": {
+            "description": "Inputs",
             "type": "string"
         },
         "input-bg": {
@@ -505,15 +517,6 @@
         "smart-playlist-builder-text": {
             "type": "string"
         },
-        "smart-playlist-button-bg": {
-            "type": "string"
-        },
-        "smart-playlist-button-disabled": {
-            "type": "string"
-        },
-        "smart-playlist-button-disabled-bg": {
-            "type": "string"
-        },
         "text": {
             "description": "Primary text color",
             "type": "string"
@@ -660,7 +663,10 @@
         "atk-icon-lyric",
         "atk-icon-video",
         "background",
-        "button-bg",
+        "button-active-bg",
+        "button-active-disabled-bg",
+        "button-active-disabled-text",
+        "button-solid-bg",
         "button-text",
         "display-name",
         "header-opacity",
@@ -793,9 +799,6 @@
         "smart-playlist-builder-block-input-bg",
         "smart-playlist-builder-block-input-text",
         "smart-playlist-builder-text",
-        "smart-playlist-button-bg",
-        "smart-playlist-button-disabled",
-        "smart-playlist-button-disabled-bg",
         "text",
         "text-active",
         "text-inactive",

@@ -19,6 +19,13 @@ export interface Theme {
     /**  Primary accent color used for active items that need to stand out */
     accent: string;
     "accent-secondary": string;
+    /** Buttons */
+    "button-active-bg": string;
+    "button-active-disabled-text": string;
+    "button-active-disabled-bg": string;
+    "button-solid-bg": string;
+    "button-text": string;
+    /** Icons */
     "icon-boxed-hover-bg": string;
     "icon-disabled": string;
     "icon-primary": string;
@@ -26,13 +33,13 @@ export interface Theme {
     "icon-secondary-hover": string;
     "icon-tertiary": string;
     "icon-tertiary-hover": string;
-    "button-bg": string;
-    "button-text": string;
+    /** Inputs */
     "input-alt-focus-outline": string;
     "input-bg": string;
     "input-focus-bg": string;
     "input-focus-outline": string;
     "input-placeholder-text": string;
+    /** */
     "header-opacity": number;
     "header-text": string;
     link: string;
@@ -188,9 +195,6 @@ export interface Theme {
     "smart-playlist-builder-block-focused-bg": string;
     "smart-playlist-builder-block-input-bg": string;
     "smart-playlist-builder-block-input-text": string;
-    "smart-playlist-button-bg": string;
-    "smart-playlist-button-disabled": string;
-    "smart-playlist-button-disabled-bg": string;
     /** Play, pause, next, previous */
     "transport-control": string;
     "transport-control-hover": string;
