@@ -295,7 +295,7 @@
         height: 100%;
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid rgb(73, 70, 70);
+        border: 1px solid var(--panel-primary-border-accent1);
         background: var(--overlay-bg);
         box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(10px);
@@ -392,7 +392,7 @@
             header {
                 display: grid;
                 grid-template-columns: auto 1fr 1fr;
-                border-bottom: 1px solid rgb(59, 56, 56);
+                border-bottom: 1px solid var(--panel-primary-border-accent1);
 
                 .close-icon {
                     display: flex;
@@ -448,7 +448,7 @@
                 font-size: inherit;
                 line-height: 1.8em;
                 resize: none;
-                color: rgb(236, 213, 222);
+                color: var(--lyrics-text);
                 font-weight: normal;
                 font-family: "Lyrics";
 

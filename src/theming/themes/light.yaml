@@ -215,3 +215,5 @@ wiki-pill-border: "#eeeeee"
 wiki-pill-text: var(--text-secondary)
 wiki-pill-hover-bg: color-mix(in srgb, var(--button-bg) 20%, transparent)
 wiki-pill-hover-text: var(--text-secondary)
+# Lyrics
+lyrics-text: var(--text)

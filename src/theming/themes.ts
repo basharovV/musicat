@@ -239,6 +239,7 @@ export const DEFAULT_THEME: Theme = {
     "seekbar-thumb": "#00C56C",
     "seekbar-tooltip-bg": "#1b1b1c",
     "seekbar-tooltip-text": "#ffffff",
+    "lyrics-text": "#ecd5de;",
 };
 
 export const DEFAULT_THEME_LIGHT: Theme = tmLight;

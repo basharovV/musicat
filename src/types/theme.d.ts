@@ -239,4 +239,6 @@ export interface Theme {
     "wiki-mention-bg": string;
     "wiki-mention-border": string;
     "wiki-mention-text": string;
+    /** Lyrics */
+    "lyrics-text": string;
 }
