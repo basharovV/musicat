@@ -43,17 +43,15 @@
         (f) => f.value === $uiPreferences.albumsViewSortBy,
     );
 
-    onMount(async () => {
-        window.onresize = throttle(() => {
-            onResize();
-        }, 200);
+    onMount(() => {
+        const resizeObserver = new ResizeObserver(() => {
+            innerWidth = element.getBoundingClientRect().width;
+        });
 
-        onResize(); // run once
+        resizeObserver.observe(element);
+
+        return () => resizeObserver.unobserve(element);
     });
-
-    function onResize() {
-        innerWidth = element.getBoundingClientRect().width;
-    }
 
     function toogleOptionsPanel(e) {
         if (showOptionsPanel) {

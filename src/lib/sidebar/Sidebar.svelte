@@ -764,14 +764,13 @@
         };
 
         // Detect size changes in scroll container for the menu
-        const resizeObserver = new ResizeObserver(onMenuResize).observe(menu);
+        const resizeObserver = new ResizeObserver(onMenuResize);
+
+        resizeObserver.observe(menu);
 
         height = window.innerHeight;
-        window.onresize = throttle(() => {
-            onResize();
-        }, 200);
 
-        onResize(); // run once
+        return () => resizeObserver.unobserve(menu);
     });
 
     let canvas: HTMLCanvasElement;
@@ -1041,6 +1040,8 @@
     // Playback speed
     let isPlaybackSpeedControlOpen = false;
 </script>
+
+<svelte:window on:resize={throttle(onResize, 200)} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
