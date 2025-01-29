@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
-        "ThemeType": {
+        "ThemeVariant": {
             "enum": [
                 "dark",
                 "light"
@@ -567,8 +567,8 @@
         "transport-volume-thumb-secondary": {
             "type": "string"
         },
-        "type": {
-            "$ref": "#/definitions/ThemeType"
+        "variant": {
+            "$ref": "#/definitions/ThemeVariant"
         },
         "waveform-bg": {
             "description": "Waveform",
@@ -814,7 +814,7 @@
         "transport-volume-thumb-bg",
         "transport-volume-thumb-icon",
         "transport-volume-thumb-secondary",
-        "type",
+        "variant",
         "waveform-bg",
         "waveform-bg-hover",
         "waveform-cursor",

@@ -1,5 +1,5 @@
 display-name: Dark
-type: dark
+variant: dark
 # Basics
 accent: "#45fffcf3"
 accent-secondary: "#632fff"

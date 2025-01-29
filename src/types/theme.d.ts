@@ -1,8 +1,8 @@
-type ThemeType = "dark" | "light";
+type ThemeVariant = "dark" | "light";
 
 export interface Theme {
     "display-name": string;
-    type: ThemeType;
+    variant: ThemeVariant;
     /**  Primary text color */
     text: string;
     /**  Secondary text color, for dimmed text */

@@ -28,12 +28,12 @@ export const allThemes: { [key: string]: Theme } = {
     "zokugun-obsidium": tmZokugunObsidium,
 };
 
-export const lightThemes = {
+export const lightThemes: { [key: string]: Theme } = {
     light: tmLight,
     light2: tmLight2,
 };
 
-export const darkThemes = {
+export const darkThemes: { [key: string]: Theme } = {
     amphibian: tmAmphibian,
     dark: tmDark,
     turquoise: tmTurquoise,

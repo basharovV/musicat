@@ -1,5 +1,5 @@
 display-name: Light
-type: light
+variant: light
 # Basics
 accent: "#5d00fff3"
 accent-secondary: "#da69ff"
