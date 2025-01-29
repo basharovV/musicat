@@ -347,7 +347,12 @@
     }
 
     async function save() {
-        if (isArtworkSet === "delete-file" || isArtworkSet === "replace-file") {
+        if (
+            $rightClickedAlbum &&
+            $rightClickedAlbum.tracksIds.length ==
+                $rightClickedTracks?.length &&
+            (isArtworkSet === "delete-file" || isArtworkSet === "replace-file")
+        ) {
             await invoke("delete_files", {
                 event: {
                     files: [artworkFilePath],
