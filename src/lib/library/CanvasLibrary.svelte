@@ -64,6 +64,7 @@
         smartQueryInitiator,
         smartQueryResults,
         uiView,
+        rightClickedAlbum,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -1320,9 +1321,12 @@
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
+                    $rightClickedTrack = null;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
+                    $rightClickedTracks = [];
                 }
+                $rightClickedAlbum = null;
                 $popupOpen = "track-info";
             }
         } else if (

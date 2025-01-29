@@ -45,6 +45,7 @@
         popupOpen,
         query,
         queue,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
         seekTime,
@@ -273,6 +274,8 @@
     function openTrackInfo() {
         if (song) {
             $rightClickedTrack = song;
+            $rightClickedTracks = [];
+            $rightClickedAlbum = null;
             $popupOpen = "track-info";
         }
     }
@@ -1818,6 +1821,7 @@
                         onClick={() => {
                             $rightClickedTrack = song;
                             $rightClickedTracks = [];
+                            $rightClickedAlbum = null;
                             $popupOpen = "track-info";
                         }}
                     />
