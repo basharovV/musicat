@@ -36,6 +36,7 @@
     let detailsAlbumHeight = 0;
     let detailsAlbumIndex = -1;
     let detailsAlbumRow = -1;
+    let detailsAlbumTracks: Song[] = null;
     let highlightedAlbum;
     let isCurrentAlbumInView = false;
     let isInit = true;
@@ -254,6 +255,7 @@
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
             detailsAlbum = null;
+            detailsAlbumTracks = null;
             detailsAlbumHeight = 0;
             detailsAlbumIndex = -1;
             detailsAlbumRow = -1;
@@ -262,11 +264,15 @@
             rowCount -= 1;
         } else {
             const oldRow = detailsAlbumRow;
-            detailsAlbumHeight = await getAlbumDetailsHeight(album);
 
             detailsAlbum = album;
+            detailsAlbumTracks = await db.songs.bulkGet(album.tracksIds);
             detailsAlbumIndex = index;
             detailsAlbumRow = Math.floor(index / columnCount) + 2;
+
+            detailsAlbumHeight = await getAlbumDetailsHeight(
+                detailsAlbumTracks.length,
+            );
 
             if (oldRow >= 0) {
                 var sizes = [...itemSizes];
@@ -349,7 +355,10 @@
                     {#if index === 0 || index + 1 === rowCount}
                         <div></div>
                     {:else if detailsAlbumRow === index}
-                        <AlbumDetails albumId={detailsAlbum.id} />
+                        <AlbumDetails
+                            album={detailsAlbum}
+                            tracks={detailsAlbumTracks}
+                        />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
                             {@const albumIdx =

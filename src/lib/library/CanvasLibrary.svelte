@@ -959,15 +959,7 @@
             }
 
             const album = albums[0];
-
-            let tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .toArray();
-
-            tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
+            const tracks = await db.songs.bulkGet(album.tracksIds);
 
             setQueue(tracks, song.viewModel.index);
         } else if ($uiView === "smart-query") {

@@ -261,7 +261,7 @@ pub async fn scan_paths(
 ) -> Option<ToImportEvent> {
     // info!("scan_paths {:?}", event);
     let start = Instant::now();
-    let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
+    let songs: Arc<std::sync::Mutex<HashMap<String, Song>>> = Arc::new(Mutex::new(HashMap::new()));
     let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
     let artwork_origins: Arc<std::sync::Mutex<HashMap<String, ArtworkOrigin>>> =
@@ -302,7 +302,7 @@ pub async fn scan_paths(
                     }
                 }
                 song.artwork = None;
-                songs.lock().unwrap().push(song);
+                songs.lock().unwrap().insert(song.id.clone(), song);
             }
         } else if path.is_dir() {
             if let Some(sub_results) = process_directory(
@@ -330,11 +330,18 @@ pub async fn scan_paths(
     //     info!("{:?}", song);
     // }
 
+    for album in albums.lock().unwrap().values_mut() {
+        album
+            .tracks_ids
+            .sort_by_key(|id| songs.lock().unwrap().get(id).unwrap().track_number);
+    }
+
     // First send all songs in chunks
     let length = songs.lock().unwrap().clone().len();
     if event.is_async && length > 500 {
-        let songs_clone = songs.lock().unwrap();
-        let enumerator = songs_clone.chunks(200);
+        let songs_locked = songs.lock().unwrap();
+        let enumerated_songs: Vec<_> = songs_locked.values().enumerate().collect();
+        let enumerator = enumerated_songs.chunks(200);
         let chunks = enumerator.len();
 
         // Send songs to client in chunks
@@ -352,7 +359,7 @@ pub async fn scan_paths(
             let _ = app_handle.emit(
                 "import_chunk",
                 ToImportEvent {
-                    songs: slice.to_vec(),
+                    songs: slice.iter().map(|(_, song)| (*song).clone()).collect(),
                     albums: vec![],
                     progress: progress,
                     done: progress == 100 && albums.lock().unwrap().clone().len() == 0,
@@ -377,7 +384,7 @@ pub async fn scan_paths(
         let _ = app_handle.emit(
             "import_chunk",
             ToImportEvent {
-                songs: songs.lock().unwrap().clone(),
+                songs: songs.lock().unwrap().values().cloned().collect(),
                 albums: vec![],
                 progress: 100,
                 done: albums.lock().unwrap().clone().len() == 0,
@@ -441,7 +448,7 @@ pub async fn scan_paths(
         songs: if event.is_async {
             vec![]
         } else {
-            songs.lock().unwrap().clone()
+            songs.lock().unwrap().values().cloned().collect()
         },
         albums: if event.is_async {
             vec![]
@@ -674,13 +681,13 @@ pub fn convert_file_src(artwork_src: String) -> String {
 }
 
 struct ProcessDirectoryResult {
-    songs: Vec<Song>,
+    songs: HashMap<String, Song>,
     albums: HashMap<String, Album>,
 }
 
 fn process_directory(
     directory_path: &Path,
-    songs: &Arc<std::sync::Mutex<Vec<Song>>>,
+    songs: &Arc<std::sync::Mutex<HashMap<String, Song>>>,
     albums: &Arc<std::sync::Mutex<HashMap<String, Album>>>,
     artwork_origins: &Arc<std::sync::Mutex<HashMap<String, ArtworkOrigin>>>,
     recursive: bool,
@@ -688,7 +695,8 @@ fn process_directory(
     is_cover_fullcheck: bool,
     app: &AppHandle,
 ) -> Option<ProcessDirectoryResult> {
-    let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
+    let subsongs: Arc<std::sync::Mutex<HashMap<String, Song>>> =
+        Arc::new(Mutex::new(HashMap::new()));
     let subalbums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
     let settings = load_settings(app).ok();
@@ -747,7 +755,7 @@ fn process_directory(
                                 }
                             }
                             song.artwork = None;
-                            subsongs.lock().unwrap().push(song);
+                            subsongs.lock().unwrap().insert(song.id.clone(), song);
                         }
                     } else if path.is_dir() && recursive {
                         if let Some(sub_results) = process_directory(
@@ -773,7 +781,7 @@ fn process_directory(
         });
 
     return Some(ProcessDirectoryResult {
-        songs: subsongs.lock().unwrap().to_vec(),
+        songs: subsongs.lock().unwrap().to_owned(),
         albums: subalbums.lock().unwrap().to_owned(),
     });
 }
