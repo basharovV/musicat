@@ -770,6 +770,8 @@
 
         height = window.innerHeight;
 
+        onResize();
+
         return () => resizeObserver.unobserve(menu);
     });
 
