@@ -31,7 +31,7 @@
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { onDestroy, onMount } from "svelte";
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
-    import { cubicInOut } from "svelte/easing";
+    import { cubicInOut, cubicOut } from "svelte/easing";
     import { blur, fade, fly } from "svelte/transition";
     import { startWatchingLibraryFolders } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryUtils";
@@ -363,11 +363,15 @@
             </div>
         {/if}
 
-        <div class="queue">
+        <div class="queue" class:visible={showQueue}>
             {#if showQueue}
                 <div
                     class="queue-container"
-                    transition:fly={{ duration: 200, x: -200 }}
+                    transition:fly={{
+                        duration: 200,
+                        x: -150,
+                        easing: cubicOut,
+                    }}
                 >
                     <QueueView autoWidth={isQueueAutoWidth} />
                 </div>
@@ -528,6 +532,10 @@
     }
 
     main {
+        border-radius: 11px;
+        border: 0.5px solid
+            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        box-sizing: border-box;
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
         grid-template-rows: auto auto auto 1fr auto auto; // (padding), header, tags/smartplaylist builder, panel, waveform, topbar, bottombar
@@ -630,6 +638,13 @@
             grid-column: 3;
             display: grid;
             overflow: hidden;
+            box-shadow: -4px 3px 20px 5px var(--panel-shadow-bg);
+            border: 1px solid var(--panel-primary-border-accent1);
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            border-bottom: 0.7px solid var(--panel-secondary-border-main);
+            margin: 3.5px 5px 0 0;
+            border-radius: 5px;
         }
 
         .waveform {
@@ -668,6 +683,10 @@
             grid-column: 2;
             overflow: hidden;
             height: 100%;
+
+            &.visible {
+                box-shadow: -10px 3px 30px 5px rgba(0, 0, 0, 0.15);
+            }
 
             .queue-container {
                 height: 100%;

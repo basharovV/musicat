@@ -147,9 +147,6 @@
 
 <style lang="scss">
     .container {
-        border: 0.7px solid var(--panel-primary-border-main);
-        margin: 5px 0 0 0;
-        border-radius: 5px;
         position: relative;
     }
     .prune-mode-overlay {

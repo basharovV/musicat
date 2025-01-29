@@ -215,7 +215,8 @@
                 top: -25px;
                 left: -10px;
                 font-size: 0.7em;
-                background: var(--overlay-bg);
+                background: var(--seekbar-tooltip-bg);
+                color: var(--seekbar-tooltip-text);
                 padding: 0 0.3em;
                 border-radius: 3px;
             }

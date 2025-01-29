@@ -122,7 +122,7 @@
     <!-- TODO -->
 </div>
 {#if !$isSmartQueryBuilderOpen}
-    {#if $selectedSmartQuery.startsWith("~usq:")}
+    {#if $selectedSmartQuery?.startsWith("~usq:")}
         <ButtonWithIcon
             size="small"
             icon="material-symbols:edit-outline"

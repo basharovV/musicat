@@ -36,6 +36,7 @@
     let detailsAlbumHeight = 0;
     let detailsAlbumIndex = -1;
     let detailsAlbumRow = -1;
+    let detailsAlbumTracks: Song[] = null;
     let highlightedAlbum;
     let isCurrentAlbumInView = false;
     let isInit = true;
@@ -266,6 +267,7 @@
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
             detailsAlbum = null;
+            detailsAlbumTracks = null;
             detailsAlbumHeight = 0;
             detailsAlbumIndex = -1;
             detailsAlbumRow = -1;
@@ -274,11 +276,15 @@
             rowCount -= 1;
         } else {
             const oldRow = detailsAlbumRow;
-            detailsAlbumHeight = await getAlbumDetailsHeight(album);
 
             detailsAlbum = album;
+            detailsAlbumTracks = await db.songs.bulkGet(album.tracksIds);
             detailsAlbumIndex = index;
             detailsAlbumRow = Math.floor(index / columnCount) + 2;
+
+            detailsAlbumHeight = await getAlbumDetailsHeight(
+                detailsAlbumTracks.length,
+            );
 
             if (oldRow >= 0) {
                 var sizes = [...itemSizes];
@@ -361,7 +367,10 @@
                     {#if index === 0 || index + 1 === rowCount}
                         <div></div>
                     {:else if detailsAlbumRow === index}
-                        <AlbumDetails albumId={detailsAlbum.id} />
+                        <AlbumDetails
+                            album={detailsAlbum}
+                            tracks={detailsAlbumTracks}
+                        />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
                             {@const albumIdx =
@@ -412,13 +421,10 @@
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
-        margin: 5px 5px 0 0;
         row-gap: 5px;
         border-radius: 5px;
         box-sizing: border-box;
         overflow: hidden;
-        border-top: 0.7px solid var(--panel-secondary-border-accent);
-        border-bottom: 0.7px solid var(--panel-secondary-border-main);
     }
     .grid-container {
         display: grid;
@@ -429,8 +435,6 @@
         grid-template-columns: 1fr;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
-        border-left: 0.7px solid var(--panel-secondary-border-main);
-        border-bottom: 0.7px solid var(--panel-secondary-border-main);
         background-color: var(--panel-background);
     }
 

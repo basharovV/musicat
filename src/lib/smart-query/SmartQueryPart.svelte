@@ -174,6 +174,7 @@
         margin: 0;
         font-weight: 400;
         line-height: 14px;
+        color: var(--smart-playlist-builder-block-text);
     }
 
     input {

@@ -1418,9 +1418,9 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
+        border-top: 1px solid var(--panel-primary-border-main);
         border-left: 1px solid var(--panel-secondary-border-main);
         border-bottom: 1px solid var(--panel-secondary-border-main);
-        border-right: 1px solid var(--panel-secondary-border-main);
         overflow: hidden;
         margin: 4px 0 0 0;
         &.dragover {
