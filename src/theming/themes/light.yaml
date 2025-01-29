@@ -33,6 +33,8 @@ text-secondary: "#56575b"
 text-active: "#38353b"
 text-inactive: "#707879"
 # Album
+album-gridsize-line-bg: "var(--icon-secondary)"
+album-gridsize-thumb: "#84afa6"
 album-hover-info-bg: "#f1f1f1cc"
 album-hover-info-text: var(--text)
 album-playing-pause-bg: var(--album-playing-play-bg)

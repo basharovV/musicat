@@ -17,8 +17,14 @@
         "accent-secondary": {
             "type": "string"
         },
-        "album-hover-info-bg": {
+        "album-gridsize-line-bg": {
             "description": "Album",
+            "type": "string"
+        },
+        "album-gridsize-thumb": {
+            "type": "string"
+        },
+        "album-hover-info-bg": {
             "type": "string"
         },
         "album-hover-info-text": {
@@ -639,6 +645,8 @@
     "required": [
         "accent",
         "accent-secondary",
+        "album-gridsize-line-bg",
+        "album-gridsize-thumb",
         "album-hover-info-bg",
         "album-hover-info-text",
         "album-playing-pause-bg",

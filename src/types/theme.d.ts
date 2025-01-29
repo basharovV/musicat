@@ -46,6 +46,8 @@ export interface Theme {
     "link-hover": string;
     title: string;
     /** Album */
+    "album-gridsize-line-bg": string;
+    "album-gridsize-thumb": string;
     "album-hover-info-bg": string;
     "album-hover-info-text": string;
     "album-playing-pause-bg": string;

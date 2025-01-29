@@ -28,16 +28,26 @@ export const allThemes: { [key: string]: Theme } = {
     "zokugun-obsidium": tmZokugunObsidium,
 };
 
-export const lightThemes: { [key: string]: Theme } = {
-    light: tmLight,
-    light2: tmLight2,
-};
+const base16 = import.meta.glob("./themes/base16/base16-*.yaml", {
+    import: "default",
+    eager: true,
+});
 
-export const darkThemes: { [key: string]: Theme } = {
-    amphibian: tmAmphibian,
-    dark: tmDark,
-    turquoise: tmTurquoise,
-    red: tmRed,
-    winamp: tmWinamp,
-    "zokugun-obsidium": tmZokugunObsidium,
-};
+for (const [path, theme] of Object.entries(base16)) {
+    const key = /\.\/themes\/base16\/base16-(.*)\.yaml/.exec(path)[1];
+
+    allThemes[`base16-${key}`] = theme as Theme;
+}
+
+export const lightThemes: { [key: string]: Theme } = {};
+export const darkThemes: { [key: string]: Theme } = {};
+
+for (const [key, theme] of Object.entries(allThemes).sort(([_a, a], [_b, b]) =>
+    a["display-name"].localeCompare(b["display-name"]),
+)) {
+    if (theme.variant === "light") {
+        lightThemes[key] = theme;
+    } else {
+        darkThemes[key] = theme;
+    }
+}
