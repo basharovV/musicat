@@ -98,16 +98,9 @@
 <style lang="scss">
     .enrichment-section {
         margin-top: 1.5em;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
         border-radius: 5px;
         padding: 2em 1em 1em 1em;
         grid-column: 1 / 3;
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
         position: relative;
 
         .label {

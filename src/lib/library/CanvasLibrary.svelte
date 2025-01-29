@@ -408,6 +408,7 @@
     let TEXT_COLOR_SECONDARY: string;
     let HIGHLIGHT_BG_COLOR: string;
     let ROW_BG_COLOR: string;
+    let ROW_ODD_BG_COLOR: string;
     let ROW_BG_COLOR_HOVERED: string;
     let PLAYING_BG_COLOR: string;
     let PLAYING_TEXT_COLOR: string;
@@ -416,6 +417,7 @@
     let CLICKABLE_CELL_BG_COLOR: string;
     let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
     let DRAGGING_SOURCE_COLOR: string;
+    let COLUMN_DIVIDER_COLOR: string;
 
     const SCROLLING_PIXEL_RATIO = 1.3;
     const IDLE_PIXEL_RATIO = 1.8;
@@ -501,6 +503,7 @@
         TEXT_COLOR_SECONDARY = $currentThemeObject["text-secondary"];
         HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
         ROW_BG_COLOR = "transparent";
+        ROW_ODD_BG_COLOR = $currentThemeObject["library-odd-row-bg"];
         ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
         PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
         PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
@@ -511,6 +514,7 @@
         CLICKABLE_CELL_BG_COLOR_HOVERED =
             $currentThemeObject["library-clickable-cell-hover-bg"];
         DRAGGING_SOURCE_COLOR = "#8a69683e";
+        COLUMN_DIVIDER_COLOR = $currentThemeObject["library-column-divider"];
     }
 
     let isRestoringScrollPos = false;
@@ -959,15 +963,7 @@
             }
 
             const album = albums[0];
-
-            let tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .toArray();
-
-            tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
+            const tracks = await db.songs.bulkGet(album.tracksIds);
 
             setQueue(tracks, song.viewModel.index);
         } else if ($uiView === "smart-query") {
@@ -1929,7 +1925,10 @@
                                                             : hoveredSongIdx ===
                                                                 songIdx
                                                               ? ROW_BG_COLOR_HOVERED
-                                                              : ROW_BG_COLOR,
+                                                              : songIdx % 2 ===
+                                                                  0
+                                                                ? ROW_BG_COLOR
+                                                                : ROW_ODD_BG_COLOR,
                                             }}
                                         />
                                         {#each displayFields as f, idx (f.value)}
@@ -1994,12 +1993,7 @@
                                                             fontSize: 13.5,
                                                             verticalAlign:
                                                                 "middle",
-                                                            fill:
-                                                                $current.song
-                                                                    ?.id ===
-                                                                song.id
-                                                                    ? PLAYING_TEXT_COLOR
-                                                                    : TEXT_COLOR,
+                                                            fill: TEXT_COLOR,
                                                             ellipsis:
                                                                 f.value.match(
                                                                     /^(title|artist|album|genre)/,
@@ -2602,6 +2596,7 @@
                                         }}
                                     />
                                 </Group>
+                                <!-- Column divider -->
                                 {#if idx > 0}
                                     <Rect
                                         config={{
@@ -2611,7 +2606,7 @@
                                                 HEADER_HEIGHT,
                                             height: viewportHeight,
                                             width: 0.5,
-                                            fill: "rgba(242, 242, 242, 0.144)",
+                                            fill: COLUMN_DIVIDER_COLOR,
                                             listening: false,
                                         }}
                                     />
@@ -2655,10 +2650,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-bottom-left-radius: 5px;
-        border-bottom-right-radius: 5px;
-        border-left: 0.7px solid var(--panel-primary-border-main);
-        border-bottom: 0.7px solid var(--panel-primary-border-main);
         overflow: hidden;
         &.dragover {
             border-color: var(--accent-secondary);

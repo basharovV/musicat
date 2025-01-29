@@ -149,47 +149,112 @@
 
             song = current.song;
 
-            const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: {
-                    path: song.path,
-                    isImport: false,
-                    includeFolderArtwork: true,
-                },
-            });
+            if (song.artworkOrigin === "File") {
+                const artwork = await invoke<{
+                    format: string;
+                    src: string;
+                }>("get_artwork_file", {
+                    event: {
+                        path: song.path,
+                    },
+                });
 
-            if (!songWithArtwork) {
-                title = "❗️File read error❗️";
-                artist = "Check permissions";
-                album = "in use by another program?";
-                toast.error(
-                    `Error reading file ${song.path}. Check permissions, or if the file is used by another program.`,
-                    { className: "app-toast" },
-                );
-                return;
-            }
-            console.log("sidebar::currentSong listener", songWithArtwork);
-            title = songWithArtwork.title;
-            fileName = song.file;
-            artist = songWithArtwork.artist;
-            album = songWithArtwork.album;
-            codec = songWithArtwork.fileInfo.codec;
-            stereo = songWithArtwork.fileInfo.channels === 2;
-            bitrate = songWithArtwork.fileInfo.bitDepth;
-            sampleRate = songWithArtwork.fileInfo.sampleRate;
-            duration = songWithArtwork.fileInfo.duration;
-            previousArtworkSrc = artworkSrc;
-            if (songWithArtwork.artwork) {
-                artworkFormat = songWithArtwork.artwork.format;
-                if (songWithArtwork.artwork.data?.length) {
-                    artworkBuffer = Buffer.from(songWithArtwork.artwork.data);
+                if (artwork) {
+                    console.log("sidebar::current get_artwork_file", artwork);
+
+                    artworkFormat = artwork.format;
+                    artworkSrc = convertFileSrc(artwork.src);
+                }
+            } else if (song.artworkOrigin === "Metadata") {
+                const artwork = await invoke<{
+                    format: string;
+                    data: number[];
+                }>("get_artwork_metadata", {
+                    event: {
+                        path: song.path,
+                    },
+                });
+
+                if (artwork) {
+                    console.log(
+                        "sidebar::current get_artwork_metadata",
+                        artwork,
+                    );
+
+                    artworkFormat = artwork.format;
+                    artworkBuffer = Buffer.from(artwork.data);
                     artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
                         "base64",
                     )}`;
-                } else if (songWithArtwork.artwork.src) {
-                    artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                }
+            } else if (song.artworkOrigin === "Broken") {
+                console.log("sidebar::current artwork/broken");
+
+                artworkFormat = null;
+                artworkSrc = null;
+            } else if (song.artworkOrigin === "NotFound") {
+                console.log("sidebar::current artwork/not found");
+
+                artworkFormat = null;
+                artworkSrc = null;
+            } else {
+                const songWithArtwork = await invoke<Song>(
+                    "get_song_metadata",
+                    {
+                        event: {
+                            path: song.path,
+                            isImport: false,
+                            includeFolderArtwork: true,
+                        },
+                    },
+                );
+
+                if (songWithArtwork && songWithArtwork.artwork) {
+                    console.log(
+                        "sidebar::current get_song_metadata",
+                        songWithArtwork,
+                    );
+
+                    artworkFormat = songWithArtwork.artwork.format;
+
+                    if (songWithArtwork.artwork.src) {
+                        artworkSrc = convertFileSrc(
+                            songWithArtwork.artwork.src,
+                        );
+                    } else {
+                        artworkBuffer = Buffer.from(
+                            songWithArtwork.artwork.data,
+                        );
+                        artworkSrc = `data:${artworkFormat};base64, ${artworkBuffer.toString(
+                            "base64",
+                        )}`;
+                    }
+                } else {
+                    artworkFormat = null;
+                    artworkSrc = null;
                 }
 
+                // don't wait for the update
+                db.songs.update(song, {
+                    artworkOrigin: songWithArtwork.artworkOrigin,
+                });
+            }
+
+            title = song.title;
+            fileName = song.file;
+            artist = song.artist;
+            album = song.album;
+            codec = song.fileInfo.codec;
+            stereo = song.fileInfo.channels === 2;
+            bitrate = song.fileInfo.bitDepth;
+            sampleRate = song.fileInfo.sampleRate;
+            duration = song.fileInfo.duration;
+
+            previousArtworkSrc = artworkSrc;
+
+            if (artworkSrc) {
                 console.log("artworkSrc", artworkSrc);
+
                 $currentSongArtworkSrc = {
                     src: artworkSrc,
                     format: artworkFormat,
@@ -198,8 +263,6 @@
                         height: 200,
                     },
                 };
-            } else {
-                artworkSrc = null;
             }
 
             drawArtwork(previousSongIdx > current.index);
@@ -2103,8 +2166,7 @@
             padding-left: 5px;
             font-size: 13px;
             color: var(--text-active, initial);
-            border: 1px solid
-                color-mix(in srgb, var(--inverse) 80%, transparent);
+            border: 1px solid var(--sidebar-search-border);
             backdrop-filter: blur(8px);
             z-index: 10;
             background-color: transparent;
@@ -2132,7 +2194,7 @@
 
     .track-info {
         width: 100%;
-        height: 210px;
+        height: 198px;
         /* height: 150px; */
         /* min-height: 150px; */
         width: 100%;
@@ -2168,6 +2230,27 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+
+        @media only screen and (min-width: 211px) {
+            &:after {
+                content: "";
+                position: absolute;
+                left: 5px;
+                right: 5px;
+                top: 5px;
+                bottom: 5px;
+                background-color: color-mix(
+                    in srgb,
+                    var(--background) 50%,
+                    transparent
+                );
+                border: 1px solid #6868681a;
+                box-shadow: 0px 0px 5px 1px #0000001a;
+                backdrop-filter: blur(5px);
+                border-radius: 5px;
+                z-index: -1;
+            }
+        }
 
         .sidebar-toggle {
             position: absolute;
@@ -2216,7 +2299,6 @@
                 background-color: var(--sidebar-info-title-hover-bg);
                 border-radius: 5px;
                 mask-image: none;
-                border: 1px dashed var(--sidebar-info-title-hover-border);
             }
 
             canvas {
@@ -2352,7 +2434,7 @@
     .artwork-container {
         padding: 0em;
         width: 100%;
-        height: 210px;
+        height: 209px;
         position: sticky;
         bottom: 140px;
         margin: auto;
@@ -2645,30 +2727,6 @@
                 display: none;
             }
         }
-        @media only screen and (max-height: 660px) {
-            /* grid-template-rows: 1fr 210px 1fr; */
-            .track-info {
-                background: linear-gradient(
-                    to bottom,
-                    hsla(240, 10.71%, 10.98%, 0.75) 0%,
-                    hsla(240, 10.71%, 10.98%, 0.74) 8.3%,
-                    hsla(240, 10.71%, 10.98%, 0.714) 16.5%,
-                    hsla(240, 10.71%, 10.98%, 0.672) 24.4%,
-                    hsla(240, 10.71%, 10.98%, 0.618) 32.2%,
-                    hsla(240, 10.71%, 10.98%, 0.556) 39.7%,
-                    hsla(240, 10.71%, 10.98%, 0.486) 47%,
-                    hsla(240, 10.71%, 10.98%, 0.412) 54.1%,
-                    hsla(240, 10.71%, 10.98%, 0.338) 60.9%,
-                    hsla(240, 10.71%, 10.98%, 0.264) 67.4%,
-                    hsla(240, 10.71%, 10.98%, 0.194) 73.6%,
-                    hsla(240, 10.71%, 10.98%, 0.132) 79.6%,
-                    hsla(240, 10.71%, 10.98%, 0.078) 85.2%,
-                    hsla(240, 10.71%, 10.98%, 0.036) 90.5%,
-                    hsla(240, 10.71%, 10.98%, 0.01) 95.4%,
-                    hsla(240, 10.71%, 10.98%, 0) 100%
-                );
-            }
-        }
 
         // COVER INFO OVER ARTWORK
         @media only screen and (max-height: 548px) {
@@ -2676,7 +2734,7 @@
 
             .track-info {
                 border-top: none;
-                backdrop-filter: blur(1px);
+                height: 210px;
             }
         }
 

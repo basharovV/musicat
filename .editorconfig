@@ -11,7 +11,7 @@ insert_final_newline = true
 
 [*.{yml,yaml}]
 indent_style = space
-indent_size = 2
+indent_size = 4
 
 [*.svg]
 insert_final_newline = false

@@ -19,10 +19,10 @@ icon-tertiary-hover: rgb(from var(--icon-tertiary) r g b / 0.6)
 button-bg: "#282b2c"
 button-text: "#ede8f0"
 input-alt-focus-outline: "1px solid #c4c7c8"
-input-bg: "#86808066"
-input-focus-bg: "#999999"
+input-bg: "transparent"
+input-focus-bg: "#ffffff"
 input-focus-outline: "2px solid #7171bb"
-input-placeholder-text: "#ffffff99"
+input-placeholder-text: "#84848499"
 header-opacity: 0.2
 header-text: var(--text)
 link: "#2c33ff"
@@ -215,3 +215,5 @@ wiki-pill-border: "#eeeeee"
 wiki-pill-text: var(--text-secondary)
 wiki-pill-hover-bg: color-mix(in srgb, var(--button-bg) 20%, transparent)
 wiki-pill-hover-text: var(--text-secondary)
+# Lyrics
+lyrics-text: var(--text)

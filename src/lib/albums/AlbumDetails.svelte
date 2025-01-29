@@ -1,6 +1,5 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
-    import { db } from "../../data/db";
     import Icon from "../ui/Icon.svelte";
     import LL from "../../i18n/i18n-svelte";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
@@ -9,54 +8,36 @@
     import { albumColumnOrder, current, isPlaying } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import { HEADER_HEIGHT, ROW_HEIGHT } from "./util";
+    import type { Album, Song } from "../../App";
 
-    export let albumId: string; // id of the album to display
+    export let album: Album;
+    export let tracks: Song[];
 
-    let canvasHeight = HEADER_HEIGHT;
     let isHovered = false;
 
-    $: album = liveQuery(async () => {
-        return await db.albums.get(albumId);
-    });
-
     $: isPlayingCurrentAlbum =
-        $current.song?.album.toLowerCase() === $album?.title.toLowerCase();
+        $current.song?.album.toLowerCase() === album?.title.toLowerCase();
 
-    $: songs = liveQuery(async () => {
-        var tracks = await db.songs
-            .where("id")
-            .anyOf($album.tracksIds)
-            .toArray();
-
-        tracks.sort((a, b) => {
-            return a.trackNumber - b.trackNumber;
-        });
-
-        canvasHeight = HEADER_HEIGHT + tracks.length * ROW_HEIGHT + 8;
-
-        return tracks;
-    });
+    $: canvasHeight = HEADER_HEIGHT + tracks.length * ROW_HEIGHT + 8;
 
     async function playPauseToggle() {
-        if ($current.song?.album.toLowerCase() === $album.title.toLowerCase()) {
+        if ($current.song?.album.toLowerCase() === album.title.toLowerCase()) {
             if ($isPlaying) {
                 audioPlayer.pause();
             } else {
                 audioPlayer.play(true);
             }
         } else {
-            const tracks = songs.getValue();
-
             setQueue(tracks, 0);
         }
     }
 </script>
 
-{#if $album}
+{#if album}
     <div
         in:fade={{ duration: 150 }}
         class="container"
-        class:hovered={isHovered && $album.artwork}
+        class:hovered={isHovered && album.artwork}
     >
         <div class="info-container">
             <div
@@ -77,12 +58,12 @@
                     async
                 />
                 <div class="artwork-frame">
-                    {#if $album.artwork}
+                    {#if album.artwork}
                         <img
                             alt="Artwork"
-                            type={$album.artwork.format}
+                            type={album.artwork.format}
                             class="artwork"
-                            src={$album.artwork.src}
+                            src={album.artwork.src}
                             loading="lazy"
                             async
                         />
@@ -121,17 +102,17 @@
                 </div>
             </div>
             <div class="info-frame">
-                <p class="title">{$album.displayTitle ?? $album.title}</p>
-                {#if $album.artist}
-                    <p class="artist">{$album.artist}</p>
+                <p class="title">{album.displayTitle ?? album.title}</p>
+                {#if album.artist}
+                    <p class="artist">{album.artist}</p>
                 {/if}
                 <div class="info">
-                    {#if $album.year > 0}
-                        <small>{$album.year}</small>
+                    {#if album.year > 0}
+                        <small>{album.year}</small>
                         <small>•</small>
                     {/if}
                     <small
-                        >{$album.tracksIds.length}
+                        >{album.tracksIds.length}
                         {$LL.albums.item.tracksLabel()}</small
                     >
                 </div>
@@ -140,7 +121,7 @@
         <div class="songs" style="height: {canvasHeight}px">
             <CanvasLibrary
                 bind:columnOrder={$albumColumnOrder}
-                allSongs={songs}
+                allSongs={liveQuery(() => tracks)}
             />
         </div>
     </div>

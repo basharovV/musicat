@@ -200,7 +200,7 @@
         />
         <MenuDivider />
         <MenuOption text="⚡️ Enrich" isDisabled />
-        {#if song.artist}
+        {#if song?.artist}
             <MenuOption
                 isLoading={isLoading("country")}
                 onClick={fetchingOriginCountry}
@@ -238,7 +238,7 @@
             onClick={compose(searchArtworkOnBrave, album)}
             text="Search for artwork on Brave"
         />
-        {#if song.artist}
+        {#if song?.artist}
             <MenuDivider />
             <MenuOption
                 onClick={compose(searchArtistOnYouTube, song)}
