@@ -290,6 +290,7 @@
     }
     let height = 0;
     let width = 0;
+    let hideArtwork = window.innerHeight < 650;
     let hasDecorations = false;
 
     let sidebarToggleX = 0;
@@ -307,6 +308,16 @@
             $isMiniPlayer = false;
             console.log("setting to true");
             // await appWindow.setDecorations(true);
+        }
+
+        if (height >= 650) {
+            if (hideArtwork) {
+                hideArtwork = false;
+
+                drawArtwork(true);
+            }
+        } else {
+            hideArtwork = true;
         }
     }
 
@@ -446,14 +457,14 @@
     let showMenuBottomScrollShadow = false;
 
     function onMenuResize() {
-        console.log(
-            "scrollTop",
-            menuInnerScrollArea.scrollTop,
-            menuInnerScrollArea.clientHeight,
-            menuInnerScrollArea.scrollHeight,
-        );
         // Check scroll area size, add shadows if necessary
         if (menuInnerScrollArea) {
+            console.log(
+                "scrollTop",
+                menuInnerScrollArea.scrollTop,
+                menuInnerScrollArea.clientHeight,
+                menuInnerScrollArea.scrollHeight,
+            );
             showMenuTopScrollShadow =
                 menuInnerScrollArea.scrollTop > 0 &&
                 menuInnerScrollArea.scrollHeight >
