@@ -28,6 +28,7 @@ use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 mod constants;
 mod dsp;
 mod files;
+mod logger;
 #[cfg(target_os = "macos")]
 mod mediakeys;
 mod metadata;
@@ -700,7 +701,9 @@ async fn main() {
             player::change_audio_device,
             download_file,
             scrape::get_wikipedia,
-            files::delete_files
+            files::delete_files,
+            logger::max_log_level,
+            logger::write_log
         ])
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);
