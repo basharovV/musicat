@@ -248,6 +248,12 @@
         canShowInfoPopup.set(innerWidth >= 750);
     }
 
+    $: {
+        if (showSidebar) {
+            $isFloatingSidebar = false;
+        }
+    }
+
     let container: HTMLElement;
     let isResizing = false;
     let showCloseWikiPrompt = false;
