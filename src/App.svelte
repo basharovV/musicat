@@ -326,14 +326,14 @@
         class:mini-player={$isMiniPlayer}
         class:queue-view={!showMainPanel && showQueue}
         class:split-view={isSplitView}
-        class:floating-sidebar={$isFloatingSidebar}
+        class:floating-sidebar={!showSidebar}
         class:transparent={$os === "macos"}
         bind:this={container}
     >
         <div
             class="sidebar"
             class:visible={showSidebar || $isFloatingSidebar}
-            class:floating={$isFloatingSidebar}
+            class:floating={!showSidebar}
         >
             {#if showSidebar || $isFloatingSidebar}
                 <Sidebar floating={$isFloatingSidebar} />
@@ -570,7 +570,9 @@
                 width: 210px;
             }
             &.floating {
-                z-index: 15;
+                position: fixed;
+                z-index: 16;
+                height: 100vh;
                 background-color: rgb(from var(--background) r g b / 1);
             }
         }
@@ -681,6 +683,10 @@
             .bottom {
                 margin-top: 5px;
                 margin-bottom: 5px;
+
+                @media only screen and (max-height: 649px) {
+                    margin: 5px;
+                }
             }
 
             &.full-width {
@@ -781,6 +787,7 @@
 
             .queue {
                 grid-column: 1;
+                margin-left: 5px;
             }
 
             .panel,
