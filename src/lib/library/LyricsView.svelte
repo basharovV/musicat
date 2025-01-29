@@ -296,9 +296,9 @@
         border-radius: 5px;
         /* background-color: rgba(0, 0, 0, 0.187); */
         border: 1px solid rgb(73, 70, 70);
-        background: rgba(53, 50, 54, 0.8);
+        background: var(--overlay-bg);
         box-shadow: 0px 5px 40px var(--overlay-shadow);
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
 
         @media only screen and (max-height: 605px) {
             height: 80%;

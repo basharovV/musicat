@@ -666,19 +666,14 @@
                 font-weight: bold;
                 border-radius: 5px;
                 font-style: normal;
-                background-color: color-mix(
-                    in srgb,
-                    var(--button-bg) 20%,
-                    transparent
-                );
-                border: 1px solid
-                    color-mix(in srgb, var(--type-bw-inverse) 40%, transparent);
+                background-color: var(--wiki-mention-bg);
+                border: 1px solid var(--wiki-mention-border);
+                color: var(--wiki-mention-text);
                 padding: 0 5px;
-                color: var(--button-text);
 
                 &:before {
                     content: "▶ ";
-                    color: var(--text);
+                    color: var(--wiki-mention-text);
                 }
             }
 

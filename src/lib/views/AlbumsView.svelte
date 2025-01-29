@@ -409,13 +409,10 @@
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
-        margin: 5px 5px 0 0;
         row-gap: 5px;
         border-radius: 5px;
         box-sizing: border-box;
         overflow: hidden;
-        border-top: 0.7px solid var(--panel-secondary-border-accent);
-        border-bottom: 0.7px solid var(--panel-secondary-border-main);
     }
     .grid-container {
         display: grid;
@@ -426,8 +423,6 @@
         grid-template-columns: 1fr;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
-        border-left: 0.7px solid var(--panel-secondary-border-main);
-        border-bottom: 0.7px solid var(--panel-secondary-border-main);
         background-color: var(--panel-background);
     }
 

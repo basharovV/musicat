@@ -211,7 +211,7 @@
         .title {
             background-color: var(--album-playing-title-bg);
             border-radius: 0 0 8px 8px;
-            color: var(--text);
+            color: var(--album-playing-title-text);
             z-index: 20;
             margin-top: 3px !important;
         }
