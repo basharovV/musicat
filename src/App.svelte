@@ -491,7 +491,7 @@
             {/if}
         </div>
 
-        <div class="bottom-bar">
+        <div class="bottom-bar" class:full-width={!showSidebar}>
             {#if !showSidebar}
                 <div class="top" in:fly={{ duration: 200, y: 30 }}>
                     <TopBar />
@@ -565,6 +565,7 @@
             grid-row: 1 / 6;
             grid-column: 1;
             width: 5px;
+            overflow: hidden;
             &.visible {
                 width: 210px;
             }
@@ -671,8 +672,7 @@
             grid-column: 2 / 6;
             @media only screen and (max-width: 600px) {
                 .top {
-                    margin-bottom: 5px;
-                    margin-top: 0px;
+                    margin: 5px 0 5px 5px;
                 }
                 .bottom {
                     display: none;
@@ -681,6 +681,10 @@
             .bottom {
                 margin-top: 5px;
                 margin-bottom: 5px;
+            }
+
+            &.full-width {
+                grid-column: 1 / -1;
             }
         }
 
@@ -791,10 +795,6 @@
             .wiki {
                 grid-column: 4;
             }
-
-            .bottom-bar {
-                grid-column: 1 / -1;
-            }
         }
 
         &.split-view {
@@ -811,10 +811,6 @@
             .panel,
             .header {
                 grid-column: 2;
-            }
-
-            .bottom-bar {
-                grid-column: 1 / -1;
             }
         }
 

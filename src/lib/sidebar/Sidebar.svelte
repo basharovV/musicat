@@ -1906,13 +1906,14 @@
         flex-direction: column;
         justify-content: flex-end;
         align-items: flex-end;
-        height: 100vh;
+        height: 100%;
         max-width: 210px;
         min-width: 210px;
-        /* border-right: 1px solid #ececec1c; */
         background-color: $sidebar_primary_color;
 
         &.floating {
+            grid-template-rows: 1fr;
+
             .top {
                 border: 0;
             }
