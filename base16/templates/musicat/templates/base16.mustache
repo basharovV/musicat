@@ -3,14 +3,14 @@ variant: {{scheme-variant}}
 # Basics
 accent: "#{{base09-hex}}cc"
 accent-secondary: "#{{base08-hex}}"
-background: "#{{base01-hex}}cc"
+background: "#{{base01-hex}}"
 button-active-bg: "#{{base02-hex}}ee"
 button-active-disabled-bg: "#dadada"
 button-active-disabled-text: "#000000"
 button-solid-bg: "#{{base0D-hex}}"
 button-text: "#{{base05-hex}}"
 header-opacity: 0.4
-header-text: --text
+header-text: var(--text)
 icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
 icon-disabled: "#{{base02-hex}}"
 icon-primary: "#{{base05-hex}}"
@@ -23,6 +23,7 @@ input-bg: "#{{base03-hex}}"
 input-focus-bg: "#{{base00-hex}}"
 input-focus-outline: "2px solid #{{base0D-hex}}99"
 input-placeholder-text: "#{{base05-hex}}99"
+inverse: rgb(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b))
 link: "#{{base0F-hex}}"
 link-hover: "#{{base0E-hex}}"
 overlay-bg: "#{{base02-hex}}"
@@ -33,6 +34,8 @@ text-secondary: "#{{base0E-hex}}"
 text-active: "#{{base05-hex}}"
 text-inactive: "#{{base05-hex}}99"
 title: "#7dffee"
+type-bw: hsl(from var(--background) h 100% calc(round(l / 100) * 100))
+type-bw-inverse: hsl(from var(--type-bw) h 100% calc(100 - l))
 # Album
 album-gridsize-line-bg: "var(--seekbar-line-bg)"
 album-gridsize-thumb: "var(--seekbar-thumb)"
@@ -129,7 +132,7 @@ panel-primary-border-accent2: "color-mix(in srgb, var(--inverse) 10%, transparen
 panel-secondary-border-main: "#{{base05-hex}}2a"
 panel-secondary-border-accent: "#{{base05-hex}}19"
 panel-separator: "#{{base05-hex}}17"
-panel-shadow-bg: rgba(0, 0, 0, 0.15)
+panel-shadow-bg: color-mix(in srgb, var(--type-bw) 15%, transparent)
 # Popups
 popup-track-artwork-about: "#{{base0E-hex}}"
 popup-track-artwork-found: "#009999"

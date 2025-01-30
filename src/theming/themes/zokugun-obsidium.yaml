@@ -9,7 +9,7 @@ button-active-disabled-bg: "#dadada"
 button-active-disabled-text: "#000000"
 button-solid-bg: "#282a2e"
 header-opacity: 0.4
-header-text: --text
+header-text: var(--text)
 icon-secondary: "#dadada"
 icon-secondary-hover: "#ffcc33"
 icon-tertiary: "#ff9900"

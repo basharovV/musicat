@@ -639,7 +639,7 @@
             height: 100%;
 
             &.visible {
-                box-shadow: -10px 3px 30px 5px rgba(0, 0, 0, 0.15);
+                box-shadow: -10px 3px 30px 5px var(--panel-shadow-bg);
             }
 
             .queue-container {

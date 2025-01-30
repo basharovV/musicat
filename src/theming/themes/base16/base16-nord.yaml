@@ -3,14 +3,14 @@ variant: dark
 # Basics
 accent: "#D08770cc"
 accent-secondary: "#BF616A"
-background: "#3B4252cc"
+background: "#3B4252"
 button-active-bg: "#434C5Eee"
 button-active-disabled-bg: "#dadada"
 button-active-disabled-text: "#000000"
 button-solid-bg: "#81A1C1"
 button-text: "#E5E9F0"
 header-opacity: 0.4
-header-text: --text
+header-text: var(--text)
 icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
 icon-disabled: "#434C5E"
 icon-primary: "#E5E9F0"
@@ -23,6 +23,7 @@ input-bg: "#4C566A"
 input-focus-bg: "#2E3440"
 input-focus-outline: "2px solid #81A1C199"
 input-placeholder-text: "#E5E9F099"
+inverse: rgb(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b))
 link: "#5E81AC"
 link-hover: "#B48EAD"
 overlay-bg: "#434C5E"
@@ -33,6 +34,8 @@ text-secondary: "#B48EAD"
 text-active: "#E5E9F0"
 text-inactive: "#E5E9F099"
 title: "#7dffee"
+type-bw: hsl(from var(--background) h 100% calc(round(l / 100) * 100))
+type-bw-inverse: hsl(from var(--type-bw) h 100% calc(100 - l))
 # Album
 album-gridsize-line-bg: "var(--seekbar-line-bg)"
 album-gridsize-thumb: "var(--seekbar-thumb)"
@@ -129,7 +132,7 @@ panel-primary-border-accent2: "color-mix(in srgb, var(--inverse) 10%, transparen
 panel-secondary-border-main: "#E5E9F02a"
 panel-secondary-border-accent: "#E5E9F019"
 panel-separator: "#E5E9F017"
-panel-shadow-bg: rgba(0, 0, 0, 0.15)
+panel-shadow-bg: color-mix(in srgb, var(--type-bw) 15%, transparent)
 # Popups
 popup-track-artwork-about: "#B48EAD"
 popup-track-artwork-found: "#009999"

@@ -42,10 +42,13 @@ export interface Theme {
     /** */
     "header-opacity": number;
     "header-text": string;
+    inverse: string;
     link: string;
     "link-hover": string;
     "shadow-gradient-bg": string;
     title: string;
+    "type-bw": string;
+    "type-bw-inverse": string;
     /** Album */
     "album-gridsize-line-bg": string;
     "album-gridsize-thumb": string;

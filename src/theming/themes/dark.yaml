@@ -23,6 +23,7 @@ input-bg: "#4d494966"
 input-focus-bg: "background-color: color-mix(in srgb, var(--input-bg) 60%, var(--inverse))"
 input-focus-outline: "2px solid #7171bb"
 input-placeholder-text: rgb(from var(--text) r g b / 0.5)
+inverse: "#ffffff2f"
 link: "#acafff"
 link-hover: "#8086ff"
 overlay-bg: "#3c3c3f33"
@@ -33,6 +34,8 @@ text-secondary: "#9fa0a2"
 text-active: "#ffffff"
 text-inactive: "#938e8e"
 title: "#7dffee"
+type-bw: "#000000"
+type-bw-inverse: "#ffffff"
 # Album
 album-gridsize-line-bg: "var(--icon-secondary)"
 album-gridsize-thumb: "#84afa6"
@@ -129,7 +132,7 @@ panel-primary-border-accent2: color-mix(in srgb, var(--inverse) 10%, transparent
 panel-secondary-border-main: "#ffffff2a"
 panel-secondary-border-accent: "#ffffff19"
 panel-separator: "#ffffff17"
-panel-shadow-bg: rgba(0, 0, 0, 0.15)
+panel-shadow-bg: color-mix(in srgb, var(--type-bw) 15%, transparent)
 # Popups
 popup-track-artwork-about: "#82c9df"
 popup-track-artwork-found: "#44a15e"
