@@ -1,58 +1,24 @@
 display-name: Light2
 variant: light
 # Basics
-accent: "#5d00fff3"
-accent-secondary: "#da69ff"
 background: "#e9e5efd9"
-button-active-bg: "#624dd4"
-button-active-disabled-bg: "#4935b8"
-button-active-disabled-text: "#747272"
-button-solid-bg: "#282b2c"
-button-text: "#ede8f0"
-header-opacity: 0.2
-header-text: var(--text)
 icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
 icon-disabled: "#474747"
-icon-primary: "#2c0b3e"
-icon-secondary: "#716a6a"
 icon-secondary-hover: rgb(from var(--icon-secondary) r g b / 0.4)
 icon-tertiary: var(--accent-secondary)
 icon-tertiary-hover: rgb(from var(--icon-tertiary) r g b / 0.4)
-input-alt-focus-outline: "1px solid #c4c7c8"
 input-bg: "#86808066"
 input-focus-bg: "background-color: color-mix(in srgb, var(--input-bg) 60%, var(--inverse))"
-input-focus-outline: "2px solid #7171bb"
 input-placeholder-text: rgb(from var(--text) r g b / 0.5)
 overlay-bg: "#f1f1f1c0"
-overlay-shadow: "#00000042"
 link: "#acafff"
 link-hover: "#8086ff"
-text: "#282230"
-text-secondary: "#56575b"
-text-active: "#38353b"
 text-inactive: "#646067"
-title: "#7dffee"
 # Album
-album-gridsize-line-bg: "var(--icon-secondary)"
-album-gridsize-thumb: "#84afa6"
-album-hover-info-bg: "#f1f1f1cc"
-album-hover-info-text: var(--text)
-album-playing-pause-bg: var(--album-playing-play-bg)
-album-playing-pause-border: var(--album-playing-play-border)
-album-playing-pause-icon: var(--album-playing-play-icon)
-album-playing-pause-hover-bg: var(--album-playing-play-hover-bg)
-album-playing-pause-hover-icon: var(--album-playing-play-hover-icon)
-album-playing-play-bg: "#25222b"
-album-playing-play-border: "#5123dd"
-album-playing-play-icon: "#ffffff"
 album-playing-play-hover-bg: "#5123dd"
-album-playing-play-hover-icon: "#ffffff"
 album-playing-shadow: "#5123dd"
-album-playing-title-bg: "#da69ff"
 # Analytics/Stats
 analytics-border: rgba(255, 255, 255, 0.11)
-analytics-text-primary: "#23dd7f"
-analytics-text-secondary: "#855dff"
 analytics-timeline-track-bg: "#ece5e54f"
 analytics-timeline-vline-bg: "#ece5e54f"
 # Artist's Toolkit
@@ -63,8 +29,6 @@ atk-icon-video: "#e04848"
 # Library
 library-clickable-cell-bg: "#9891aa1c"
 library-clickable-cell-hover-bg: "#5123dd6e"
-library-favourite-icon: "#5123dd"
-library-favourite-hover-icon: "#784bff"
 library-header-active-bg: "#997be1"
 library-header-bg: "#998bbb7e"
 library-header-text: "#312c2c"
@@ -72,45 +36,20 @@ library-highlight-bg: "#5123dd45"
 library-hover-bg: "#5123dd1c"
 library-playing-bg: "#5123dd"
 library-playing-icon: "#efe2e6"
-library-playing-text: "#ffffff"
 library-playing-title: "#ffffff"
-library-text: "#3e4040"
 library-title: "#282230"
 # Map View
-mapview-region-bg: "#645479"
-mapview-region-border: "#4F4464"
-mapview-region-hover-bg: "#645479"
-mapview-region-hover-border: "#C1B1F3"
-mapview-region-selected-bg: "#59CD70"
-mapview-region-selected-border: "#4F4464"
-mapview-region-selected-hover-bg: "#59CD70"
-mapview-region-selected-hover-border: "#4F4464"
-mapview-scale-1: "#eeeeee"
-mapview-scale-2: "#999999"
 mapview-tooltip-artist: "#ffffff95"
 mapview-tooltip-bg: "#232325cc"
 mapview-tooltip-border: "#ffffff2d"
 mapview-tooltip-text: "#808080"
 # Menus
 menu-bg: "#20202296"
-menu-border: "#ffffff3b"
-menu-checkbox-off: "#808080"
 menu-checkbox-on: "#ffffff"
 menu-divider: "#494949"
-menu-item-confirm-bg: "#d2630e"
 menu-item-destructive-hover-bg: "#d20e32"
-menu-item-destructive-hover-text: "#ffffff"
 menu-item-disabled: "#aeaeae66"
-menu-item-highlight-bg: "#ffffffcb"
-menu-item-highlight-border: transparent
-menu-item-highlight-text: "#252424"
-menu-item-highlight-secondary-bg: "#ffffff32"
-menu-item-highlight-secondary-border: "#ffffff1a"
-menu-item-highlight-secondary-text: "#ffffff"
-menu-item-loading-from: inherit
-menu-item-loading-to: "#dba4fac1"
 menu-item-text: "#ffffff"
-menu-shadow: "#00000022"
 # Oscilloscope
 oscilloscope: "#590194"
 # Panels
@@ -124,14 +63,8 @@ panel-separator: "#ffffff17"
 # Popups
 popup-track-artwork-about: "#82c9df"
 popup-track-artwork-found: "#44a15e"
-popup-track-artwork-notfound: "#808080"
-popup-track-data-field-bg: "#0000001e"
 popup-track-header-bg: color-mix(in srgb, var(--background) 1%, transparent)
 popup-track-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
-popup-track-metadata-prompt-error: "#6f5757"
-popup-track-metadata-title: "#ffe6ac"
-popup-track-metadata-validation-error: "#a12e2e"
-popup-track-metadata-validation-warning: "#e19a00"
 popup-track-section-bg: color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))
 popup-track-section-border: color-mix(in srgb, var(--background) 70%, var(--inverse))
 popup-track-section-title-bg: color-mix(in srgb, var(--background) 50%, var(--inverse))
@@ -142,24 +75,9 @@ progressbar-value-bg: "#23DD7F"
 # Prune
 prune-button-border: var(--inverse)
 prune-button-delete-bg: "#ff00007d"
-prune-button-delete-pressed-shadow: "#ff4747aa"
 prune-button-keep-bg: "#00800073"
-prune-button-keep-pressed-shadow: "#00ff00aa"
-prune-fordelete: "#ff5a5a"
 # ScrollTo
-scrollto-active-bg: "#c0c0ca"
-scrollto-active-border: "#65626243"
-scrollto-active-shadow: "#1f1f1f88"
-scrollto-bg: "#d9d9e0"
-scrollto-border: "#a39e9e7f"
-scrollto-eq: "#a0a0a0"
-scrollto-hover-bg: "#d2d2dd"
-scrollto-hover-border: "#6562624f"
-scrollto-hover-shadow: "#1f1f1f88"
-scrollto-shadow: "#1f1f1f33"
-scrollto-text: var(--text)
 # Seekbar
-seekbar-hoverhead: "#ffffff"
 seekbar-line-bg: color-mix(in srgb, var(--background) 76%, white)
 seekbar-thumb: "#00C56C"
 # Sidebar
@@ -167,54 +85,19 @@ sidebar-info-artist-active-bg: color-mix(in srgb, var(--inverse) 90%, transparen
 sidebar-info-artist-hover-bg: color-mix(in srgb, var(--inverse) 80%, transparent)
 sidebar-info-title-hover-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
 sidebar-info-title-hover-border: var(--inverse)
-sidebar-item-drag-bg: "#5123dd"
-sidebar-item-hover-bg: "#392f5d3b"
-sidebar-item-hover-text: var(--text-inactive)
-sidebar-item-selected-pipe-bg: "#5123dd"
-sidebar-node-inactive-hover-bg: transparent
-sidebar-node-inactive-hover-opacity: 0.5
-sidebar-node-inactive-hover-text: var(--text-inactive)
 sidebar-player-disabled-bg: "#312d3ec0"
-sidebar-player-disabled-text: var(--text)
 sidebar-search-focus-bg: color-mix(in srgb, var(--inverse) 80%, transparent);
 # Smart playlist
 smart-playlist-builder-bg: "#b49bff"
-smart-playlist-builder-text: "#ffffffde"
 smart-playlist-builder-block-bg: "#a691f3"
 smart-playlist-builder-block-focused-bg: "#8b76d0"
 smart-playlist-builder-block-input-bg: "#907dd1"
-smart-playlist-builder-block-input-text: "#ffffffde"
 # Play, pause, next, previous
-transport-control: "#333135"
-transport-control-hover: rgb(from var(--transport-control) r g b / 0.5)
-transport-favorite: "#49ab65"
-transport-favorite-hover: rgb(from var(--transport-favorite) r g b / 0.4)
 transport-shuffle: "#9804d3"
-transport-shuffle-hover: rgb(from var(--transport-shuffle) r g b / 0.4)
-transport-volume-line-bg: color-mix(in srgb, var(--inverse) 20%, transparent)
 transport-volume-thumb-bg: "#FDFDFD"
 transport-volume-thumb-icon: "#5123DD"
 transport-volume-thumb-secondary: "#04aa6d"
 # Waveform
-waveform-bg: "#9c86b10f"
-waveform-bg-hover: "#9c86b11c"
-waveform-cursor: "#ffffff"
-waveform-progress: "#cfbfff"
-waveform-region-current: "#00C56C"
-waveform-region-loop: "#DCBCFF3A"
-waveform-wave: "#64578cca"
-waveform-hover-label-bg: transparent
-waveform-hover-label-text: "#ffffff"
-waveform-hover-line: "#f8f8f882"
-waveform-hoverhead-line-bg: "#FFFFFF62"
 # Wiki
-wiki-bg: "#ffffff18"
 wiki-close-prompt-bg: "#33303ce2"
-wiki-close-prompt-text: "#ffffff"
-wiki-header-bg: var(--wiki-bg)
-wiki-inarticle-bg: var(--wiki-bg)
-wiki-pill-bg: var(--wiki-bg)
 wiki-pill-border: var(--panel-primary-border-main)
-wiki-pill-text: var(--text-secondary)
-wiki-pill-hover-bg: color-mix(in srgb, var(--button-bg) 20%, transparent)
-wiki-pill-hover-text: var(--text-secondary)

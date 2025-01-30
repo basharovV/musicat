@@ -1,21 +1,23 @@
 display-name: fruitOS Dark
 variant: dark
-background: "#27282aa8"
+# Basics
 accent: "#e54a5c"
 accent-secondary: "#F25769"
+background: "#27282aa8"
+overlay-bg: "#252527ec"
+# Album
 album-playing-shadow: var(--accent)
 album-playing-play-bg: "#2f2c2c"
 album-playing-play-hover-bg: var(--accent)
 album-playing-title-bg: var(--accent)
-panel-background: "#2b302f77"
-overlay-bg: "#252527ec"
+# Analytics/Stats
+# Artist's Toolkit
+# Library
 library-text: "#ffffff"
-library-title: "#ffffff"
 library-odd-row-bg: "#363b3a7e"
 library-playing-bg: "#d12f47"
 library-hover-bg: "#45454571"
 library-playing-text: "#ffffff"
-library-playing-title: "#ffffff"
 library-highlight-bg: "#d0536655"
 library-header-bg: "#2a2f2ebf"
 library-header-active-bg: "#4b514fab"
@@ -25,13 +27,28 @@ library-scrollbar-bg: "#827f8a7e"
 library-scrollbar-hover-bg: "#b3afbb77"
 library-favourite-icon: "#e54a5c"
 library-favourite-hover-icon: "#e54a5c"
+# Map View
+# Menus
+# Oscilloscope
+oscilloscope: "#e54a5c"
+# Panels
+panel-background: "#2b302f77"
 panel-primary-border-main: rgba(255, 255, 255, 0.2)
 panel-secondary-border-main: rgba(255, 255, 255, 0.05)
+# Popups
+# Progress bar
+# Prune
+# ScrollTo
+# Seekbar
+# Sidebar
 sidebar-item-selected-pipe-bg: var(--accent)
 sidebar-item-hover-bg: "#50505054"
+# Smart playlist
 smart-playlist-builder-bg: "#914a4a"
 smart-playlist-builder-block-bg: "#6f4141"
 smart-playlist-builder-block-focused-bg: "#582b2b"
 smart-playlist-builder-block-input-bg: "#7c4a4a"
 smart-playlist-button-bg: var(--accent)
-oscilloscope: "#e54a5c"
+# Play, pause, next, previous
+# Waveform
+# Wiki
