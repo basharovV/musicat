@@ -27,6 +27,7 @@ link: "#{{base0F-hex}}"
 link-hover: "#{{base0E-hex}}"
 overlay-bg: "#{{base02-hex}}"
 overlay-shadow: "#00000042"
+shadow-gradient-bg: var(--panel-background)
 text: "#{{base05-hex}}ee"
 text-secondary: "#{{base0E-hex}}"
 text-active: "#{{base05-hex}}"
@@ -48,7 +49,8 @@ album-playing-play-icon: "#{{base05-hex}}"
 album-playing-play-hover-bg: "#{{base03-hex}}"
 album-playing-play-hover-icon: "#{{base05-hex}}"
 album-playing-shadow: "#{{base05-hex}}"
-album-playing-title-bg: transparent
+album-playing-title-bg: var(--library-playing-bg)
+album-playing-title-text: var(--text)
 # Analytics/Stats
 analytics-border: "rgba(255, 255, 255, 0.11)"
 analytics-text-primary: "#{{base0A-hex}}"
@@ -63,6 +65,7 @@ atk-icon-video: "#e04848"
 # Library
 library-clickable-cell-bg: "#{{base0F-hex}}1e"
 library-clickable-cell-hover-bg: "#{{base0D-hex}}36"
+library-column-divider: rgba(242, 242, 242, 0.144)
 library-favourite-icon: "#{{base0B-hex}}"
 library-favourite-hover-icon: "#{{base05-hex}}"
 library-header-bg: "#{{base03-hex}}"
@@ -70,12 +73,17 @@ library-header-text: "#{{base05-hex}}"
 library-header-active-bg: "#{{base0F-hex}}cc"
 library-highlight-bg: "#{{base0C-hex}}"
 library-hover-bg: "#{{base03-hex}}99"
+library-odd-row-bg: transparent
 library-playing-bg: "#{{base0F-hex}}bb"
 library-playing-icon: "#{{base05-hex}}ee"
 library-playing-text: "#{{base05-hex}}ee"
 library-playing-title: "#{{base05-hex}}ee"
+library-scrollbar-bg: "#71658e7e"
+library-scrollbar-hover-bg: "#a59bbc77"
 library-text: "#{{base05-hex}}"
 library-title: "#{{base05-hex}}"
+# Lyrics
+lyrics-text: "#ecd5de"
 # Map View
 mapview-region-bg: "#{{base03-hex}}"
 mapview-region-border: "#{{base0D-hex}}"
@@ -121,6 +129,7 @@ panel-primary-border-accent2: "color-mix(in srgb, var(--inverse) 10%, transparen
 panel-secondary-border-main: "#{{base05-hex}}2a"
 panel-secondary-border-accent: "#{{base05-hex}}19"
 panel-separator: "#{{base05-hex}}17"
+panel-shadow-bg: rgba(0, 0, 0, 0.15)
 # Popups
 popup-track-artwork-about: "#{{base0E-hex}}"
 popup-track-artwork-found: "#009999"
@@ -162,6 +171,8 @@ scrollto-text: var(--text)
 seekbar-hoverhead: "#{{base05-hex}}"
 seekbar-line-bg: "color-mix(in srgb, var(--background) 76%, #ffffff)"
 seekbar-thumb: "#{{base0C-hex}}"
+seekbar-tooltip-bg: "#1b1b1c"
+seekbar-tooltip-text: "#ffffff"
 # Sidebar
 sidebar-info-artist-active-bg: "color-mix(in srgb, var(--inverse) 90%, transparent)"
 sidebar-info-artist-hover-bg: "color-mix(in srgb, var(--inverse) 80%, transparent)"
@@ -176,6 +187,7 @@ sidebar-node-inactive-hover-opacity: 1
 sidebar-node-inactive-hover-text: "#{{base00-hex}}99"
 sidebar-player-disabled-bg: "#{{base04-hex}}c0"
 sidebar-player-disabled-text: "var(--text)"
+sidebar-search-border: var(--panel-primary-border-main)
 sidebar-search-focus-bg: "color-mix(in srgb, var(--inverse) 80%, transparent);"
 # Smart playlist
 smart-playlist-builder-bg: "#{{base0C-hex}}"
@@ -183,7 +195,8 @@ smart-playlist-builder-text: "#{{base05-hex}}de"
 smart-playlist-builder-block-bg: "#{{base0F-hex}}56"
 smart-playlist-builder-block-focused-bg: "#{{base0D-hex}}99"
 smart-playlist-builder-block-input-bg: "#{{base00-hex}}45"
-smart-playlist-builder-block-input-text: "#{{base05-hex}}de"
+smart-playlist-builder-block-input-text: var(--smart-playlist-builder-text)
+smart-playlist-builder-block-text: var(--text)
 # Play, pause, next, previous
 transport-control: "#{{base08-hex}}"
 transport-control-hover: "#{{base0C-hex}}"
@@ -213,6 +226,9 @@ wiki-close-prompt-bg: "#{{base05-hex}}"
 wiki-close-prompt-text: "#{{base05-hex}}"
 wiki-header-bg: "#{{base01-hex}}cc"
 wiki-inarticle-bg: "#{{base01-hex}}cc"
+wiki-mention-bg: "#dadada18"
+wiki-mention-border: "#eeeeee"
+wiki-mention-text: var(--text)
 wiki-pill-bg: "#{{base0B-hex}}"
 wiki-pill-border: "var(--panel-primary-border-main)"
 wiki-pill-text: "#{{base00-hex}}ee"

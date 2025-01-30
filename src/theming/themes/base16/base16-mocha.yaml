@@ -27,6 +27,7 @@ link: "#bb9584"
 link-hover: "#a89bb9"
 overlay-bg: "#645240"
 overlay-shadow: "#00000042"
+shadow-gradient-bg: var(--panel-background)
 text: "#d0c8c6ee"
 text-secondary: "#a89bb9"
 text-active: "#d0c8c6"
@@ -48,7 +49,8 @@ album-playing-play-icon: "#d0c8c6"
 album-playing-play-hover-bg: "#7e705a"
 album-playing-play-hover-icon: "#d0c8c6"
 album-playing-shadow: "#d0c8c6"
-album-playing-title-bg: transparent
+album-playing-title-bg: var(--library-playing-bg)
+album-playing-title-text: var(--text)
 # Analytics/Stats
 analytics-border: "rgba(255, 255, 255, 0.11)"
 analytics-text-primary: "#f4bc87"
@@ -63,6 +65,7 @@ atk-icon-video: "#e04848"
 # Library
 library-clickable-cell-bg: "#bb95841e"
 library-clickable-cell-hover-bg: "#8ab3b536"
+library-column-divider: rgba(242, 242, 242, 0.144)
 library-favourite-icon: "#beb55b"
 library-favourite-hover-icon: "#d0c8c6"
 library-header-bg: "#7e705a"
@@ -70,12 +73,17 @@ library-header-text: "#d0c8c6"
 library-header-active-bg: "#bb9584cc"
 library-highlight-bg: "#7bbda4"
 library-hover-bg: "#7e705a99"
+library-odd-row-bg: transparent
 library-playing-bg: "#bb9584bb"
 library-playing-icon: "#d0c8c6ee"
 library-playing-text: "#d0c8c6ee"
 library-playing-title: "#d0c8c6ee"
+library-scrollbar-bg: "#71658e7e"
+library-scrollbar-hover-bg: "#a59bbc77"
 library-text: "#d0c8c6"
 library-title: "#d0c8c6"
+# Lyrics
+lyrics-text: "#ecd5de"
 # Map View
 mapview-region-bg: "#7e705a"
 mapview-region-border: "#8ab3b5"
@@ -121,6 +129,7 @@ panel-primary-border-accent2: "color-mix(in srgb, var(--inverse) 10%, transparen
 panel-secondary-border-main: "#d0c8c62a"
 panel-secondary-border-accent: "#d0c8c619"
 panel-separator: "#d0c8c617"
+panel-shadow-bg: rgba(0, 0, 0, 0.15)
 # Popups
 popup-track-artwork-about: "#a89bb9"
 popup-track-artwork-found: "#009999"
@@ -162,6 +171,8 @@ scrollto-text: var(--text)
 seekbar-hoverhead: "#d0c8c6"
 seekbar-line-bg: "color-mix(in srgb, var(--background) 76%, #ffffff)"
 seekbar-thumb: "#7bbda4"
+seekbar-tooltip-bg: "#1b1b1c"
+seekbar-tooltip-text: "#ffffff"
 # Sidebar
 sidebar-info-artist-active-bg: "color-mix(in srgb, var(--inverse) 90%, transparent)"
 sidebar-info-artist-hover-bg: "color-mix(in srgb, var(--inverse) 80%, transparent)"
@@ -176,6 +187,7 @@ sidebar-node-inactive-hover-opacity: 1
 sidebar-node-inactive-hover-text: "#3B322899"
 sidebar-player-disabled-bg: "#b8afadc0"
 sidebar-player-disabled-text: "var(--text)"
+sidebar-search-border: var(--panel-primary-border-main)
 sidebar-search-focus-bg: "color-mix(in srgb, var(--inverse) 80%, transparent);"
 # Smart playlist
 smart-playlist-builder-bg: "#7bbda4"
@@ -183,7 +195,8 @@ smart-playlist-builder-text: "#d0c8c6de"
 smart-playlist-builder-block-bg: "#bb958456"
 smart-playlist-builder-block-focused-bg: "#8ab3b599"
 smart-playlist-builder-block-input-bg: "#3B322845"
-smart-playlist-builder-block-input-text: "#d0c8c6de"
+smart-playlist-builder-block-input-text: var(--smart-playlist-builder-text)
+smart-playlist-builder-block-text: var(--text)
 # Play, pause, next, previous
 transport-control: "#cb6077"
 transport-control-hover: "#7bbda4"
@@ -213,6 +226,9 @@ wiki-close-prompt-bg: "#d0c8c6"
 wiki-close-prompt-text: "#d0c8c6"
 wiki-header-bg: "#534636cc"
 wiki-inarticle-bg: "#534636cc"
+wiki-mention-bg: "#dadada18"
+wiki-mention-border: "#eeeeee"
+wiki-mention-text: var(--text)
 wiki-pill-bg: "#beb55b"
 wiki-pill-border: "var(--panel-primary-border-main)"
 wiki-pill-text: "#3B3228ee"

@@ -195,7 +195,7 @@ smart-playlist-builder-text: "#ffffffde"
 smart-playlist-builder-block-bg: "#7256be56"
 smart-playlist-builder-block-focused-bg: "#7256be99"
 smart-playlist-builder-block-input-bg: "#231b4d45"
-smart-playlist-builder-block-input-text: "#ffffffde"
+smart-playlist-builder-block-input-text: var(--smart-playlist-builder-text)
 smart-playlist-builder-block-text: var(--text)
 # Play, pause, next, previous
 transport-control: "#ffffff"
