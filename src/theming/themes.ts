@@ -16,6 +16,7 @@ export const allFonts = {
 };
 
 export const DEFAULT_THEME: Theme = tmDark;
+export const DEFAULT_THEME_LIGHT: Theme = tmLight;
 
 export const allThemes: { [key: string]: Theme } = {
     amphibian: tmAmphibian,

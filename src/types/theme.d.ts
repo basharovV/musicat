@@ -44,6 +44,7 @@ export interface Theme {
     "header-text": string;
     link: string;
     "link-hover": string;
+    "shadow-gradient-bg": string;
     title: string;
     /** Album */
     "album-gridsize-line-bg": string;
@@ -62,6 +63,7 @@ export interface Theme {
     "album-playing-play-hover-icon": string;
     "album-playing-shadow": string;
     "album-playing-title-bg": string;
+    "album-playing-title-text": string;
     /** Analytics/Stats */
     "analytics-border": string;
     "analytics-text-primary": string;
@@ -81,6 +83,7 @@ export interface Theme {
     "library-header-active-bg": string;
     "library-header-bg": string;
     "library-header-text": string;
+    "library-odd-row-bg": string;
     "library-highlight-bg": string;
     "library-hover-bg": string;
     "library-playing-bg": string;
@@ -89,6 +92,11 @@ export interface Theme {
     "library-playing-title": string;
     "library-text": string;
     "library-title": string;
+    "library-scrollbar-bg": string;
+    "library-scrollbar-hover-bg": string;
+    "library-column-divider": string;
+    /** Lyrics */
+    "lyrics-text": string;
     /** Map View */
     "mapview-region-bg": string;
     "mapview-region-border": string;
@@ -132,6 +140,7 @@ export interface Theme {
     "panel-secondary-border-main": string;
     "panel-secondary-border-accent": string;
     "panel-separator": string;
+    "panel-shadow-bg": string;
     /** Popups */
     "popup-track-artwork-about": string;
     "popup-track-artwork-found": string;
@@ -175,6 +184,8 @@ export interface Theme {
     "seekbar-line-bg": string;
     "seekbar-hoverhead": string;
     "seekbar-thumb": string;
+    "seekbar-tooltip-bg": string;
+    "seekbar-tooltip-text": string;
     /** Sidebar */
     "sidebar-info-artist-active-bg": string;
     "sidebar-info-artist-hover-bg": string;
@@ -190,10 +201,12 @@ export interface Theme {
     "sidebar-player-disabled-bg": string;
     "sidebar-player-disabled-text": string;
     "sidebar-search-focus-bg": string;
+    "sidebar-search-border": string;
     /** Smart playlist */
     "smart-playlist-builder-bg": string;
     "smart-playlist-builder-text": string;
     "smart-playlist-builder-block-bg": string;
+    "smart-playlist-builder-block-text": string;
     "smart-playlist-builder-block-focused-bg": string;
     "smart-playlist-builder-block-input-bg": string;
     "smart-playlist-builder-block-input-text": string;
@@ -231,4 +244,7 @@ export interface Theme {
     "wiki-pill-text": string;
     "wiki-pill-hover-bg": string;
     "wiki-pill-hover-text": string;
+    "wiki-mention-bg": string;
+    "wiki-mention-border": string;
+    "wiki-mention-text": string;
 }

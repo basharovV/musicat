@@ -70,8 +70,8 @@
                     width: 8,
                     fill: $currentThemeObject[
                         isHovering
-                            ? "library-header-active-bg"
-                            : "library-header-bg"
+                            ? "library-scrollbar-hover-bg"
+                            : "library-scrollbar-bg"
                     ],
                     draggable: true,
                     cornerRadius: 6,

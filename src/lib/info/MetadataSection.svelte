@@ -674,13 +674,7 @@
         color: var(--text);
         position: relative;
         width: 100%;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
+        border: 1px solid var(--popup-track-section-border);
 
         font-family:
             system-ui,
