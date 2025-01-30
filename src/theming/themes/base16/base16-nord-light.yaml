@@ -2,7 +2,7 @@ display-name: Base16 Nord Light
 variant: light
 # Basics
 accent: "#ac4426cc"
-accent-secondary: "#99324b"
+accent-secondary: "#aebacf"
 background: "#c2d0e7"
 button-active-bg: "#b8c5dbee"
 button-active-disabled-bg: "#dadada"
@@ -23,7 +23,7 @@ input-bg: "#aebacf"
 input-focus-bg: "#e5e9f0"
 input-focus-outline: "2px solid #3b6ea899"
 input-placeholder-text: "#2e344099"
-inverse: rgb(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b))
+inverse: rgba(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b) / 0.18)
 link: "#5272af"
 link-hover: "#97365b"
 overlay-bg: "#b8c5db"
@@ -55,11 +55,11 @@ album-playing-shadow: "#2e3440"
 album-playing-title-bg: var(--library-playing-bg)
 album-playing-title-text: var(--text)
 # Analytics/Stats
-analytics-border: "rgba(255, 255, 255, 0.11)"
+analytics-border: "rgba(from var(--accent) r g b / 0.11)"
 analytics-text-primary: "#9a7500"
 analytics-text-secondary: "#9a7500"
-analytics-timeline-track-bg: "#ece5e54f"
-analytics-timeline-vline-bg: "#ece5e54f"
+analytics-timeline-track-bg: "#60728c4f"
+analytics-timeline-vline-bg: "#60728c4f"
 # Artist's Toolkit
 atk-icon-audio: "#c745c7"
 atk-icon-link: "#46e3e3"
@@ -74,7 +74,7 @@ library-favourite-hover-icon: "#2e3440"
 library-header-bg: "#aebacf"
 library-header-text: "#2e3440"
 library-header-active-bg: "#5272afcc"
-library-highlight-bg: "#398eac"
+library-highlight-bg: "#398eaccc"
 library-hover-bg: "#aebacf99"
 library-odd-row-bg: transparent
 library-playing-bg: "#5272afbb"
@@ -99,9 +99,9 @@ mapview-region-selected-hover-border: "#3b6ea8"
 mapview-scale-1: "#eeeeee"
 mapview-scale-2: "#999999"
 mapview-tooltip-artist: "#2e344095"
-mapview-tooltip-bg: "#232325cc"
+mapview-tooltip-bg: "#b8c5dbcc"
 mapview-tooltip-border: "#2e34402d"
-mapview-tooltip-text: "#808080"
+mapview-tooltip-text: "#2e3440cc"
 # Menus
 menu-bg: "#c2d0e7cc"
 menu-border: "#2e34403b"
@@ -121,14 +121,14 @@ menu-item-highlight-secondary-text: "#2e3440"
 menu-item-loading-from: inherit
 menu-item-loading-to: "#60728c"
 menu-item-text: "#2e3440"
-menu-shadow: "#00000022"
+menu-shadow: color-mix(in srgb, var(--type-bw) 13%, transparent)
 # Oscilloscope
 oscilloscope: "#c2d0e7"
 # Panels
 panel-background: "#e5e9f0b3"
-panel-primary-border-main: "color-mix(in srgb, var(--inverse) 40%, transparent)"
-panel-primary-border-accent1: "color-mix(in srgb, var(--inverse) 30%, transparent)"
-panel-primary-border-accent2: "color-mix(in srgb, var(--inverse) 10%, transparent)"
+panel-primary-border-main: color-mix(in srgb, var(--inverse) 40%, transparent)
+panel-primary-border-accent1: color-mix(in srgb, var(--inverse) 30%, transparent)
+panel-primary-border-accent2: color-mix(in srgb, var(--inverse) 10%, transparent)
 panel-secondary-border-main: "#2e34402a"
 panel-secondary-border-accent: "#2e344019"
 panel-separator: "#2e344017"
@@ -139,9 +139,9 @@ popup-track-artwork-found: "#009999"
 popup-track-artwork-notfound: "#808080"
 popup-track-data-field-bg: "#0000001e"
 popup-track-header-bg: "#aebacf"
-popup-track-header-border: "color-mix(in srgb, var(--background) 60%, var(--inverse))"
+popup-track-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
 popup-track-metadata-prompt-error: "#6f5757"
-popup-track-metadata-title: "#4f894c"
+popup-track-metadata-title: "color-mix(in srgb, #4f894c, #b8c5db 5%)"
 popup-track-metadata-validation-error: "#a12e2e"
 popup-track-metadata-validation-warning: "#e19a00"
 popup-track-section-bg: "color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))"
@@ -172,14 +172,14 @@ scrollto-shadow: "#2e344099"
 scrollto-text: var(--text)
 # Seekbar
 seekbar-hoverhead: "#2e3440"
-seekbar-line-bg: "color-mix(in srgb, var(--background) 76%, #ffffff)"
+seekbar-line-bg: color-mix(in srgb, var(--background) 76%, var(--inverse))
 seekbar-thumb: "#398eac"
-seekbar-tooltip-bg: "#1b1b1c"
-seekbar-tooltip-text: "#ffffff"
+seekbar-tooltip-bg: "#b8c5db"
+seekbar-tooltip-text: "#2e3440"
 # Sidebar
-sidebar-info-artist-active-bg: "color-mix(in srgb, var(--inverse) 90%, transparent)"
-sidebar-info-artist-hover-bg: "color-mix(in srgb, var(--inverse) 80%, transparent)"
-sidebar-info-title-hover-bg: "color-mix(in srgb, var(--inverse) 40%, transparent)"
+sidebar-info-artist-active-bg: color-mix(in srgb, var(--inverse) 90%, transparent)
+sidebar-info-artist-hover-bg: color-mix(in srgb, var(--inverse) 80%, transparent)
+sidebar-info-title-hover-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
 sidebar-info-title-hover-border: "var(--inverse)"
 sidebar-item-drag-bg: "#9a750011"
 sidebar-item-hover-bg: "#2e344033"
@@ -191,7 +191,7 @@ sidebar-node-inactive-hover-text: "#e5e9f099"
 sidebar-player-disabled-bg: "#60728cc0"
 sidebar-player-disabled-text: "var(--text)"
 sidebar-search-border: var(--panel-primary-border-main)
-sidebar-search-focus-bg: "color-mix(in srgb, var(--inverse) 80%, transparent);"
+sidebar-search-focus-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
 # Smart playlist
 smart-playlist-builder-bg: "#398eac"
 smart-playlist-builder-text: "#2e3440de"
@@ -207,7 +207,7 @@ transport-favorite: "#4f894c"
 transport-favorite-hover: "#398eac"
 transport-shuffle: "#4f894c"
 transport-shuffle-hover: "#9a7500"
-transport-volume-line-bg: "color-mix(in srgb, var(--background) 76%, #ffffff66)"
+transport-volume-line-bg: color-mix(in srgb, var(--background) 76%, var(--inverse) 40%)
 transport-volume-thumb-bg: "#398eac"
 transport-volume-thumb-icon: "#c2d0e7"
 transport-volume-thumb-secondary: "#398eac"

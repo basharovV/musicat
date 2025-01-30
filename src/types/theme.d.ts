@@ -81,6 +81,7 @@ export interface Theme {
     /** Library */
     "library-clickable-cell-bg": string;
     "library-clickable-cell-hover-bg": string;
+    "library-column-divider": string;
     "library-favourite-hover-icon": string;
     "library-favourite-icon": string;
     "library-header-active-bg": string;
@@ -93,11 +94,10 @@ export interface Theme {
     "library-playing-icon": string;
     "library-playing-text": string;
     "library-playing-title": string;
-    "library-text": string;
-    "library-title": string;
     "library-scrollbar-bg": string;
     "library-scrollbar-hover-bg": string;
-    "library-column-divider": string;
+    "library-text": string;
+    "library-title": string;
     /** Lyrics */
     "lyrics-text": string;
     /** Map View */

@@ -2,7 +2,7 @@ display-name: Base16 Mocha
 variant: dark
 # Basics
 accent: "#d28b71cc"
-accent-secondary: "#cb6077"
+accent-secondary: "#7e705a"
 background: "#534636"
 button-active-bg: "#645240ee"
 button-active-disabled-bg: "#dadada"
@@ -23,7 +23,7 @@ input-bg: "#7e705a"
 input-focus-bg: "#3B3228"
 input-focus-outline: "2px solid #8ab3b599"
 input-placeholder-text: "#d0c8c699"
-inverse: rgb(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b))
+inverse: rgba(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b) / 0.18)
 link: "#bb9584"
 link-hover: "#a89bb9"
 overlay-bg: "#645240"
@@ -55,11 +55,11 @@ album-playing-shadow: "#d0c8c6"
 album-playing-title-bg: var(--library-playing-bg)
 album-playing-title-text: var(--text)
 # Analytics/Stats
-analytics-border: "rgba(255, 255, 255, 0.11)"
+analytics-border: "rgba(from var(--accent) r g b / 0.11)"
 analytics-text-primary: "#f4bc87"
 analytics-text-secondary: "#f4bc87"
-analytics-timeline-track-bg: "#ece5e54f"
-analytics-timeline-vline-bg: "#ece5e54f"
+analytics-timeline-track-bg: "#b8afad4f"
+analytics-timeline-vline-bg: "#b8afad4f"
 # Artist's Toolkit
 atk-icon-audio: "#c745c7"
 atk-icon-link: "#46e3e3"
@@ -74,7 +74,7 @@ library-favourite-hover-icon: "#d0c8c6"
 library-header-bg: "#7e705a"
 library-header-text: "#d0c8c6"
 library-header-active-bg: "#bb9584cc"
-library-highlight-bg: "#7bbda4"
+library-highlight-bg: "#7bbda4cc"
 library-hover-bg: "#7e705a99"
 library-odd-row-bg: transparent
 library-playing-bg: "#bb9584bb"
@@ -99,9 +99,9 @@ mapview-region-selected-hover-border: "#8ab3b5"
 mapview-scale-1: "#eeeeee"
 mapview-scale-2: "#999999"
 mapview-tooltip-artist: "#d0c8c695"
-mapview-tooltip-bg: "#232325cc"
+mapview-tooltip-bg: "#645240cc"
 mapview-tooltip-border: "#d0c8c62d"
-mapview-tooltip-text: "#808080"
+mapview-tooltip-text: "#d0c8c6cc"
 # Menus
 menu-bg: "#534636cc"
 menu-border: "#d0c8c63b"
@@ -121,14 +121,14 @@ menu-item-highlight-secondary-text: "#d0c8c6"
 menu-item-loading-from: inherit
 menu-item-loading-to: "#b8afad"
 menu-item-text: "#d0c8c6"
-menu-shadow: "#00000022"
+menu-shadow: color-mix(in srgb, var(--type-bw) 13%, transparent)
 # Oscilloscope
 oscilloscope: "#534636"
 # Panels
 panel-background: "#3B3228b3"
-panel-primary-border-main: "color-mix(in srgb, var(--inverse) 40%, transparent)"
-panel-primary-border-accent1: "color-mix(in srgb, var(--inverse) 30%, transparent)"
-panel-primary-border-accent2: "color-mix(in srgb, var(--inverse) 10%, transparent)"
+panel-primary-border-main: color-mix(in srgb, var(--inverse) 40%, transparent)
+panel-primary-border-accent1: color-mix(in srgb, var(--inverse) 30%, transparent)
+panel-primary-border-accent2: color-mix(in srgb, var(--inverse) 10%, transparent)
 panel-secondary-border-main: "#d0c8c62a"
 panel-secondary-border-accent: "#d0c8c619"
 panel-separator: "#d0c8c617"
@@ -139,9 +139,9 @@ popup-track-artwork-found: "#009999"
 popup-track-artwork-notfound: "#808080"
 popup-track-data-field-bg: "#0000001e"
 popup-track-header-bg: "#7e705a"
-popup-track-header-border: "color-mix(in srgb, var(--background) 60%, var(--inverse))"
+popup-track-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
 popup-track-metadata-prompt-error: "#6f5757"
-popup-track-metadata-title: "#beb55b"
+popup-track-metadata-title: "color-mix(in srgb, #beb55b, #645240 5%)"
 popup-track-metadata-validation-error: "#a12e2e"
 popup-track-metadata-validation-warning: "#e19a00"
 popup-track-section-bg: "color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))"
@@ -172,14 +172,14 @@ scrollto-shadow: "#d0c8c699"
 scrollto-text: var(--text)
 # Seekbar
 seekbar-hoverhead: "#d0c8c6"
-seekbar-line-bg: "color-mix(in srgb, var(--background) 76%, #ffffff)"
+seekbar-line-bg: color-mix(in srgb, var(--background) 76%, var(--inverse))
 seekbar-thumb: "#7bbda4"
-seekbar-tooltip-bg: "#1b1b1c"
-seekbar-tooltip-text: "#ffffff"
+seekbar-tooltip-bg: "#645240"
+seekbar-tooltip-text: "#d0c8c6"
 # Sidebar
-sidebar-info-artist-active-bg: "color-mix(in srgb, var(--inverse) 90%, transparent)"
-sidebar-info-artist-hover-bg: "color-mix(in srgb, var(--inverse) 80%, transparent)"
-sidebar-info-title-hover-bg: "color-mix(in srgb, var(--inverse) 40%, transparent)"
+sidebar-info-artist-active-bg: color-mix(in srgb, var(--inverse) 90%, transparent)
+sidebar-info-artist-hover-bg: color-mix(in srgb, var(--inverse) 80%, transparent)
+sidebar-info-title-hover-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
 sidebar-info-title-hover-border: "var(--inverse)"
 sidebar-item-drag-bg: "#f4bc8711"
 sidebar-item-hover-bg: "#d0c8c633"
@@ -191,7 +191,7 @@ sidebar-node-inactive-hover-text: "#3B322899"
 sidebar-player-disabled-bg: "#b8afadc0"
 sidebar-player-disabled-text: "var(--text)"
 sidebar-search-border: var(--panel-primary-border-main)
-sidebar-search-focus-bg: "color-mix(in srgb, var(--inverse) 80%, transparent);"
+sidebar-search-focus-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
 # Smart playlist
 smart-playlist-builder-bg: "#7bbda4"
 smart-playlist-builder-text: "#d0c8c6de"
@@ -207,7 +207,7 @@ transport-favorite: "#beb55b"
 transport-favorite-hover: "#7bbda4"
 transport-shuffle: "#beb55b"
 transport-shuffle-hover: "#f4bc87"
-transport-volume-line-bg: "color-mix(in srgb, var(--background) 76%, #ffffff66)"
+transport-volume-line-bg: color-mix(in srgb, var(--background) 76%, var(--inverse) 40%)
 transport-volume-thumb-bg: "#7bbda4"
 transport-volume-thumb-icon: "#534636"
 transport-volume-thumb-secondary: "#7bbda4"
