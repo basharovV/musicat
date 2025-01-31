@@ -373,8 +373,32 @@
         "panel-shadow-bg": {
             "type": "string"
         },
-        "popup-track-artwork-about": {
+        "popup-backdrop": {
             "description": "Popups",
+            "type": "string"
+        },
+        "popup-body-bg": {
+            "type": "string"
+        },
+        "popup-header-bg": {
+            "type": "string"
+        },
+        "popup-header-border": {
+            "type": "string"
+        },
+        "popup-section-bg": {
+            "type": "string"
+        },
+        "popup-section-border": {
+            "type": "string"
+        },
+        "popup-section-title-bg": {
+            "type": "string"
+        },
+        "popup-section-title-text": {
+            "type": "string"
+        },
+        "popup-track-artwork-about": {
             "type": "string"
         },
         "popup-track-artwork-found": {
@@ -384,12 +408,6 @@
             "type": "string"
         },
         "popup-track-data-field-bg": {
-            "type": "string"
-        },
-        "popup-track-header-bg": {
-            "type": "string"
-        },
-        "popup-track-header-border": {
             "type": "string"
         },
         "popup-track-metadata-prompt-error": {
@@ -402,18 +420,6 @@
             "type": "string"
         },
         "popup-track-metadata-validation-warning": {
-            "type": "string"
-        },
-        "popup-track-section-bg": {
-            "type": "string"
-        },
-        "popup-track-section-border": {
-            "type": "string"
-        },
-        "popup-track-section-title-bg": {
-            "type": "string"
-        },
-        "popup-track-section-title-text": {
             "type": "string"
         },
         "progressbar-track-bg": {
@@ -814,20 +820,22 @@
         "panel-secondary-border-main",
         "panel-separator",
         "panel-shadow-bg",
+        "popup-backdrop",
+        "popup-body-bg",
+        "popup-header-bg",
+        "popup-header-border",
+        "popup-section-bg",
+        "popup-section-border",
+        "popup-section-title-bg",
+        "popup-section-title-text",
         "popup-track-artwork-about",
         "popup-track-artwork-found",
         "popup-track-artwork-notfound",
         "popup-track-data-field-bg",
-        "popup-track-header-bg",
-        "popup-track-header-border",
         "popup-track-metadata-prompt-error",
         "popup-track-metadata-title",
         "popup-track-metadata-validation-error",
         "popup-track-metadata-validation-warning",
-        "popup-track-section-bg",
-        "popup-track-section-border",
-        "popup-track-section-title-bg",
-        "popup-track-section-title-text",
         "progressbar-track-bg",
         "progressbar-value-bg",
         "prune-button-border",

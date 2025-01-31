@@ -145,20 +145,23 @@ export interface Theme {
     "panel-separator": string;
     "panel-shadow-bg": string;
     /** Popups */
+    "popup-backdrop": string;
+    "popup-body-bg": string;
+    "popup-header-bg-lone": string;
+    "popup-header-bg-many": string;
+    "popup-header-border": string;
+    "popup-section-bg": string;
+    "popup-section-border": string;
+    "popup-section-title-bg": string;
+    "popup-section-title-text": string;
     "popup-track-artwork-about": string;
     "popup-track-artwork-found": string;
     "popup-track-artwork-notfound": string;
     "popup-track-data-field-bg": string;
-    "popup-track-header-bg": string;
-    "popup-track-header-border": string;
     "popup-track-metadata-prompt-error": string;
     "popup-track-metadata-title": string;
     "popup-track-metadata-validation-error": string;
     "popup-track-metadata-validation-warning": string;
-    "popup-track-section-bg": string;
-    "popup-track-section-border": string;
-    "popup-track-section-title-bg": string;
-    "popup-track-section-title-text": string;
     /** Progress bar */
     "progressbar-track-bg": string;
     "progressbar-value-bg": string;

@@ -729,7 +729,7 @@
         bottom: 0;
         z-index: 30;
         display: flex;
-        background-color: rgba(30, 26, 31, 0.824);
+        background-color: var(--popup-backdrop);
     }
 
     :global(.svelecte-control) {

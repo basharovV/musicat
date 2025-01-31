@@ -80,8 +80,8 @@ export function createCSSTemplate(prefix, base = {}) {
     const variablePrefix = prefix ? `--${prefix}` : "-";
 
     const theme = get(currentThemeObject);
-    let themeCSS = Object.entries(theme).reduce((acc, val) => {
-        return (acc += `--${val[0]}: ${val[1]};\n`);
+    let themeCSS = Object.entries(theme).reduce((acc, [key, value]) => {
+        return (acc += `--${key}: ${value};\n`);
     }, "");
 
     for (const [key, value] of Object.entries(get(currentFont))) {

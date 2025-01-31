@@ -51,12 +51,12 @@ panel-primary-border-accent1: rgba(179, 175, 175, 0.336)
 panel-shadow-bg: rgba(0, 0, 0, 0.04)
 panel-separator: "#c6c6c6"
 # Popups
-popup-track-section-bg: "#8e8e8e19"
-popup-track-section-border: rgba(0, 0, 0, 0.1)
-popup-track-header-border: rgba(0, 0, 0, 0.1)
+popup-header-border: rgba(0, 0, 0, 0.1)
+popup-section-bg: "#8e8e8e19"
+popup-section-border: rgba(0, 0, 0, 0.1)
+popup-section-title-bg: "#ffffff"
+popup-section-title-text: "#000000"
 popup-track-data-field-bg: rgba(0, 0, 0, 0.1)
-popup-track-section-title-bg: "#ffffff"
-popup-track-section-title-text: "#000000"
 popup-track-metadata-title: "#000000"
 # Progress bar
 # Prune

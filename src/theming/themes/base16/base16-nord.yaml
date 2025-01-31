@@ -26,8 +26,8 @@ input-placeholder-text: "#E5E9F099"
 inverse: rgba(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b) / 0.18)
 link: "#5E81AC"
 link-hover: "#B48EAD"
-overlay-bg: "#434C5E"
-overlay-shadow: "#00000042"
+overlay-bg: "#434C5E88"
+overlay-shadow: rgb(from var(--inverse) r g b / 0.2)
 shadow-gradient-bg: var(--panel-background)
 text: "#E5E9F0ee"
 text-secondary: "#B48EAD"
@@ -61,10 +61,15 @@ analytics-text-secondary: "#EBCB8B"
 analytics-timeline-track-bg: "#D8DEE94f"
 analytics-timeline-vline-bg: "#D8DEE94f"
 # Artist's Toolkit
-atk-icon-audio: "#c745c7"
-atk-icon-link: "#46e3e3"
-atk-icon-lyric: "#d4d442"
-atk-icon-video: "#e04848"
+#atk-icon-audio: "color-mix(in srgb, #3B4252 35%, #FF00FF)"
+#atk-icon-link: "color-mix(in srgb, #3B4252 15%, #00FFFF)"
+#atk-icon-link: "color-mix(in srgb, #3B4252 85%, #FF0000)"
+#atk-icon-lyric: "color-mix(in srgb, #3B4252 20%, #FFFF00)"
+#atk-icon-video: "color-mix(in srgb, #3B4252 15%, #FF0000)"
+atk-icon-audio: "#FF00FFcc"
+atk-icon-link: "#00FFFFcc"
+atk-icon-lyric: "#FFFF00cc"
+atk-icon-video: "#FF0000cc"
 # Library
 library-clickable-cell-bg: "#5E81AC1e"
 library-clickable-cell-hover-bg: "#81A1C136"
@@ -86,7 +91,7 @@ library-scrollbar-hover-bg: "#a59bbc77"
 library-text: "#E5E9F0"
 library-title: "#E5E9F0"
 # Lyrics
-lyrics-text: "#ecd5de"
+lyrics-text: "#E5E9F0"
 # Map View
 mapview-region-bg: "#4C566A"
 mapview-region-border: "#81A1C1"
@@ -134,20 +139,23 @@ panel-secondary-border-accent: "#E5E9F019"
 panel-separator: "#E5E9F017"
 panel-shadow-bg: color-mix(in srgb, var(--type-bw) 15%, transparent)
 # Popups
+popup-backdrop: "#4C566Ad2"
+popup-body-bg: "#434C5E"
+popup-header-bg-lone: color-mix(in srgb, var(--background) 90%, var(--inverse))
+popup-header-bg-many: color-mix(in srgb, var(--background) 95%, var(--inverse))
+popup-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
+popup-section-bg: "color-mix(in srgb, #434C5E, #4C566A 50%)"
+popup-section-border: "color-mix(in srgb, var(--background) 70%, var(--inverse))"
+popup-section-title-bg: "color-mix(in srgb, var(--background) 50%, var(--inverse))"
+popup-section-title-text: "var(--title)"
 popup-track-artwork-about: "#B48EAD"
 popup-track-artwork-found: "#009999"
 popup-track-artwork-notfound: "#808080"
 popup-track-data-field-bg: "#0000001e"
-popup-track-header-bg: "#4C566A"
-popup-track-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
 popup-track-metadata-prompt-error: "#6f5757"
 popup-track-metadata-title: "color-mix(in srgb, #A3BE8C, #434C5E 5%)"
 popup-track-metadata-validation-error: "#a12e2e"
 popup-track-metadata-validation-warning: "#e19a00"
-popup-track-section-bg: "color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))"
-popup-track-section-border: "color-mix(in srgb, var(--background) 70%, var(--inverse))"
-popup-track-section-title-bg: "color-mix(in srgb, var(--background) 50%, var(--inverse))"
-popup-track-section-title-text: "var(--title)"
 # Progress bar
 progressbar-track-bg: "#E5E9F043"
 progressbar-value-bg: "#BF616A"
