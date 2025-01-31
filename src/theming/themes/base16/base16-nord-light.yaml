@@ -167,16 +167,16 @@ prune-button-keep-bg: "#4f894ccc"
 prune-button-keep-pressed-shadow: "#4f894c99"
 prune-fordelete: "#99324bcc"
 # ScrollTo
-scrollto-active-bg: "#b8c5db"
+scrollto-active-bg: "#b8c5db80"
 scrollto-active-border: "#aebacf"
 scrollto-active-shadow: "#2e3440ee"
-scrollto-bg: "#aebacf"
-scrollto-border: "#b8c5db"
+scrollto-bg: "#b8c5db"
+scrollto-border: "#aebacf80"
 scrollto-eq: "#e5e9f0"
 scrollto-hover-bg: "#c2d0e7"
 scrollto-hover-border: "#aebacf"
 scrollto-hover-shadow: "#2e3440ee"
-scrollto-shadow: "#2e344099"
+scrollto-shadow: color-mix(in srgb, var(--type-bw-inverse) 10%, transparent)
 scrollto-text: var(--text)
 # Seekbar
 seekbar-hoverhead: "#2e3440"
