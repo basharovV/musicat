@@ -23,19 +23,19 @@ input-bg: "#4C566A"
 input-focus-bg: "#2E3440"
 input-focus-outline: "2px solid #81A1C199"
 input-placeholder-text: "#E5E9F099"
-inverse: rgba(from var(--background) calc(1 - r) calc(1 - g) calc(1 - b) / 0.18)
+inverse: "#0000002e"
 link: "#5E81AC"
 link-hover: "#B48EAD"
 overlay-bg: "#434C5E88"
-overlay-shadow: rgb(from var(--inverse) r g b / 0.2)
+overlay-shadow: "#00000033"
 shadow-gradient-bg: var(--panel-background)
 text: "#E5E9F0ee"
 text-secondary: "#B48EAD"
 text-active: "#E5E9F0"
 text-inactive: "#E5E9F099"
 title: "#2E3440"
-type-bw: hsl(from var(--background) h 100% calc(round(l / 100) * 100))
-type-bw-inverse: hsl(from var(--type-bw) h 100% calc(100 - l))
+type-bw: "#000000"
+type-bw-inverse: "#ffffff"
 # Album
 album-gridsize-line-bg: "var(--seekbar-line-bg)"
 album-gridsize-thumb: "var(--seekbar-thumb)"
@@ -55,25 +55,20 @@ album-playing-shadow: "#E5E9F0"
 album-playing-title-bg: var(--library-playing-bg)
 album-playing-title-text: var(--text)
 # Analytics/Stats
-analytics-border: "rgba(from var(--accent) r g b / 0.11)"
+analytics-border: "#d087701c"
 analytics-text-primary: "#EBCB8B"
 analytics-text-secondary: "#EBCB8B"
 analytics-timeline-track-bg: "#D8DEE94f"
 analytics-timeline-vline-bg: "#D8DEE94f"
 # Artist's Toolkit
-#atk-icon-audio: "color-mix(in srgb, #3B4252 35%, #FF00FF)"
-#atk-icon-link: "color-mix(in srgb, #3B4252 15%, #00FFFF)"
-#atk-icon-link: "color-mix(in srgb, #3B4252 85%, #FF0000)"
-#atk-icon-lyric: "color-mix(in srgb, #3B4252 20%, #FFFF00)"
-#atk-icon-video: "color-mix(in srgb, #3B4252 15%, #FF0000)"
-atk-icon-audio: "#FF00FFcc"
-atk-icon-link: "#00FFFFcc"
-atk-icon-lyric: "#FFFF00cc"
-atk-icon-video: "#FF0000cc"
+atk-icon-audio: "#e20ae5ff"
+atk-icon-link: "#09e3e5ff"
+atk-icon-lyric: "#e2e30cff"
+atk-icon-video: "#e20a0cff"
 # Library
 library-clickable-cell-bg: "#5E81AC1e"
 library-clickable-cell-hover-bg: "#81A1C136"
-library-column-divider: rgba(242, 242, 242, 0.144)
+library-column-divider: "#f2f2f225"
 library-favourite-icon: "#A3BE8C"
 library-favourite-hover-icon: "#E5E9F0"
 library-header-bg: "#4C566A"
@@ -126,34 +121,34 @@ menu-item-highlight-secondary-text: "#E5E9F0"
 menu-item-loading-from: inherit
 menu-item-loading-to: "#D8DEE9"
 menu-item-text: "#E5E9F0"
-menu-shadow: color-mix(in srgb, var(--type-bw) 13%, transparent)
+menu-shadow: "#00000021"
 # Oscilloscope
 oscilloscope: "#D8DEE9"
 # Panels
 panel-background: "#2E3440b3"
-panel-primary-border-main: color-mix(in srgb, var(--inverse) 40%, transparent)
-panel-primary-border-accent1: color-mix(in srgb, var(--inverse) 30%, transparent)
-panel-primary-border-accent2: color-mix(in srgb, var(--inverse) 10%, transparent)
+panel-primary-border-main: "#00000012"
+panel-primary-border-accent1: "#0000000e"
+panel-primary-border-accent2: "#00000005"
 panel-secondary-border-main: "#E5E9F02a"
 panel-secondary-border-accent: "#E5E9F019"
 panel-separator: "#E5E9F017"
-panel-shadow-bg: color-mix(in srgb, var(--type-bw) 15%, transparent)
+panel-shadow-bg: "#00000026"
 # Popups
 popup-backdrop: "#4C566Ad2"
 popup-body-bg: "#434C5E"
-popup-header-bg-lone: color-mix(in srgb, var(--background) 90%, var(--inverse))
-popup-header-bg-many: color-mix(in srgb, var(--background) 95%, var(--inverse))
-popup-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
-popup-section-bg: "color-mix(in srgb, #434C5E, #4C566A 50%)"
-popup-section-border: color-mix(in srgb, var(--background) 70%, var(--inverse))
-popup-section-title-bg: color-mix(in srgb, var(--background) 50%, var(--inverse))
+popup-header-bg-lone: "#3a4150ea"
+popup-header-bg-many: "#3a4151f5"
+popup-header-border: "#353b49ab"
+popup-section-bg: "#485164"
+popup-section-border: "#373d4cc0"
+popup-section-title-bg: "#32384596"
 popup-section-title-text: var(--title)
 popup-track-artwork-about: "#B48EAD"
 popup-track-artwork-found: "#A3BE8C"
 popup-track-artwork-notfound: "#EBCB8B"
-popup-track-data-field-bg: rgb(from var(--type-bw) r g b / 0.3)
+popup-track-data-field-bg: "#0000004d"
 popup-track-metadata-prompt-error: "#BF616A42"
-popup-track-metadata-title: "color-mix(in srgb, #A3BE8C, #434C5E 5%)"
+popup-track-metadata-title: "#9eb88a"
 popup-track-metadata-validation-error: "#BF616A"
 popup-track-metadata-validation-warning: "#D08770"
 # Progress bar
@@ -176,18 +171,18 @@ scrollto-eq: "#2E3440"
 scrollto-hover-bg: "#3B4252"
 scrollto-hover-border: "#4C566A"
 scrollto-hover-shadow: "#E5E9F0ee"
-scrollto-shadow: color-mix(in srgb, var(--type-bw-inverse) 10%, transparent)
+scrollto-shadow: "#ffffff1a"
 scrollto-text: var(--text)
 # Seekbar
 seekbar-hoverhead: "#E5E9F0"
-seekbar-line-bg: color-mix(in srgb, var(--background) 76%, var(--inverse))
+seekbar-line-bg: "#383e4ecd"
 seekbar-thumb: "#88C0D0"
 seekbar-tooltip-bg: "#434C5E"
 seekbar-tooltip-text: "#E5E9F0"
 # Sidebar
-sidebar-info-artist-active-bg: color-mix(in srgb, var(--inverse) 90%, transparent)
-sidebar-info-artist-hover-bg: color-mix(in srgb, var(--inverse) 80%, transparent)
-sidebar-info-title-hover-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
+sidebar-info-artist-active-bg: "#00000029"
+sidebar-info-artist-hover-bg: "#00000025"
+sidebar-info-title-hover-bg: "#00000012"
 sidebar-info-title-hover-border: "var(--inverse)"
 sidebar-item-drag-bg: "#EBCB8B11"
 sidebar-item-hover-bg: "#E5E9F033"
@@ -199,7 +194,7 @@ sidebar-node-inactive-hover-text: "#2E344099"
 sidebar-player-disabled-bg: "#D8DEE9c0"
 sidebar-player-disabled-text: "var(--text)"
 sidebar-search-border: var(--panel-primary-border-main)
-sidebar-search-focus-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
+sidebar-search-focus-bg: "#00000012"
 # Smart playlist
 smart-playlist-builder-bg: "#88C0D0"
 smart-playlist-builder-text: "#E5E9F0de"
@@ -215,7 +210,7 @@ transport-favorite: "#A3BE8C"
 transport-favorite-hover: "#88C0D0"
 transport-shuffle: "#A3BE8C"
 transport-shuffle-hover: "#EBCB8B"
-transport-volume-line-bg: color-mix(in srgb, var(--background) 76%, var(--inverse) 40%)
+transport-volume-line-bg: "#363c4bb7"
 transport-volume-thumb-bg: "#88C0D0"
 transport-volume-thumb-icon: "#3B4252"
 transport-volume-thumb-secondary: "#88C0D0"
@@ -237,7 +232,7 @@ wiki-close-prompt-bg: "#E5E9F0"
 wiki-close-prompt-text: "#E5E9F0"
 wiki-header-bg: "#3B4252cc"
 wiki-inarticle-bg: "#3B4252cc"
-wiki-mention-bg: color-mix(in srgb, var(--background) 80%, transparent)
+wiki-mention-bg: "#3b4252cc"
 wiki-mention-border: var(--panel-secondary-border-accent)
 wiki-mention-text: var(--text)
 wiki-pill-bg: "#A3BE8C"

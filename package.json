@@ -9,7 +9,7 @@
         "dev": "vite --host",
         "preview": "vite preview",
         "tauri": "tauri",
-        "tm-build": "base16 build base16 --prefix base16-",
+        "tm-build": "npm run build --prefix ./base16/builder",
         "tm-schema": "npx typescript-json-schema --required --out src/theming/theme.schema.json src/types/theme.d.ts Theme",
         "tm-watch": "chokidar \"base16/**\" -c \"npm run tm-build\"",
         "typesafe-i18n": "typesafe-i18n"
@@ -32,7 +32,6 @@
         "@tsconfig/svelte": "^3.0.0",
         "audiomotion-analyzer": "^3.6.0",
         "autoprefixer": "^10.4.8",
-        "base16-builder-node": "^1.2.1",
         "better-cue-parser": "^0.3.1",
         "chokidar-cli": "^3.0.0",
         "chord-mark": "^0.17.0",

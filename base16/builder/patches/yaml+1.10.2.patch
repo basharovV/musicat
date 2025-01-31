@@ -1,0 +1,35 @@
+diff --git a/node_modules/yaml/dist/PlainValue-ec8e588e.js b/node_modules/yaml/dist/PlainValue-ec8e588e.js
+index db8a14e..e061d82 100644
+--- a/node_modules/yaml/dist/PlainValue-ec8e588e.js
++++ b/node_modules/yaml/dist/PlainValue-ec8e588e.js
+@@ -166,7 +166,7 @@ function getLine(line, cst) {
+ function getPrettyContext({
+   start,
+   end
+-}, cst, maxWidth = 80) {
++}, cst, maxWidth = 0) {
+   let src = getLine(start.line, cst);
+   if (!src) return null;
+   let {
+diff --git a/node_modules/yaml/dist/resolveSeq-d03cb037.js b/node_modules/yaml/dist/resolveSeq-d03cb037.js
+index d7c7c8c..975f8c4 100644
+--- a/node_modules/yaml/dist/resolveSeq-d03cb037.js
++++ b/node_modules/yaml/dist/resolveSeq-d03cb037.js
+@@ -712,7 +712,7 @@ const strOptions = {
+     minMultiLineLength: 40
+   },
+   fold: {
+-    lineWidth: 80,
++    lineWidth: 0,
+     minContentWidth: 20
+   }
+ };
+@@ -781,7 +781,7 @@ const consumeMoreIndentedLines = (text, i) => {
+ 
+ function foldFlowLines(text, indent, mode, {
+   indentAtStart,
+-  lineWidth = 80,
++  lineWidth = 0,
+   minContentWidth = 20,
+   onFold,
+   onOverflow
