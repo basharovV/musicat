@@ -278,10 +278,15 @@ class AudioPlayer {
             playerTime.set(event.payload);
         });
 
-        appWindow.listen("stopped", async (event: any) => {
+        appWindow.listen("end_of_queue", async (event: any) => {
             this.isStopped = true;
             playerTime.set(0);
             isPlaying.set(false);
+
+            this.currentSongIdx = -1;
+            this.currentSong = null;
+
+            current.set({ song: null, index: -1, position: 0 });
         });
 
         appWindow.listen("paused", async (event: any) => {
@@ -380,13 +385,17 @@ class AudioPlayer {
     }
 
     playNext() {
-        this.currentSongIdx++;
-        this.playSong(this.queue[this.currentSongIdx]);
+        if (this.currentSongIdx + 1 < this.queue?.length) {
+            this.currentSongIdx++;
+            this.playSong(this.queue[this.currentSongIdx]);
+        }
     }
 
     playPrevious() {
-        this.currentSongIdx--;
-        this.playSong(this.queue[this.currentSongIdx]);
+        if (this.currentSongIdx > 0) {
+            this.currentSongIdx--;
+            this.playSong(this.queue[this.currentSongIdx]);
+        }
     }
 
     restart() {}
@@ -654,7 +663,11 @@ class AudioPlayer {
             this.pause();
         } else {
             if (this.isStopped) {
-                this.playCurrent();
+                if (this.currentSong) {
+                    this.playCurrent();
+                } else {
+                    this.playNext();
+                }
             } else {
                 this.play(true);
             }
