@@ -128,7 +128,7 @@ menu-item-loading-to: "#b8afad"
 menu-item-text: "#d0c8c6"
 menu-shadow: color-mix(in srgb, var(--type-bw) 13%, transparent)
 # Oscilloscope
-oscilloscope: "#534636"
+oscilloscope: "#b8afad"
 # Panels
 panel-background: "#3B3228b3"
 panel-primary-border-main: color-mix(in srgb, var(--inverse) 40%, transparent)
