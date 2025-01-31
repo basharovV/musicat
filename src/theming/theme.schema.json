@@ -380,7 +380,10 @@
         "popup-body-bg": {
             "type": "string"
         },
-        "popup-header-bg": {
+        "popup-header-bg-lone": {
+            "type": "string"
+        },
+        "popup-header-bg-many": {
             "type": "string"
         },
         "popup-header-border": {
@@ -822,7 +825,8 @@
         "panel-shadow-bg",
         "popup-backdrop",
         "popup-body-bg",
-        "popup-header-bg",
+        "popup-header-bg-lone",
+        "popup-header-bg-many",
         "popup-header-border",
         "popup-section-bg",
         "popup-section-border",

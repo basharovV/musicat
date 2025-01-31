@@ -5,13 +5,13 @@ accent: "#{{base09-hex}}cc"
 accent-secondary: "#{{base03-hex}}"
 background: "#{{base01-hex}}"
 button-active-bg: "#{{base02-hex}}ee"
-button-active-disabled-bg: "#dadada"
-button-active-disabled-text: "#000000"
+button-active-disabled-bg: "#{{base02-hex}}99"
+button-active-disabled-text: "#{{base05-hex}}99"
 button-solid-bg: "#{{base0D-hex}}"
 button-text: "#{{base05-hex}}"
 header-opacity: 0.4
 header-text: var(--text)
-icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
+icon-boxed-hover-bg: "#{{base02-hex}}99"
 icon-disabled: "#{{base02-hex}}"
 icon-primary: "#{{base05-hex}}"
 icon-secondary: "#{{base0D-hex}}"
@@ -33,7 +33,7 @@ text: "#{{base05-hex}}ee"
 text-secondary: "#{{base0E-hex}}"
 text-active: "#{{base05-hex}}"
 text-inactive: "#{{base05-hex}}99"
-title: "#7dffee"
+title: "#{{base00-hex}}"
 type-bw: hsl(from var(--background) h 100% calc(round(l / 100) * 100))
 type-bw-inverse: hsl(from var(--type-bw) h 100% calc(100 - l))
 # Album
@@ -86,8 +86,8 @@ library-playing-bg: "#{{base0F-hex}}bb"
 library-playing-icon: "#{{base05-hex}}ee"
 library-playing-text: "#{{base05-hex}}ee"
 library-playing-title: "#{{base05-hex}}ee"
-library-scrollbar-bg: "#71658e7e"
-library-scrollbar-hover-bg: "#a59bbc77"
+library-scrollbar-bg: "#{{base03-hex}}cc"
+library-scrollbar-hover-bg: "#{{base04-hex}}77"
 library-text: "#{{base05-hex}}"
 library-title: "#{{base05-hex}}"
 # Lyrics
@@ -145,27 +145,27 @@ popup-header-bg-lone: color-mix(in srgb, var(--background) 90%, var(--inverse))
 popup-header-bg-many: color-mix(in srgb, var(--background) 95%, var(--inverse))
 popup-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
 popup-section-bg: "color-mix(in srgb, #{{base02-hex}}, #{{base03-hex}} 50%)"
-popup-section-border: "color-mix(in srgb, var(--background) 70%, var(--inverse))"
-popup-section-title-bg: "color-mix(in srgb, var(--background) 50%, var(--inverse))"
-popup-section-title-text: "var(--title)"
+popup-section-border: color-mix(in srgb, var(--background) 70%, var(--inverse))
+popup-section-title-bg: color-mix(in srgb, var(--background) 50%, var(--inverse))
+popup-section-title-text: var(--title)
 popup-track-artwork-about: "#{{base0E-hex}}"
-popup-track-artwork-found: "#009999"
-popup-track-artwork-notfound: "#808080"
-popup-track-data-field-bg: "#0000001e"
-popup-track-metadata-prompt-error: "#6f5757"
+popup-track-artwork-found: "#{{base0B-hex}}"
+popup-track-artwork-notfound: "#{{base0A-hex}}"
+popup-track-data-field-bg: rgb(from var(--type-bw) r g b / 0.3)
+popup-track-metadata-prompt-error: "#{{base08-hex}}42"
 popup-track-metadata-title: "color-mix(in srgb, #{{base0B-hex}}, #{{base02-hex}} 5%)"
-popup-track-metadata-validation-error: "#a12e2e"
-popup-track-metadata-validation-warning: "#e19a00"
+popup-track-metadata-validation-error: "#{{base08-hex}}"
+popup-track-metadata-validation-warning: "#{{base09-hex}}"
 # Progress bar
 progressbar-track-bg: "#{{base05-hex}}43"
 progressbar-value-bg: "#{{base08-hex}}"
 # Prune
 prune-button-border: "var(--inverse)"
-prune-button-delete-bg: "#ff00007d"
-prune-button-delete-pressed-shadow: "#ff4747aa"
-prune-button-keep-bg: "#00800073"
-prune-button-keep-pressed-shadow: "#00ff00aa"
-prune-fordelete: "#ff5a5a"
+prune-button-delete-bg: "#{{base08-hex}}cc"
+prune-button-delete-pressed-shadow: "#{{base08-hex}}99"
+prune-button-keep-bg: "#{{base0B-hex}}cc"
+prune-button-keep-pressed-shadow: "#{{base0B-hex}}99"
+prune-fordelete: "#{{base08-hex}}cc"
 # ScrollTo
 scrollto-active-bg: "#{{base02-hex}}"
 scrollto-active-border: "#{{base03-hex}}"
@@ -220,28 +220,28 @@ transport-volume-thumb-bg: "#{{base0C-hex}}"
 transport-volume-thumb-icon: "#{{base01-hex}}"
 transport-volume-thumb-secondary: "#{{base0C-hex}}"
 # Waveform
+waveform-bg: "#{{base01-hex}}cc"
+waveform-bg-hover: "#{{base01-hex}}"
 waveform-cursor: "#{{base05-hex}}"
 waveform-progress: "#{{base0C-hex}}"
-waveform-region-current: "#00C56C"
-waveform-region-loop: "#DCBCFF3A"
+waveform-region-current: "#{{base0B-hex}}"
+waveform-region-loop: "#{{base01-hex}}22"
 waveform-wave: "#{{base0D-hex}}"
 waveform-hover-label-bg: transparent
 waveform-hover-label-text: "#{{base05-hex}}"
 waveform-hover-line: "#{{base00-hex}}"
 waveform-hoverhead-line-bg: "#{{base05-hex}}62"
-waveform-bg: "#{{base01-hex}}cc"
-waveform-bg-hover: "#{{base01-hex}}"
 # Wiki
 wiki-bg: "#{{base00-hex}}aa"
 wiki-close-prompt-bg: "#{{base05-hex}}"
 wiki-close-prompt-text: "#{{base05-hex}}"
 wiki-header-bg: "#{{base01-hex}}cc"
 wiki-inarticle-bg: "#{{base01-hex}}cc"
-wiki-mention-bg: "#dadada18"
-wiki-mention-border: "#eeeeee"
+wiki-mention-bg: color-mix(in srgb, var(--background) 80%, transparent)
+wiki-mention-border: var(--panel-secondary-border-accent)
 wiki-mention-text: var(--text)
 wiki-pill-bg: "#{{base0B-hex}}"
-wiki-pill-border: "var(--panel-primary-border-main)"
+wiki-pill-border: var(--panel-primary-border-main)
 wiki-pill-text: "#{{base00-hex}}ee"
 wiki-pill-hover-bg: "#{{base0A-hex}}"
 wiki-pill-hover-text: "#{{base00-hex}}ee"

@@ -5,13 +5,13 @@ accent: "#ac4426cc"
 accent-secondary: "#aebacf"
 background: "#c2d0e7"
 button-active-bg: "#b8c5dbee"
-button-active-disabled-bg: "#dadada"
-button-active-disabled-text: "#000000"
+button-active-disabled-bg: "#b8c5db99"
+button-active-disabled-text: "#2e344099"
 button-solid-bg: "#3b6ea8"
 button-text: "#2e3440"
 header-opacity: 0.4
 header-text: var(--text)
-icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
+icon-boxed-hover-bg: "#b8c5db99"
 icon-disabled: "#b8c5db"
 icon-primary: "#2e3440"
 icon-secondary: "#3b6ea8"
@@ -33,7 +33,7 @@ text: "#2e3440ee"
 text-secondary: "#97365b"
 text-active: "#2e3440"
 text-inactive: "#2e344099"
-title: "#7dffee"
+title: "#e5e9f0"
 type-bw: hsl(from var(--background) h 100% calc(round(l / 100) * 100))
 type-bw-inverse: hsl(from var(--type-bw) h 100% calc(100 - l))
 # Album
@@ -86,8 +86,8 @@ library-playing-bg: "#5272afbb"
 library-playing-icon: "#2e3440ee"
 library-playing-text: "#2e3440ee"
 library-playing-title: "#2e3440ee"
-library-scrollbar-bg: "#71658e7e"
-library-scrollbar-hover-bg: "#a59bbc77"
+library-scrollbar-bg: "#aebacfcc"
+library-scrollbar-hover-bg: "#60728c77"
 library-text: "#2e3440"
 library-title: "#2e3440"
 # Lyrics
@@ -145,27 +145,27 @@ popup-header-bg-lone: color-mix(in srgb, var(--background) 90%, var(--inverse))
 popup-header-bg-many: color-mix(in srgb, var(--background) 95%, var(--inverse))
 popup-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
 popup-section-bg: "color-mix(in srgb, #b8c5db, #aebacf 50%)"
-popup-section-border: "color-mix(in srgb, var(--background) 70%, var(--inverse))"
-popup-section-title-bg: "color-mix(in srgb, var(--background) 50%, var(--inverse))"
-popup-section-title-text: "var(--title)"
+popup-section-border: color-mix(in srgb, var(--background) 70%, var(--inverse))
+popup-section-title-bg: color-mix(in srgb, var(--background) 50%, var(--inverse))
+popup-section-title-text: var(--title)
 popup-track-artwork-about: "#97365b"
-popup-track-artwork-found: "#009999"
-popup-track-artwork-notfound: "#808080"
-popup-track-data-field-bg: "#0000001e"
-popup-track-metadata-prompt-error: "#6f5757"
+popup-track-artwork-found: "#4f894c"
+popup-track-artwork-notfound: "#9a7500"
+popup-track-data-field-bg: rgb(from var(--type-bw) r g b / 0.3)
+popup-track-metadata-prompt-error: "#99324b42"
 popup-track-metadata-title: "color-mix(in srgb, #4f894c, #b8c5db 5%)"
-popup-track-metadata-validation-error: "#a12e2e"
-popup-track-metadata-validation-warning: "#e19a00"
+popup-track-metadata-validation-error: "#99324b"
+popup-track-metadata-validation-warning: "#ac4426"
 # Progress bar
 progressbar-track-bg: "#2e344043"
 progressbar-value-bg: "#99324b"
 # Prune
 prune-button-border: "var(--inverse)"
-prune-button-delete-bg: "#ff00007d"
-prune-button-delete-pressed-shadow: "#ff4747aa"
-prune-button-keep-bg: "#00800073"
-prune-button-keep-pressed-shadow: "#00ff00aa"
-prune-fordelete: "#ff5a5a"
+prune-button-delete-bg: "#99324bcc"
+prune-button-delete-pressed-shadow: "#99324b99"
+prune-button-keep-bg: "#4f894ccc"
+prune-button-keep-pressed-shadow: "#4f894c99"
+prune-fordelete: "#99324bcc"
 # ScrollTo
 scrollto-active-bg: "#b8c5db"
 scrollto-active-border: "#aebacf"
@@ -220,28 +220,28 @@ transport-volume-thumb-bg: "#398eac"
 transport-volume-thumb-icon: "#c2d0e7"
 transport-volume-thumb-secondary: "#398eac"
 # Waveform
+waveform-bg: "#c2d0e7cc"
+waveform-bg-hover: "#c2d0e7"
 waveform-cursor: "#2e3440"
 waveform-progress: "#398eac"
-waveform-region-current: "#00C56C"
-waveform-region-loop: "#DCBCFF3A"
+waveform-region-current: "#4f894c"
+waveform-region-loop: "#c2d0e722"
 waveform-wave: "#3b6ea8"
 waveform-hover-label-bg: transparent
 waveform-hover-label-text: "#2e3440"
 waveform-hover-line: "#e5e9f0"
 waveform-hoverhead-line-bg: "#2e344062"
-waveform-bg: "#c2d0e7cc"
-waveform-bg-hover: "#c2d0e7"
 # Wiki
 wiki-bg: "#e5e9f0aa"
 wiki-close-prompt-bg: "#2e3440"
 wiki-close-prompt-text: "#2e3440"
 wiki-header-bg: "#c2d0e7cc"
 wiki-inarticle-bg: "#c2d0e7cc"
-wiki-mention-bg: "#dadada18"
-wiki-mention-border: "#eeeeee"
+wiki-mention-bg: color-mix(in srgb, var(--background) 80%, transparent)
+wiki-mention-border: var(--panel-secondary-border-accent)
 wiki-mention-text: var(--text)
 wiki-pill-bg: "#4f894c"
-wiki-pill-border: "var(--panel-primary-border-main)"
+wiki-pill-border: var(--panel-primary-border-main)
 wiki-pill-text: "#e5e9f0ee"
 wiki-pill-hover-bg: "#9a7500"
 wiki-pill-hover-text: "#e5e9f0ee"
