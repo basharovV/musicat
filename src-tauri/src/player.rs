@@ -1238,7 +1238,7 @@ fn decode_loop(
                                         }
                                         info!("Buffer is now empty. Pausing stream...");
                                         guard.pause();
-                                        let _ = app_handle.emit("stopped", Some(0.0f64));
+                                        let _ = app_handle.emit("end_of_queue", Some(0.0f64));
                                     }
                                 }
                                 // Do not treat "end of stream" as a fatal error. It's the currently only way a

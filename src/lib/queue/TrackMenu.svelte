@@ -5,6 +5,7 @@
         canShowInfoPopup,
         isShuffleEnabled,
         popupOpen,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -92,6 +93,7 @@
             $rightClickedTracks = songs;
             $rightClickedTrack = null;
         }
+        $rightClickedAlbum = null;
 
         close();
         $popupOpen = "track-info";

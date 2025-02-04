@@ -18,6 +18,7 @@
         rightClickedTracks,
         seekTime,
         lastWrittenSongs,
+        rightClickedAlbum,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
@@ -180,6 +181,7 @@
                         onClick={() => {
                             $rightClickedTrack = $current.song;
                             $rightClickedTracks = [];
+                            $rightClickedAlbum = null;
                             $popupOpen = "track-info";
                         }}
                         color={$currentThemeObject["icon-secondary"]}

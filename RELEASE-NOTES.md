@@ -6,7 +6,7 @@
 - **Playback rate**. Drag the control below the seekbar to adjust the playback rate from 0.3x to 3.0x (doesn't maintain pitch yet). Double-click to reset back to 1.0x.
 - **LRC synced lyrics**. Lyrics tab now shows synced lyrics if available - using lrclib.net. Auto-scroll is enabled by default, option to disable.
 - **Tagger: delete encoded artwork**.
-- **New theme - Zokugun Obsidium** by [@daiyam](https://github.com/daiyam).
+- **New themes** - Zokugun Obsidium (dark) by [@daiyam](https://github.com/daiyam), fruitOS (light and dark)
 - **Full support for macOS Now Playing center**, with media keys. Thanks to [@daiyam](https://github.com/daiyam).
 
 #### Enhancements
@@ -18,7 +18,8 @@
 - In the tagger you can now select the origin country from a dropdown as well as by typing.
 - You can now edit smart playlists. Thanks to [@daiyam](https://github.com/daiyam).
 - You can now drag playlists/smart playlists into the queue, or into other playlists. Thanks to [@daiyam](https://github.com/daiyam).
-- THe right-click menu is now cleaner, thanks to [@daiyam](https://github.com/daiyam).
+- The right-click menu is now cleaner, thanks to [@daiyam](https://github.com/daiyam).
+- Improved delay when playing album in a large library, by [@daiyam](https://github.com/daiyam)
 
 #### Fixes
 

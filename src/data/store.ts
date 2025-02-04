@@ -1,5 +1,10 @@
 import { path } from "@tauri-apps/api";
-import { appConfigDir, audioDir, downloadDir } from "@tauri-apps/api/path";
+import {
+    appConfigDir,
+    audioDir,
+    downloadDir,
+    pictureDir,
+} from "@tauri-apps/api/path";
 import * as fs from "@tauri-apps/plugin-fs";
 import { type, type OsType } from "@tauri-apps/plugin-os";
 import type {
@@ -139,6 +144,7 @@ export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
+export const rightClickedAlbum: Writable<Album> = writable(null);
 export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);
@@ -398,6 +404,13 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
  */
 export const lastWrittenSongs: Writable<Song[]> = writable([]);
 
+export const artworkDirectory: Writable<string> = writable(
+    localStorage.getItem("artworkDirectory"),
+);
+artworkDirectory.subscribe((val) =>
+    localStorage.setItem("artworkDirectory", val),
+);
+
 async function init() {
     // Set OS
     const osType = await type();
@@ -438,6 +451,10 @@ async function init() {
     queue.subscribe(async (songs) => {
         await writeQueueToFile(songs);
     });
+
+    if (!get(artworkDirectory)) {
+        artworkDirectory.set(await pictureDir());
+    }
 }
 
 export const streamInfo: Writable<StreamInfo> = writable({

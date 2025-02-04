@@ -54,6 +54,7 @@
                     class="texture"
                     src="images/textures/soft-wallpaper.png"
                     loading="lazy"
+                    on:contextmenu|preventDefault={() => {}}
                     async
                 />
                 <div class="artwork-frame">

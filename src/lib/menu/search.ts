@@ -17,8 +17,8 @@ export function searchArtistOnYouTube(song: Song) {
     open(`https://www.youtube.com/results?search_query=${query}`);
 }
 
-export function searchArtworkOnBrave(song: Song) {
-    const query = encodeURIComponent(`${song.artist} - ${song.title}`);
+export function searchArtworkOnBrave(data: { title: string; artist: string }) {
+    const query = encodeURIComponent(`${data.artist} - ${data.title}`);
     open(`https://search.brave.com/images?q=${query}`);
 }
 
