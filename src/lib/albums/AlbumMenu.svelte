@@ -5,6 +5,7 @@
     import {
         popupOpen,
         userSettings,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -123,9 +124,11 @@
         if (songs.length === 1) {
             $rightClickedTracks = [];
             $rightClickedTrack = song;
+            $rightClickedAlbum = null;
         } else {
             $rightClickedTracks = songs;
             $rightClickedTrack = null;
+            $rightClickedAlbum = album;
         }
 
         close();
@@ -232,7 +235,7 @@
             <MenuOption text={result.error || result.success} isDisabled />
         {/if}
         <MenuOption
-            onClick={compose(searchArtworkOnBrave, song)}
+            onClick={compose(searchArtworkOnBrave, album)}
             text="Search for artwork on Brave"
         />
         {#if song?.artist}

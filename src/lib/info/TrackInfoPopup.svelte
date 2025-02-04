@@ -1,7 +1,9 @@
 <script lang="ts">
-    import { pictureDir } from "@tauri-apps/api/path";
+    import { dirname, join, pictureDir } from "@tauri-apps/api/path";
     import { open } from "@tauri-apps/plugin-dialog";
     import { open as fileOpen } from "@tauri-apps/plugin-shell";
+    import { basename } from "@tauri-apps/api/path";
+    import { remove as removeFile } from "@tauri-apps/plugin-fs";
 
     import hotkeys from "hotkeys-js";
     import type { Song } from "src/App";
@@ -10,8 +12,10 @@
     import tippy from "svelte-tippy";
     import { fade, fly } from "svelte/transition";
     import {
+        artworkDirectory,
         os,
         popupOpen,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -19,7 +23,10 @@
     import "../tippy.css";
 
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-    import { fetchAlbumArt } from "../data/LibraryEnrichers";
+    import {
+        type EnricherResult,
+        fetchAlbumArt,
+    } from "../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
 
@@ -28,14 +35,15 @@
     import LL from "../../i18n/i18n-svelte";
     import MetadataSection from "./MetadataSection.svelte";
     import CountrySection from "./CountrySection.svelte";
-    // optional
+    import { searchArtworkOnBrave } from "../menu/search";
 
     // The artwork for this track(s)
     let artworkBuffer: Buffer;
+    let artworkFileName;
+    let artworkFilePath;
     let artworkFocused = false;
     let artworkFormat;
     let artworkSrc;
-    let foundArtwork;
 
     // When scrolling through tracks, re-use artworks
     let previousArtworkFormat;
@@ -45,7 +53,12 @@
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
     let artworkToSetData: Uint8Array = null;
-    let isArtworkSet: "delete" | "replace" | false = false;
+    let isArtworkSet:
+        | "delete-file"
+        | "delete-metadata"
+        | "replace-file"
+        | "replace-metadata"
+        | false = false;
     let artworkFileToSet = null;
 
     let unlisten;
@@ -55,15 +68,32 @@
     let metadata: MetadataSection;
     let hasMetadataChanges: false;
 
+    type ActionType = "artwork";
+
+    let loadingType: ActionType = null;
+    let result: EnricherResult;
+    let resultType: ActionType;
+
     $: hasChanges = !!isArtworkSet || hasMetadataChanges;
 
     function completeMetadataEvent(event) {
         event.artwork_file = artworkFileToSet ? artworkFileToSet : "";
         event.artwork_data = artworkToSetData ?? [];
         event.artwork_data_mime_type = artworkToSetFormat;
-        event.delete_artwork = isArtworkSet === "delete";
+        event.delete_artwork = isArtworkSet === "delete-metadata";
 
         return event;
+    }
+
+    function deleteArtwork() {
+        if (artworkFileName) {
+            isArtworkSet = "delete-file";
+        } else if (artworkToSetSrc) {
+            artworkToSetSrc = null;
+            artworkToSetFormat = null;
+        } else {
+            isArtworkSet = "delete-metadata";
+        }
     }
 
     async function getArtwork() {
@@ -77,6 +107,7 @@
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: { path, isImport: false, includeFolderArtwork: true },
             });
+            console.log(songWithArtwork);
 
             if (!songWithArtwork) {
                 toast.error(
@@ -96,7 +127,10 @@
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
                     artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
-                    foundArtwork = true;
+                    artworkFilePath = songWithArtwork.artwork.src;
+                    artworkFileName = await basename(
+                        songWithArtwork.artwork.src,
+                    );
                 }
 
                 previousArtworkFormat = artworkFormat;
@@ -137,7 +171,9 @@
 
     function hasArtworkToSet() {
         return (
-            artworkFileToSet || artworkToSetData || isArtworkSet === "delete"
+            artworkFileToSet ||
+            artworkToSetData ||
+            isArtworkSet === "delete-metadata"
         );
     }
 
@@ -145,41 +181,40 @@
         $popupOpen = null;
     }
 
-    async function onImageClick(evt) {
-        console.log("clicked", artworkFocused);
-        if (!artworkFocused) {
-            artworkFocused = true;
-            return;
-        }
-
-        if (artworkSrc && artworkFormat) {
-            // Let options for existing artwork (delete, replace) handle this
-            return;
-        }
-
-        await openArtworkFilePicker();
-    }
-
     async function openArtworkFilePicker() {
         // Open a selection dialog for directories
         const selected = await open({
             directory: false,
             multiple: false,
-            defaultPath: await pictureDir(),
+            defaultPath: $artworkDirectory,
+            filters: [
+                {
+                    name: "default",
+                    extensions: ["jpeg", "jpg", "png"],
+                },
+            ],
         });
         if (Array.isArray(selected)) {
-            // user selected multiple directories
+            // user selected multiple files
         } else if (selected === null) {
             // user cancelled the selection
         } else {
-            // user selected a single directory
-            // addFolder(selected)
-            const src = "asset://localhost/" + selected;
+            // user selected a single file
+
+            // save current directory
+            $artworkDirectory = await dirname(selected);
+
+            const src = convertFileSrc(selected);
             const response = await fetch(src);
+
             if (response.status === 200) {
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
-                isArtworkSet = "replace";
+                artworkSrc = src;
+                isArtworkSet =
+                    isArtworkSet === "delete-file" || artworkFileName
+                        ? "replace-file"
+                        : "replace-metadata";
                 artworkFileToSet = selected;
                 artworkToSetData = null;
                 artworkToSetSrc = src;
@@ -206,7 +241,8 @@
         artworkToSetFormat = null;
         artworkToSetSrc = null;
         artworkToSetData = null;
-        foundArtwork = null;
+        artworkFileName = null;
+        artworkFilePath = null;
         isArtworkSet = false;
         artworkFileToSet = null;
 
@@ -302,9 +338,39 @@
             artworkToSetFormat = mimeType;
             artworkToSetData = new Uint8Array(arrayBuffer);
             artworkFileToSet = null;
-            isArtworkSet = "replace";
+            isArtworkSet =
+                isArtworkSet === "delete-file" || artworkFileName
+                    ? "replace-file"
+                    : "replace-metadata";
         }
-        // const src = "asset://localhost/" + folder + artworkFilename;
+        // const src = "asset://localhost/" + folder + artworkFileName;
+    }
+
+    async function save() {
+        if (
+            $rightClickedAlbum &&
+            $rightClickedAlbum.tracksIds.length ==
+                $rightClickedTracks?.length &&
+            (isArtworkSet === "delete-file" || isArtworkSet === "replace-file")
+        ) {
+            await invoke("delete_files", {
+                event: {
+                    files: [artworkFilePath],
+                },
+            });
+        }
+
+        await metadata.writeMetadata();
+    }
+
+    function searchArtwork() {
+        if ($rightClickedTrack) {
+            searchArtworkOnBrave($rightClickedTrack);
+        } else if ($rightClickedAlbum) {
+            searchArtworkOnBrave($rightClickedAlbum);
+        } else {
+            searchArtworkOnBrave($rightClickedTracks[0]);
+        }
     }
 
     let previousScope;
@@ -328,25 +394,32 @@
         document.removeEventListener("paste", onPaste);
     });
 
-    let isFetchingArtwork = false;
-    let artworkResult: { success?: string; error?: string };
     async function fetchArtwork() {
-        isFetchingArtwork = true;
-        artworkResult = await fetchAlbumArt(
-            null,
+        if (loadingType === "artwork") {
+            return;
+        }
+
+        loadingType = "artwork";
+        resultType = "artwork";
+        result = null;
+
+        result = await fetchAlbumArt(
+            $rightClickedAlbum,
             $rightClickedTrack || $rightClickedTracks[0],
         );
-        if (artworkResult.success) {
+
+        if (result.success) {
             toast.success("Found album art and written to album!", {
                 position: "top-right",
             });
             updateArtwork();
-        } else if (artworkResult.error) {
+        } else if (result.error) {
             toast.error("Couldn't find album art", {
                 position: "top-right",
             });
         }
-        isFetchingArtwork = false;
+
+        loadingType = null;
     }
 </script>
 
@@ -359,7 +432,7 @@
         <div class="button-container">
             <ButtonWithIcon
                 disabled={!hasChanges}
-                onClick={() => metadata.writeMetadata()}
+                onClick={save}
                 text={`Overwrite file${isMultiMode ? "s" : ""}`}
             />
             <small>Cmd + ENTER</small>
@@ -471,13 +544,8 @@
                 contenteditable
                 class="artwork-container"
                 class:focused={artworkFocused}
-                on:mousedown|preventDefault={(e) => {
-                    onImageClick(e);
-                    //@ts-ignore
-                    e.currentTarget.focus();
-                }}
-                on:focus={() => (artworkFocused = true)}
-                on:blur={() => (artworkFocused = false)}
+                on:mouseenter={() => (artworkFocused = true)}
+                on:mouseleave={() => (artworkFocused = false)}
                 use:tippy={{
                     content: $LL.trackInfo.artworkTooltip(),
                     placement: "bottom",
@@ -485,7 +553,7 @@
                 }}
             >
                 <div class="artwork-frame">
-                    {#if isArtworkSet !== "delete" && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
+                    {#if (!isArtworkSet || !isArtworkSet.startsWith("delete")) && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
                         <img
                             alt=""
                             class="artwork"
@@ -493,41 +561,40 @@
                                 previousArtworkSrc ||
                                 artworkSrc}
                         />
-                        {#if artworkFocused && artworkSrc && artworkFormat && !foundArtwork}
+                        {#if artworkFocused && artworkSrc && artworkFormat}
                             <div class="artwork-options">
                                 <Icon
                                     icon={artworkToSetSrc
                                         ? "mingcute:close-circle-fill"
                                         : "ant-design:delete-outlined"}
-                                    onClick={() => {
-                                        if (artworkToSetSrc) {
-                                            artworkToSetSrc = null;
-                                            artworkToSetFormat = null;
-                                        } else {
-                                            isArtworkSet = "delete";
-                                        }
-                                    }}
+                                    onClick={deleteArtwork}
                                 />
                                 <Icon
                                     icon="material-symbols:folder"
-                                    onClick={() => {
-                                        openArtworkFilePicker();
-                                    }}
+                                    onClick={openArtworkFilePicker}
                                 />
                             </div>
                         {/if}
                     {:else}
                         <div class="artwork-placeholder">
-                            <Icon icon="mdi:music-clef-treble" />
-                            <!-- <small>No art</small> -->
+                            {#if artworkFocused}
+                                <div
+                                    class="artwork-options"
+                                    on:click={openArtworkFilePicker}
+                                >
+                                    <Icon icon="material-symbols:folder" />
+                                </div>
+                            {:else}
+                                <Icon icon="mdi:music-clef-treble" />
+                            {/if}
                         </div>
                     {/if}
                 </div>
             </div>
             {#if isArtworkSet}
                 <small>{$LL.trackInfo.artworkReadyToSave()}</small>
-            {:else if foundArtwork}
-                <small>{$LL.trackInfo.artworkFound()}</small>
+            {:else if artworkFileName}
+                <small>{artworkFileName}</small>
             {:else if artworkSrc}
                 <small>{$LL.trackInfo.encodedInFile()}</small>
             {:else}
@@ -545,10 +612,19 @@
             >
             <div class="find-art-btn">
                 <ButtonWithIcon
-                    icon="ic:twotone-downloading"
+                    disabled={isArtworkSet || artworkSrc}
+                    icon={loadingType === "artwork"
+                        ? "line-md:loading-loop"
+                        : "ic:twotone-downloading"}
                     text="Fetch art"
                     theme="transparent"
                     onClick={fetchArtwork}
+                />
+                <ButtonWithIcon
+                    icon="mdi:search-web"
+                    text="Search art"
+                    theme="transparent"
+                    onClick={searchArtwork}
                 />
             </div>
         </section>

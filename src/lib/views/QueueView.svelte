@@ -33,6 +33,7 @@
         shuffledQueue,
         singleKeyShortcutsEnabled,
         uiView,
+        rightClickedAlbum,
     } from "../../data/store";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
     import Konva from "konva";
@@ -823,9 +824,12 @@
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
+                    $rightClickedTrack = null;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
+                    $rightClickedTracks = [];
                 }
+                $rightClickedAlbum = null;
                 $popupOpen = "track-info";
             }
         } else if (

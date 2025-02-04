@@ -9,6 +9,7 @@
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         popupOpen,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistFile,
@@ -193,6 +194,7 @@
             $rightClickedTracks = songs;
             $rightClickedTrack = null;
         }
+        $rightClickedAlbum = null;
 
         close();
 

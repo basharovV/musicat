@@ -15,11 +15,17 @@
     let originCountryEdited = originCountry;
 
     async function fetchFromWikipedia() {
-        originCountryEdited = null;
+        if (isFetchingOriginCountry) {
+            return;
+        }
+
         isFetchingOriginCountry = true;
+        originCountryEdited = null;
+
         const country = await findCountryByArtist(
             ($rightClickedTrack || $rightClickedTracks[0]).artist,
         );
+
         console.log("country", country);
         if (country) {
             originCountryEdited = country;
@@ -81,7 +87,9 @@
             onClick={fetchFromWikipedia}
             isLoading={isFetchingOriginCountry}
             text={$LL.trackInfo.fetchFromWikipedia()}
-            icon="tabler:world-download"
+            icon={isFetchingOriginCountry
+                ? "line-md:loading-loop"
+                : "tabler:world-download"}
             theme="transparent"
         />
     </div>
