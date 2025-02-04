@@ -170,6 +170,7 @@
                 paths: [album.path],
                 recursive: false,
                 process_albums: true,
+                process_m3u: false,
                 is_async: false,
                 is_cover_fullcheck: $userSettings.isArtistsToolkitEnabled,
             },

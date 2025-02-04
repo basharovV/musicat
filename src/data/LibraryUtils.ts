@@ -119,6 +119,7 @@ export async function importPaths(
             paths: selected,
             recursive: true,
             process_albums: true,
+            process_m3u: false,
             is_async: true,
             is_cover_fullcheck: get(userSettings).isCoverFullCheckEnabled,
         },
