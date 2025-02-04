@@ -268,6 +268,8 @@
 
             drawArtwork(previousSongIdx > current.index);
             previousSongIdx = current.index;
+        } else {
+            song = null;
         }
     });
 
