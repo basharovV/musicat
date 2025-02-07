@@ -122,6 +122,7 @@
     onMount(async () => {
         appWindow.emit("opened");
         // File associations: check for opened urls on the window
+        // @ts-expect-error
         console.log("window opened urls: ", window.openedUrls);
 
         window["onFileOpen"] = (urls) => {

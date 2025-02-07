@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import ImportWorker from "../ImportWorker?worker";
 import { invoke } from "@tauri-apps/api/core";
-import { BaseDirectory, exists, readDir } from "@tauri-apps/plugin-fs";
+import { readDir } from "@tauri-apps/plugin-fs";
 import { audioDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -20,14 +20,10 @@ import { get } from "svelte/store";
 import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
 import { getMapForTagType, getTagTypeFromCodec } from "./LabelMap";
 import { db } from "./db";
-import {
-    bottomBarNotification,
-    importStatus,
-    shouldShowToast,
-    songsJustAdded,
-    userSettings,
-} from "./store";
+import { bottomBarNotification, importStatus, userSettings } from "./store";
 import { path } from "@tauri-apps/api";
+import { uniq } from "lodash-es";
+
 const appWindow = getCurrentWebviewWindow();
 
 let addedSongs: Song[] = [];
@@ -410,7 +406,7 @@ export async function deleteFromLibrary(tracks: Song[]) {
     });
 }
 
-export function getAlbumId(track: Song) {
+export function getAlbumId(track: Song): string {
     return md5(
         `${track.path.replace(`/${track.file}`, "")} - ${track.album}`.toLowerCase(),
     );
@@ -428,4 +424,59 @@ export function songMatchesQuery(song: Song, query: string) {
             .join(" ")
             .includes(query.toLowerCase())
     );
+}
+
+export async function reImport(
+    response: ToImport,
+    oldSongs: Song[],
+    songIdToOldAlbumId: { [key: string]: string },
+) {
+    await db.transaction("rw", db.songs, db.albums, async () => {
+        await reImportTracks(response.songs, oldSongs);
+
+        for (const album of response.albums) {
+            await reImportAlbum(album, songIdToOldAlbumId);
+        }
+    });
+}
+
+async function reImportAlbum(
+    newAlbum: Album,
+    songIdToOldAlbumId: { [key: string]: string },
+) {
+    const existingAlbum = await db.albums.get(newAlbum.id);
+
+    // remove duplicate
+    const oldAlbums = [existingAlbum?.id];
+
+    for await (const trackId of newAlbum.tracksIds) {
+        const albumId = songIdToOldAlbumId[trackId];
+
+        if (albumId && !oldAlbums.includes(albumId)) {
+            oldAlbums.push(albumId);
+
+            await db.albums.delete(albumId);
+        }
+    }
+
+    if (existingAlbum) {
+        existingAlbum.artist = newAlbum.artist;
+        existingAlbum.artwork = newAlbum.artwork;
+        existingAlbum.displayTitle = newAlbum.displayTitle;
+        existingAlbum.genre = newAlbum.genre;
+        existingAlbum.title = newAlbum.title;
+        existingAlbum.year = newAlbum.year;
+        existingAlbum.tracksIds = uniq([
+            ...existingAlbum.tracksIds,
+            ...newAlbum.tracksIds,
+        ]);
+
+        await db.albums.put(existingAlbum);
+    } else {
+        await db.albums.put(newAlbum);
+    }
+}
+
+async function reImportTracks(newSongs: Song[], oldSongs: Song[]) {
+    await db.songs.bulkPut(newSongs);
 }
