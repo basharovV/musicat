@@ -1,0 +1,57 @@
+display-name: Turquoise
+variant: dark
+# Basics
+accent-secondary: "#32ceb5f3"
+background: "#01796fda"
+button-solid-bg: "#282b2c"
+button-text: "#ede8f0"
+icon-primary: white
+icon-secondary: white
+input-bg: "#0c5f58da"
+overlay-bg: "#02564fc6"
+text: "#eef4f1"
+text-secondary: "#e4d7c7ff"
+text-inactive: "#a3ccc5"
+# Album
+album-playing-play-hover-bg: "#f3d2ba"
+album-playing-shadow: "#f3d2ba"
+album-playing-title-bg: "#32ceb5f3"
+# Analytics/Stats
+# Artist's Toolkit
+# Library
+library-clickable-cell-bg: "#03867b"
+library-clickable-cell-hover-bg: "#0ca89b"
+library-favourite-icon: "#f3d2ba"
+library-favourite-hover-icon: "#f6decd"
+library-header-active-bg: "#59b5ad"
+library-header-bg: "#03867b"
+library-highlight-bg: "#f3caad82"
+library-hover-bg: "#f4ceb238"
+library-playing-bg: "#f3d2ba"
+library-playing-icon: "#073d23"
+library-playing-text: "#444444"
+library-playing-title: "#3d1507"
+library-text: "#e4eced"
+library-title: "#e4eced"
+# Map View
+# Menus
+# Oscilloscope
+oscilloscope: "#d2ff2e"
+# Panels
+panel-background: "#027167"
+# Popups
+# Progress bar
+# Prune
+# ScrollTo
+# Seekbar
+# Sidebar
+# Smart playlist
+smart-playlist-builder-bg: "#d6d5d0"
+smart-playlist-builder-text: "#1c4531"
+smart-playlist-builder-block-bg: "#eee3e3"
+smart-playlist-builder-block-focused-bg: "#f5efef"
+smart-playlist-builder-block-input-bg: "#d6e1e090"
+smart-playlist-builder-block-input-text: "#675c5cde"
+# Play, pause, next, previous
+# Waveform
+# Wiki

@@ -1,0 +1,3 @@
+base16:
+  extension: .yaml
+  output: ../../../src/theming/themes/base16

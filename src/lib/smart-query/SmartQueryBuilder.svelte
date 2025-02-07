@@ -216,51 +216,6 @@
         grid-template-columns: 1fr auto;
         overflow: visible;
         position: relative;
-        /* border-bottom: 0.7px solid rgba(255, 255, 255, 0.16); */
-    }
-
-    .smart-query-actions {
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        justify-content: flex-end;
-        padding-right: 0.5em;
-        border-bottom: 0.7px solid rgba(255, 255, 255, 0.16);
-
-        input {
-            background-color: transparent;
-            outline: none;
-            border: none;
-            margin-left: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.36);
-            border-radius: 4px;
-            padding: 0 0.5em;
-            font-size: 1em;
-            line-height: 1.8rem;
-            width: fit-content;
-            min-width: 100px;
-            color: var(--smart-playlist-builder-text);
-            &::placeholder {
-                color: var(--smart-playlist-builder-text);
-            }
-        }
-
-        img {
-            width: 30px;
-            margin: 0 5px;
-            position: relative;
-            opacity: 0.2;
-        }
-
-        button {
-            background-color: var(--smart-playlist-button-bg);
-            border-radius: 4px;
-
-            &:disabled {
-                background-color: var(--smart-playlist-button-disabled-bg);
-                color: var(--smart-playlist-button-disabled);
-            }
-        }
     }
 
     .query-parts {

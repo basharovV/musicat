@@ -2250,8 +2250,10 @@
                     var(--background) 50%,
                     transparent
                 );
-                border: 1px solid #6868681a;
-                box-shadow: 0px 0px 5px 1px #0000001a;
+                border: 1px solid
+                    color-mix(in srgb, var(--inverse) 10%, transparent);
+                box-shadow: 0px 0px 5px 1px
+                    color-mix(in srgb, var(--type-bw) 20%, transparent);
                 backdrop-filter: blur(5px);
                 border-radius: 5px;
                 z-index: -1;

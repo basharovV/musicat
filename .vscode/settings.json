@@ -6,7 +6,7 @@
         "a11y-click-events-have-key-events": "ignore"
     },
     "yaml.schemas": {
-        "src/theming/theme.schema.json": "src/theming/themes/*.yaml"
+        "src/theming/theme.schema.json": "src/theming/themes/**/*.yaml"
     },
     "[css]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -26,5 +26,5 @@
     "[typescript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
-    "vscode-color-picker.languages": ["javascript", "typescript", "yaml"],
+    "vscode-color-picker.languages": ["javascript", "typescript", "yaml"]
 }

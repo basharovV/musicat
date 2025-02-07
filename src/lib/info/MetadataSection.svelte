@@ -781,10 +781,6 @@
                 border: 1px solid var(--popup-track-metadata-validation-warning);
             }
         }
-
-        .artist-input {
-            /* overflow: hidden; */
-        }
     }
 
     .tools {

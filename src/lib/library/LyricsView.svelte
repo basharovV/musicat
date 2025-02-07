@@ -337,7 +337,6 @@
 
             .synced {
                 p {
-                    opacity: 0.5;
                     margin: 0.5em 0;
                     transition: all 0.3s ease-in-out;
                     &.current {

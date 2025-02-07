@@ -52,7 +52,6 @@
         gap: 5px;
         font-weight: normal;
         border-radius: 6px;
-        color: var(--button-text);
         white-space: nowrap;
         cursor: pointer;
         transition: border-color 0.1s;
@@ -69,9 +68,6 @@
         &:active {
             opacity: 0.8;
         }
-        &:hover:not(.disabled) {
-            background-color: rgba(240, 248, 255, 0.088);
-        }
         &:focus,
         &:focus-visible {
             outline: 4px auto -webkit-focus-ring-color;
@@ -82,16 +78,25 @@
             font-size: 1em;
             font-weight: 500;
             font-family: inherit;
-            background-color: var(--smart-playlist-button-bg);
+            background-color: var(--button-active-bg);
+            color: var(--button-text);
             white-space: nowrap;
 
-            &:hover {
-                background-color: var(--smart-playlist-button-disabled-bg);
+            &:hover:not(.disabled) {
+                background-color: color-mix(
+                    in srgb,
+                    var(--button-active-bg) 80%,
+                    transparent
+                );
             }
 
             &:disabled {
-                background-color: var(--smart-playlist-button-disabled-bg);
-                color: var(--smart-playlist-button-disabled);
+                background-color: var(--button-active-disabled-bg);
+                color: var(--button-active-disabled-text);
+
+                &:hover {
+                    background-color: var(--button-active-disabled-bg);
+                }
             }
         }
 
@@ -100,13 +105,15 @@
             font-size: 1em;
             font-weight: 500;
             font-family: inherit;
-            background-color: var(--button-bg);
+            background-color: var(--button-solid-bg);
+            color: var(--button-text);
             white-space: nowrap;
+
             &:hover:not(.disabled) {
                 border-color: var(--accent);
                 background-color: color-mix(
                     in srgb,
-                    var(--button-bg) 80%,
+                    var(--button-solid-bg) 80%,
                     transparent
                 );
             }
@@ -120,6 +127,8 @@
             );
             border: 1px solid
                 color-mix(in srgb, var(--inverse) 80%, transparent);
+            color: var(--button-text);
+
             &:hover:not(.disabled) {
                 border-color: var(--accent);
                 background-color: color-mix(

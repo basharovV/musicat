@@ -1,0 +1,35 @@
+display-name: Red
+variant: dark
+# Basics
+accent-secondary: "#be3153f3"
+background: "#562931"
+text: "#f1f1f1"
+# Album
+album-playing-play-hover-bg: "#be3153f3"
+album-playing-shadow: "#be3153"
+album-playing-title-bg: "#be3153f3"
+# Analytics/Stats
+# Artist's Toolkit
+# Library
+library-favourite-icon: "#ff386a"
+library-favourite-hover-icon: "#ff899d"
+library-playing-bg: "#be3153"
+library-playing-icon: "#ffffff"
+library-playing-text: "#ffffff"
+# Map View
+# Menus
+# Oscilloscope
+# Panels
+# Popups
+# Progress bar
+# Prune
+# ScrollTo
+# Seekbar
+# Sidebar
+# Smart playlist
+# Play, pause, next, previous
+transport-control: "#be3153"
+transport-favorite: "#ff386a"
+transport-shuffle: "#be3153"
+# Waveform
+# Wiki
