@@ -478,5 +478,15 @@ async function reImportAlbum(
 }
 
 async function reImportTracks(newSongs: Song[], oldSongs: Song[]) {
+    const favorites = oldSongs.filter(({ isFavourite }) => isFavourite);
+
+    for (const { id } of favorites) {
+        const song = newSongs.find((song) => song.id === id);
+
+        if (song) {
+            song.isFavourite = true;
+        }
+    }
+
     await db.songs.bulkPut(newSongs);
 }
