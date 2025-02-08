@@ -54,11 +54,25 @@ interface Query {
 export const isInit = writable(true);
 export const isSongReady = writable(false);
 export const forceRefreshLibrary = writable(false);
-export const query: Writable<Query> = writable({
-    orderBy: "artist",
-    libraryOrderBy: "artist",
-    reverse: false,
-    query: "",
+export const query: Writable<Query> = writable(
+    {
+        orderBy: "artist",
+        libraryOrderBy: "artist",
+        reverse: false,
+        query: "",
+    },
+    () => {
+        const item = localStorage.getItem("query");
+
+        if (item) {
+            const data = JSON.parse(item);
+
+            query.set(data);
+        }
+    },
+);
+query.subscribe((query) => {
+    localStorage.setItem("query", JSON.stringify(query));
 });
 
 export const allSongs: Writable<Song[]> = writable([]);
