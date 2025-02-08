@@ -505,11 +505,7 @@
     let songsHighlighted: Song[] = [];
     let onSongsHighlighted = null;
 
-    $: if (
-        songs?.length &&
-        $query.query?.length &&
-        $popupOpen !== "track-info"
-    ) {
+    $: if (songs?.length && $query?.length && $popupOpen !== "track-info") {
         highlightSong(songs[0], 0, false, true);
     }
 

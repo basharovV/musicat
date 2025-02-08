@@ -1,17 +1,16 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
-    import { popupOpen, query, uiView, userSettings } from "../../data/store";
-    import type { Album, Song } from "../../App";
+    import { uiView } from "../../data/store";
+    import type { Album, Song, SongOrder } from "../../App";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { groupBy } from "../../utils/ArrayUtils";
-    import OpenAI from "openai";
-    import Icon from "../ui/Icon.svelte";
-    import { fetch } from "@tauri-apps/plugin-http";
     import AlbumsTimeline from "../ui/AlbumsTimeline.svelte";
     import { fade } from "svelte/transition";
     import { cubicInOut } from "svelte/easing";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+
+    export let songOrder: SongOrder;
 
     // Analytics for your library
     // Including play metrics, GPT summaries
@@ -22,18 +21,18 @@
         let isSmartQueryResults = false;
         let isIndexed = true;
         results = db.songs.orderBy(
-            $query.orderBy === "artist"
+            songOrder.orderBy === "artist"
                 ? "[artist+year+album+trackNumber]"
-                : $query.orderBy === "album"
+                : songOrder.orderBy === "album"
                   ? "[album+trackNumber]"
-                  : $query.orderBy,
+                  : songOrder.orderBy,
         );
 
         let resultsArray: Song[] = [];
 
         // Depending whether this is a smart query or not
         if (isIndexed) {
-            if ($query.reverse) {
+            if (songOrder.reverse) {
                 results = results.reverse();
             }
             resultsArray = await results.toArray();
@@ -44,15 +43,15 @@
         // Do sorting for non-indexed results
         if (!isIndexed) {
             resultsArray = resultsArray.sort((a, b) => {
-                switch ($query.orderBy) {
+                switch (songOrder.orderBy) {
                     case "title":
                     case "album":
                     case "track":
                     case "year":
                     case "duration":
                     case "genre":
-                        return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy],
+                        return a[songOrder.orderBy].localeCompare(
+                            b[songOrder.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie

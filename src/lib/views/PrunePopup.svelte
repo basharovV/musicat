@@ -69,7 +69,6 @@
             $isSmartQueryBuilderOpen = false;
             $selectedPlaylistFile = null;
             $selectedSmartQuery = null;
-            $query.orderBy = $query.libraryOrderBy;
         } else {
             $uiView = "to-delete";
         }

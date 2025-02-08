@@ -7,7 +7,7 @@
     import { Stage as Stg } from "konva/lib/Stage";
     import { Rect as Rct } from "konva/lib/shapes/Rect";
     import { debounce } from "lodash-es";
-    import type { Query, Song } from "src/App";
+    import type { Query, Song, SongOrder } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import {
         Group,
@@ -91,10 +91,11 @@
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder: String[];
-    export let query: Query = null;
     export let dim = false;
     export let isInit = true;
     export let isLoading = false;
+    export let query: Query = null;
+    export let songOrder: SongOrder = null;
     export let theme = "default";
 
     $: songs =
@@ -973,7 +974,7 @@
             setQueue($queriedSongs, song.viewModel.index);
         }
 
-        if (query?.query.length) {
+        if (query?.length) {
             $queueMirrorsSearch = true;
         }
     }
@@ -1014,7 +1015,7 @@
      * - if multiple songs are highlighted, they will be unhighlighted and the first song will be highlighted as you type
      */
     $: {
-        if (query?.query?.length && $popupOpen !== "track-info") {
+        if (query?.length && $popupOpen !== "track-info") {
             if (songs?.length === 0) {
                 resetHighlight();
             } else {
@@ -1219,7 +1220,7 @@
                 return;
             }
 
-            if (query?.orderBy !== "none") {
+            if (songOrder?.orderBy !== "none") {
                 toast.error($LL.library.orderDisabledHint());
             }
 
@@ -1380,7 +1381,7 @@
             AudioPlayer.shouldPlay = true;
             setQueue($queriedSongs, highlightedSongIdx);
 
-            if (query?.query.length) {
+            if (query?.length) {
                 $queueMirrorsSearch = true;
             }
         }
@@ -1406,18 +1407,14 @@
     // COLUMNS
 
     function updateOrderBy(newOrderBy) {
-        if (!query) return;
+        if (!songOrder) return;
         if (newOrderBy === "trackNumber") return; // Not supported
-        if (query.orderBy === newOrderBy) {
-            query.reverse = !query.reverse;
+        if (songOrder.orderBy === newOrderBy) {
+            songOrder.reverse = !songOrder.reverse;
+        } else {
+            songOrder.orderBy = newOrderBy;
         }
-        query.orderBy = newOrderBy;
-        if ($uiView === "library") {
-            // This is used to restore the orderBy
-            // when going back to the library from a playlist (custom order)
-            query.libraryOrderBy = newOrderBy;
-        }
-        query = query;
+        songOrder = songOrder;
     }
 
     // Re-order columns
@@ -1777,7 +1774,7 @@
                 <p>🪣</p>
             </div>
         </div>
-    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && query?.query.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
+    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && query?.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
         <ImportPlaceholder />
     {:else}
         <div
@@ -2469,19 +2466,19 @@
                                                     $draggedColumnIdx
                                                     ? DROP_HIGHLIGHT_BG_COLOR
                                                     : f.name === "none" &&
-                                                        query?.orderBy ===
+                                                        songOrder?.orderBy ===
                                                             "none"
                                                       ? HEADER_BG_COLOR_ACCENT
-                                                      : query &&
+                                                      : query !== null &&
                                                           (hoveredColumnIdx ===
                                                               idx ||
-                                                              query?.orderBy ===
+                                                              songOrder?.orderBy ===
                                                                   f.value)
                                                         ? HEADER_BG_COLOR_HOVERED
                                                         : HEADER_BG_COLOR,
                                         }}
                                     />
-                                    {#if query && hoveredColumnIdx === idx}
+                                    {#if query !== null && hoveredColumnIdx === idx}
                                         <Path
                                             config={{
                                                 x: -2,
@@ -2520,9 +2517,9 @@
                                     {/if}
 
                                     <!-- Sort arrow icons -->
-                                    {#if query}
-                                        {#if query.orderBy === f.value || (query.orderBy === "none" && f.name === "none")}
-                                            {#if query.reverse}
+                                    {#if songOrder}
+                                        {#if songOrder.orderBy === f.value || (songOrder.orderBy === "none" && f.name === "none")}
+                                            {#if songOrder.reverse}
                                                 <Path
                                                     config={{
                                                         x:
@@ -2640,7 +2637,7 @@
                 {#if $isSmartQueryBuilderOpen && noSongs}
                     <SmartQueryResultsPlaceholder />
                 {/if}
-                {#if query?.query?.length && noSongs}
+                {#if query?.length && noSongs}
                     <QueryResultsPlaceholder />
                 {/if}
             </div>

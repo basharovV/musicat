@@ -30,6 +30,7 @@
         draggedOrigin,
         draggedSongs,
         draggedTitle,
+        genericSongOrder,
         isFindFocused,
         isMiniPlayer,
         isPlaying,
@@ -618,12 +619,8 @@
     function onClickPlaylist(e, playlist) {
         $uiView = "playlists";
         // Opening a playlist will reset the query
-        $query = {
-            ...$query,
-            orderBy: "none",
-            reverse: false,
-            query: "",
-        };
+        $genericSongOrder.orderBy = "none";
+        $genericSongOrder.reverse = false;
         $selectedPlaylistFile = playlist;
         $selectedSmartQuery = null;
 
@@ -646,8 +643,8 @@
         $selectedPlaylistFile = null;
         $uiView = "smart-query";
         if (reset) {
-            $query.orderBy = "none";
-            $query.reverse = false;
+            $genericSongOrder.orderBy = "none";
+            $genericSongOrder.reverse = false;
         }
         $selectedSmartQuery = smartQuery;
     }
@@ -1083,16 +1080,16 @@
                     placeholder="{$LL.sidebar.search()} ({$os === 'macos'
                         ? 'Cmd + F'
                         : 'Ctrl + F'})"
-                    bind:value={$query.query}
+                    bind:value={$query}
                     on:keydown={onSearchInputKeyDown}
                 />
                 <div class="search-icon">
-                    {#if $query.query.length}
+                    {#if $query.length}
                         <Icon
                             icon="mingcute:close-circle-fill"
                             size={15}
                             onClick={() => {
-                                $query.query = "";
+                                $query = "";
                             }}
                         />
                     {:else}
@@ -1132,7 +1129,6 @@
                                 $isSmartQueryBuilderOpen = false;
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
-                                $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
                             }}
                         >
@@ -1186,8 +1182,8 @@
                                 class:selected={$uiView === "to-delete"}
                                 on:click={() => {
                                     $uiView = "to-delete";
-                                    $query.orderBy = "none";
-                                    $query.reverse = false;
+                                    $genericSongOrder.orderBy = "none";
+                                    $genericSongOrder.reverse = false;
                                     $selectedSmartQuery = null;
                                 }}
                             >
@@ -1499,7 +1495,6 @@
                             on:click={() => {
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
-                                $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "map";
                             }}
                         >
@@ -1516,7 +1511,6 @@
                             on:click={() => {
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
-                                $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "analytics";
                             }}
                         >

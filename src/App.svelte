@@ -9,6 +9,7 @@
         emptyDropEvent,
         fileToDownload,
         foldersToWatch,
+        genericSongOrder,
         hoveredFiles,
         isLyricsOpen,
         isMiniPlayer,
@@ -18,6 +19,7 @@
         isTagCloudOpen,
         isWaveformOpen,
         isWikiOpen,
+        librarySongOrder,
         os,
         popupOpen,
         selectedPlaylistFile,
@@ -355,7 +357,10 @@
             {#if $uiView === "playlists"}
                 <div class="content" data-tauri-drag-region>
                     {#if $selectedPlaylistFile}
-                        <PlaylistHeader playlist={$selectedPlaylistFile} />
+                        <PlaylistHeader
+                            playlist={$selectedPlaylistFile}
+                            bind:songOrder={$genericSongOrder}
+                        />
                     {/if}
                 </div>
             {:else if $uiView === "to-delete"}
@@ -404,18 +409,18 @@
         </div>
 
         <div class="panel">
-            {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites|to-delete)/)}
-                <CanvasLibraryView />
-            {:else if $uiView === "playlists" || $uiView === "to-delete"}
-                <CanvasLibraryView />
+            {#if $uiView === "library" || $uiView === "favourites"}
+                <CanvasLibraryView bind:songOrder={$librarySongOrder} />
+            {:else if $uiView === "playlists" || $uiView === "to-delete" || $uiView.startsWith("smart-query")}
+                <CanvasLibraryView bind:songOrder={$genericSongOrder} />
             {:else if $uiView === "albums"}
                 <AlbumView />
             {:else if $uiView === "your-music"}
                 <ArtistsToolkitView />
             {:else if $uiView === "map"}
-                <MapView />
+                <MapView bind:songOrder={$librarySongOrder} />
             {:else if $uiView === "analytics"}
-                <AnalyticsView />
+                <AnalyticsView bind:songOrder={$librarySongOrder} />
             {:else if $uiView === "internet-archive"}
                 <InternetArchiveView />
             {:else if $uiView === "prune"}

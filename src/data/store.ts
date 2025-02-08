@@ -27,6 +27,7 @@ import type {
     PlayingSong,
     Query,
     Song,
+    SongOrder,
     StreamInfo,
     UIPreferences,
     UiView,
@@ -48,25 +49,55 @@ export const L = derived(locale, (l) => {
 export const isInit = writable(true);
 export const isSongReady = writable(false);
 export const forceRefreshLibrary = writable(false);
-export const query: Writable<Query> = writable(
+export const query: Writable<Query> = writable("", (set) => {
+    const item = localStorage.getItem("query");
+
+    if (typeof item === "string") {
+        set(item);
+    } else {
+        set("");
+    }
+});
+query.subscribe((query) => {
+    localStorage.setItem("query", query);
+});
+
+export const librarySongOrder: Writable<SongOrder> = writable(
     {
         orderBy: "artist",
-        libraryOrderBy: "artist",
         reverse: false,
-        query: "",
     },
-    () => {
-        const item = localStorage.getItem("query");
+    (set) => {
+        const item = localStorage.getItem("librarySongOrder");
 
         if (item) {
             const data = JSON.parse(item);
 
-            query.set(data);
+            set(data);
         }
     },
 );
-query.subscribe((query) => {
-    localStorage.setItem("query", JSON.stringify(query));
+librarySongOrder.subscribe((query) => {
+    localStorage.setItem("librarySongOrder", JSON.stringify(query));
+});
+
+export const genericSongOrder: Writable<SongOrder> = writable(
+    {
+        orderBy: "artist",
+        reverse: false,
+    },
+    (set) => {
+        const item = localStorage.getItem("genericSongOrder");
+
+        if (item) {
+            const data = JSON.parse(item);
+
+            set(data);
+        }
+    },
+);
+genericSongOrder.subscribe((query) => {
+    localStorage.setItem("genericSongOrder", JSON.stringify(query));
 });
 
 export const allSongs: Writable<Song[]> = writable([]);

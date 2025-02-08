@@ -113,13 +113,11 @@
     $: showSingles = $uiPreferences.albumsViewShowSingles;
 
     $: if ($albums && columnCount) {
-        if ($query.query.length) {
+        if ($query.length) {
             queriedAlbums = $albums.filter(
                 (a) =>
-                    a.artist
-                        .toLowerCase()
-                        .includes($query.query.toLowerCase()) ||
-                    a.title.includes($query.query.toLowerCase()),
+                    a.artist.toLowerCase().includes($query.toLowerCase()) ||
+                    a.title.includes($query.toLowerCase()),
             );
 
             activeAlbums = queriedAlbums;

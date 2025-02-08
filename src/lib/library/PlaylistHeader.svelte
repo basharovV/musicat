@@ -1,10 +1,9 @@
 <script lang="ts">
     import { open } from "@tauri-apps/plugin-shell";
-    import type { PlaylistFile } from "../../App";
+    import type { PlaylistFile, SongOrder } from "../../App";
     import { parsePlaylist, writePlaylist } from "../../data/M3UUtils";
     import {
         queriedSongs,
-        query,
         queueDuration,
         selectedPlaylistFile,
     } from "../../data/store";
@@ -13,6 +12,7 @@
     import Icon from "../ui/Icon.svelte";
 
     export let playlist: PlaylistFile;
+    export let songOrder: SongOrder;
 
     let tracks = [];
 
@@ -66,32 +66,32 @@
 {#if $queriedSongs.length}
     <div
         class="file-order-hint-container"
-        class:is-temp={$query.orderBy !== "none"}
+        class:is-temp={songOrder.orderBy !== "none"}
     >
         <div class="file-order-hint">
             <Icon
                 icon="qlementine-icons:sort-desc-16"
                 size={14}
-                color={$query.orderBy !== "none" ? "#ff8c3a" : undefined}
+                color={songOrder.orderBy !== "none" ? "#ff8c3a" : undefined}
             />
         </div>
 
         <p>
-            {$query.orderBy === "none"
+            {songOrder.orderBy === "none"
                 ? $LL.library.orderHint()
                 : $LL.library.orderHintTemp()}
         </p>
     </div>
 {/if}
-{#if $query.orderBy !== "none"}
+{#if songOrder.orderBy !== "none"}
     <ButtonWithIcon
         size="small"
         icon="material-symbols:save-outline"
         text="Save order"
-        disabled={$query.orderBy === "none"}
+        disabled={songOrder.orderBy === "none"}
         onClick={async () => {
             await writePlaylist($selectedPlaylistFile, $queriedSongs);
-            $query.orderBy = "none";
+            songOrder.orderBy = "none";
         }}
     />
 {/if}
