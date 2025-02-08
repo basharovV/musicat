@@ -254,14 +254,7 @@
 
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
-            detailsAlbum = null;
-            detailsAlbumTracks = null;
-            detailsAlbumHeight = 0;
-            detailsAlbumIndex = -1;
-            detailsAlbumRow = -1;
-
-            itemSizes.splice(Math.floor(index / columnCount) + 2, 1);
-            rowCount -= 1;
+            unselectAlbum(index);
         } else {
             const oldRow = detailsAlbumRow;
 
@@ -284,6 +277,17 @@
                 rowCount += 1;
             }
         }
+    }
+
+    function unselectAlbum(index) {
+        detailsAlbum = null;
+        detailsAlbumTracks = null;
+        detailsAlbumHeight = 0;
+        detailsAlbumIndex = -1;
+        detailsAlbumRow = -1;
+
+        itemSizes.splice(Math.floor(index / columnCount) + 2, 1);
+        rowCount -= 1;
     }
 
     function scrollToCurrentAlbum() {
@@ -358,6 +362,7 @@
                         <AlbumDetails
                             album={detailsAlbum}
                             tracks={detailsAlbumTracks}
+                            onUnselect={() => unselectAlbum(index - 1)}
                         />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}

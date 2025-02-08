@@ -9,8 +9,10 @@
     import { setQueue } from "../../data/storeHelper";
     import { HEADER_HEIGHT, ROW_HEIGHT } from "./util";
     import type { Album, Song } from "../../App";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     export let album: Album;
+    export let onUnselect: () => void;
     export let tracks: Song[];
 
     let isHovered = false;
@@ -30,6 +32,10 @@
         } else {
             setQueue(tracks, 0);
         }
+    }
+
+    function unselect() {
+        onUnselect && onUnselect();
     }
 </script>
 
@@ -82,11 +88,13 @@
                         </div>
                     {/if}
                     {#if isHovered}
-                        <div class="play-button-container">
+                        <div
+                            class={$isPlaying && isPlayingCurrentAlbum
+                                ? "play-button-container pause-button"
+                                : "play-button-container play-button"}
+                        >
                             <div
-                                class={$isPlaying && isPlayingCurrentAlbum
-                                    ? "pause-button"
-                                    : "play-button"}
+                                class="button"
                                 on:click|stopPropagation={playPauseToggle}
                             >
                                 <Icon
@@ -94,7 +102,6 @@
                                         ? "fe:pause"
                                         : "fe:play"}
                                     size={25}
-                                    color="white"
                                 />
                             </div>
                         </div>
@@ -116,6 +123,15 @@
                         {$LL.albums.item.tracksLabel()}</small
                     >
                 </div>
+            </div>
+            <div class="close">
+                <ButtonWithIcon
+                    onClick={unselect}
+                    icon="material-symbols:close"
+                    iconSize={30}
+                    theme="transparent"
+                    noOutline={true}
+                />
             </div>
         </div>
         <div class="songs" style="height: {canvasHeight}px">
@@ -141,6 +157,7 @@
                 flex-direction: column;
                 justify-content: flex-end;
                 text-align: left;
+                flex-grow: 1;
 
                 .title {
                     border-radius: 20px;
@@ -204,38 +221,68 @@
                     .play-button-container {
                         position: absolute;
                         align-self: center;
-                        border: 1px solid
-                            color-mix(
-                                in srgb,
-                                var(--library-playing-bg) 60%,
-                                transparent
-                            );
-                        background-color: #25222b;
                         border-radius: 50px;
                         width: 40px;
                         height: 40px;
                         display: flex;
                         z-index: 10;
 
-                        &:hover {
-                            background-color: var(--library-playing-bg);
-                        }
-                        &:active {
-                            background-color: var(--library-playing-bg);
-                            transform: scale(0.9);
-                        }
-                        .play-button {
-                            position: relative;
-                            left: 1px;
-                            font-size: 2em;
-                            margin: auto;
-                            align-self: center;
+                        &.play-button {
+                            border: 1px solid
+                                color-mix(
+                                    in srgb,
+                                    var(--album-playing-play-border) 60%,
+                                    transparent
+                                );
+                            background-color: var(--album-playing-play-bg);
+
+                            .button {
+                                position: relative;
+                                left: 1px;
+                                font-size: 2em;
+                                margin: auto;
+                                align-self: center;
+                                color: var(--album-playing-play-icon);
+                            }
+
+                            &:hover {
+                                background-color: var(
+                                    --album-playing-play-hover-bg
+                                );
+
+                                .button {
+                                    color: var(--album-playing-play-hover-icon);
+                                }
+                            }
                         }
 
-                        .pause-button {
-                            font-size: 2.2em;
-                            margin: auto;
-                            align-self: center;
+                        &.pause-button {
+                            border: 1px solid
+                                color-mix(
+                                    in srgb,
+                                    var(--album-playing-pause-border) 60%,
+                                    transparent
+                                );
+                            background-color: var(--album-playing-pause-bg);
+
+                            .button {
+                                font-size: 2.2em;
+                                margin: auto;
+                                align-self: center;
+                                color: var(--album-playing-pause-icon);
+                            }
+
+                            &:hover {
+                                background-color: var(
+                                    --album-playing-pause-hover-bg
+                                );
+
+                                .button {
+                                    color: var(
+                                        --album-playing-pause-hover-icon
+                                    );
+                                }
+                            }
                         }
                     }
                 }
