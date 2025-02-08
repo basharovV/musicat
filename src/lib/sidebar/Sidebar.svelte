@@ -2672,14 +2672,6 @@
         }
     }
 
-    // @media only screen and (max-height: 385px) {
-    //     .top {
-    //         padding-top: 0em;
-    //         border-bottom: none;
-    //         visibility: hidden;
-    //     }
-    // }
-
     sidebar.hovered {
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,
@@ -2700,21 +2692,6 @@
             background: none;
         }
 
-        // COVER INFO OVER ARTWORK
-        // @media only screen and (max-height: 548px) {
-        //     .track-info {
-        //         backdrop-filter: blur(1px);
-        //     }
-        // }
-
-        // @media only screen and (max-height: 500px) {
-        //     grid-template-rows: 1fr auto 140px;
-        //     .top-header,
-        //     .file {
-        //         display: none;
-        //     }
-        // }
-
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .top {
                 padding-top: 0em;
@@ -2732,11 +2709,6 @@
         @media only screen and (min-height: 821px) {
             grid-template-rows: 1fr auto 310px;
         }
-        // @media only screen and (max-height: 870px) {
-        //     .app-title {
-        //         display: none;
-        //     }
-        // }
 
         .file.empty {
             @media only screen and (max-height: 765px) {
@@ -2749,22 +2721,6 @@
                 display: none;
             }
         }
-
-        // @media only screen and (max-height: 700px) {
-        //     .top-header {
-        //         display: none;
-        //     }
-        // }
-
-        // COVER INFO OVER ARTWORK
-        // @media only screen and (max-height: 548px) {
-        //     grid-template-rows: 1fr auto 140px;
-
-        //     .track-info {
-        //         border-top: none;
-        //         height: 210px;
-        //     }
-        // }
 
         @media only screen and (max-height: 220px) {
             .cd-gif,
