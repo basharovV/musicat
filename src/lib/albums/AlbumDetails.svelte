@@ -20,7 +20,7 @@
     $: isPlayingCurrentAlbum =
         $current.song?.album.toLowerCase() === album?.title.toLowerCase();
 
-    $: canvasHeight = HEADER_HEIGHT + tracks.length * ROW_HEIGHT + 8;
+    $: canvasHeight = HEADER_HEIGHT + tracks?.length * ROW_HEIGHT + 8;
 
     async function playPauseToggle() {
         if ($current.song?.album.toLowerCase() === album.title.toLowerCase()) {
