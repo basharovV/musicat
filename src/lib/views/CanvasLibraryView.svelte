@@ -232,6 +232,7 @@
 <div class="container" class:has-lyrics={$isLyricsOpen}>
     <CanvasLibrary
         bind:columnOrder={$columnOrder}
+        bind:query={$query}
         allSongs={songs}
         dim={$isLyricsHovered}
         {isLoading}

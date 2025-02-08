@@ -24,13 +24,14 @@ import type {
     ImportStatus,
     PlaylistFile,
     PopupType,
-    UiView,
+    PlayingSong,
+    Query,
     Song,
     StreamInfo,
     UIPreferences,
+    UiView,
     UserSettings,
     WaveformPlayerState,
-    PlayingSong,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
@@ -43,13 +44,6 @@ import { db } from "./db";
 export const L = derived(locale, (l) => {
     return i18nString(l);
 });
-
-interface Query {
-    orderBy: string;
-    libraryOrderBy: string;
-    reverse: boolean;
-    query: string;
-}
 
 export const isInit = writable(true);
 export const isSongReady = writable(false);
