@@ -91,7 +91,7 @@
     import ScrollTo from "../ui/ScrollTo.svelte";
 
     export let allSongs: Observable<Song[]> = null;
-    export let columnOrder;
+    export let columnOrder: String[];
     export let dim = false;
     export let isInit = true;
     export let isLoading = false;
