@@ -19,7 +19,7 @@
         draggedSource,
         forceRefreshLibrary,
         isShuffleEnabled,
-        isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         popupOpen,
         libraryScrollPos,
@@ -1366,7 +1366,8 @@
                                 <Text
                                     config={{
                                         x:
-                                            !$isSidebarOpen && $os === "macos"
+                                            !$isSidebarShowing &&
+                                            $os === "macos"
                                                 ? WINDOW_CONTROLS_WIDTH
                                                 : null,
                                         text: "Queue",

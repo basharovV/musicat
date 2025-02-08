@@ -11,11 +11,12 @@
         fileToDownload,
         foldersToWatch,
         hoveredFiles,
-        isFloatingSidebar,
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
+        isSidebarFloating,
         isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isWaveformOpen,
@@ -249,8 +250,10 @@
     }
 
     $: {
+        $isSidebarShowing = showSidebar;
+
         if (showSidebar) {
-            $isFloatingSidebar = false;
+            $isSidebarFloating = false;
         }
     }
 
@@ -332,21 +335,21 @@
     >
         <div
             class="sidebar"
-            class:visible={showSidebar || $isFloatingSidebar}
+            class:visible={showSidebar || $isSidebarFloating}
             class:floating={!showSidebar}
         >
-            {#if showSidebar || $isFloatingSidebar}
-                <Sidebar floating={$isFloatingSidebar} />
+            {#if showSidebar || $isSidebarFloating}
+                <Sidebar floating={$isSidebarFloating} />
             {/if}
         </div>
 
-        {#if $isFloatingSidebar}
+        {#if $isSidebarFloating}
             <div class="sidebar-collapse">
                 <Icon
                     icon="tabler:layout-sidebar-left-collapse"
                     size={22}
                     onClick={() => {
-                        $isFloatingSidebar = false;
+                        $isSidebarFloating = false;
                     }}
                 />
             </div>
@@ -360,7 +363,7 @@
                             !showMiniPlayer &&
                             (innerWidth < 660 || innerHeight < 650)
                         ) {
-                            $isFloatingSidebar = true;
+                            $isSidebarFloating = true;
                         } else {
                             $isSidebarOpen = true;
                         }
@@ -564,7 +567,7 @@
             width: 100%;
             grid-row: 1 / 6;
             grid-column: 1;
-            width: 5px;
+            width: 0;
             overflow: hidden;
             &.visible {
                 width: 210px;
@@ -811,7 +814,7 @@
                 grid-column: 1;
 
                 .queue-container {
-                    margin: 0 4px;
+                    margin: 0 4px 0 0;
                 }
             }
 
@@ -824,6 +827,7 @@
         &.queue-view {
             .queue {
                 grid-column: 1 / -1;
+                margin: 0;
 
                 .queue-container {
                     margin: 0 4px;

@@ -379,7 +379,8 @@ export const isSidebarOpen: Writable<boolean> = writable(
 isSidebarOpen.subscribe((val) =>
     localStorage.setItem("isSidebarOpen", String(val)),
 );
-export const isFloatingSidebar = writable(false);
+export const isSidebarFloating = writable(false);
+export const isSidebarShowing = writable(true);
 
 export const isWaveformOpen: Writable<boolean> = writable(
     localStorage.getItem("isWaveformOpen") === "true",

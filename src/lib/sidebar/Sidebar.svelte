@@ -31,7 +31,7 @@
         draggedSongs,
         draggedTitle,
         isFindFocused,
-        isFloatingSidebar,
+        isSidebarFloating,
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
@@ -628,7 +628,7 @@
         };
         $selectedPlaylistFile = playlist;
         $selectedSmartQuery = null;
-        $isFloatingSidebar = false;
+        $isSidebarFloating = false;
 
         activePlaylist = null;
     }
@@ -653,7 +653,7 @@
             $query.reverse = false;
         }
         $selectedSmartQuery = smartQuery;
-        $isFloatingSidebar = false;
+        $isSidebarFloating = false;
     }
 
     function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
@@ -1132,7 +1132,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
-                                $isFloatingSidebar = false;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1150,7 +1150,7 @@
                                 $uiView = "albums";
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
-                                $isFloatingSidebar = false;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1170,7 +1170,7 @@
                                 $selectedSmartQuery = null;
                                 $selectedSmartQuery =
                                     SmartQueries.favourites.value;
-                                $isFloatingSidebar = false;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1190,7 +1190,7 @@
                                     $query.orderBy = "none";
                                     $query.reverse = false;
                                     $selectedSmartQuery = null;
-                                    $isFloatingSidebar = false;
+                                    $isSidebarFloating = false;
                                 }}
                             >
                                 <Icon
@@ -1469,7 +1469,7 @@
                                     $isTagCloudOpen = false;
                                     $selectedPlaylistFile = null;
                                     $selectedSmartQuery = null;
-                                    $isFloatingSidebar = false;
+                                    $isSidebarFloating = false;
                                 }}
                             >
                                 <Icon
@@ -1487,7 +1487,7 @@
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $uiView = "internet-archive";
-                                $isFloatingSidebar = false;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1505,7 +1505,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "map";
-                                $isFloatingSidebar = false;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1523,7 +1523,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "analytics";
-                                $isFloatingSidebar = false;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon

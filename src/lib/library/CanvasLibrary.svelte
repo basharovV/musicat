@@ -43,7 +43,7 @@
         importStatus,
         isPlaying,
         isQueueOpen,
-        isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
@@ -2561,7 +2561,7 @@
                                     <Text
                                         config={{
                                             x:
-                                                !$isSidebarOpen &&
+                                                !$isSidebarShowing &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
@@ -2590,7 +2590,7 @@
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
                                             visible: !(
-                                                !$isSidebarOpen &&
+                                                !$isSidebarShowing &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
