@@ -480,7 +480,7 @@ fn decode_loop(
 
     // Loop here!
     loop {
-        info!("path_str is {:?}", path_str);
+        // info!("path_str is {:?}", path_str);
         path_str_clone = path_str.clone(); // Used for looping
         if let None = path_str {
             is_transition = false;
