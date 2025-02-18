@@ -437,3 +437,8 @@ interface AudioDevices {
 type PopupType = "info" | "track-info" | "settings";
 
 type SyncedLyrics = { timestamp: number; lyricLine: string };
+
+interface LibraryPage {
+    offset: number; // based on scroll position
+    size: number; // based on available height
+}

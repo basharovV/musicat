@@ -2247,16 +2247,27 @@
                 bottom: 5px;
                 background-color: color-mix(
                     in srgb,
-                    var(--background) 50%,
+                    var(--inverse) 30%,
                     transparent
                 );
                 border: 1px solid
                     color-mix(in srgb, var(--inverse) 10%, transparent);
                 box-shadow: 0px 0px 5px 1px
                     color-mix(in srgb, var(--type-bw) 20%, transparent);
-                backdrop-filter: blur(5px);
+                backdrop-filter: contrast(40%) blur(5px);
                 border-radius: 5px;
                 z-index: -1;
+                opacity: 0.2;
+                transition: opacity 0.3s ease-in-out;
+                @media screen and (max-height: 740px) {
+                    border: 1px solid
+                        color-mix(in srgb, var(--inverse) 30%, transparent);
+                    opacity: 1;
+                }
+                @media screen and (max-height: 552px) {
+                    border: 1px solid
+                        color-mix(in srgb, var(--inverse) 30%, transparent);
+                }
             }
         }
 

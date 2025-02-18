@@ -14,6 +14,7 @@
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isTagOrCondition,
+        libraryPage,
         queriedSongs,
         query,
         queueMirrorsSearch,
@@ -118,13 +119,16 @@
                 )
                 .and((song) => songMatchesQuery(song, $query.query));
         } else {
-            results = db.songs.orderBy(
-                $query.orderBy === "artist"
-                    ? "[artist+year+album+trackNumber]"
-                    : $query.orderBy === "album"
-                      ? "[album+trackNumber]"
-                      : $query.orderBy,
-            );
+            results = db.songs
+                .orderBy(
+                    $query.orderBy === "artist"
+                        ? "[artist+year+album+trackNumber]"
+                        : $query.orderBy === "album"
+                          ? "[album+trackNumber]"
+                          : $query.orderBy,
+                )
+                .offset($libraryPage.offset)
+                .limit($libraryPage.size);
         }
         let resultsArray: Song[] = [];
 

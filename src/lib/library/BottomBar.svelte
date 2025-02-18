@@ -3,7 +3,7 @@
     import tippy from "svelte-tippy";
     import { cubicInOut } from "svelte/easing";
     import { fly } from "svelte/transition";
-    import { runScan } from "../../data/LibraryUtils";
+    import { blowUpLibrary, runScan } from "../../data/LibraryUtils";
 
     import { liveQuery } from "dexie";
     import { db } from "../../data/db";
@@ -102,6 +102,16 @@
                 <CompressionSelector />
             </div>
         {/if}
+        <!-- DEBUG BUTTON -->
+        <div
+            class="toggle-button"
+            on:click={() => {
+                blowUpLibrary();
+            }}
+        >
+            <p>BLOW UP</p>
+        </div>
+
         {#if !$isIAPlaying && $nextUpSong}
             <div class="next-up" bind:this={nextUp}>
                 <p class="label">{$LL.bottomBar.nextUp()}:</p>

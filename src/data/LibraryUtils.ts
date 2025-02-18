@@ -22,6 +22,7 @@ import { getMapForTagType, getTagTypeFromCodec } from "./LabelMap";
 import { db } from "./db";
 import {
     bottomBarNotification,
+    current,
     importStatus,
     shouldShowToast,
     songsJustAdded,
@@ -427,5 +428,67 @@ export function songMatchesQuery(song: Song, query: string) {
             ?.map((t) => t.toLowerCase())
             .join(" ")
             .includes(query.toLowerCase())
+    );
+}
+
+/**
+ * For testing only!
+ * Duplicates the current track 40,000 times in the library
+ */
+export async function blowUpLibrary() {
+    const randomSongs = [];
+
+    for (let i = 0; i < 40000; i++) {
+        randomSongs.push(generateRandomSong());
+    }
+    // Generate random songs and add them to the library
+    await db.songs.bulkAdd(randomSongs);
+}
+
+function generateRandomSong() {
+    let randomSong: Song = {
+        id: uuidv4(),
+        title: "Random Song " + Math.floor(Math.random() * 1000),
+        artist: "Random Artist " + Math.floor(Math.random() * 1000),
+        album: "Random Album " + Math.floor(Math.random() * 1000),
+        albumArtist: "Random Album Artist",
+        genre: ["Random Genre"],
+        year: Math.floor(Math.random() * 1000),
+        path: "",
+        file: "",
+        tags: [],
+        trackNumber: 1,
+        duration: "40",
+        composer: ["Random Composer"],
+        discNumber: 1,
+        discTotal: 1,
+        fileInfo: {
+            audioBitrate: 320,
+            bitDepth: 16,
+            channels: 2,
+            codec: "MPEG",
+            duration: 80,
+            lossless: false,
+            overallBitrate: 320,
+            sampleRate: 44100,
+            tagType: "ID3v2.4",
+        },
+        isFavourite: false,
+        markers: [],
+        metadata: [],
+        playCount: 0,
+        trackTotal: 8,
+    };
+    return randomSong;
+}
+
+function uuidv4() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+        /[xy]/g,
+        function (c) {
+            const r = (Math.random() * 16) | 0,
+                v = c == "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+        },
     );
 }

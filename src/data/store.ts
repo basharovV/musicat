@@ -31,6 +31,7 @@ import type {
     UserSettings,
     WaveformPlayerState,
     PlayingSong,
+    LibraryPage,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
@@ -319,6 +320,11 @@ playlistLocation.subscribe((pl) => {
     if (pl) {
         scanPlaylists();
     }
+});
+
+export const libraryPage: Writable<LibraryPage> = writable({
+    offset: 0,
+    size: 100,
 });
 
 export const libraryScrollPos: Writable<number> = writable(

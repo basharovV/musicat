@@ -65,6 +65,7 @@
         smartQueryResults,
         uiView,
         rightClickedAlbum,
+        libraryPage,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -89,6 +90,7 @@
     } from "../../data/storeHelper";
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import { get } from "svelte/store";
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder;
@@ -472,7 +474,7 @@
             const albums = await (
                 await db.songs.orderBy("album").uniqueKeys()
             ).length;
-            const songs = await $allSongs.length;
+            const songs = await db.songs.count();
             return { songs, artists, albums };
         });
     });
@@ -579,7 +581,7 @@
     }
 
     function calculateCanvasSize() {
-        contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
+        contentHeight = HEADER_HEIGHT + 1127 * ROW_HEIGHT;
         viewportHeight = libraryContainer.getBoundingClientRect().height;
         // console.log("contentHeight", contentHeight, "viewportHeight", viewportHeight);
         let area = contentHeight - viewportHeight;
@@ -733,6 +735,26 @@
                     Math.floor(scrollNormalized * songsCountScrollable),
                 ),
             );
+
+            if (
+                $libraryPage.offset !== songsStartSlice ||
+                $libraryPage.size !== songsCountViewport
+            ) {
+                // console.log(
+                //     'pagination: "songsStartSlice"',
+                //     songsStartSlice,
+                //     "songsCountViewport",
+                //     songsCountViewport,
+                //     "scrollNormalized",
+                //     scrollPos,
+                // );
+                // Now we try to set the offset and size to take advantage of dexies pagination
+                $libraryPage = {
+                    offset: songsStartSlice,
+                    size: songsCountViewport,
+                };
+            }
+
             songsEndSlice = Math.min(
                 songs.length,
                 Math.ceil(songsStartSlice + songsCountViewport),
@@ -742,16 +764,18 @@
             // console.log("songSlice", songsSlice);
             // Make sure the window is always filled with the right amount of rows
             // console.log("songIdxSlice", songsEndSlice - songsStartSlice);
-            let newLength = songsEndSlice - songsStartSlice;
-            if (songsIdxSlice?.length !== newLength) {
-                songsIdxSlice = Array(newLength)
-                    .fill(0)
-                    .map((_, idx) => songsStartSlice + idx);
-            } else {
-                for (let i = 0; i < newLength; i++) {
-                    songsIdxSlice[i] = songsStartSlice + i;
-                }
-            }
+
+            // This code calculated a slice assuming we have all songs in memory
+            // let newLength = songsEndSlice - songsStartSlice;
+            // if (songsIdxSlice?.length !== newLength) {
+            //     songsIdxSlice = Array(newLength)
+            //         .fill(0)
+            //         .map((_, idx) => songsStartSlice + idx);
+            // } else {
+            //     for (let i = 0; i < newLength; i++) {
+            //         songsIdxSlice[i] = songsStartSlice + i;
+            //     }
+            // }
 
             // console.log("slice", songsIdxSlice);
             // console.log(songsSlice.length);
@@ -798,7 +822,6 @@
         force = false,
     ) {
         if (!isScrollable) return;
-        // console.log("onscroll", e, scrollProgress, scrollPosY);
         if (
             !force &&
             Date.now() - lastScrollTime < 50 &&
@@ -1839,9 +1862,9 @@
                                 }}
                             />
 
-                            {#if songsIdxSlice?.length && songs?.length}
-                                {#each songsIdxSlice as idx, songIdx (songs[idx]?.viewModel?.viewId ?? songs[idx]?.id)}
-                                    {@const song = songs[idx]}
+                            {#if songs?.length}
+                                {#each songs as s, songIdx (s.viewModel?.viewId ?? s?.id)}
+                                    {@const song = s}
                                     <!-- {@debug idx} -->
                                     <!-- {@debug song} -->
                                     <Group
@@ -1923,7 +1946,7 @@
                                                           ? PLAYING_BG_COLOR
                                                           : songsHighlighted &&
                                                               isSongIdxHighlighted(
-                                                                  idx,
+                                                                  song,
                                                               )
                                                             ? HIGHLIGHT_BG_COLOR
                                                             : hoveredSongIdx ===
