@@ -6,6 +6,7 @@
     import { db } from "../../data/db";
     import { deleteSongsFromPlaylist } from "../../data/M3UUtils";
     import {
+        canShowInfoPopup,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         popupOpen,
@@ -31,6 +32,7 @@
     import { searchArtistOnWikiPanel } from "../menu/search";
     import { openInFinder } from "../menu/file";
     import { removeQueuedSongs } from "../../data/storeHelper";
+    import { get } from "svelte/store";
     import toast from "svelte-french-toast";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
@@ -500,11 +502,13 @@
                 text="Open in {explorerName}"
             />
         {/if}
-        <MenuOption
-            isDisabled={isDisabled()}
-            onClick={openInfo}
-            text="Info & metadata"
-        />
+        {#if get(canShowInfoPopup)}
+            <MenuOption
+                isDisabled={isDisabled()}
+                onClick={openInfo}
+                text="Info & metadata"
+            />
+        {/if}
     </Menu>
 {/if}
 

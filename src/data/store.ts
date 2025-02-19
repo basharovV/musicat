@@ -361,7 +361,7 @@ export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
 export const isQueueOpen: Writable<boolean> = writable(
-    /true/.test(localStorage.getItem("isQueueOpen")) || false,
+    localStorage.getItem("isQueueOpen") === "true",
 );
 isQueueOpen.subscribe((val) =>
     localStorage.setItem("isQueueOpen", String(val)),
@@ -373,13 +373,17 @@ export const isWikiOpen = writable(false);
 export const wikiArtist: Writable<string> = writable(null);
 
 // Sidebar
-export const isSidebarOpen = writable(true);
-export const sidebarManuallyOpened = writable(false);
-export const sidebarTogglePos = writable({ x: 0, y: 0 });
-export const isCmdOrCtrlPressed = writable(false);
+export const isSidebarOpen: Writable<boolean> = writable(
+    localStorage.getItem("isSidebarOpen") === "true",
+);
+isSidebarOpen.subscribe((val) =>
+    localStorage.setItem("isSidebarOpen", String(val)),
+);
+export const isSidebarFloating = writable(false);
+export const isSidebarShowing = writable(true);
 
 export const isWaveformOpen: Writable<boolean> = writable(
-    /true/.test(localStorage.getItem("isWaveformOpen")) || false,
+    localStorage.getItem("isWaveformOpen") === "true",
 );
 isWaveformOpen.subscribe((val) => {
     localStorage.setItem("isWaveformOpen", String(val));
@@ -503,5 +507,8 @@ export const webPlayerBufferedRanges: Writable<TimeRanges> = writable(null);
 export const webPlayerVolume: Writable<number> = writable(0.6);
 export const webPlayerIsLoading = writable(false);
 export const fileToDownload: Writable<IAFile> = writable(null);
+
+// Info Popup
+export const canShowInfoPopup = writable(true);
 
 init();
