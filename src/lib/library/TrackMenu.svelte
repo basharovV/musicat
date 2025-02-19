@@ -26,11 +26,12 @@
     import MenuInput from "../ui/menu/MenuInput.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Icon from "../ui/Icon.svelte";
-    import { deleteFromLibrary } from "../../data/LibraryUtils";
+    import { deleteFromLibrary, reImport } from "../../data/LibraryUtils";
     import { liveQuery } from "dexie";
     import { searchArtistOnWikiPanel } from "../menu/search";
     import { openInFinder } from "../menu/file";
     import { removeQueuedSongs } from "../../data/storeHelper";
+    import toast from "svelte-french-toast";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
@@ -227,6 +228,7 @@
 
     async function reImportTracks() {
         isReimporting = true;
+
         const response = await invoke<ToImport>("scan_paths", {
             event: {
                 paths: song ? [song.path] : songs.map((t) => t.path),
@@ -238,12 +240,23 @@
             },
         });
         console.log("response", response);
-        await db.transaction("rw", db.songs, db.albums, async () => {
-            await db.songs.bulkPut(response.songs);
-            for (const album of response.albums) {
-                await reImportAlbum(album);
+
+        if (response) {
+            if (response.error) {
+                // Show error
+                toast.error(response.error);
+            } else {
+                reImport(response, song ? [song] : songs, {});
+
+                toast.success(
+                    `Successfully re-imported track${song ? "" : "s"}!`,
+                    {
+                        position: "top-right",
+                    },
+                );
             }
-        });
+        }
+
         isReimporting = false;
     }
 

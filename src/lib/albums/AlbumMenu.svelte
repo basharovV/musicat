@@ -27,6 +27,8 @@
         searchArtworkOnBrave,
     } from "../menu/search";
     import { removeQueuedSongs } from "../../data/storeHelper";
+    import { reImport } from "../../data/LibraryUtils";
+    import toast from "svelte-french-toast";
 
     type ActionType =
         | "artwork-local"
@@ -179,10 +181,25 @@
             },
         });
         console.log("response", response);
-        await db.transaction("rw", db.songs, db.albums, async () => {
-            await db.songs.bulkPut(response.songs);
-            await db.albums.bulkPut(response.albums);
-        });
+
+        if (response) {
+            if (response.error) {
+                // Show error
+                toast.error(response.error);
+            } else {
+                const songIdToOldAlbumId = {};
+
+                for (const song of songs) {
+                    songIdToOldAlbumId[song.id] = album.id;
+                }
+
+                reImport(response, songs, songIdToOldAlbumId);
+
+                toast.success("Successfully re-imported album!", {
+                    position: "top-right",
+                });
+            }
+        }
 
         loadingType = null;
     }
