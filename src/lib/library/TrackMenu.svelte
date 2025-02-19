@@ -114,7 +114,7 @@
             $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
         } else if ($uiView === "to-delete") {
             // Delete from internal playlist (currently only used for the "to-delete" playlist)
-            const toDelete = await db.internalPlaylists.
+            const toDelete = await db.internalPlaylists.get(
                 $toDeletePlaylist.id,
             );
             tracks.forEach((t) => {
