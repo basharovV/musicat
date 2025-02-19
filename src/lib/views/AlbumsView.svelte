@@ -214,8 +214,20 @@
         height = container?.clientHeight;
         width = container?.clientWidth;
 
-        const contentWidth = getContentWidth(container) - PADDING - PADDING;
-        const count = Math.floor(contentWidth / minWidth);
+        let contentWidth = getContentWidth(container) - PADDING - PADDING;
+        let count = Math.floor(contentWidth / minWidth);
+
+        if (count === 0) {
+            count = 1;
+            contentWidth = width - PADDING - PADDING;
+        }
+        if (count === 1) {
+            if (contentWidth / minWidth >= 1.5) {
+                count = 2;
+                contentWidth = Math.floor(contentWidth / 2);
+            }
+        }
+
         const remaining = contentWidth - count * minWidth;
         const perColumn = Math.floor(remaining / count);
         const max = Math.floor(contentWidth * 0.1);

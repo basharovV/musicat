@@ -6,8 +6,6 @@
 
     import {
         current,
-        isCmdOrCtrlPressed,
-        os,
         playerTime,
         seekTime,
         waveformPeaks,

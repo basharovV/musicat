@@ -7,12 +7,28 @@ export default {
 
     // Consult https://github.com/sveltejs/svelte-preprocess
     // for more information about preprocessors
-    preprocess: [sveltePreprocess(), mdsvex(mdsvexConfig)],
+    preprocess: [
+        sveltePreprocess({
+            scss: {
+                api: "modern",
+                silenceDeprecations: [
+                    "legacy-js-api",
+                    "global-builtin",
+                    "import",
+                    "color-functions",
+                ],
+            },
+        }),
+        mdsvex(mdsvexConfig),
+    ],
 
     onwarn: (warning, handler) => {
-        if (warning.code.startsWith("a11y-") || warning.code === "css-unused-selector") {
+        if (
+            warning.code.startsWith("a11y-") ||
+            warning.code === "css-unused-selector"
+        ) {
             return;
         }
         handler(warning);
-    }
+    },
 };

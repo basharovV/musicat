@@ -43,7 +43,7 @@
         importStatus,
         isPlaying,
         isQueueOpen,
-        isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
@@ -600,7 +600,8 @@
             setTimeout(() => {
                 width =
                     scrollContainer?.clientWidth ??
-                    libraryContainer.clientWidth;
+                    libraryContainer?.clientWidth ??
+                    0;
 
                 calculateColumns();
             }, 50);
@@ -1347,13 +1348,8 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if (!showTrackMenu && songsHighlighted.length) {
+            if (!trackMenu.isOpen && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
-                if (songsHighlighted.length > 1) {
-                    $rightClickedTracks = songsHighlighted;
-                } else {
-                    $rightClickedTrack = songsHighlighted[0];
-                }
 
                 const topTrack = songsHighlighted[0];
                 // Get the y position of the top track by calculating the offset using the index in the slice
@@ -1367,8 +1363,11 @@
                     HEADER_HEIGHT +
                     10;
                 console.log("top track y", topTrackY);
-                menuPos = { x: 250, y: topTrackY };
-                showTrackMenu = true;
+
+                trackMenu.open(
+                    songsHighlighted.length > 1 ? songsHighlighted : topTrack,
+                    { x: 250, y: topTrackY },
+                );
             }
         } else if (
             event.keyCode === 13 &&
@@ -1735,8 +1734,6 @@
         );
     }
 </script>
-
-<!-- <svelte:window on:resize={debounce(onResize, 5)} /> -->
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -2567,7 +2564,7 @@
                                     <Text
                                         config={{
                                             x:
-                                                !$isSidebarOpen &&
+                                                !$isSidebarShowing &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
@@ -2596,7 +2593,7 @@
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
                                             visible: !(
-                                                !$isSidebarOpen &&
+                                                !$isSidebarShowing &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
