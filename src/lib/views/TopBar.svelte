@@ -8,8 +8,8 @@
         current,
         isPlaying,
         isShuffleEnabled,
-        isSidebarOpen,
         popupOpen,
+        isSidebarOpen,
         isWaveformOpen,
         playerTime,
         queriedSongs,
@@ -18,6 +18,7 @@
         rightClickedTracks,
         seekTime,
         lastWrittenSongs,
+        rightClickedAlbum,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
@@ -163,25 +164,30 @@
                 </div>
             {/if}
             <div class="song-info" data-tauri-drag-region>
-                <small
-                    >{$current.song?.title}
-                    <span> • {$current.song?.artist}</span>
-                    <span> • {$current.song?.album}</span>
-                </small>
+                {#if $current.song}
+                    <small>
+                        {$current.song.title}
+                        <span> • {$current.song.artist}</span>
+                        <span> • {$current.song.album}</span>
+                    </small>
+                {/if}
             </div>
 
-            <div class="track-info-icon">
-                <Icon
-                    size={16}
-                    icon="mdi:information"
-                    onClick={() => {
-                        $rightClickedTrack = $current.song;
-                        $rightClickedTracks = [];
-                        $popupOpen = "track-info";
-                    }}
-                    color={$currentThemeObject["icon-secondary"]}
-                />
-            </div>
+            {#if $current.song}
+                <div class="track-info-icon">
+                    <Icon
+                        size={16}
+                        icon="mdi:information"
+                        onClick={() => {
+                            $rightClickedTrack = $current.song;
+                            $rightClickedTracks = [];
+                            $rightClickedAlbum = null;
+                            $popupOpen = "track-info";
+                        }}
+                        color={$currentThemeObject["icon-secondary"]}
+                    />
+                </div>
+            {/if}
         </div>
     </div>
     <div class="right" data-tauri-drag-region>
@@ -203,19 +209,21 @@
             />
         </div>
     </div>
-    <div></div>
 
-    <div class="seekbar-outer">
-        <div class="seekbar">
-            <Seekbar
-                {duration}
-                onSeek={(time) => seekTime.set(time)}
-                playerTime={$playerTime}
-                style="thin"
-                showProgress
-            />
+    <div></div>
+    {#if $current.song}
+        <div class="seekbar-outer">
+            <div class="seekbar">
+                <Seekbar
+                    {duration}
+                    onSeek={(time) => seekTime.set(time)}
+                    playerTime={$playerTime}
+                    style="thin"
+                    showProgress
+                />
+            </div>
         </div>
-    </div>
+    {/if}
     <div></div>
 </top-bar>
 
@@ -237,10 +245,6 @@
         @media screen and (max-width: 600px) {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto 40px;
-        }
-
-        &.sidebar-collapsed {
-            /* margin-left: 70px; */
         }
 
         p {
@@ -325,6 +329,8 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 padding: 0 20px 5px 20px;
+                height: 30px;
+
                 small {
                     font-size: 12.5px;
                     color: var(--text);

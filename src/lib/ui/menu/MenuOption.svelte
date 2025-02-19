@@ -42,7 +42,9 @@
             : `background-color: ${$currentThemeObject["menu-item-highlight-bg"]};`
         : ""}
     on:click|stopPropagation={(e) => {
-        !isDisabled && onClick && onClick(e);
+        if (!isDisabled && !isLoading) {
+            onClick && onClick(e);
+        }
     }}
 >
     <div class="bg" style={color ? `background-color: ${color}` : ""} />

@@ -1,0 +1,104 @@
+display-name: Light2
+variant: light
+# Basics
+background: "#e9e5efd9"
+icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
+icon-disabled: "#474747"
+icon-secondary-hover: rgb(from var(--icon-secondary) r g b / 0.4)
+icon-tertiary: var(--accent-secondary)
+icon-tertiary-hover: rgb(from var(--icon-tertiary) r g b / 0.4)
+input-bg: "#86808066"
+input-focus-bg: "background-color: color-mix(in srgb, var(--input-bg) 60%, var(--inverse))"
+input-placeholder-text: rgb(from var(--text) r g b / 0.5)
+overlay-bg: "#f1f1f1c0"
+link: "#acafff"
+link-hover: "#8086ff"
+text-inactive: "#646067"
+# Album
+album-playing-play-hover-bg: "#5123dd"
+album-playing-shadow: "#5123dd"
+# Analytics/Stats
+analytics-border: rgba(255, 255, 255, 0.11)
+analytics-timeline-track-bg: "#ece5e54f"
+analytics-timeline-vline-bg: "#ece5e54f"
+# Artist's Toolkit
+atk-icon-audio: "#c745c7"
+atk-icon-link: "#46e3e3"
+atk-icon-lyric: "#d4d442"
+atk-icon-video: "#e04848"
+# Library
+library-clickable-cell-bg: "#9891aa1c"
+library-clickable-cell-hover-bg: "#5123dd6e"
+library-header-active-bg: "#997be1"
+library-header-bg: "#998bbb7e"
+library-header-text: "#312c2c"
+library-highlight-bg: "#5123dd45"
+library-hover-bg: "#5123dd1c"
+library-playing-bg: "#5123dd"
+library-playing-icon: "#efe2e6"
+library-playing-title: "#ffffff"
+library-title: "#282230"
+# Map View
+mapview-tooltip-artist: "#ffffff95"
+mapview-tooltip-bg: "#232325cc"
+mapview-tooltip-border: "#ffffff2d"
+mapview-tooltip-text: "#808080"
+# Menus
+menu-bg: "#20202296"
+menu-checkbox-on: "#ffffff"
+menu-divider: "#494949"
+menu-item-destructive-hover-bg: "#d20e32"
+menu-item-disabled: "#aeaeae66"
+menu-item-text: "#ffffff"
+# Oscilloscope
+oscilloscope: "#590194"
+# Panels
+panel-background: "#e3dfe8"
+panel-primary-border-main: color-mix(in srgb, var(--inverse) 40%, transparent)
+panel-primary-border-accent1: color-mix(in srgb, var(--inverse) 30%, transparent)
+panel-primary-border-accent2: color-mix(in srgb, var(--inverse) 10%, transparent)
+panel-secondary-border-main: "#ffffff2a"
+panel-secondary-border-accent: "#ffffff19"
+panel-separator: "#ffffff17"
+# Popups
+popup-header-bg-lone: color-mix(in srgb, var(--background) 1%, transparent)
+popup-header-bg-many: color-mix(in srgb, var(--background) 1%, transparent)
+popup-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
+popup-section-bg: color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))
+popup-section-border: color-mix(in srgb, var(--background) 70%, var(--inverse))
+popup-section-title-bg: color-mix(in srgb, var(--background) 50%, var(--inverse))
+popup-section-title-text: var(--title)
+popup-track-artwork-about: "#82c9df"
+popup-track-artwork-found: "#44a15e"
+# Progress bar
+progressbar-track-bg: "#ffffff43"
+progressbar-value-bg: "#23DD7F"
+# Prune
+prune-button-border: var(--inverse)
+prune-button-delete-bg: "#ff00007d"
+prune-button-keep-bg: "#00800073"
+# ScrollTo
+# Seekbar
+seekbar-line-bg: color-mix(in srgb, var(--background) 76%, white)
+seekbar-thumb: "#00C56C"
+# Sidebar
+sidebar-info-artist-active-bg: color-mix(in srgb, var(--inverse) 90%, transparent)
+sidebar-info-artist-hover-bg: color-mix(in srgb, var(--inverse) 80%, transparent)
+sidebar-info-title-hover-bg: color-mix(in srgb, var(--inverse) 40%, transparent)
+sidebar-info-title-hover-border: var(--inverse)
+sidebar-player-disabled-bg: "#312d3ec0"
+sidebar-search-focus-bg: color-mix(in srgb, var(--inverse) 80%, transparent);
+# Smart playlist
+smart-playlist-builder-bg: "#b49bff"
+smart-playlist-builder-block-bg: "#a691f3"
+smart-playlist-builder-block-focused-bg: "#8b76d0"
+smart-playlist-builder-block-input-bg: "#907dd1"
+# Play, pause, next, previous
+transport-shuffle: "#9804d3"
+transport-volume-thumb-bg: "#FDFDFD"
+transport-volume-thumb-icon: "#5123DD"
+transport-volume-thumb-secondary: "#04aa6d"
+# Waveform
+# Wiki
+wiki-close-prompt-bg: "#33303ce2"
+wiki-pill-border: var(--panel-primary-border-main)

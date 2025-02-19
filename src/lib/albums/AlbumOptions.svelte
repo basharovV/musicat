@@ -4,10 +4,18 @@
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
     import Icon from "../ui/Icon.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
 
-    $: showSingles = $uiPreferences.albumsViewShowSingles;
+    export let showAllOptions = true;
+
+    let optionsPanelPosition = { x: 0, y: 0 };
+    let showOptionsPanel = false;
+
     $: showInfo = $uiPreferences.albumsViewShowInfo;
     $: minWidth = $uiPreferences.albumsViewGridSize;
+    $: showSingles = $uiPreferences.albumsViewShowSingles;
+
     const fields = [
         {
             value: "title",
@@ -26,65 +34,165 @@
     $: orderBy = fields.find(
         (f) => f.value === $uiPreferences.albumsViewSortBy,
     );
+
+    function toogleOptionsPanel(e) {
+        if (showOptionsPanel) {
+            showOptionsPanel = false;
+        } else {
+            optionsPanelPosition = { x: e.clientX, y: e.clientY };
+            showOptionsPanel = true;
+        }
+    }
 </script>
 
 <div class="options" data-tauri-drag-region>
-    <div class="order-by">
-        <p>{$LL.albums.options.orderBy()}</p>
-        <Dropdown
-            options={fields}
-            selected={orderBy}
-            onSelect={(v) => {
-                $uiPreferences.albumsViewSortBy = v;
-            }}
-        />
-    </div>
-    <Divider />
-    <div class="toggle">
+    {#if showAllOptions}
+        <div class="order-by">
+            <Icon
+                icon="heroicons-solid:sort-descending"
+                color="var(--icon-primary)"
+                boxed
+            />
+            <Dropdown
+                options={fields}
+                selected={orderBy}
+                onSelect={(v) => {
+                    $uiPreferences.albumsViewSortBy = v;
+                }}
+            />
+        </div>
+        <Divider />
+        <div class="toggle">
+            <Icon
+                icon={showSingles
+                    ? "mynaui:one-circle-solid"
+                    : "mynaui:one-circle-solid-off"}
+                color={showSingles
+                    ? "var(--icon-primary)"
+                    : "var(--icon-secondary)"}
+                boxed
+                onClick={() => {
+                    $uiPreferences.albumsViewShowSingles = !showSingles;
+                }}
+            />
+        </div>
+        <div class="toggle">
+            <Icon
+                icon={showInfo ? "mdi:information" : "mdi:information-off"}
+                color={showInfo
+                    ? "var(--icon-primary)"
+                    : "var(--icon-secondary)"}
+                boxed
+                onClick={() => {
+                    $uiPreferences.albumsViewShowInfo = !showInfo;
+                }}
+            />
+        </div>
+        <Divider />
+        <label>
+            <Icon
+                icon="material-symbols:grid-view-rounded"
+                color="var(--icon-primary)"
+                boxed
+            />
+            <input
+                type="range"
+                min={100}
+                max={400}
+                value={minWidth}
+                on:input={(ev) => {
+                    $uiPreferences.albumsViewGridSize = Number(ev.target.value);
+                }}
+            />
+        </label>
+    {:else}
         <Icon
-            icon={showSingles ? "mdi:show" : "mdi:hide"}
-            color={showSingles
-                ? "var(--icon-primary)"
-                : "var(--icon-secondary)"}
+            icon="iconamoon:settings-fill"
+            color="var(--icon-primary)"
             boxed
-            onClick={() => {
-                $uiPreferences.albumsViewShowSingles = !showSingles;
-            }}
+            onClick={toogleOptionsPanel}
         />
-        <p>{$LL.albums.options.showSingles()}</p>
-    </div>
-    <div class="toggle">
-        <Icon
-            icon={showInfo ? "mdi:show" : "mdi:hide"}
-            color={showInfo ? "var(--icon-primary)" : "var(--icon-secondary)"}
-            boxed
-            onClick={() => {
-                $uiPreferences.albumsViewShowInfo = !showInfo;
-            }}
-        />
-        <p>{$LL.albums.options.showInfo()}</p>
-    </div>
-    <Divider />
-    <label
-        >{$LL.albums.options.gridSize()}
-        <input
-            type="range"
-            min={100}
-            max={400}
-            value={minWidth}
-            on:input={(ev) => {
-                $uiPreferences.albumsViewGridSize = Number(ev.target.value);
-            }}
-        /></label
-    >
+    {/if}
 </div>
+
+{#if showOptionsPanel}
+    <div class="options-panel">
+        <Menu {...optionsPanelPosition} onClickOutside={toogleOptionsPanel}>
+            <div class="order-by">
+                <Icon
+                    icon="heroicons-solid:sort-descending"
+                    color="var(--icon-primary)"
+                    boxed
+                />
+                <Dropdown
+                    options={fields}
+                    selected={orderBy}
+                    onSelect={(v) => {
+                        $uiPreferences.albumsViewSortBy = v;
+                    }}
+                />
+            </div>
+            <MenuDivider />
+            <div class="controls">
+                <div class="toggle">
+                    <Icon
+                        icon={showSingles
+                            ? "mynaui:one-circle-solid"
+                            : "mynaui:one-circle-solid-off"}
+                        color={showSingles
+                            ? "var(--icon-primary)"
+                            : "var(--icon-secondary)"}
+                        boxed
+                        onClick={() => {
+                            $uiPreferences.albumsViewShowSingles = !showSingles;
+                        }}
+                    />
+                </div>
+                <div class="toggle">
+                    <Icon
+                        icon={showInfo
+                            ? "mdi:information"
+                            : "mdi:information-off"}
+                        color={showInfo
+                            ? "var(--icon-primary)"
+                            : "var(--icon-secondary)"}
+                        boxed
+                        onClick={() => {
+                            $uiPreferences.albumsViewShowInfo = !showInfo;
+                        }}
+                    />
+                </div>
+            </div>
+            <MenuDivider />
+            <label>
+                <input
+                    type="range"
+                    min={100}
+                    max={400}
+                    value={minWidth}
+                    on:input={(ev) => {
+                        $uiPreferences.albumsViewGridSize = Number(
+                            ev.target.value,
+                        );
+                    }}
+                />
+                <Icon
+                    icon="material-symbols:grid-view-rounded"
+                    color="var(--icon-primary)"
+                    boxed
+                />
+            </label>
+        </Menu>
+    </div>
+{/if}
 
 <style lang="scss">
     .options {
         display: flex;
         gap: 10px;
         align-items: center;
-        margin-right: 5px;
+        margin: 0 5px 0 20px;
+
         * {
             margin: 0;
             line-height: initial;
@@ -95,6 +203,27 @@
             display: flex;
             gap: 3px;
             color: var(--text-secondary);
+        }
+        .toggle {
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+            cursor: default;
+            :global(svg) {
+                opacity: 0.7;
+            }
+        }
+    }
+
+    .options-panel {
+        .order-by {
+            display: flex;
+            gap: 3px;
+            color: var(--text-secondary);
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
         }
         .toggle {
             display: flex;
@@ -124,11 +253,11 @@
         border: none;
         box-shadow: none;
         max-width: 100px;
+        background-color: transparent;
         &::-webkit-slider-thumb {
             appearance: none;
-            background-color: rgb(132, 175, 166);
-            border-radius: 2px;
-            color: red;
+            background: var(--album-gridsize-thumb);
+            border-radius: 4px;
             width: 10px;
             height: 10px;
             top: -2.5px;
@@ -136,14 +265,14 @@
             position: relative;
         }
         &::-webkit-slider-runnable-track {
-            background-color: var(--icon-secondary);
+            background-color: var(--album-gridsize-line-bg);
             appearance: none;
             border-radius: 10px;
             outline: none;
             height: 4px;
         }
         ::-moz-range-track {
-            background: #ade8ff;
+            background: var(--album-gridsize-thumb);
             height: 4px;
         }
     }

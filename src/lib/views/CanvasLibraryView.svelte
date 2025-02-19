@@ -244,12 +244,8 @@
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
-        margin: 3.5px 5px 0 0;
-        border-radius: 5px;
         box-sizing: content-box;
         overflow: hidden;
-        border-top: 0.7px solid var(--panel-primary-border-main);
-        border-bottom: 0.7px solid var(--panel-primary-border-accent1);
 
         &:has(.library-container.dragover) {
             border-color: var(--accent-secondary);

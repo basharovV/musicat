@@ -5,6 +5,7 @@
     import {
         popupOpen,
         userSettings,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -26,6 +27,8 @@
         searchArtworkOnBrave,
     } from "../menu/search";
     import { removeQueuedSongs } from "../../data/storeHelper";
+    import { reImport } from "../../data/LibraryUtils";
+    import toast from "svelte-french-toast";
 
     type ActionType =
         | "artwork-local"
@@ -123,9 +126,11 @@
         if (songs.length === 1) {
             $rightClickedTracks = [];
             $rightClickedTrack = song;
+            $rightClickedAlbum = null;
         } else {
             $rightClickedTracks = songs;
             $rightClickedTrack = null;
+            $rightClickedAlbum = album;
         }
 
         close();
@@ -170,15 +175,31 @@
                 paths: [album.path],
                 recursive: false,
                 process_albums: true,
+                process_m3u: false,
                 is_async: false,
                 is_cover_fullcheck: $userSettings.isArtistsToolkitEnabled,
             },
         });
         console.log("response", response);
-        await db.transaction("rw", db.songs, db.albums, async () => {
-            await db.songs.bulkPut(response.songs);
-            await db.albums.bulkPut(response.albums);
-        });
+
+        if (response) {
+            if (response.error) {
+                // Show error
+                toast.error(response.error);
+            } else {
+                const songIdToOldAlbumId = {};
+
+                for (const song of songs) {
+                    songIdToOldAlbumId[song.id] = album.id;
+                }
+
+                reImport(response, songs, songIdToOldAlbumId);
+
+                toast.success("Successfully re-imported album!", {
+                    position: "top-right",
+                });
+            }
+        }
 
         loadingType = null;
     }
@@ -232,7 +253,7 @@
             <MenuOption text={result.error || result.success} isDisabled />
         {/if}
         <MenuOption
-            onClick={compose(searchArtworkOnBrave, song)}
+            onClick={compose(searchArtworkOnBrave, album)}
             text="Search for artwork on Brave"
         />
         {#if song?.artist}

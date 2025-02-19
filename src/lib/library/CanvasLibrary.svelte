@@ -43,7 +43,7 @@
         importStatus,
         isPlaying,
         isQueueOpen,
-        isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
@@ -64,6 +64,7 @@
         smartQueryInitiator,
         smartQueryResults,
         uiView,
+        rightClickedAlbum,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -408,6 +409,7 @@
     let TEXT_COLOR_SECONDARY: string;
     let HIGHLIGHT_BG_COLOR: string;
     let ROW_BG_COLOR: string;
+    let ROW_ODD_BG_COLOR: string;
     let ROW_BG_COLOR_HOVERED: string;
     let PLAYING_BG_COLOR: string;
     let PLAYING_TEXT_COLOR: string;
@@ -416,6 +418,7 @@
     let CLICKABLE_CELL_BG_COLOR: string;
     let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
     let DRAGGING_SOURCE_COLOR: string;
+    let COLUMN_DIVIDER_COLOR: string;
 
     const SCROLLING_PIXEL_RATIO = 1.3;
     const IDLE_PIXEL_RATIO = 1.8;
@@ -501,6 +504,7 @@
         TEXT_COLOR_SECONDARY = $currentThemeObject["text-secondary"];
         HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
         ROW_BG_COLOR = "transparent";
+        ROW_ODD_BG_COLOR = $currentThemeObject["library-odd-row-bg"];
         ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
         PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
         PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
@@ -511,6 +515,7 @@
         CLICKABLE_CELL_BG_COLOR_HOVERED =
             $currentThemeObject["library-clickable-cell-hover-bg"];
         DRAGGING_SOURCE_COLOR = "#8a69683e";
+        COLUMN_DIVIDER_COLOR = $currentThemeObject["library-column-divider"];
     }
 
     let isRestoringScrollPos = false;
@@ -593,11 +598,11 @@
 
         setTimeout(() => {
             width =
-                scrollContainer?.clientWidth ?? libraryContainer?.clientWidth;
+                scrollContainer?.clientWidth ??
+                libraryContainer?.clientWidth ??
+                0;
 
-            if (width) {
-                calculateColumns();
-            }
+            calculateColumns();
         }, 50);
     }
 
@@ -962,15 +967,7 @@
             }
 
             const album = albums[0];
-
-            let tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .toArray();
-
-            tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
+            const tracks = await db.songs.bulkGet(album.tracksIds);
 
             setQueue(tracks, song.viewModel.index);
         } else if ($uiView === "smart-query:list") {
@@ -1327,9 +1324,12 @@
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
+                    $rightClickedTrack = null;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
+                    $rightClickedTracks = [];
                 }
+                $rightClickedAlbum = null;
                 $popupOpen = "track-info";
             }
         } else if (
@@ -1346,13 +1346,8 @@
             event.preventDefault();
             console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if (!showTrackMenu && songsHighlighted.length) {
+            if (!trackMenu.isOpen && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
-                if (songsHighlighted.length > 1) {
-                    $rightClickedTracks = songsHighlighted;
-                } else {
-                    $rightClickedTrack = songsHighlighted[0];
-                }
 
                 const topTrack = songsHighlighted[0];
                 // Get the y position of the top track by calculating the offset using the index in the slice
@@ -1366,8 +1361,11 @@
                     HEADER_HEIGHT +
                     10;
                 console.log("top track y", topTrackY);
-                menuPos = { x: 250, y: topTrackY };
-                showTrackMenu = true;
+
+                trackMenu.open(
+                    songsHighlighted.length > 1 ? songsHighlighted : topTrack,
+                    { x: 250, y: topTrackY },
+                );
             }
         } else if (
             event.keyCode === 13 &&
@@ -1735,8 +1733,6 @@
     }
 </script>
 
-<!-- <svelte:window on:resize={debounce(onResize, 5)} /> -->
-
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
@@ -1932,7 +1928,10 @@
                                                             : hoveredSongIdx ===
                                                                 songIdx
                                                               ? ROW_BG_COLOR_HOVERED
-                                                              : ROW_BG_COLOR,
+                                                              : songIdx % 2 ===
+                                                                  0
+                                                                ? ROW_BG_COLOR
+                                                                : ROW_ODD_BG_COLOR,
                                             }}
                                         />
                                         {#each displayFields as f, idx (f.value)}
@@ -1997,12 +1996,7 @@
                                                             fontSize: 13.5,
                                                             verticalAlign:
                                                                 "middle",
-                                                            fill:
-                                                                $current.song
-                                                                    ?.id ===
-                                                                song.id
-                                                                    ? PLAYING_TEXT_COLOR
-                                                                    : TEXT_COLOR,
+                                                            fill: TEXT_COLOR,
                                                             ellipsis:
                                                                 f.value.match(
                                                                     /^(title|artist|album|genre)/,
@@ -2568,7 +2562,7 @@
                                     <Text
                                         config={{
                                             x:
-                                                !$isSidebarOpen &&
+                                                !$isSidebarShowing &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
@@ -2597,7 +2591,7 @@
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
                                             visible: !(
-                                                !$isSidebarOpen &&
+                                                !$isSidebarShowing &&
                                                 !$isQueueOpen &&
                                                 $os === "macos" &&
                                                 idx === 0
@@ -2605,6 +2599,7 @@
                                         }}
                                     />
                                 </Group>
+                                <!-- Column divider -->
                                 {#if idx > 0}
                                     <Rect
                                         config={{
@@ -2614,7 +2609,7 @@
                                                 HEADER_HEIGHT,
                                             height: viewportHeight,
                                             width: 0.5,
-                                            fill: "rgba(242, 242, 242, 0.144)",
+                                            fill: COLUMN_DIVIDER_COLOR,
                                             listening: false,
                                         }}
                                     />
@@ -2658,10 +2653,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-bottom-left-radius: 5px;
-        border-bottom-right-radius: 5px;
-        border-left: 0.7px solid var(--panel-primary-border-main);
-        border-bottom: 0.7px solid var(--panel-primary-border-main);
         overflow: hidden;
         &.dragover {
             border-color: var(--accent-secondary);

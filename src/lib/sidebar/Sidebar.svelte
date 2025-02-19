@@ -31,6 +31,7 @@
         draggedSongs,
         draggedTitle,
         isFindFocused,
+        isSidebarFloating,
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
@@ -45,14 +46,13 @@
         popupOpen,
         query,
         queue,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
         seekTime,
         selectedPlaylistFile,
         selectedSmartQuery,
         shouldFocusFind,
-        sidebarManuallyOpened,
-        sidebarTogglePos,
         singleKeyShortcutsEnabled,
         smartQueryInitiator,
         toDeletePlaylist,
@@ -86,6 +86,8 @@
     import BuiltInQueries from "../../data/SmartQueries";
 
     const appWindow = tauriWindow.getCurrentWindow();
+
+    export let floating = false;
 
     // What to show in the sidebar
     let song: Song;
@@ -267,12 +269,16 @@
 
             drawArtwork(previousSongIdx > current.index);
             previousSongIdx = current.index;
+        } else {
+            song = null;
         }
     });
 
     function openTrackInfo() {
         if (song) {
             $rightClickedTrack = song;
+            $rightClickedTracks = [];
+            $rightClickedAlbum = null;
             $popupOpen = "track-info";
         }
     }
@@ -289,6 +295,7 @@
     }
     let height = 0;
     let width = 0;
+    let hideArtwork = window.innerHeight < 650;
     let hasDecorations = false;
 
     let sidebarToggleX = 0;
@@ -308,14 +315,14 @@
             // await appWindow.setDecorations(true);
         }
 
-        // Get bottom coordinates of top container
-        const topContainer = sidebar?.querySelector(".top");
+        if (height >= 650) {
+            if (hideArtwork) {
+                hideArtwork = false;
 
-        if (topContainer) {
-            $sidebarTogglePos = {
-                x: topContainer.getBoundingClientRect().right,
-                y: topContainer.getBoundingClientRect().bottom,
-            };
+                drawArtwork(true);
+            }
+        } else {
+            hideArtwork = true;
         }
     }
 
@@ -455,14 +462,14 @@
     let showMenuBottomScrollShadow = false;
 
     function onMenuResize() {
-        console.log(
-            "scrollTop",
-            menuInnerScrollArea.scrollTop,
-            menuInnerScrollArea.clientHeight,
-            menuInnerScrollArea.scrollHeight,
-        );
         // Check scroll area size, add shadows if necessary
         if (menuInnerScrollArea) {
+            console.log(
+                "scrollTop",
+                menuInnerScrollArea.scrollTop,
+                menuInnerScrollArea.clientHeight,
+                menuInnerScrollArea.scrollHeight,
+            );
             showMenuTopScrollShadow =
                 menuInnerScrollArea.scrollTop > 0 &&
                 menuInnerScrollArea.scrollHeight >
@@ -621,6 +628,7 @@
         };
         $selectedPlaylistFile = playlist;
         $selectedSmartQuery = null;
+        $isSidebarFloating = false;
 
         activePlaylist = null;
     }
@@ -652,6 +660,7 @@
         }
 
         $selectedSmartQuery = smartQuery;
+        $isSidebarFloating = false;
     }
 
     function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
@@ -735,7 +744,7 @@
         await db.songs.put($current.song);
         $current = $current;
     }
-    let sidebar;
+    let sidebarElement;
     let sidebarWidth = 210;
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
@@ -767,14 +776,15 @@
         };
 
         // Detect size changes in scroll container for the menu
-        const resizeObserver = new ResizeObserver(onMenuResize).observe(menu);
+        const resizeObserver = new ResizeObserver(onMenuResize);
+
+        resizeObserver.observe(menu);
 
         height = window.innerHeight;
-        window.onresize = throttle(() => {
-            onResize();
-        }, 200);
 
-        onResize(); // run once
+        onResize();
+
+        return () => resizeObserver.unobserve(menu);
     });
 
     let canvas: HTMLCanvasElement;
@@ -792,16 +802,6 @@
             titleElement?.scrollWidth > titleElement?.clientWidth;
 
         resetMarquee();
-
-        // Get bottom coordinates of top container
-        const topContainer = sidebar.querySelector(".top");
-
-        if (topContainer) {
-            $sidebarTogglePos = {
-                x: topContainer.getBoundingClientRect().right - 15,
-                y: topContainer.getBoundingClientRect().bottom - 10,
-            };
-        }
     }
 
     function clearMarquee() {
@@ -1055,6 +1055,8 @@
     let isPlaybackSpeedControlOpen = false;
 </script>
 
+<svelte:window on:resize={throttle(onResize, 200)} />
+
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <sidebar
@@ -1062,8 +1064,9 @@
     class:empty={!song}
     class:hovered={isMiniPlayerHovered}
     class:visible={$isSidebarOpen}
+    class:floating
     transition:fly={{ duration: 200, x: -200 }}
-    bind:this={sidebar}
+    bind:this={sidebarElement}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
@@ -1136,6 +1139,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "library";
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1153,6 +1157,7 @@
                                 $uiView = "albums";
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1172,6 +1177,7 @@
                                 $selectedSmartQuery = null;
                                 $selectedSmartQuery =
                                     SmartQueries.favourites.value;
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1191,6 +1197,7 @@
                                     $query.orderBy = "none";
                                     $query.reverse = false;
                                     $selectedSmartQuery = null;
+                                    $isSidebarFloating = false;
                                 }}
                             >
                                 <Icon
@@ -1469,6 +1476,7 @@
                                     $isTagCloudOpen = false;
                                     $selectedPlaylistFile = null;
                                     $selectedSmartQuery = null;
+                                    $isSidebarFloating = false;
                                 }}
                             >
                                 <Icon
@@ -1486,6 +1494,7 @@
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $uiView = "internet-archive";
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1503,6 +1512,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "map";
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1520,6 +1530,7 @@
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
                                 $uiView = "analytics";
+                                $isSidebarFloating = false;
                             }}
                         >
                             <Icon
@@ -1625,230 +1636,238 @@
             </p>
         </div>
     {/if}
-    <div class="track-info">
-        <!-- <hr /> -->
+    {#if !floating}
+        <div class="track-info">
+            <!-- <hr /> -->
 
-        <div class="track-info-content">
-            <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+            <div class="track-info-content">
+                <!-- svelte-ignore a11y-mouse-events-have-key-events -->
 
-            {#if !$isMiniPlayer}
+                {#if !$isMiniPlayer}
+                    <div
+                        class="sidebar-toggle"
+                        class:visible={$isSidebarOpen}
+                        use:tippy={{
+                            content: "Toggle the sidebar.",
+                            placement: "right",
+                        }}
+                    >
+                        <Icon
+                            icon="tabler:layout-sidebar-left-collapse"
+                            size={22}
+                            onClick={(e) => {
+                                $isSidebarOpen = false;
+                            }}
+                        />
+                    </div>
+                {/if}
+
+                <!-- svelte-ignore a11y-mouse-events-have-key-events -->
                 <div
-                    class="sidebar-toggle"
-                    class:visible={$isSidebarOpen}
+                    bind:this={miniToggleBtn}
+                    class="mini-toggle"
+                    class:hovered={isMiniToggleHovered}
+                    on:mouseover={onMiniToggleMouseOver}
+                    on:mouseout={onMiniToggleMouseOut}
                     use:tippy={{
-                        content: "Toggle the sidebar.",
+                        theme: $isMiniPlayer ? "hidden" : "",
+                        content: "Toggle the mini player.",
                         placement: "right",
                     }}
                 >
                     <Icon
-                        icon="tabler:layout-sidebar-left-collapse"
-                        size={22}
-                        onClick={(e) => {
-                            $isSidebarOpen = false;
-                            $sidebarManuallyOpened = false;
-                            $sidebarTogglePos = { x: e.clientX, y: e.clientY };
-                        }}
+                        icon={$isMiniPlayer
+                            ? "gg:arrows-expand-up-right"
+                            : "gg:arrows-expand-down-left"}
+                        onClick={() => toggleMiniPlayer()}
+                        boxed
                     />
                 </div>
-            {/if}
+                <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
 
-            <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-            <div
-                bind:this={miniToggleBtn}
-                class="mini-toggle"
-                class:hovered={isMiniToggleHovered}
-                on:mouseover={onMiniToggleMouseOver}
-                on:mouseout={onMiniToggleMouseOut}
-                use:tippy={{
-                    theme: $isMiniPlayer ? "hidden" : "",
-                    content: "Toggle the mini player.",
-                    placement: "right",
-                }}
-            >
-                <Icon
-                    icon={$isMiniPlayer
-                        ? "gg:arrows-expand-up-right"
-                        : "gg:arrows-expand-down-left"}
-                    onClick={() => toggleMiniPlayer()}
-                    boxed
-                />
-            </div>
-            <img alt="cd gif" class="cd-gif" src="images/cd6.gif" />
+                <div class="info">
+                    {#if song}
+                        {#if sidebarWidth && displayTitle}
+                            <div
+                                class="marquee-container"
+                                on:mousedown={() => {
+                                    setDraggedSongs([song], "Player");
+                                }}
+                            >
+                                <canvas
+                                    class="show"
+                                    bind:this={canvas}
+                                    width={sidebarWidth * 2.5}
+                                    height="50"
+                                ></canvas>
+                            </div>
+                        {/if}
+                        {#if artist}
+                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                            <p
+                                class="artist"
+                                on:click={() => {
+                                    $isWikiOpen = !$isWikiOpen;
+                                }}
+                                use:optionalTippy={{
+                                    show: !$isMiniPlayer,
+                                    content: $LL.sidebar.openWikiTooltip({
+                                        artist,
+                                    }),
+                                    placement: "right",
+                                }}
+                            >
+                                {artist}
+                            </p>
+                        {/if}
+                        {#if !title && !album && !artist}
+                            <button
+                                class="add-metadata-btn"
+                                on:click={openTrackInfo}
+                                >{$LL.sidebar.addMetadataHint()}</button
+                            >
+                        {/if}
+                        {#if album}
+                            <small>{album}</small>
+                        {/if}
+                    {:else}
+                        <p class="is-placeholder">
+                            {$LL.sidebar.takeControl()}
+                        </p>
+                    {/if}
 
-            <div class="info">
-                {#if song}
-                    {#if sidebarWidth && displayTitle}
+                    {#if codec}
                         <div
-                            class="marquee-container"
-                            on:mousedown={() => {
-                                setDraggedSongs([song], "Player");
-                            }}
+                            class="file"
+                            class:empty={!title && !album && !artist}
                         >
-                            <canvas
-                                class="show"
-                                bind:this={canvas}
-                                width={sidebarWidth * 2.5}
-                                height="50"
-                            ></canvas>
+                            <p>{codec}</p>
+                            <!-- {#if bitrate}<p>{bitrate} bit</p>{/if} -->
+                            <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
+                            <p class="with-icon">
+                                <span>
+                                    <Icon
+                                        icon={stereo
+                                            ? "fad:stereo"
+                                            : "fad:mono"}
+                                        size={12}
+                                    /></span
+                                >{stereo ? "stereo" : "mono"}
+                            </p>
                         </div>
                     {/if}
-                    {#if artist}
-                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                        <p
-                            class="artist"
-                            on:click={() => {
-                                $isWikiOpen = !$isWikiOpen;
-                            }}
-                            use:optionalTippy={{
-                                show: !$isMiniPlayer,
-                                content: $LL.sidebar.openWikiTooltip({
-                                    artist,
-                                }),
-                                placement: "right",
-                            }}
-                        >
-                            {artist}
-                        </p>
-                    {/if}
-                    {#if !title && !album && !artist}
-                        <button
-                            class="add-metadata-btn"
-                            on:click={openTrackInfo}
-                            >{$LL.sidebar.addMetadataHint()}</button
-                        >
-                    {/if}
-                    {#if album}
-                        <small>{album}</small>
-                    {/if}
-                {:else}
-                    <p class="is-placeholder">{$LL.sidebar.takeControl()}</p>
-                {/if}
-
-                {#if codec}
-                    <div class="file" class:empty={!title && !album && !artist}>
-                        <p>{codec}</p>
-                        <!-- {#if bitrate}<p>{bitrate} bit</p>{/if} -->
-                        <p>{(Number(sampleRate) / 1000).toFixed(1)} Khz</p>
-                        <p class="with-icon">
-                            <span>
-                                <Icon
-                                    icon={stereo ? "fad:stereo" : "fad:mono"}
-                                    size={12}
-                                /></span
-                            >{stereo ? "stereo" : "mono"}
-                        </p>
-                    </div>
-                {/if}
+                </div>
             </div>
         </div>
-    </div>
-
-    {#if song}
-        <div class="artwork-container">
-            <div class="artwork-frame">
-                <canvas
-                    class="artwork"
-                    bind:this={artworkCanvas}
-                    width={210}
-                    height={210}
+        {#if song}
+            <div class="artwork-container">
+                <div class="artwork-frame">
+                    <canvas
+                        class="artwork"
+                        bind:this={artworkCanvas}
+                        width={210}
+                        height={210}
+                    />
+                </div>
+            </div>
+        {/if}
+        <div class="bottom" data-tauri-drag-region>
+            <div class="seekbar">
+                <Seekbar
+                    {duration}
+                    onSeek={(time) => seekTime.set(time)}
+                    playerTime={$playerTime}
                 />
+                <div
+                    class="time-controls"
+                    class:speed-control-expanded={isPlaybackSpeedControlOpen}
+                >
+                    <p class="elapsed-time">
+                        <span class="elapsed">{elapsedTime} </span>
+                    </p>
+                    <PlaybackSpeed bind:selected={isPlaybackSpeedControlOpen} />
+                    <p class="elapsed-time">
+                        <span class="elapsed">{durationText} </span>
+                    </p>
+                </div>
+                <transport>
+                    <Icon
+                        class="transport-side shuffle {$isShuffleEnabled
+                            ? 'active'
+                            : 'inactive'}"
+                        icon="ph:shuffle-bold"
+                        onClick={() => {
+                            $isShuffleEnabled = !$isShuffleEnabled;
+                        }}
+                    />
+                    <Icon
+                        class="transport-middle"
+                        icon="fe:backward"
+                        size={36}
+                        disabled={$current.index <= 0}
+                        onClick={() => audioPlayer.playPrevious()}
+                    />
+                    <Icon
+                        class="transport-middle"
+                        size={42}
+                        onClick={() => audioPlayer.togglePlay()}
+                        icon={$isPlaying ? "fe:pause" : "fe:play"}
+                    />
+                    <Icon
+                        class="transport-middle"
+                        size={36}
+                        icon="fe:forward"
+                        disabled={$queue.length === 0 ||
+                            $current.index === $queue?.length - 1}
+                        onClick={() => audioPlayer.playNext()}
+                    />
+                    <Icon
+                        class="transport-side favourite {$current.song
+                            ?.isFavourite
+                            ? 'active'
+                            : 'inactive'}"
+                        icon={$current.song?.isFavourite
+                            ? "clarity:heart-solid"
+                            : "clarity:heart-line"}
+                        onClick={() => {
+                            favouriteCurrentSong();
+                        }}
+                    />
+                </transport>
+
+                <div class="other-controls">
+                    <div class="track-info-icon">
+                        <Icon
+                            icon="mdi:information"
+                            onClick={() => {
+                                $rightClickedTrack = song;
+                                $rightClickedTracks = [];
+                                $rightClickedAlbum = null;
+                                $popupOpen = "track-info";
+                            }}
+                        />
+                    </div>
+
+                    <VolumeSlider />
+
+                    <div
+                        class="visualizer-icon"
+                        use:tippy={{
+                            content: "waveform, loop region, marker editor",
+                            placement: "top",
+                        }}
+                    >
+                        <Icon
+                            class={$isWaveformOpen ? "active" : "inactive"}
+                            icon="ph:wave-sine-duotone"
+                            onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     {/if}
-    <div class="bottom" data-tauri-drag-region>
-        <div class="seekbar">
-            <Seekbar
-                {duration}
-                onSeek={(time) => seekTime.set(time)}
-                playerTime={$playerTime}
-            />
-            <div
-                class="time-controls"
-                class:speed-control-expanded={isPlaybackSpeedControlOpen}
-            >
-                <p class="elapsed-time">
-                    <span class="elapsed">{elapsedTime} </span>
-                </p>
-                <PlaybackSpeed bind:selected={isPlaybackSpeedControlOpen} />
-                <p class="elapsed-time">
-                    <span class="elapsed">{durationText} </span>
-                </p>
-            </div>
-            <transport>
-                <Icon
-                    class="transport-side shuffle {$isShuffleEnabled
-                        ? 'active'
-                        : 'inactive'}"
-                    icon="ph:shuffle-bold"
-                    onClick={() => {
-                        $isShuffleEnabled = !$isShuffleEnabled;
-                    }}
-                />
-                <Icon
-                    class="transport-middle"
-                    icon="fe:backward"
-                    size={36}
-                    disabled={$current.index <= 0}
-                    onClick={() => audioPlayer.playPrevious()}
-                />
-                <Icon
-                    class="transport-middle"
-                    size={42}
-                    onClick={() => audioPlayer.togglePlay()}
-                    icon={$isPlaying ? "fe:pause" : "fe:play"}
-                />
-                <Icon
-                    class="transport-middle"
-                    size={36}
-                    icon="fe:forward"
-                    disabled={$queue.length === 0 ||
-                        $current.index === $queue?.length - 1}
-                    onClick={() => audioPlayer.playNext()}
-                />
-                <Icon
-                    class="transport-side favourite {$current.song?.isFavourite
-                        ? 'active'
-                        : 'inactive'}"
-                    icon={$current.song?.isFavourite
-                        ? "clarity:heart-solid"
-                        : "clarity:heart-line"}
-                    onClick={() => {
-                        favouriteCurrentSong();
-                    }}
-                />
-            </transport>
-
-            <div class="other-controls">
-                <div class="track-info-icon">
-                    <Icon
-                        icon="mdi:information"
-                        onClick={() => {
-                            $rightClickedTrack = song;
-                            $rightClickedTracks = [];
-                            $popupOpen = "track-info";
-                        }}
-                    />
-                </div>
-
-                <VolumeSlider />
-
-                <div
-                    class="visualizer-icon"
-                    use:tippy={{
-                        content: "waveform, loop region, marker editor",
-                        placement: "top",
-                    }}
-                >
-                    <Icon
-                        class={$isWaveformOpen ? "active" : "inactive"}
-                        icon="ph:wave-sine-duotone"
-                        onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                    />
-                </div>
-            </div>
-        </div>
-    </div></sidebar
->
+</sidebar>
 
 <style lang="scss">
     $mini_y_breakpoint: 460px;
@@ -1903,11 +1922,22 @@
         flex-direction: column;
         justify-content: flex-end;
         align-items: flex-end;
-        height: 100vh;
+        height: 100%;
         max-width: 210px;
         min-width: 210px;
-        /* border-right: 1px solid #ececec1c; */
         background-color: $sidebar_primary_color;
+
+        &.floating {
+            grid-template-rows: 1fr;
+
+            .top {
+                border: 0;
+            }
+        }
+
+        @media only screen and (max-height: 649px) {
+            grid-template-rows: 1fr;
+        }
     }
 
     hr {
@@ -2173,8 +2203,7 @@
             padding-left: 5px;
             font-size: 13px;
             color: var(--text-active, initial);
-            border: 1px solid
-                color-mix(in srgb, var(--inverse) 80%, transparent);
+            border: 1px solid var(--sidebar-search-border);
             backdrop-filter: blur(8px);
             z-index: 10;
             background-color: transparent;
@@ -2202,7 +2231,7 @@
 
     .track-info {
         width: 100%;
-        height: 210px;
+        height: 198px;
         /* height: 150px; */
         /* min-height: 150px; */
         width: 100%;
@@ -2238,6 +2267,29 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+
+        @media only screen and (min-width: 211px) {
+            &:after {
+                content: "";
+                position: absolute;
+                left: 5px;
+                right: 5px;
+                top: 5px;
+                bottom: 5px;
+                background-color: color-mix(
+                    in srgb,
+                    var(--background) 50%,
+                    transparent
+                );
+                border: 1px solid
+                    color-mix(in srgb, var(--inverse) 10%, transparent);
+                box-shadow: 0px 0px 5px 1px
+                    color-mix(in srgb, var(--type-bw) 20%, transparent);
+                backdrop-filter: blur(5px);
+                border-radius: 5px;
+                z-index: -1;
+            }
+        }
 
         .sidebar-toggle {
             position: absolute;
@@ -2286,7 +2338,6 @@
                 background-color: var(--sidebar-info-title-hover-bg);
                 border-radius: 5px;
                 mask-image: none;
-                border: 1px dashed var(--sidebar-info-title-hover-border);
             }
 
             canvas {
@@ -2406,8 +2457,6 @@
             }
         }
     }
-    .spectrum {
-    }
 
     .cd-gif {
         margin-top: 1.3em;
@@ -2422,7 +2471,7 @@
     .artwork-container {
         padding: 0em;
         width: 100%;
-        height: 210px;
+        height: 209px;
         position: sticky;
         bottom: 140px;
         margin: auto;
@@ -2632,14 +2681,6 @@
         }
     }
 
-    @media only screen and (max-height: 385px) {
-        .top {
-            padding-top: 0em;
-            border-bottom: none;
-            visibility: hidden;
-        }
-    }
-
     sidebar.hovered {
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .track-info,
@@ -2660,21 +2701,6 @@
             background: none;
         }
 
-        // COVER INFO OVER ARTWORK
-        @media only screen and (max-height: 548px) {
-            .track-info {
-                backdrop-filter: blur(1px);
-            }
-        }
-
-        @media only screen and (max-height: 500px) {
-            grid-template-rows: 1fr auto 140px;
-            .top-header,
-            .file {
-                display: none;
-            }
-        }
-
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .top {
                 padding-top: 0em;
@@ -2692,11 +2718,6 @@
         @media only screen and (min-height: 821px) {
             grid-template-rows: 1fr auto 310px;
         }
-        @media only screen and (max-height: 870px) {
-            .app-title {
-                display: none;
-            }
-        }
 
         .file.empty {
             @media only screen and (max-height: 765px) {
@@ -2707,46 +2728,6 @@
         @media only screen and (max-height: 785px) {
             .file:not(.empty) {
                 display: none;
-            }
-        }
-
-        @media only screen and (max-height: 700px) {
-            .top-header {
-                display: none;
-            }
-        }
-        @media only screen and (max-height: 660px) {
-            /* grid-template-rows: 1fr 210px 1fr; */
-            .track-info {
-                background: linear-gradient(
-                    to bottom,
-                    hsla(240, 10.71%, 10.98%, 0.75) 0%,
-                    hsla(240, 10.71%, 10.98%, 0.74) 8.3%,
-                    hsla(240, 10.71%, 10.98%, 0.714) 16.5%,
-                    hsla(240, 10.71%, 10.98%, 0.672) 24.4%,
-                    hsla(240, 10.71%, 10.98%, 0.618) 32.2%,
-                    hsla(240, 10.71%, 10.98%, 0.556) 39.7%,
-                    hsla(240, 10.71%, 10.98%, 0.486) 47%,
-                    hsla(240, 10.71%, 10.98%, 0.412) 54.1%,
-                    hsla(240, 10.71%, 10.98%, 0.338) 60.9%,
-                    hsla(240, 10.71%, 10.98%, 0.264) 67.4%,
-                    hsla(240, 10.71%, 10.98%, 0.194) 73.6%,
-                    hsla(240, 10.71%, 10.98%, 0.132) 79.6%,
-                    hsla(240, 10.71%, 10.98%, 0.078) 85.2%,
-                    hsla(240, 10.71%, 10.98%, 0.036) 90.5%,
-                    hsla(240, 10.71%, 10.98%, 0.01) 95.4%,
-                    hsla(240, 10.71%, 10.98%, 0) 100%
-                );
-            }
-        }
-
-        // COVER INFO OVER ARTWORK
-        @media only screen and (max-height: 548px) {
-            grid-template-rows: 1fr auto 140px;
-
-            .track-info {
-                border-top: none;
-                backdrop-filter: blur(1px);
             }
         }
 

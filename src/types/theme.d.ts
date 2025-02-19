@@ -1,8 +1,8 @@
-type ThemeType = "dark" | "light";
+type ThemeVariant = "dark" | "light";
 
 export interface Theme {
     "display-name": string;
-    type: ThemeType;
+    variant: ThemeVariant;
     /**  Primary text color */
     text: string;
     /**  Secondary text color, for dimmed text */
@@ -19,6 +19,13 @@ export interface Theme {
     /**  Primary accent color used for active items that need to stand out */
     accent: string;
     "accent-secondary": string;
+    /** Buttons */
+    "button-active-bg": string;
+    "button-active-disabled-text": string;
+    "button-active-disabled-bg": string;
+    "button-solid-bg": string;
+    "button-text": string;
+    /** Icons */
     "icon-boxed-hover-bg": string;
     "icon-disabled": string;
     "icon-primary": string;
@@ -26,19 +33,25 @@ export interface Theme {
     "icon-secondary-hover": string;
     "icon-tertiary": string;
     "icon-tertiary-hover": string;
-    "button-bg": string;
-    "button-text": string;
+    /** Inputs */
     "input-alt-focus-outline": string;
     "input-bg": string;
     "input-focus-bg": string;
     "input-focus-outline": string;
     "input-placeholder-text": string;
+    /** */
     "header-opacity": number;
     "header-text": string;
+    inverse: string;
     link: string;
     "link-hover": string;
+    "shadow-gradient-bg": string;
     title: string;
+    "type-bw": string;
+    "type-bw-inverse": string;
     /** Album */
+    "album-gridsize-line-bg": string;
+    "album-gridsize-thumb": string;
     "album-hover-info-bg": string;
     "album-hover-info-text": string;
     "album-playing-pause-bg": string;
@@ -53,6 +66,7 @@ export interface Theme {
     "album-playing-play-hover-icon": string;
     "album-playing-shadow": string;
     "album-playing-title-bg": string;
+    "album-playing-title-text": string;
     /** Analytics/Stats */
     "analytics-border": string;
     "analytics-text-primary": string;
@@ -67,19 +81,25 @@ export interface Theme {
     /** Library */
     "library-clickable-cell-bg": string;
     "library-clickable-cell-hover-bg": string;
+    "library-column-divider": string;
     "library-favourite-hover-icon": string;
     "library-favourite-icon": string;
     "library-header-active-bg": string;
     "library-header-bg": string;
     "library-header-text": string;
+    "library-odd-row-bg": string;
     "library-highlight-bg": string;
     "library-hover-bg": string;
     "library-playing-bg": string;
     "library-playing-icon": string;
     "library-playing-text": string;
     "library-playing-title": string;
+    "library-scrollbar-bg": string;
+    "library-scrollbar-hover-bg": string;
     "library-text": string;
     "library-title": string;
+    /** Lyrics */
+    "lyrics-text": string;
     /** Map View */
     "mapview-region-bg": string;
     "mapview-region-border": string;
@@ -123,21 +143,25 @@ export interface Theme {
     "panel-secondary-border-main": string;
     "panel-secondary-border-accent": string;
     "panel-separator": string;
+    "panel-shadow-bg": string;
     /** Popups */
+    "popup-backdrop": string;
+    "popup-body-bg": string;
+    "popup-header-bg-lone": string;
+    "popup-header-bg-many": string;
+    "popup-header-border": string;
+    "popup-section-bg": string;
+    "popup-section-border": string;
+    "popup-section-title-bg": string;
+    "popup-section-title-text": string;
     "popup-track-artwork-about": string;
     "popup-track-artwork-found": string;
     "popup-track-artwork-notfound": string;
     "popup-track-data-field-bg": string;
-    "popup-track-header-bg": string;
-    "popup-track-header-border": string;
     "popup-track-metadata-prompt-error": string;
     "popup-track-metadata-title": string;
     "popup-track-metadata-validation-error": string;
     "popup-track-metadata-validation-warning": string;
-    "popup-track-section-bg": string;
-    "popup-track-section-border": string;
-    "popup-track-section-title-bg": string;
-    "popup-track-section-title-text": string;
     /** Progress bar */
     "progressbar-track-bg": string;
     "progressbar-value-bg": string;
@@ -166,6 +190,8 @@ export interface Theme {
     "seekbar-line-bg": string;
     "seekbar-hoverhead": string;
     "seekbar-thumb": string;
+    "seekbar-tooltip-bg": string;
+    "seekbar-tooltip-text": string;
     /** Sidebar */
     "sidebar-info-artist-active-bg": string;
     "sidebar-info-artist-hover-bg": string;
@@ -181,16 +207,15 @@ export interface Theme {
     "sidebar-player-disabled-bg": string;
     "sidebar-player-disabled-text": string;
     "sidebar-search-focus-bg": string;
+    "sidebar-search-border": string;
     /** Smart playlist */
     "smart-playlist-builder-bg": string;
     "smart-playlist-builder-text": string;
     "smart-playlist-builder-block-bg": string;
+    "smart-playlist-builder-block-text": string;
     "smart-playlist-builder-block-focused-bg": string;
     "smart-playlist-builder-block-input-bg": string;
     "smart-playlist-builder-block-input-text": string;
-    "smart-playlist-button-bg": string;
-    "smart-playlist-button-disabled": string;
-    "smart-playlist-button-disabled-bg": string;
     /** Play, pause, next, previous */
     "transport-control": string;
     "transport-control-hover": string;
@@ -225,4 +250,7 @@ export interface Theme {
     "wiki-pill-text": string;
     "wiki-pill-hover-bg": string;
     "wiki-pill-hover-text": string;
+    "wiki-mention-bg": string;
+    "wiki-mention-border": string;
+    "wiki-mention-text": string;
 }

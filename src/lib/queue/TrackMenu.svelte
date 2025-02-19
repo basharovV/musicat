@@ -2,8 +2,10 @@
     import { type } from "@tauri-apps/plugin-os";
     import { onMount } from "svelte";
     import {
+        canShowInfoPopup,
         isShuffleEnabled,
         popupOpen,
+        rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
@@ -15,6 +17,7 @@
     import { openInFinder } from "../menu/file";
     import Icon from "../ui/Icon.svelte";
     import ToolsMenu from "./ToolsMenu.svelte";
+    import { get } from "svelte/store";
 
     type ActionType = "delete";
 
@@ -90,6 +93,7 @@
             $rightClickedTracks = songs;
             $rightClickedTrack = null;
         }
+        $rightClickedAlbum = null;
 
         close();
         $popupOpen = "track-info";
@@ -148,7 +152,7 @@
             isDisabled={true}
             text={song ? song.title : songs.length + " tracks"}
         />
-        {#if song}
+        {#if song && get(canShowInfoPopup)}
             <MenuDivider />
             <MenuOption onClick={onMoreToolsClick}>
                 More Tools <Icon icon="lucide:chevron-right" class="right" />
@@ -174,7 +178,8 @@
                 text="Open in {explorerName}"
             />
         {/if}
-
-        <MenuOption onClick={openInfo} text="Info & metadata" />
+        {#if get(canShowInfoPopup)}
+            <MenuOption onClick={openInfo} text="Info & metadata" />
+        {/if}
     </Menu>
 {/if}

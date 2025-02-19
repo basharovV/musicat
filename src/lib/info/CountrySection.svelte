@@ -15,11 +15,17 @@
     let originCountryEdited = originCountry;
 
     async function fetchFromWikipedia() {
-        originCountryEdited = null;
+        if (isFetchingOriginCountry) {
+            return;
+        }
+
         isFetchingOriginCountry = true;
+        originCountryEdited = null;
+
         const country = await findCountryByArtist(
             ($rightClickedTrack || $rightClickedTracks[0]).artist,
         );
+
         console.log("country", country);
         if (country) {
             originCountryEdited = country;
@@ -81,7 +87,9 @@
             onClick={fetchFromWikipedia}
             isLoading={isFetchingOriginCountry}
             text={$LL.trackInfo.fetchFromWikipedia()}
-            icon="tabler:world-download"
+            icon={isFetchingOriginCountry
+                ? "line-md:loading-loop"
+                : "tabler:world-download"}
             theme="transparent"
         />
     </div>
@@ -90,16 +98,9 @@
 <style lang="scss">
     .enrichment-section {
         margin-top: 1.5em;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 70%, var(--inverse));
         border-radius: 5px;
         padding: 2em 1em 1em 1em;
         grid-column: 1 / 3;
-        background-color: color-mix(
-            in srgb,
-            var(--overlay-bg) 80%,
-            var(--inverse)
-        );
         position: relative;
 
         .label {

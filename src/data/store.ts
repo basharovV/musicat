@@ -1,5 +1,10 @@
 import { path } from "@tauri-apps/api";
-import { appConfigDir, audioDir, downloadDir } from "@tauri-apps/api/path";
+import {
+    appConfigDir,
+    audioDir,
+    downloadDir,
+    pictureDir,
+} from "@tauri-apps/api/path";
 import * as fs from "@tauri-apps/plugin-fs";
 import { type, type OsType } from "@tauri-apps/plugin-os";
 import type {
@@ -139,6 +144,7 @@ export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
+export const rightClickedAlbum: Writable<Album> = writable(null);
 export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);
@@ -356,7 +362,7 @@ export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
 export const isQueueOpen: Writable<boolean> = writable(
-    /true/.test(localStorage.getItem("isQueueOpen")) || false,
+    localStorage.getItem("isQueueOpen") === "true",
 );
 isQueueOpen.subscribe((val) =>
     localStorage.setItem("isQueueOpen", String(val)),
@@ -368,13 +374,17 @@ export const isWikiOpen = writable(false);
 export const wikiArtist: Writable<string> = writable(null);
 
 // Sidebar
-export const isSidebarOpen = writable(true);
-export const sidebarManuallyOpened = writable(false);
-export const sidebarTogglePos = writable({ x: 0, y: 0 });
-export const isCmdOrCtrlPressed = writable(false);
+export const isSidebarOpen: Writable<boolean> = writable(
+    localStorage.getItem("isSidebarOpen") === "true",
+);
+isSidebarOpen.subscribe((val) =>
+    localStorage.setItem("isSidebarOpen", String(val)),
+);
+export const isSidebarFloating = writable(false);
+export const isSidebarShowing = writable(true);
 
 export const isWaveformOpen: Writable<boolean> = writable(
-    /true/.test(localStorage.getItem("isWaveformOpen")) || false,
+    localStorage.getItem("isWaveformOpen") === "true",
 );
 isWaveformOpen.subscribe((val) => {
     localStorage.setItem("isWaveformOpen", String(val));
@@ -395,6 +405,13 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
  * info is updated even if the same song is played.
  */
 export const lastWrittenSongs: Writable<Song[]> = writable([]);
+
+export const artworkDirectory: Writable<string> = writable(
+    localStorage.getItem("artworkDirectory"),
+);
+artworkDirectory.subscribe((val) =>
+    localStorage.setItem("artworkDirectory", val),
+);
 
 async function init() {
     // Set OS
@@ -442,6 +459,10 @@ async function init() {
     queue.subscribe(async (songs) => {
         await writeQueueToFile(songs);
     });
+
+    if (!get(artworkDirectory)) {
+        artworkDirectory.set(await pictureDir());
+    }
 }
 
 export const streamInfo: Writable<StreamInfo> = writable({
@@ -493,5 +514,8 @@ export const webPlayerBufferedRanges: Writable<TimeRanges> = writable(null);
 export const webPlayerVolume: Writable<number> = writable(0.6);
 export const webPlayerIsLoading = writable(false);
 export const fileToDownload: Writable<IAFile> = writable(null);
+
+// Info Popup
+export const canShowInfoPopup = writable(true);
 
 init();

@@ -3,6 +3,7 @@
     import { Toaster } from "svelte-french-toast";
     import {
         bottomBarNotification,
+        canShowInfoPopup,
         draggedScrapbookItems,
         draggedSongs,
         droppedFiles,
@@ -13,7 +14,9 @@
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
+        isSidebarFloating,
         isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isWaveformOpen,
@@ -22,8 +25,6 @@
         popupOpen,
         selectedPlaylistFile,
         selectedSmartQuery,
-        sidebarManuallyOpened,
-        sidebarTogglePos,
         uiView,
     } from "./data/store";
 
@@ -31,7 +32,7 @@
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { onDestroy, onMount } from "svelte";
     import { getLocaleFromNavigator, init, register } from "svelte-i18n";
-    import { cubicInOut } from "svelte/easing";
+    import { cubicInOut, cubicOut } from "svelte/easing";
     import { blur, fade, fly } from "svelte/transition";
     import { startWatchingLibraryFolders } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryUtils";
@@ -122,6 +123,7 @@
     onMount(async () => {
         appWindow.emit("opened");
         // File associations: check for opened urls on the window
+        // @ts-expect-error
         console.log("window opened urls: ", window.openedUrls);
 
         window["onFileOpen"] = (urls) => {
@@ -216,14 +218,44 @@
         unlistenFolderWatch();
     });
 
-    $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
+    let showMiniPlayer = window.innerHeight <= 220 && window.innerWidth <= 210;
 
+    $: innerHeight = window.innerHeight;
+    $: innerWidth = window.innerWidth;
     $: selectedQuery = findQuery($selectedSmartQuery);
+    $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
+    $: showMainPanel = innerWidth >= 300;
+    $: showQueue = !showMiniPlayer && (innerWidth < 460 || $isQueueOpen);
+    $: showSidebar =
+        showMiniPlayer ||
+        (innerHeight >= 650 &&
+            $isSidebarOpen &&
+            ((!$isWikiOpen && innerWidth >= 660) ||
+                ($isWikiOpen &&
+                    ((!showQueue && innerWidth >= 880) ||
+                        (showQueue && innerWidth >= 1000)))));
+    $: showWiki =
+        $isWikiOpen &&
+        ((!showQueue && innerWidth >= 500) || (showQueue && innerWidth >= 660));
+    $: isQueueAutoWidth = !showMiniPlayer && innerWidth < 520;
+    $: isSplitView = showMainPanel && showQueue && innerWidth < 520;
 
     $: if ($bottomBarNotification?.timeout) {
         setTimeout(() => {
             $bottomBarNotification = null;
         }, $bottomBarNotification.timeout);
+    }
+
+    $: {
+        canShowInfoPopup.set(innerWidth >= 750);
+    }
+
+    $: {
+        $isSidebarShowing = showSidebar;
+
+        if (showSidebar) {
+            $isSidebarFloating = false;
+        }
     }
 
     let container: HTMLElement;
@@ -244,40 +276,28 @@
     }
     function startResizeListener() {
         isResizing = true;
+
         container.addEventListener("mousemove", onWikiResize);
         document.addEventListener("mouseup", stopResizeListener);
     }
     function stopResizeListener() {
-        isResizing = false;
-        container.removeEventListener("mousemove", onWikiResize);
-        if (showCloseWikiPrompt) {
-            $isWikiOpen = false;
-            showCloseWikiPrompt = false;
+        if (isResizing) {
+            isResizing = false;
+
+            container.removeEventListener("mousemove", onWikiResize);
+            container.removeEventListener("mouseup", stopResizeListener);
+
+            if (showCloseWikiPrompt) {
+                $isWikiOpen = false;
+                showCloseWikiPrompt = false;
+            }
         }
     }
 
     function onResize() {
-        // If sidebar is open and width is below 400px, collapse it
-        if ($isSidebarOpen && window.innerWidth < 400) {
-            if (window.innerHeight <= 210 && window.innerWidth <= 210) {
-                $isSidebarOpen = true;
-            } else {
-                $isSidebarOpen = false;
-            }
-        } else if (
-            !$isSidebarOpen &&
-            $sidebarManuallyOpened &&
-            window.innerWidth > 400
-        ) {
-            $isSidebarOpen = true;
-        } else if (window.innerHeight <= 210 && window.innerWidth <= 210) {
-            $isSidebarOpen = true;
-        }
-
-        $sidebarTogglePos = {
-            x: 0,
-            y: window.innerHeight / 2 - 30,
-        };
+        showMiniPlayer = window.innerHeight <= 220 && window.innerWidth <= 210;
+        innerHeight = window.innerHeight;
+        innerWidth = window.innerWidth;
     }
 </script>
 
@@ -308,41 +328,62 @@
 
     <main
         class:mini-player={$isMiniPlayer}
+        class:queue-view={!showMainPanel && showQueue}
+        class:split-view={isSplitView}
+        class:floating-sidebar={!showSidebar}
         class:transparent={$os === "macos"}
         bind:this={container}
     >
-        <div class="window-padding">
-            <!-- {#if !$isSidebarOpen}
-                <div data-tauri-drag-region></div>
-            {/if} -->
-        </div>
-
-        <div class="sidebar" class:visible={$isSidebarOpen}>
-            {#if $isSidebarOpen}
-                <Sidebar />
+        <div
+            class="sidebar"
+            class:visible={showSidebar || $isSidebarFloating}
+            class:floating={!showSidebar}
+        >
+            {#if showSidebar || $isSidebarFloating}
+                <Sidebar floating={$isSidebarFloating} />
             {/if}
         </div>
 
-        {#if !$isSidebarOpen}
-            <div class="sidebar-toggle" style="top: {$sidebarTogglePos.y}px">
+        {#if $isSidebarFloating}
+            <div class="sidebar-collapse">
+                <Icon
+                    icon="tabler:layout-sidebar-left-collapse"
+                    size={22}
+                    onClick={() => {
+                        $isSidebarFloating = false;
+                    }}
+                />
+            </div>
+        {:else if !showSidebar}
+            <div class="sidebar-expand">
                 <Icon
                     icon="tabler:layout-sidebar-left-expand"
                     size={22}
                     onClick={() => {
-                        $isSidebarOpen = true;
-                        $sidebarManuallyOpened = true;
+                        if (
+                            !showMiniPlayer &&
+                            (innerWidth < 660 || innerHeight < 650)
+                        ) {
+                            $isSidebarFloating = true;
+                        } else {
+                            $isSidebarOpen = true;
+                        }
                     }}
                 />
             </div>
         {/if}
 
-        <div class="queue">
-            {#if $isQueueOpen}
+        <div class="queue" class:visible={showQueue}>
+            {#if showQueue}
                 <div
                     class="queue-container"
-                    transition:fly={{ duration: 200, x: -200 }}
+                    transition:fly={{
+                        duration: 200,
+                        x: -150,
+                        easing: cubicOut,
+                    }}
                 >
-                    <QueueView />
+                    <QueueView autoWidth={isQueueAutoWidth} />
                 </div>
             {/if}
         </div>
@@ -399,23 +440,25 @@
             {/if}
         </div>
 
-        <div class="panel">
-            {#if $uiView === "library" || $uiView === "favourites" || $uiView === "playlists" || $uiView === "smart-query:list" || $uiView === "to-delete"}
-                <CanvasLibraryView />
-            {:else if $uiView === "albums" || $uiView === "smart-query:icon"}
-                <AlbumView />
-            {:else if $uiView === "your-music"}
-                <ArtistsToolkitView />
-            {:else if $uiView === "map"}
-                <MapView />
-            {:else if $uiView === "analytics"}
-                <AnalyticsView />
-            {:else if $uiView === "internet-archive"}
-                <InternetArchiveView />
-            {:else if $uiView === "prune"}
-                <PrunePopup />
-            {/if}
-        </div>
+        {#if showMainPanel}
+            <div class="panel">
+                {#if $uiView === "library" || $uiView === "favourites" || $uiView === "playlists" || $uiView === "smart-query:list" || $uiView === "to-delete"}
+                    <CanvasLibraryView />
+                {:else if $uiView === "albums" || $uiView === "smart-query:icon"}
+                    <AlbumView />
+                {:else if $uiView === "your-music"}
+                    <ArtistsToolkitView />
+                {:else if $uiView === "map"}
+                    <MapView />
+                {:else if $uiView === "analytics"}
+                    <AnalyticsView />
+                {:else if $uiView === "internet-archive"}
+                    <InternetArchiveView />
+                {:else if $uiView === "prune"}
+                    <PrunePopup />
+                {/if}
+            </div>
+        {/if}
 
         {#if $isLyricsOpen}
             <div class="lyrics" transition:fade={{ duration: 150 }}>
@@ -431,7 +474,7 @@
         </div>
 
         <div class="wiki">
-            {#if $isWikiOpen}
+            {#if showWiki}
                 <div
                     class="wiki-container"
                     style={`width: ${wikiPanelSize}px;`}
@@ -450,8 +493,8 @@
             {/if}
         </div>
 
-        <div class="bottom-bar">
-            {#if !$isSidebarOpen}
+        <div class="bottom-bar" class:full-width={!showSidebar}>
+            {#if !showSidebar}
                 <div class="top" in:fly={{ duration: 200, y: 30 }}>
                     <TopBar />
                 </div>
@@ -465,7 +508,7 @@
             <DownloadPopup />
         {/if}
 
-        {#if $isWikiOpen}
+        {#if showWiki}
             <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
             <resize-handle
                 role="separator"
@@ -497,6 +540,10 @@
     }
 
     main {
+        border-radius: 11px;
+        border: 0.5px solid
+            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        box-sizing: border-box;
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki
         grid-template-rows: auto auto auto 1fr auto auto; // (padding), header, tags/smartplaylist builder, panel, waveform, topbar, bottombar
@@ -519,21 +566,41 @@
             width: 100%;
             grid-row: 1 / 6;
             grid-column: 1;
-            width: 5px;
+            width: 0;
+            overflow: hidden;
             &.visible {
                 width: 210px;
             }
+            &.floating {
+                position: fixed;
+                z-index: 16;
+                height: 100vh;
+                background-color: rgb(from var(--background) r g b / 1);
+            }
         }
 
-        .sidebar-toggle {
+        .sidebar-expand,
+        .sidebar-collapse {
             position: absolute;
-            left: -12px;
             margin: auto;
             z-index: 20;
             transition: all 0.1s ease-in-out;
+            top: 50%;
+        }
+
+        .sidebar-expand {
+            left: -12px;
 
             &:hover {
-                transform: translateX(5px);
+                transform: scale(1.3) translateX(5px);
+            }
+        }
+
+        .sidebar-collapse {
+            left: 198px;
+
+            &:hover {
+                transform: scale(1.3);
             }
         }
 
@@ -582,6 +649,13 @@
             grid-column: 3;
             display: grid;
             overflow: hidden;
+            box-shadow: -4px 3px 20px 5px var(--panel-shadow-bg);
+            border: 1px solid var(--panel-primary-border-accent1);
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            border-bottom: 0.7px solid var(--panel-secondary-border-main);
+            margin: 3.5px 5px 0 0;
+            border-radius: 5px;
         }
 
         .waveform {
@@ -602,8 +676,7 @@
             grid-column: 2 / 6;
             @media only screen and (max-width: 600px) {
                 .top {
-                    margin-bottom: 5px;
-                    margin-top: 0px;
+                    margin: 5px 0 5px 5px;
                 }
                 .bottom {
                     display: none;
@@ -612,6 +685,14 @@
             .bottom {
                 margin-top: 5px;
                 margin-bottom: 5px;
+
+                @media only screen and (max-height: 649px) {
+                    margin: 5px;
+                }
+            }
+
+            &.full-width {
+                grid-column: 1 / -1;
             }
         }
 
@@ -620,6 +701,10 @@
             grid-column: 2;
             overflow: hidden;
             height: 100%;
+
+            &.visible {
+                box-shadow: -10px 3px 30px 5px var(--panel-shadow-bg);
+            }
 
             .queue-container {
                 height: 100%;
@@ -698,6 +783,56 @@
                 background-color: var(--accent-secondary);
             }
         }
+
+        &.floating-sidebar {
+            grid-template-columns: auto 1fr auto auto; // queue, panel, resizer, wiki
+
+            .queue {
+                grid-column: 1;
+                margin-left: 5px;
+            }
+
+            .panel,
+            .header {
+                grid-column: 2;
+            }
+
+            resize-handle {
+                grid-column: 3;
+            }
+
+            .wiki {
+                grid-column: 4;
+            }
+        }
+
+        &.split-view {
+            grid-template-columns: 1fr 1fr; // queue, panel
+
+            .queue {
+                grid-column: 1;
+
+                .queue-container {
+                    margin: 0 4px 0 0;
+                }
+            }
+
+            .panel,
+            .header {
+                grid-column: 2;
+            }
+        }
+
+        &.queue-view {
+            .queue {
+                grid-column: 1 / -1;
+                margin: 0;
+
+                .queue-container {
+                    margin: 0 4px;
+                }
+            }
+        }
     }
 
     .info {
@@ -708,7 +843,7 @@
         bottom: 0;
         z-index: 30;
         display: flex;
-        background-color: rgba(30, 26, 31, 0.824);
+        background-color: var(--popup-backdrop);
     }
 
     :global(.svelecte-control) {

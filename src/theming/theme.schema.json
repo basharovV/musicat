@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
-        "ThemeType": {
+        "ThemeVariant": {
             "enum": [
                 "dark",
                 "light"
@@ -17,8 +17,14 @@
         "accent-secondary": {
             "type": "string"
         },
-        "album-hover-info-bg": {
+        "album-gridsize-line-bg": {
             "description": "Album",
+            "type": "string"
+        },
+        "album-gridsize-thumb": {
+            "type": "string"
+        },
+        "album-hover-info-bg": {
             "type": "string"
         },
         "album-hover-info-text": {
@@ -60,6 +66,9 @@
         "album-playing-title-bg": {
             "type": "string"
         },
+        "album-playing-title-text": {
+            "type": "string"
+        },
         "analytics-border": {
             "description": "Analytics/Stats",
             "type": "string"
@@ -93,7 +102,17 @@
             "description": "Window background (will be made more translucent on macOS)",
             "type": "string"
         },
-        "button-bg": {
+        "button-active-bg": {
+            "description": "Buttons",
+            "type": "string"
+        },
+        "button-active-disabled-bg": {
+            "type": "string"
+        },
+        "button-active-disabled-text": {
+            "type": "string"
+        },
+        "button-solid-bg": {
             "type": "string"
         },
         "button-text": {
@@ -109,6 +128,7 @@
             "type": "string"
         },
         "icon-boxed-hover-bg": {
+            "description": "Icons",
             "type": "string"
         },
         "icon-disabled": {
@@ -130,6 +150,7 @@
             "type": "string"
         },
         "input-alt-focus-outline": {
+            "description": "Inputs",
             "type": "string"
         },
         "input-bg": {
@@ -144,11 +165,17 @@
         "input-placeholder-text": {
             "type": "string"
         },
+        "inverse": {
+            "type": "string"
+        },
         "library-clickable-cell-bg": {
             "description": "Library",
             "type": "string"
         },
         "library-clickable-cell-hover-bg": {
+            "type": "string"
+        },
+        "library-column-divider": {
             "type": "string"
         },
         "library-favourite-hover-icon": {
@@ -172,6 +199,9 @@
         "library-hover-bg": {
             "type": "string"
         },
+        "library-odd-row-bg": {
+            "type": "string"
+        },
         "library-playing-bg": {
             "type": "string"
         },
@@ -184,6 +214,12 @@
         "library-playing-title": {
             "type": "string"
         },
+        "library-scrollbar-bg": {
+            "type": "string"
+        },
+        "library-scrollbar-hover-bg": {
+            "type": "string"
+        },
         "library-text": {
             "type": "string"
         },
@@ -194,6 +230,10 @@
             "type": "string"
         },
         "link-hover": {
+            "type": "string"
+        },
+        "lyrics-text": {
+            "description": "Lyrics",
             "type": "string"
         },
         "mapview-region-bg": {
@@ -330,8 +370,38 @@
         "panel-separator": {
             "type": "string"
         },
-        "popup-track-artwork-about": {
+        "panel-shadow-bg": {
+            "type": "string"
+        },
+        "popup-backdrop": {
             "description": "Popups",
+            "type": "string"
+        },
+        "popup-body-bg": {
+            "type": "string"
+        },
+        "popup-header-bg-lone": {
+            "type": "string"
+        },
+        "popup-header-bg-many": {
+            "type": "string"
+        },
+        "popup-header-border": {
+            "type": "string"
+        },
+        "popup-section-bg": {
+            "type": "string"
+        },
+        "popup-section-border": {
+            "type": "string"
+        },
+        "popup-section-title-bg": {
+            "type": "string"
+        },
+        "popup-section-title-text": {
+            "type": "string"
+        },
+        "popup-track-artwork-about": {
             "type": "string"
         },
         "popup-track-artwork-found": {
@@ -341,12 +411,6 @@
             "type": "string"
         },
         "popup-track-data-field-bg": {
-            "type": "string"
-        },
-        "popup-track-header-bg": {
-            "type": "string"
-        },
-        "popup-track-header-border": {
             "type": "string"
         },
         "popup-track-metadata-prompt-error": {
@@ -359,18 +423,6 @@
             "type": "string"
         },
         "popup-track-metadata-validation-warning": {
-            "type": "string"
-        },
-        "popup-track-section-bg": {
-            "type": "string"
-        },
-        "popup-track-section-border": {
-            "type": "string"
-        },
-        "popup-track-section-title-bg": {
-            "type": "string"
-        },
-        "popup-track-section-title-text": {
             "type": "string"
         },
         "progressbar-track-bg": {
@@ -443,6 +495,15 @@
         "seekbar-thumb": {
             "type": "string"
         },
+        "seekbar-tooltip-bg": {
+            "type": "string"
+        },
+        "seekbar-tooltip-text": {
+            "type": "string"
+        },
+        "shadow-gradient-bg": {
+            "type": "string"
+        },
         "sidebar-info-artist-active-bg": {
             "description": "Sidebar",
             "type": "string"
@@ -483,6 +544,9 @@
         "sidebar-player-disabled-text": {
             "type": "string"
         },
+        "sidebar-search-border": {
+            "type": "string"
+        },
         "sidebar-search-focus-bg": {
             "type": "string"
         },
@@ -502,16 +566,10 @@
         "smart-playlist-builder-block-input-text": {
             "type": "string"
         },
+        "smart-playlist-builder-block-text": {
+            "type": "string"
+        },
         "smart-playlist-builder-text": {
-            "type": "string"
-        },
-        "smart-playlist-button-bg": {
-            "type": "string"
-        },
-        "smart-playlist-button-disabled": {
-            "type": "string"
-        },
-        "smart-playlist-button-disabled-bg": {
             "type": "string"
         },
         "text": {
@@ -564,8 +622,14 @@
         "transport-volume-thumb-secondary": {
             "type": "string"
         },
-        "type": {
-            "$ref": "#/definitions/ThemeType"
+        "type-bw": {
+            "type": "string"
+        },
+        "type-bw-inverse": {
+            "type": "string"
+        },
+        "variant": {
+            "$ref": "#/definitions/ThemeVariant"
         },
         "waveform-bg": {
             "description": "Waveform",
@@ -617,6 +681,15 @@
         "wiki-inarticle-bg": {
             "type": "string"
         },
+        "wiki-mention-bg": {
+            "type": "string"
+        },
+        "wiki-mention-border": {
+            "type": "string"
+        },
+        "wiki-mention-text": {
+            "type": "string"
+        },
         "wiki-pill-bg": {
             "type": "string"
         },
@@ -636,6 +709,8 @@
     "required": [
         "accent",
         "accent-secondary",
+        "album-gridsize-line-bg",
+        "album-gridsize-thumb",
         "album-hover-info-bg",
         "album-hover-info-text",
         "album-playing-pause-bg",
@@ -650,6 +725,7 @@
         "album-playing-play-icon",
         "album-playing-shadow",
         "album-playing-title-bg",
+        "album-playing-title-text",
         "analytics-border",
         "analytics-text-primary",
         "analytics-text-secondary",
@@ -660,7 +736,10 @@
         "atk-icon-lyric",
         "atk-icon-video",
         "background",
-        "button-bg",
+        "button-active-bg",
+        "button-active-disabled-bg",
+        "button-active-disabled-text",
+        "button-solid-bg",
         "button-text",
         "display-name",
         "header-opacity",
@@ -677,8 +756,10 @@
         "input-focus-bg",
         "input-focus-outline",
         "input-placeholder-text",
+        "inverse",
         "library-clickable-cell-bg",
         "library-clickable-cell-hover-bg",
+        "library-column-divider",
         "library-favourite-hover-icon",
         "library-favourite-icon",
         "library-header-active-bg",
@@ -686,14 +767,18 @@
         "library-header-text",
         "library-highlight-bg",
         "library-hover-bg",
+        "library-odd-row-bg",
         "library-playing-bg",
         "library-playing-icon",
         "library-playing-text",
         "library-playing-title",
+        "library-scrollbar-bg",
+        "library-scrollbar-hover-bg",
         "library-text",
         "library-title",
         "link",
         "link-hover",
+        "lyrics-text",
         "mapview-region-bg",
         "mapview-region-border",
         "mapview-region-hover-bg",
@@ -737,20 +822,24 @@
         "panel-secondary-border-accent",
         "panel-secondary-border-main",
         "panel-separator",
+        "panel-shadow-bg",
+        "popup-backdrop",
+        "popup-body-bg",
+        "popup-header-bg-lone",
+        "popup-header-bg-many",
+        "popup-header-border",
+        "popup-section-bg",
+        "popup-section-border",
+        "popup-section-title-bg",
+        "popup-section-title-text",
         "popup-track-artwork-about",
         "popup-track-artwork-found",
         "popup-track-artwork-notfound",
         "popup-track-data-field-bg",
-        "popup-track-header-bg",
-        "popup-track-header-border",
         "popup-track-metadata-prompt-error",
         "popup-track-metadata-title",
         "popup-track-metadata-validation-error",
         "popup-track-metadata-validation-warning",
-        "popup-track-section-bg",
-        "popup-track-section-border",
-        "popup-track-section-title-bg",
-        "popup-track-section-title-text",
         "progressbar-track-bg",
         "progressbar-value-bg",
         "prune-button-border",
@@ -773,6 +862,9 @@
         "seekbar-hoverhead",
         "seekbar-line-bg",
         "seekbar-thumb",
+        "seekbar-tooltip-bg",
+        "seekbar-tooltip-text",
+        "shadow-gradient-bg",
         "sidebar-info-artist-active-bg",
         "sidebar-info-artist-hover-bg",
         "sidebar-info-title-hover-bg",
@@ -786,16 +878,15 @@
         "sidebar-node-inactive-hover-text",
         "sidebar-player-disabled-bg",
         "sidebar-player-disabled-text",
+        "sidebar-search-border",
         "sidebar-search-focus-bg",
         "smart-playlist-builder-bg",
         "smart-playlist-builder-block-bg",
         "smart-playlist-builder-block-focused-bg",
         "smart-playlist-builder-block-input-bg",
         "smart-playlist-builder-block-input-text",
+        "smart-playlist-builder-block-text",
         "smart-playlist-builder-text",
-        "smart-playlist-button-bg",
-        "smart-playlist-button-disabled",
-        "smart-playlist-button-disabled-bg",
         "text",
         "text-active",
         "text-inactive",
@@ -811,7 +902,9 @@
         "transport-volume-thumb-bg",
         "transport-volume-thumb-icon",
         "transport-volume-thumb-secondary",
-        "type",
+        "type-bw",
+        "type-bw-inverse",
+        "variant",
         "waveform-bg",
         "waveform-bg-hover",
         "waveform-cursor",
@@ -828,6 +921,9 @@
         "wiki-close-prompt-text",
         "wiki-header-bg",
         "wiki-inarticle-bg",
+        "wiki-mention-bg",
+        "wiki-mention-border",
+        "wiki-mention-text",
         "wiki-pill-bg",
         "wiki-pill-border",
         "wiki-pill-hover-bg",

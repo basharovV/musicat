@@ -1,15 +1,26 @@
 <script lang="ts">
-    import {
-        isQueueOpen,
-        isSidebarOpen,
-        os,
-        uiPreferences,
-    } from "../../data/store";
+    import { onMount } from "svelte";
+    import { isQueueOpen, isSidebarOpen, os } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import AlbumOptions from "./AlbumOptions.svelte";
+
+    let element: HTMLElement;
+
+    $: innerWidth = 800;
+    $: showAllOptions = innerWidth >= 480;
+
+    onMount(() => {
+        const resizeObserver = new ResizeObserver(() => {
+            innerWidth = element.getBoundingClientRect().width;
+        });
+
+        resizeObserver.observe(element);
+
+        return () => resizeObserver.unobserve(element);
+    });
 </script>
 
-<div class="header" data-tauri-drag-region>
+<div class="header" data-tauri-drag-region bind:this={element}>
     <h1
         class:window-controls-offset={!$isSidebarOpen &&
             !$isQueueOpen &&
@@ -18,8 +29,7 @@
     >
         {$LL.albums.title()}
     </h1>
-    <!-- {#if count}<p>{count} {count === 1 ? "album" : "albums"}</p>{/if} -->
-    <AlbumOptions />
+    <AlbumOptions bind:showAllOptions />
 </div>
 
 <style lang="scss">
@@ -28,7 +38,6 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 20px;
         grid-column: 1 /3;
         grid-row: 1;
 

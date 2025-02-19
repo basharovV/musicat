@@ -19,7 +19,7 @@
         draggedSource,
         forceRefreshLibrary,
         isShuffleEnabled,
-        isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         popupOpen,
         libraryScrollPos,
@@ -33,6 +33,7 @@
         shuffledQueue,
         singleKeyShortcutsEnabled,
         uiView,
+        rightClickedAlbum,
     } from "../../data/store";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
     import Konva from "konva";
@@ -48,6 +49,7 @@
     } from "../../data/storeHelper";
     import QueueMenu from "../queue/QueueMenu.svelte";
 
+    export let autoWidth = false;
     export let dim = false;
     export let isLoading = false;
     export let isInit = true;
@@ -823,9 +825,12 @@
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
+                    $rightClickedTrack = null;
                 } else {
                     $rightClickedTrack = songsHighlighted[0];
+                    $rightClickedTracks = [];
                 }
+                $rightClickedAlbum = null;
                 $popupOpen = "track-info";
             }
         } else if (
@@ -928,6 +933,7 @@
 <div
     class="library-container"
     class:dragover={isDraggingOver}
+    class:auto-width={autoWidth}
     bind:this={libraryContainer}
 >
     {#if isLoading}
@@ -1360,7 +1366,8 @@
                                 <Text
                                     config={{
                                         x:
-                                            !$isSidebarOpen && $os === "macos"
+                                            !$isSidebarShowing &&
+                                            $os === "macos"
                                                 ? WINDOW_CONTROLS_WIDTH
                                                 : null,
                                         text: "Queue",
@@ -1416,13 +1423,17 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
+        border-top: 1px solid var(--panel-primary-border-main);
         border-left: 1px solid var(--panel-secondary-border-main);
         border-bottom: 1px solid var(--panel-secondary-border-main);
-        border-right: 1px solid var(--panel-secondary-border-main);
         overflow: hidden;
         margin: 4px 0 0 0;
         &.dragover {
             border-color: var(--accent-secondary);
+        }
+        &.auto-width {
+            width: 100%;
+            max-width: initial;
         }
     }
     .container {

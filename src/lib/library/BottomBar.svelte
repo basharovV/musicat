@@ -13,7 +13,6 @@
         isFolderWatchUpdate,
         isLyricsOpen,
         isQueueOpen,
-        isSidebarOpen,
         nextUpSong,
         uiView,
         userSettings,
@@ -54,8 +53,6 @@
             onResize();
         }, 200);
     });
-
-    let wasSidebarOpen = $isSidebarOpen;
 
     function onResize() {
         if (nextUp?.getBoundingClientRect()) {
@@ -291,7 +288,8 @@
                     background-color: rgba(128, 128, 128, 0.391);
                 }
                 &.selected {
-                    border: 1px solid white;
+                    border: 1px solid
+                        rgb(from var(--type-bw-inverse) r g b / 0.5);
                     ::before {
                         position: absolute;
                         top: -11px;
@@ -300,7 +298,9 @@
                         margin: 0 auto;
                         height: 10px;
                         width: 1.5px;
-                        background-color: white;
+                        background-color: rgb(
+                            from var(--type-bw-inverse) r g b / 0.5
+                        );
                     }
                 }
                 p {

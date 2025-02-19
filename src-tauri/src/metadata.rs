@@ -11,7 +11,9 @@ use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_m3u::Playlist;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{BufReader, ErrorKind};
 use std::ops::Mul;
@@ -52,6 +54,7 @@ pub struct ScanPathsEvent {
     paths: Vec<String>,
     recursive: bool,
     process_albums: bool,
+    process_m3u: bool,
     is_async: bool,
     is_cover_fullcheck: bool,
 }
@@ -262,7 +265,7 @@ pub async fn scan_paths(
 ) -> Option<ToImportEvent> {
     // info!("scan_paths {:?}", event);
     let start = Instant::now();
-    let songs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
+    let songs: Arc<std::sync::Mutex<HashMap<String, Song>>> = Arc::new(Mutex::new(HashMap::new()));
     let albums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
     let artwork_origins: Arc<std::sync::Mutex<HashMap<String, ArtworkOrigin>>> =
@@ -274,36 +277,44 @@ pub async fn scan_paths(
         // info!("{:?}", path);
 
         if path.is_file() {
-            // info!("path is file");
-            if let Some(mut song) = crate::metadata::extract_metadata(
-                &path,
-                true,
-                event.is_cover_fullcheck,
-                false,
-                &app_handle,
-            ) {
-                if event.process_albums {
-                    if let Some(album) = process_new_album(
-                        &mut song,
-                        Some(&albums),
-                        None,
-                        Some(&artwork_origins),
-                        &settings,
-                        &app_handle,
-                    ) {
-                        info!("Album: {:?}", album);
-                        albums
-                            .lock()
-                            .unwrap()
-                            .entry(album.id.clone())
-                            .and_modify(|a| {
-                                a.tracks_ids.push(song.id.clone());
-                            })
-                            .or_insert(album);
+            if event.process_m3u && path.extension() == Some(OsStr::new("m3u")) {
+                if let Some(sub_results) = process_playlist(Path::new(path), &app_handle) {
+                    if !sub_results.songs.is_empty() {
+                        songs.lock().unwrap().extend(sub_results.songs);
                     }
                 }
-                song.artwork = None;
-                songs.lock().unwrap().push(song);
+            } else {
+                // info!("path is file");
+                if let Some(mut song) = crate::metadata::extract_metadata(
+                    &path,
+                    true,
+                    event.is_cover_fullcheck,
+                    false,
+                    &app_handle,
+                ) {
+                    if event.process_albums {
+                        if let Some(album) = process_new_album(
+                            &mut song,
+                            Some(&albums),
+                            None,
+                            Some(&artwork_origins),
+                            &settings,
+                            &app_handle,
+                        ) {
+                            info!("Album: {:?}", album);
+                            albums
+                                .lock()
+                                .unwrap()
+                                .entry(album.id.clone())
+                                .and_modify(|a| {
+                                    a.tracks_ids.push(song.id.clone());
+                                })
+                                .or_insert(album);
+                        }
+                    }
+                    song.artwork = None;
+                    songs.lock().unwrap().insert(song.id.clone(), song);
+                }
             }
         } else if path.is_dir() {
             if let Some(sub_results) = process_directory(
@@ -331,11 +342,18 @@ pub async fn scan_paths(
     //     info!("{:?}", song);
     // }
 
+    for album in albums.lock().unwrap().values_mut() {
+        album
+            .tracks_ids
+            .sort_by_key(|id| songs.lock().unwrap().get(id).unwrap().track_number);
+    }
+
     // First send all songs in chunks
     let length = songs.lock().unwrap().clone().len();
     if event.is_async && length > 500 {
-        let songs_clone = songs.lock().unwrap();
-        let enumerator = songs_clone.chunks(200);
+        let songs_locked = songs.lock().unwrap();
+        let enumerated_songs: Vec<_> = songs_locked.values().enumerate().collect();
+        let enumerator = enumerated_songs.chunks(200);
         let chunks = enumerator.len();
 
         // Send songs to client in chunks
@@ -353,7 +371,7 @@ pub async fn scan_paths(
             let _ = app_handle.emit(
                 "import_chunk",
                 ToImportEvent {
-                    songs: slice.to_vec(),
+                    songs: slice.iter().map(|(_, song)| (*song).clone()).collect(),
                     albums: vec![],
                     progress: progress,
                     done: progress == 100 && albums.lock().unwrap().clone().len() == 0,
@@ -378,7 +396,7 @@ pub async fn scan_paths(
         let _ = app_handle.emit(
             "import_chunk",
             ToImportEvent {
-                songs: songs.lock().unwrap().clone(),
+                songs: songs.lock().unwrap().values().cloned().collect(),
                 albums: vec![],
                 progress: 100,
                 done: albums.lock().unwrap().clone().len() == 0,
@@ -442,7 +460,7 @@ pub async fn scan_paths(
         songs: if event.is_async {
             vec![]
         } else {
-            songs.lock().unwrap().clone()
+            songs.lock().unwrap().values().cloned().collect()
         },
         albums: if event.is_async {
             vec![]
@@ -675,13 +693,13 @@ pub fn convert_file_src(artwork_src: String) -> String {
 }
 
 struct ProcessDirectoryResult {
-    songs: Vec<Song>,
+    songs: HashMap<String, Song>,
     albums: HashMap<String, Album>,
 }
 
 fn process_directory(
     directory_path: &Path,
-    songs: &Arc<std::sync::Mutex<Vec<Song>>>,
+    songs: &Arc<std::sync::Mutex<HashMap<String, Song>>>,
     albums: &Arc<std::sync::Mutex<HashMap<String, Album>>>,
     artwork_origins: &Arc<std::sync::Mutex<HashMap<String, ArtworkOrigin>>>,
     recursive: bool,
@@ -689,7 +707,8 @@ fn process_directory(
     is_cover_fullcheck: bool,
     app: &AppHandle,
 ) -> Option<ProcessDirectoryResult> {
-    let subsongs: Arc<std::sync::Mutex<Vec<Song>>> = Arc::new(Mutex::new(Vec::new()));
+    let subsongs: Arc<std::sync::Mutex<HashMap<String, Song>>> =
+        Arc::new(Mutex::new(HashMap::new()));
     let subalbums: Arc<std::sync::Mutex<HashMap<String, Album>>> =
         Arc::new(Mutex::new(HashMap::new()));
     let settings = load_settings(app).ok();
@@ -750,7 +769,7 @@ fn process_directory(
                                 }
                             }
                             song.artwork = None;
-                            subsongs.lock().unwrap().push(song);
+                            subsongs.lock().unwrap().insert(song.id.clone(), song);
                         }
                     } else if path.is_dir() && recursive {
                         if let Some(sub_results) = process_directory(
@@ -776,8 +795,36 @@ fn process_directory(
         });
 
     return Some(ProcessDirectoryResult {
-        songs: subsongs.lock().unwrap().to_vec(),
+        songs: subsongs.lock().unwrap().to_owned(),
         albums: subalbums.lock().unwrap().to_owned(),
+    });
+}
+
+struct ProcessPlaylistResult {
+    songs: HashMap<String, Song>,
+}
+
+fn process_playlist(playlist_path: &Path, app: &AppHandle) -> Option<ProcessPlaylistResult> {
+    let subsongs: Arc<std::sync::Mutex<HashMap<String, Song>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+
+    let read_result = std::fs::read_to_string(playlist_path);
+
+    if let Ok(content) = read_result {
+        let playlist: Playlist = Playlist::from(content.as_str());
+
+        for entry in playlist.list {
+            if let Some(mut song) =
+                crate::metadata::extract_metadata(Path::new(&entry.url), true, false, false, &app)
+            {
+                song.artwork = None;
+                subsongs.lock().unwrap().insert(song.id.clone(), song);
+            }
+        }
+    }
+
+    return Some(ProcessPlaylistResult {
+        songs: subsongs.lock().unwrap().to_owned(),
     });
 }
 

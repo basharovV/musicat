@@ -25,16 +25,15 @@
         if (isPlayingCurrentAlbum) {
             audioPlayer.togglePlay();
         } else {
-            const tracks = await db.songs
-                .where("id")
-                .anyOf(album.tracksIds)
-                .toArray();
+            const track = await db.songs.get(album.tracksIds[0]);
 
-            tracks.sort((a, b) => {
-                return a.trackNumber - b.trackNumber;
-            });
+            audioPlayer.playSong(track);
 
-            setQueue(tracks, 0);
+            const tracks = await db.songs.bulkGet(album.tracksIds.slice(1));
+
+            tracks.unshift(track);
+
+            setQueue(tracks, false);
         }
     }
 
@@ -66,14 +65,7 @@
             cancel = false;
 
             if (e.button === 0) {
-                const songs = await db.songs
-                    .where("id")
-                    .anyOf(album.tracksIds)
-                    .toArray();
-
-                songs.sort((a, b) => {
-                    return a.trackNumber - b.trackNumber;
-                });
+                const songs = await db.songs.bulkGet(album.tracksIds);
 
                 if (cancel) {
                     resetDraggedSongs();
@@ -219,7 +211,7 @@
         .title {
             background-color: var(--album-playing-title-bg);
             border-radius: 0 0 8px 8px;
-            color: var(--text);
+            color: var(--album-playing-title-text);
             z-index: 20;
             margin-top: 3px !important;
         }
