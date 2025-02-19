@@ -382,7 +382,7 @@
                         <AlbumDetails
                             album={detailsAlbum}
                             tracks={detailsAlbumTracks}
-                            onUnselect={() => unselectAlbum(index - 1)}
+                            onUnselect={() => unselectAlbum(detailsAlbumIndex)}
                         />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
