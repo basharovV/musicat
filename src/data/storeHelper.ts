@@ -16,6 +16,16 @@ import { get } from "svelte/store";
 import { remove } from "lodash-es";
 import type SmartQuery from "src/lib/smart-query/Query";
 
+export function appendToQueue(songs: Song[]) {
+    const newQueue = [...get(queue), ...songs];
+    const newDuration = songs.reduce((total, song) => {
+        return total + song.fileInfo.duration;
+    }, get(queueDuration));
+
+    queue.set(newQueue);
+    queueDuration.set(newDuration);
+}
+
 export function findQueueIndex({ id }: Song): number {
     return get(queue).findIndex((song) => song.id === id);
 }
