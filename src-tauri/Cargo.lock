@@ -37,6 +37,7 @@ dependencies = [
  "rustfft",
  "scraper",
  "serde",
+ "serde-m3u",
  "serde_json",
  "serde_repr",
  "symphonia",
@@ -5199,6 +5200,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-m3u"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8254f74916150eb8f6f33498e251d09d6a7894f1a4820ac3bd1278fde24e323e"
+dependencies = [
+ "serde",
+ "serde_derive",
+ "serde_json",
 ]
 
 [[package]]
