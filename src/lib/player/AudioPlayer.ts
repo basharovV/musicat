@@ -26,6 +26,7 @@ import webAudioPlayer, { isIAPlaying } from "./WebAudioPlayer";
 const appWindow = getCurrentWebviewWindow();
 import { listen } from "@tauri-apps/api/event";
 import { TauriEvent } from "@tauri-apps/api/event";
+import { setQueue } from "../../data/storeHelper";
 
 if (!ReadableStream.prototype[Symbol.asyncIterator]) {
     ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
@@ -618,14 +619,14 @@ class AudioPlayer {
                 paths: paths,
                 recursive: false,
                 process_albums: false,
+                process_m3u: true,
                 is_async: false,
                 is_cover_fullcheck: get(userSettings).isArtistsToolkitEnabled,
             },
         });
         console.log("scan_paths response", response);
         if (response.songs) {
-            this.shouldPlay = true;
-            queue.set(response.songs);
+            setQueue(response.songs, 0);
         }
     }
 

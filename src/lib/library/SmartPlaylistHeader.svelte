@@ -3,10 +3,10 @@
     import {
         forceRefreshLibrary,
         isQueueOpen,
-        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
+        isSidebarOpen,
         queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,

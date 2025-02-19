@@ -19,7 +19,7 @@
         draggedSource,
         forceRefreshLibrary,
         isShuffleEnabled,
-        isSidebarOpen,
+        isSidebarShowing,
         isSmartQueryBuilderOpen,
         popupOpen,
         libraryScrollPos,
@@ -49,6 +49,7 @@
     } from "../../data/storeHelper";
     import QueueMenu from "../queue/QueueMenu.svelte";
 
+    export let autoWidth = false;
     export let dim = false;
     export let isLoading = false;
     export let isInit = true;
@@ -928,6 +929,7 @@
 <div
     class="library-container"
     class:dragover={isDraggingOver}
+    class:auto-width={autoWidth}
     bind:this={libraryContainer}
 >
     {#if isLoading}
@@ -1360,7 +1362,8 @@
                                 <Text
                                     config={{
                                         x:
-                                            !$isSidebarOpen && $os === "macos"
+                                            !$isSidebarShowing &&
+                                            $os === "macos"
                                                 ? WINDOW_CONTROLS_WIDTH
                                                 : null,
                                         text: "Queue",
@@ -1423,6 +1426,10 @@
         margin: 4px 0 0 0;
         &.dragover {
             border-color: var(--accent-secondary);
+        }
+        &.auto-width {
+            width: 100%;
+            max-width: initial;
         }
     }
     .container {

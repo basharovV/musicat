@@ -39,6 +39,10 @@
                 "description": "Music files",
                 "role": "Editor",
                 "mimeType": "audio/*"
+            },
+            {
+                "ext": ["m3u"],
+                "mimeType": "application/mpegurl"
             }
         ],
         "resources": ["resources/*"],

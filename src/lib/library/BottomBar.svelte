@@ -13,7 +13,6 @@
         isFolderWatchUpdate,
         isLyricsOpen,
         isQueueOpen,
-        isSidebarOpen,
         nextUpSong,
         uiView,
         userSettings,
@@ -53,8 +52,6 @@
             onResize();
         }, 200);
     });
-
-    let wasSidebarOpen = $isSidebarOpen;
 
     function onResize() {
         if (nextUp?.getBoundingClientRect()) {
