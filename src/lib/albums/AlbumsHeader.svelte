@@ -286,11 +286,11 @@
             border: none;
             box-shadow: none;
             max-width: 100px;
+            background-color: transparent;
             &::-webkit-slider-thumb {
                 appearance: none;
-                background-color: rgb(132, 175, 166);
-                border-radius: 2px;
-                color: red;
+                background: var(--album-gridsize-thumb);
+                border-radius: 4px;
                 width: 10px;
                 height: 10px;
                 top: -2.5px;
@@ -298,14 +298,14 @@
                 position: relative;
             }
             &::-webkit-slider-runnable-track {
-                background-color: var(--icon-secondary);
+                background-color: var(--album-gridsize-line-bg);
                 appearance: none;
                 border-radius: 10px;
                 outline: none;
                 height: 4px;
             }
             ::-moz-range-track {
-                background: #ade8ff;
+                background: var(--album-gridsize-thumb);
                 height: 4px;
             }
         }

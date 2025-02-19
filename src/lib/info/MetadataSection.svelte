@@ -6,23 +6,17 @@
     import LL from "../../i18n/i18n-svelte";
     import {
         current,
-        isPlaying,
         lastWrittenSongs,
         playerTime,
         rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
-    import type {
-        Album,
-        MetadataEntry,
-        Song,
-        TagType,
-        ToImport,
-    } from "src/App";
+    import type { MetadataEntry, TagType, ToImport } from "src/App";
     import { invoke } from "@tauri-apps/api/core";
     import {
         getAlbumId,
         readMappedMetadataFromSong,
+        reImport,
     } from "../../data/LibraryUtils";
     import toast from "svelte-french-toast";
     import { db } from "../../data/db";
@@ -36,7 +30,7 @@
         encodeUtf8,
     } from "../../utils/EncodingUtils";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { cloneDeep, isEqual, uniq, uniqBy } from "lodash-es";
+    import { cloneDeep, isEqual, uniqBy } from "lodash-es";
     import { getMapForTagType } from "../../data/LabelMap";
     import { onMount } from "svelte";
 
@@ -317,42 +311,6 @@
         }
     }
 
-    async function reImportAlbum(album: Album, track2album: {}) {
-        const existingAlbum = await db.albums.get(album.id);
-        if (existingAlbum) {
-            existingAlbum.artist = album.artist;
-            existingAlbum.artwork = album.artwork;
-            existingAlbum.displayTitle = album.displayTitle;
-            existingAlbum.genre = album.genre;
-            existingAlbum.title = album.title;
-            existingAlbum.year = album.year;
-            existingAlbum.tracksIds = uniq([
-                ...existingAlbum.tracksIds,
-                ...album.tracksIds,
-            ]);
-
-            await db.albums.put(existingAlbum);
-        } else {
-            const oldAlbums = [];
-
-            for await (const trackId of album.tracksIds) {
-                const albumId = track2album[trackId];
-
-                if (albumId && !oldAlbums.includes(albumId)) {
-                    oldAlbums.push(albumId);
-
-                    await db.albums.delete(albumId);
-                }
-            }
-
-            await db.albums.put(album);
-        }
-    }
-
-    async function reImportTracks(songs: Song[]) {
-        await db.songs.bulkPut(songs);
-    }
-
     export async function resetMetadata() {
         containsError = null;
         const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
@@ -442,7 +400,7 @@
             ? [$rightClickedTrack]
             : $rightClickedTracks;
         const tracks = [];
-        const track2album = {};
+        const songIdToOldAlbumId = {};
 
         for (const song of writtenTracks) {
             tracks.push(
@@ -454,7 +412,7 @@
                 }),
             );
 
-            track2album[song.id] = getAlbumId(song);
+            songIdToOldAlbumId[song.id] = getAlbumId(song);
         }
 
         if (tracks.length) {
@@ -474,19 +432,13 @@
                     // Roll back to current artwork
                     rollbackArtwork();
                 } else {
-                    await reImportTracks(toImport.songs);
+                    reImport(toImport, writtenTracks, songIdToOldAlbumId);
+
+                    toast.success("Successfully written metadata!", {
+                        position: "top-right",
+                    });
                 }
             }
-
-            if (toImport.albums.length) {
-                for (const album of toImport.albums) {
-                    await reImportAlbum(album, track2album);
-                }
-            }
-
-            toast.success("Successfully written metadata!", {
-                position: "top-right",
-            });
 
             $lastWrittenSongs = writtenTracks;
 
@@ -780,10 +732,6 @@
             &.validation-warning {
                 border: 1px solid var(--popup-track-metadata-validation-warning);
             }
-        }
-
-        .artist-input {
-            /* overflow: hidden; */
         }
     }
 

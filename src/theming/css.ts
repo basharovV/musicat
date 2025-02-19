@@ -48,7 +48,7 @@ export function createCSSVariableStatement(variableName, value) {
  */
 export function createCSSVariableOverride({
     initialVariableName,
-    themeVariableName
+    themeVariableName,
 }) {
     return `${initialVariableName}: var(${themeVariableName});`;
 }
@@ -80,25 +80,19 @@ export function createCSSTemplate(prefix, base = {}) {
     const variablePrefix = prefix ? `--${prefix}` : "-";
 
     const theme = get(currentThemeObject);
-    const themeCSS = Object.entries(theme).reduce((acc, val) => {
-        if (val[0] === "type" && val[1] === "dark") {
-            acc += `--inverse: #ffffff2f;\n`;
-            acc += `--type-bw: black;\n`;
-            acc += `--type-bw-inverse: white;\n`;
-        } else if (val[0] === "type" && val[1] === "light") {
-            acc += `--inverse: black;\n`;
-            acc += `--type-bw: white;\n`;
-            acc += `--type-bw-inverse: black;\n`;
-        }
-        return (acc += `--${val[0]}: ${val[1]};\n`);
+    let themeCSS = Object.entries(theme).reduce((acc, [key, value]) => {
+        return (acc += `--${key}: ${value};\n`);
     }, "");
-    const font = get(currentFont);
+
+    for (const [key, value] of Object.entries(get(currentFont))) {
+        themeCSS += `${key}: ${value};\n`;
+    }
 
     const template = `
     <style>
       :root {
-      ${themeCSS}
-      font-family: ${font};
+        ${themeCSS}
+        // font-family: var(--font);
       }
     </style>
   `;

@@ -135,13 +135,6 @@
             }
         }
 
-        .smart-query-actions {
-            display: flex;
-            align-items: center;
-            flex-direction: row;
-            justify-content: flex-end;
-        }
-
         input {
             background-color: transparent;
             outline: none;

@@ -1,0 +1,54 @@
+display-name: Amphibian
+variant: dark
+# Basics
+accent: "#00ff62f3"
+accent-secondary: "#4453bbf3"
+background: "#233346"
+button-solid-bg: "#486d7b"
+icon-secondary: "#797676"
+overlay-bg: "#2333466d"
+text: "#b6e1e3de"
+text-secondary: "#819be8"
+text-active: "#83e4ff"
+text-inactive: "#668e93"
+# Album
+album-playing-play-hover-bg: "#23cedd"
+album-playing-shadow: "#23cedd"
+album-playing-title-bg: "#4453bbf3"
+# Analytics/Stats
+# Artist's Toolkit
+# Library
+library-clickable-cell-bg: "#286e7f46"
+library-clickable-cell-hover-bg: "#188da5ae"
+library-favourite-icon: "#23cedd"
+library-favourite-hover-icon: "#83dbe6"
+library-header-active-bg: "#4d788d"
+library-header-bg: "#65888e7e"
+library-highlight-bg: "#2e4f57"
+library-hover-bg: "#1d2a30"
+library-playing-bg: "#23cedd"
+library-playing-icon: "#1a1718"
+library-playing-text: "#444444"
+library-playing-title: "#000000"
+library-text: "#8cb3b8"
+library-title: "#eeeeee"
+# Map View
+# Menus
+# Oscilloscope
+# Panels
+panel-background: "#181e25"
+# Popups
+# Progress bar
+# Prune
+# ScrollTo
+# Seekbar
+# Sidebar
+# Smart playlist
+smart-playlist-builder-bg: "#347c75"
+smart-playlist-builder-block-bg: "#56beb556"
+smart-playlist-builder-block-focused-bg: "#569abe99"
+smart-playlist-builder-block-input-bg: "#1b474d6f"
+# Play, pause, next, previous
+transport-control: "#e9d6fb"
+# Waveform
+# Wiki

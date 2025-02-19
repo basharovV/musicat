@@ -123,6 +123,7 @@
     onMount(async () => {
         appWindow.emit("opened");
         // File associations: check for opened urls on the window
+        // @ts-expect-error
         console.log("window opened urls: ", window.openedUrls);
 
         window["onFileOpen"] = (urls) => {
@@ -704,7 +705,7 @@
             height: 100%;
 
             &.visible {
-                box-shadow: -10px 3px 30px 5px rgba(0, 0, 0, 0.15);
+                box-shadow: -10px 3px 30px 5px var(--panel-shadow-bg);
             }
 
             .queue-container {
@@ -844,7 +845,7 @@
         bottom: 0;
         z-index: 30;
         display: flex;
-        background-color: rgba(30, 26, 31, 0.824);
+        background-color: var(--popup-backdrop);
     }
 
     :global(.svelecte-control) {

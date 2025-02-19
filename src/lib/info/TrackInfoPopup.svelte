@@ -645,11 +645,11 @@
     :global {
         .info {
             section.boxed {
-                border: 1px solid var(--popup-track-section-border);
+                border: 1px solid var(--popup-section-border);
                 border-radius: 5px;
                 min-width: 575px;
                 position: relative;
-                background-color: var(--popup-track-section-bg);
+                background-color: var(--popup-section-bg);
             }
 
             .section-title {
@@ -660,7 +660,7 @@
                 flex-direction: row;
                 gap: 5px;
                 align-items: center;
-                background-color: var(--popup-track-section-title-bg);
+                background-color: var(--popup-section-title-bg);
                 z-index: 11;
                 border: 1px solid rgb(from var(--inverse) r g b / 0.08);
                 top: -15px;
@@ -672,7 +672,7 @@
                 width: fit-content;
                 margin: 0.5em 0;
                 text-align: start;
-                color: var(--popup-track-section-title-text);
+                color: var(--popup-section-title-text);
                 text-transform: uppercase;
             }
         }
@@ -695,7 +695,7 @@
         align-items: center;
         border-radius: 5px;
         border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
-        background-color: var(--overlay-bg);
+        background-color: var(--popup-body-bg);
         box-shadow: 0px 5px 40px var(--overlay-shadow);
         backdrop-filter: blur(8px);
         overflow-y: auto;
@@ -721,8 +721,8 @@
         top: -1px;
         padding: 0.4em 0;
         width: 100%;
-        background-color: var(--popup-track-header-bg);
-        border-bottom: 1px solid var(--popup-track-header-border);
+        background-color: var(--popup-header-bg-many);
+        border-bottom: 1px solid var(--popup-header-border);
         backdrop-filter: blur(10px);
         z-index: 20;
 

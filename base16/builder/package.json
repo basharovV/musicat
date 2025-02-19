@@ -1,0 +1,27 @@
+{
+    "name": "builder",
+    "version": "1.0.0",
+    "main": "index.ts",
+    "scripts": {
+        "build": "tsx src/index.ts",
+        "postinstall": "patch-package"
+    },
+    "author": "",
+    "license": "MIT",
+    "description": "",
+    "dependencies": {
+        "@asamuzakjp/css-color": "^3.0.5",
+        "@ctrl/tinycolor": "^4.1.0",
+        "enhanced-yaml": "^0.1.0",
+        "fs-extra": "^11.3.0",
+        "globby": "^14.0.2",
+        "js-yaml": "^4.1.0",
+        "mustache": "^4.2.0",
+        "tsx": "^4.19.2"
+    },
+    "devDependencies": {
+        "@types/fs-extra": "^11.0.4",
+        "@types/js-yaml": "^4.0.9",
+        "patch-package": "^8.0.0"
+    }
+}

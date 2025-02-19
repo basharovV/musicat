@@ -1,0 +1,42 @@
+display-name: Winamp
+variant: dark
+# Basics
+accent: "#F0D895"
+accent-secondary: "#7c715cf3"
+background: "#25253e"
+icon-primary: "#E5F6F7"
+icon-secondary: "#E5F6F7"
+text-active: "#F0D895"
+text-inactive: "#aeafa8"
+# Album
+album-playing-play-hover-bg: "#7c715cf3"
+album-playing-shadow: transparent
+album-playing-title-bg: "#7c715cf3"
+# Analytics/Stats
+# Artist's Toolkit
+# Library
+library-favourite-icon: "#05A101"
+library-favourite-hover-icon: "#7fbd7f"
+library-header-bg: black
+library-header-text: "#acb4ac"
+library-playing-bg: transparent
+library-playing-icon: "#ffffff"
+library-playing-text: "#ffffff"
+library-text: "#05A101"
+library-title: "#05A101"
+# Map View
+# Menus
+# Oscilloscope
+oscilloscope: "#07ea03"
+# Panels
+panel-background: black
+# Popups
+# Progress bar
+# Prune
+# ScrollTo
+# Seekbar
+# Sidebar
+# Smart playlist
+# Play, pause, next, previous
+# Waveform
+# Wiki
