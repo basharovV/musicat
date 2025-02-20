@@ -684,6 +684,7 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             metadata::write_metadatas,
             metadata::scan_paths,
+            metadata::scan_playlist,
             metadata::get_song_metadata,
             metadata::get_artwork_file,
             metadata::get_artwork_metadata,
