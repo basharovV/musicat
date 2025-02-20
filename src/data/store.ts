@@ -368,6 +368,7 @@ isQueueOpen.subscribe((val) =>
     localStorage.setItem("isQueueOpen", String(val)),
 );
 export const isQueueCleared = writable(false);
+export const isQueueShowing = writable(false);
 
 // Wiki
 export const isWikiOpen = writable(false);

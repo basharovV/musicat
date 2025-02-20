@@ -332,9 +332,11 @@
         }
 
         .center {
-            position: fixed;
-            left: 50%;
-            transform: translate(-50%, 0%);
+            @media only screen and (min-width: 1800px) {
+                position: fixed;
+                left: 50%;
+                transform: translate(-50%, 0%);
+            }
 
             nav {
                 display: flex;
