@@ -22,6 +22,7 @@
     import { isIAPlaying } from "../player/WebAudioPlayer";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     let right;
     let nextUp;
@@ -63,6 +64,13 @@
             visualiserWidth = Math.min(150, diff - 13);
             showVisualiser = window.innerWidth > 900 && diff > 150;
         }
+    }
+
+    function showIconView() {
+        $uiView = "smart-query:icon";
+    }
+    function showListView() {
+        $uiView = "smart-query:list";
     }
 </script>
 
@@ -112,6 +120,26 @@
             <Oscilloscope show={showVisualiser} width={visualiserWidth} />
         </div>
     </div>
+    {#if $uiView.startsWith("smart-query")}
+        <div class="center">
+            <nav>
+                <ButtonWithIcon
+                    size="small"
+                    icon="material-symbols:grid-view-rounded"
+                    onClick={showIconView}
+                    theme="transparent"
+                    fill={$uiView === "smart-query:icon"}
+                />
+                <ButtonWithIcon
+                    size="small"
+                    icon="material-symbols:view-list-rounded"
+                    onClick={showListView}
+                    theme="transparent"
+                    fill={$uiView === "smart-query:list"}
+                />
+            </nav>
+        </div>
+    {/if}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="right" bind:this={right}>
@@ -299,6 +327,42 @@
 
                 @media only screen and (max-width: 1050px) {
                     display: none;
+                }
+            }
+        }
+
+        .center {
+            @media only screen and (min-width: 1800px) {
+                position: fixed;
+                left: 50%;
+                transform: translate(-50%, 0%);
+            }
+
+            nav {
+                display: flex;
+                align-items: center;
+                align-self: normal;
+                text-align: start;
+                justify-content: flex-start;
+                white-space: nowrap;
+                gap: 0;
+
+                :global {
+                    > div:nth-child(1) {
+                        border-radius: 0;
+                        border-start-start-radius: 6px !important;
+                        border-end-start-radius: 6px !important;
+                    }
+                    > div:nth-last-child(1) {
+                        border-radius: 0;
+                        border-start-end-radius: 6px !important;
+                        border-end-end-radius: 6px !important;
+                    }
+
+                    :focus,
+                    :focus-visible {
+                        outline: 0;
+                    }
                 }
             }
         }

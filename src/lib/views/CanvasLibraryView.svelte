@@ -74,7 +74,7 @@
                     songMatchesQuery(song, $query.query),
                 );
             }
-        } else if ($uiView === "smart-query" || $uiView === "favourites") {
+        } else if ($uiView === "smart-query:list" || $uiView === "favourites") {
             /**
              * User-built smart queries don't support indexing
              */
@@ -133,7 +133,7 @@
             if ($query.reverse) {
                 results = results.reverse();
             }
-            if ($uiView === "smart-query" && $query.orderBy !== "none") {
+            if ($uiView === "smart-query:list" && $query.orderBy !== "none") {
                 resultsArray = await results.sortBy($query.orderBy);
             } else {
                 resultsArray = await results.toArray();

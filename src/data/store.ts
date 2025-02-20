@@ -258,6 +258,7 @@ const defaultSettings: UserSettings = {
     theme: "dark",
     outputDevice: null, // default system device,
     followSystemOutput: true,
+    preferredView: "track",
 };
 
 /**
@@ -367,6 +368,7 @@ isQueueOpen.subscribe((val) =>
     localStorage.setItem("isQueueOpen", String(val)),
 );
 export const isQueueCleared = writable(false);
+export const isQueueShowing = writable(false);
 
 // Wiki
 export const isWikiOpen = writable(false);
@@ -432,11 +434,17 @@ async function init() {
         );
     }
 
-    // Get user settings
-    userSettings.set({
+    const settings = {
         ...defaultSettings,
         ...fileSettings,
-    });
+    };
+
+    if (settings.preferredView === "album") {
+        uiView.set("albums");
+    }
+
+    // Get user settings
+    userSettings.set(settings);
 
     // Auto-persist settings
     userSettings.subscribe(async (val) => {

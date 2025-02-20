@@ -180,7 +180,7 @@
                         firstSongInPreviousAlbum: null,
                         firstSongInPreviousArtist: null,
                     },
-                    songs: [],
+                    songs: [] as Song[],
                 },
             )?.songs ?? [];
 
@@ -601,6 +601,7 @@
                 scrollContainer?.clientWidth ??
                 libraryContainer?.clientWidth ??
                 0;
+
             calculateColumns();
         }, 50);
     }
@@ -969,7 +970,7 @@
             const tracks = await db.songs.bulkGet(album.tracksIds);
 
             setQueue(tracks, song.viewModel.index);
-        } else if ($uiView === "smart-query") {
+        } else if ($uiView === "smart-query:list") {
             setQueue($smartQueryResults, song.viewModel.index);
         } else {
             setQueue($queriedSongs, song.viewModel.index);
@@ -1632,7 +1633,7 @@
         $smartQuery.parts = $smartQuery.parts;
         $isSmartQueryBuilderOpen = true;
         $isSmartQuerySaveUiOpen = false;
-        $uiView = "smart-query";
+        $uiView = "smart-query:list";
     }
 
     function isInvalidValue(value) {

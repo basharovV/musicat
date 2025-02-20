@@ -334,13 +334,76 @@
                     <tr>
                         <td>{$LL.settings.followSystem()}</td>
                         <td>
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    bind:checked={$userSettings.followSystemOutput}
-                                    on:change={onFollowSystemOutputChange}
+                            <select bind:value={$userSettings.theme}>
+                                <optgroup label="light themes">
+                                    {#each Object.entries(lightThemes) as [name, theme]}
+                                        <option value={name}>
+                                            {theme["display-name"]}
+                                        </option>
+                                    {/each}
+                                </optgroup>
+                                <optgroup label="dark themes">
+                                    {#each Object.entries(darkThemes) as [name, theme]}
+                                        <option value={name}>
+                                            {theme["display-name"]}
+                                        </option>
+                                    {/each}
+                                </optgroup>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Preferred View</td>
+                        <td>
+                            <select bind:value={$userSettings.preferredView}>
+                                <option value="album">Album View</option>
+                                <option value="track">Track View</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Enable Artist's Toolkit</td>
+                        <td>
+                            <input
+                                type="checkbox"
+                                bind:checked={$userSettings.isArtistsToolkitEnabled}
+                            />
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="2">Import</th>
+                    </tr>
+                    <tr>
+                        <td>Enable Cover Art check</td>
+                        <td>
+                            <input
+                                type="checkbox"
+                                bind:checked={$userSettings.isCoverFullCheckEnabled}
+                            />
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <th colspan="2">Data</th>
+                    </tr>
+                    <tr>
+                        <td>{$LL.settings.songbookLocation()}</td>
+                        <td>
+                            <div class="songbook-location">
+                                <p>
+                                    {$userSettings.songbookLocation ??
+                                        "Select a location"}
+                                </p>
+                                <Icon
+                                    icon="material-symbols:folder"
+                                    onClick={() => {
+                                        openSongbookDirSelector();
+                                    }}
                                 />
-                            </label>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
