@@ -60,6 +60,11 @@ pub struct ScanPathsEvent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ScanPlaylistEvent {
+    playlist: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
     pub duration: Option<f64>, //s
@@ -466,6 +471,42 @@ pub async fn scan_paths(
         } else {
             albums.lock().unwrap().values().cloned().collect()
         },
+        progress: 100,
+        done: true,
+        error: None,
+    })
+}
+
+#[tauri::command]
+pub async fn scan_playlist(
+    event: ScanPlaylistEvent,
+    app_handle: tauri::AppHandle,
+) -> Option<ToImportEvent> {
+    let mut songs: Vec<Song> = vec![];
+
+    let read_result = std::fs::read_to_string(event.playlist);
+
+    if let Ok(content) = read_result {
+        let playlist: Playlist = Playlist::from(content.as_str());
+
+        for entry in playlist.list {
+            if let Some(mut song) = crate::metadata::extract_metadata(
+                Path::new(&entry.url),
+                true,
+                false,
+                false,
+                &app_handle,
+            ) {
+                song.artwork = None;
+
+                songs.push(song);
+            }
+        }
+    }
+
+    Some(ToImportEvent {
+        songs,
+        albums: vec![],
         progress: 100,
         done: true,
         error: None,
