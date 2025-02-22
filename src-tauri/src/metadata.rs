@@ -528,7 +528,7 @@ pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Op
                         return Some(Artwork {
                             data: pic.data().to_vec(),
                             src: None,
-                            format: format.to_string(),
+                            format,
                         });
                     }
                 }
@@ -1031,7 +1031,7 @@ pub fn extract_metadata(
                                     artwork = Some(Artwork {
                                         data: pic.data().to_vec(),
                                         src: None,
-                                        format: format.to_string(),
+                                        format,
                                     })
                                 } else {
                                     artwork_origin = Some(ArtworkOrigin::Broken);
