@@ -515,10 +515,20 @@ pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Op
             Ok(tagged_file) => {
                 if tagged_file.primary_tag().is_some() {
                     if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
+                        let mut format = String::new();
+
+                        if let Some(mime) = pic.mime_type() {
+                            format = mime.to_string();
+                        } else {
+                            let mime = mimetype::detect(pic.data());
+
+                            format = mime.mime.to_string();
+                        }
+
                         return Some(Artwork {
                             data: pic.data().to_vec(),
                             src: None,
-                            format: pic.mime_type().unwrap().to_string(),
+                            format: format.to_string(),
                         });
                     }
                 }
@@ -984,8 +994,17 @@ pub fn extract_metadata(
                             if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first()
                             {
                                 let mut decoded = false;
+                                let mut format = String::new();
 
-                                match pic.mime_type().unwrap().as_str() {
+                                if let Some(mime) = pic.mime_type() {
+                                    format = mime.to_string();
+                                } else {
+                                    let mime = mimetype::detect(pic.data());
+
+                                    format = mime.mime.to_string();
+                                }
+
+                                match format.as_str() {
                                     "image/jpeg" => {
                                         let mut decoder = zune_jpeg::JpegDecoder::new(pic.data());
 
@@ -1012,7 +1031,7 @@ pub fn extract_metadata(
                                     artwork = Some(Artwork {
                                         data: pic.data().to_vec(),
                                         src: None,
-                                        format: pic.mime_type().unwrap().to_string(),
+                                        format: format.to_string(),
                                     })
                                 } else {
                                     artwork_origin = Some(ArtworkOrigin::Broken);

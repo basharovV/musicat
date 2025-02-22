@@ -26,6 +26,7 @@ dependencies = [
  "lofty",
  "log",
  "log4rs",
+ "mimetype",
  "objc2",
  "objc2-foundation",
  "percent-encoding",
@@ -3327,6 +3328,19 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
+
+[[package]]
+name = "mimetype"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad81b1e703d84473c6b6e6b8999ede6b9a918662ba7d89d9970c036bb72edd17"
+dependencies = [
+ "byteorder",
+ "parking_lot",
+ "quick-xml 0.36.2",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "minimal-lexical"
