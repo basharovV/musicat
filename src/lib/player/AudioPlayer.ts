@@ -275,6 +275,21 @@ class AudioPlayer {
             this.isRunningTransition = false;
         });
 
+        appWindow.listen("get_next_song", async (event: Event<string>) => {
+            // if the player is at the end of the current song and the next song is broken,
+            // then, the index hasn't been incremented
+            // so, it needs to be incremented
+            if (
+                this.currentSongIdx + 1 < this.queue?.length &&
+                this.queue[this.currentSongIdx + 1].path === event.payload
+            ) {
+                this.currentSongIdx += 1;
+            }
+
+            this.setNextUpSong();
+            this.isRunningTransition = false;
+        });
+
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
         });

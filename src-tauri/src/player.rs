@@ -568,44 +568,31 @@ fn decode_loop(
             let probe_result = get_probe().format(&hint, mss, &format_opts, &metadata_opts);
             info!("probe format {:?}", probe_result.is_ok());
 
-            let song = crate::metadata::extract_metadata(
-                &Path::new(&p.clone().as_str()),
-                false,
-                false,
-                true,
-                &app_handle,
-            );
-
             if probe_result.is_err() {
                 error!("Error probing file: {}", probe_result.err().unwrap());
                 is_transition = false; // Revert transition mode so that track/seek info is changed straight away
 
-                // Send song change event
-                if let Some(s) = &song {
-                    is_transition = false;
-                    let _ = app_handle.emit("song_change", Some(s));
+                // clear receiver since it might contains invalid data
+                while let Ok(_) = next_track_receiver.try_lock().unwrap().try_recv() {}
 
-                    let mut next_track = None;
-                    while let Ok(value) = next_track_receiver.try_lock().unwrap().try_recv() {
-                        next_track.replace(value);
-                    }
+                // get next song
+                let _ = app_handle.emit("get_next_song", Some(path_str.clone()));
 
-                    if let Some(request) = next_track {
-                        if let Some(path) = request.path.clone() {
-                            is_transition = true;
-                            info!("player: next track received! {:?}", request);
-                            path_str.replace(path);
-                            seek.replace(request.seek.unwrap());
-                            volume.replace(request.volume.unwrap());
-                            is_reset = false;
-                        } else {
-                            path_str = None;
+                if let Ok(request) = next_track_receiver.try_lock().unwrap().recv() {
+                    info!("next_track {:?}", request);
 
-                            info!("player: nothing else in the queue");
-                            let _ = app_handle.emit("end_of_queue", Some(0.0f64));
-                        }
+                    if let Some(path) = request.path.clone() {
+                        is_transition = true;
+                        info!("player: next track received! {:?}", request);
+                        path_str.replace(path);
+                        seek.replace(request.seek.unwrap());
+                        volume.replace(request.volume.unwrap());
+                        is_reset = false;
                     } else {
                         path_str = None;
+
+                        info!("player: nothing else in the queue");
+                        let _ = app_handle.emit("end_of_queue", Some(0.0f64));
                     }
                 } else {
                     path_str = None;
@@ -806,6 +793,14 @@ fn decode_loop(
             previous_sample_rate = spec.rate;
             previous_channels = spec.channels.count();
             previous_audio_device_name = device_name.clone();
+
+            let song = crate::metadata::extract_metadata(
+                &Path::new(&p.clone().as_str()),
+                false,
+                false,
+                true,
+                &app_handle,
+            );
 
             if audio_output.is_none() || should_reset_audio {
                 info!("player: Resetting audio device");
@@ -1239,6 +1234,7 @@ fn decode_loop(
                             {
                                 info!("End of stream!!");
                                 let mut next_track = None;
+                                // get the latest event
                                 while let Ok(value) =
                                     next_track_receiver.try_lock().unwrap().try_recv()
                                 {
