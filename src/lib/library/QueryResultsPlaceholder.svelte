@@ -4,7 +4,7 @@
 </script>
 
 <div>
-    <h2>{$LL.library.queryNoResultsPlaceholder({ query: $query.query })}</h2>
+    <h2>{$LL.library.queryNoResultsPlaceholder({ query: $query })}</h2>
 </div>
 
 <style lang="scss">

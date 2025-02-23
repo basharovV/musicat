@@ -3,7 +3,7 @@
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
 
-    export let columnOrder;
+    export let columnOrder: String[];
     export let fields;
     export let isOrderChanged = false;
     export let onResetOrder;
@@ -23,7 +23,19 @@
         const found = fields.find((f) => f.value === field.value);
         found.show = !found.show;
         fields = [...fields];
-        columnOrder = fields.filter((f) => f.show).map((f) => f.value);
+
+        const index = columnOrder.indexOf(field.value);
+
+        if (index === -1) {
+            if (found.show) {
+                columnOrder = [...columnOrder, field.value];
+            }
+        } else {
+            if (!found.show) {
+                columnOrder.splice(index, 1);
+                columnOrder = [...columnOrder];
+            }
+        }
     }
     // Enrichers
 </script>
