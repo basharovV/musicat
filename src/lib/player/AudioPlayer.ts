@@ -621,7 +621,7 @@ class AudioPlayer {
                 process_albums: false,
                 process_m3u: true,
                 is_async: false,
-                is_cover_fullcheck: get(userSettings).isArtistsToolkitEnabled,
+                is_cover_fullcheck: get(userSettings).isCoverFullCheckEnabled,
             },
         });
         console.log("scan_paths response", response);
