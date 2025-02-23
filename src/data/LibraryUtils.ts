@@ -385,24 +385,35 @@ export async function getArtistProfileImage(
  * @param tracks list of tracks
  */
 export async function deleteFromLibrary(tracks: Song[]) {
-    const albumsToDelete = new Set<string>();
+    const albumsToDelete = [];
+    const checkedAlbums = {};
 
     for (const track of tracks) {
         const albumId = getAlbumId(track);
-        const album = await db.albums.get(albumId);
-        console.log("checking album", albumId);
-        if (
-            album &&
-            album.tracksIds.every((id) => tracks.map((t) => t.id).includes(id))
-        ) {
-            albumsToDelete.add(album.id);
+
+        if (!checkedAlbums[albumId]) {
+            console.log("checking album", albumId);
+
+            const album = await db.albums.get(albumId);
+
+            if (
+                album &&
+                album.tracksIds.every((id) =>
+                    tracks.map((t) => t.id).includes(id),
+                )
+            ) {
+                albumsToDelete.push(album.id);
+            }
+
+            checkedAlbums[albumId] = true;
         }
     }
     console.log("albumsToDelete", albumsToDelete);
+
     await db.transaction("rw", db.songs, db.albums, async () => {
         await db.songs.bulkDelete(tracks.map((t) => t.id));
-        if (albumsToDelete.size) {
-            await db.albums.bulkDelete(Array.from(albumsToDelete));
+        if (albumsToDelete.length) {
+            await db.albums.bulkDelete(albumsToDelete);
         }
     });
 }
