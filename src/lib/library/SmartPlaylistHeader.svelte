@@ -1,5 +1,8 @@
 <script lang="ts">
-    import { db } from "../../data/db";
+    import {
+        loadDynamicPlaylist,
+        writeDynamicPlaylist,
+    } from "../../data/PlaylistUtils";
     import {
         forceRefreshLibrary,
         isQueueOpen,
@@ -9,16 +12,20 @@
         isSidebarOpen,
         queueDuration,
         selectedPlaylistFile,
-        selectedSmartQuery,
         smartQuery,
         smartQueryInitiator,
         uiView,
+        userSettings,
+        selectedSmartQuery,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import SmartQuery from "../smart-query/Query";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
+    import { kebabCase } from "lodash-es";
+    import { path } from "@tauri-apps/api";
+    import type { DynamicPlaylistFile } from "../../App";
 
     export let selectedQuery;
 
@@ -30,23 +37,28 @@
         durationText = null;
     }
 
-    function closeSmartPlaylist() {
+    async function closeSmartPlaylist() {
         if ($smartQueryInitiator === "library-cell") {
             $forceRefreshLibrary = true;
             $isSmartQueryBuilderOpen = false;
             $uiView = "library";
         } else {
             $isSmartQueryBuilderOpen = false;
-            // $uiView = "smart-query";
 
             if ($smartQueryInitiator.startsWith("smart-query:")) {
-                $selectedSmartQuery = $smartQueryInitiator.substring(12);
+                const query = $smartQueryInitiator.substring(12);
+
+                if (query === "favourites" || query === "recentlyAdded") {
+                    $selectedSmartQuery = query;
+                } else {
+                    $selectedPlaylistFile = await loadDynamicPlaylist(query);
+                }
             }
         }
     }
 
     async function editSmartPlaylist() {
-        $smartQuery = new SmartQuery(selectedQuery);
+        $smartQuery = $selectedPlaylistFile.query;
 
         $isSmartQueryValid = true;
         $isSmartQueryBuilderOpen = true;
@@ -54,8 +66,14 @@
     }
 
     function newSmartPlaylist() {
-        $smartQueryInitiator = `smart-query:${$selectedSmartQuery}`;
-        $selectedSmartQuery = null;
+        if ($selectedSmartQuery) {
+            $smartQueryInitiator = `smart-query:${$selectedSmartQuery}`;
+            $selectedSmartQuery = null;
+        } else {
+            $smartQueryInitiator = `smart-query:${$selectedPlaylistFile.path}`;
+            $selectedPlaylistFile = null;
+        }
+
         $smartQuery = new SmartQuery();
         $isSmartQueryValid = false;
         $isSmartQueryBuilderOpen = true;
@@ -81,12 +99,32 @@
     }
 
     async function save() {
-        let id = await $smartQuery.save();
-        // Close the builder UI and set the current selected query to the one we just saved
+        if ($selectedPlaylistFile) {
+            const playlist = $selectedPlaylistFile as DynamicPlaylistFile;
+
+            $smartQuery.toDynoPL(playlist.schema);
+
+            await writeDynamicPlaylist(playlist);
+        } else {
+            const name = kebabCase($smartQuery.name);
+            const filepath = await path.join(
+                $userSettings.playlistsLocation,
+                `${name}.dynopl.yaml`,
+            );
+            const schema = $smartQuery.toDynoPL();
+            const playlist: DynamicPlaylistFile = {
+                title: $smartQuery.name,
+                path: filepath,
+                schema,
+            };
+
+            await writeDynamicPlaylist(playlist);
+
+            $selectedPlaylistFile = playlist;
+        }
+
+        // Close the builder UI
         $isSmartQueryBuilderOpen = false;
-        $selectedSmartQuery = `~usq:${id}`;
-        $selectedPlaylistFile = null;
-        $smartQuery.reset();
     }
 </script>
 
@@ -110,7 +148,9 @@
                 size={15}
                 color={$uiView === "smart-query" ? "#45fffcf3" : "currentColor"}
             /></span
-        >&nbsp;{selectedQuery?.name}
+        >&nbsp;{selectedQuery
+            ? selectedQuery.name
+            : $selectedPlaylistFile?.title}
     </h3>
 {/if}
 {#if durationText}
@@ -122,7 +162,7 @@
     <!-- TODO -->
 </div>
 {#if !$isSmartQueryBuilderOpen}
-    {#if $selectedSmartQuery?.startsWith("~usq:")}
+    {#if $selectedPlaylistFile}
         <ButtonWithIcon
             size="small"
             icon="material-symbols:edit-outline"

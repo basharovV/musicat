@@ -27,10 +27,10 @@
     import { Context } from "konva/lib/Context";
     import toast from "svelte-french-toast";
     import {
-        addSongsToPlaylist,
-        insertSongsToPlaylist,
-        reorderSongsInPlaylist,
-    } from "../../data/M3UUtils";
+        addSongsToStaticPlaylist,
+        insertSongsToStaticPlaylist,
+        reorderSongsInStaticPlaylist,
+    } from "../../data/PlaylistUtils";
     import {
         arrowFocus,
         current,
@@ -1179,7 +1179,7 @@
             resetDraggedSongs();
 
             console.log("[Library] Adding to playlist: ", playlist);
-            await addSongsToPlaylist(playlist, songs);
+            await addSongsToStaticPlaylist(playlist, songs);
             toast.success(
                 `${
                     songs.length > 1 ? songs.length + " songs" : songs[0].title
@@ -1203,7 +1203,7 @@
             resetDraggedSongs();
 
             console.log("[Library] Insert to playlist: ", playlist);
-            await insertSongsToPlaylist(playlist, songs, idx);
+            await insertSongsToStaticPlaylist(playlist, songs, idx);
             toast.success(
                 `${
                     songs.length > 1 ? songs.length + " songs" : songs[0].title
@@ -1225,7 +1225,7 @@
                 toast.error($LL.library.orderDisabledHint());
             }
 
-            await reorderSongsInPlaylist(
+            await reorderSongsInStaticPlaylist(
                 $selectedPlaylistFile,
                 draggingSongIdx,
                 idx,

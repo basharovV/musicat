@@ -17,7 +17,7 @@ import {
     loadArtistsFromSongbook,
     loadSongProjectsForArtist,
 } from "./ArtistsToolkitData";
-import { scanPlaylists } from "./M3UUtils";
+import { scanPlaylists } from "./PlaylistUtils";
 
 // can also watch an array of paths
 export async function startWatchingLibraryFolders() {
