@@ -74,6 +74,8 @@
         "wtf_wikipedia": "^10.3.2"
     },
     "dependencies": {
+        "@zokugun/dynopl": "^0.1.1",
+        "ajv": "^8.17.1",
         "chord-symbol": "^4.0.0",
         "is-dark-color": "^1.2.0",
         "mousetrap": "^1.6.5",
@@ -82,6 +84,8 @@
         "svelecte": "^4.5.1",
         "svelte-tiny-virtual-list": "^2.1.2",
         "svrollbar": "^0.12.0",
-        "wtf-plugin-html": "^1.0.0"
+        "uuid": "^11.1.0",
+        "wtf-plugin-html": "^1.0.0",
+        "yaml": "^2.7.0"
     }
 }

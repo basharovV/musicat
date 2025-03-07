@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import type { Album, Song, ToImport } from "../../App";
     import { db } from "../../data/db";
-    import { deleteSongsFromPlaylist } from "../../data/M3UUtils";
+    import { deleteSongsFromStaticPlaylist } from "../../data/PlaylistUtils";
     import {
         canShowInfoPopup,
         isSmartQueryBuilderOpen,
@@ -110,7 +110,7 @@
         // Delete from playlist
         if ($selectedPlaylistFile) {
             // Delete directly from M3U file
-            await deleteSongsFromPlaylist($selectedPlaylistFile, tracks);
+            await deleteSongsFromStaticPlaylist($selectedPlaylistFile, tracks);
             $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
         } else if ($uiView === "to-delete") {
             // Delete from internal playlist (currently only used for the "to-delete" playlist)
