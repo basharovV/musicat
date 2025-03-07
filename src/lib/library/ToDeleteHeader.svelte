@@ -93,7 +93,6 @@
         $isSmartQueryBuilderOpen = false;
         $selectedPlaylistFile = null;
         $selectedSmartQuery = null;
-        $query.orderBy = $query.libraryOrderBy;
     }
 
     async function keepAll() {
@@ -103,7 +102,6 @@
         $isSmartQueryBuilderOpen = false;
         $selectedPlaylistFile = null;
         $selectedSmartQuery = null;
-        $query.orderBy = $query.libraryOrderBy;
     }
 </script>
 

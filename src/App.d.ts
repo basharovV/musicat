@@ -437,3 +437,10 @@ interface AudioDevices {
 type PopupType = "info" | "track-info" | "settings";
 
 type SyncedLyrics = { timestamp: number; lyricLine: string };
+
+type Query = string;
+
+type SongOrder = {
+    orderBy: string;
+    reverse: boolean;
+};
