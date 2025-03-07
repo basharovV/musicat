@@ -3,6 +3,7 @@
     import Icon from "./Icon.svelte";
 
     export let icon = null;
+    export let iconSize = 20;
     export let onClick;
     export let text = "";
     export let theme: "active" | "solid" | "translucent" | "transparent" =
@@ -13,6 +14,7 @@
     export let fill = false;
     export let confirmText = null;
     export let isDestructive = false;
+    export let noOutline = false;
 
     let isConfirmingAction = false;
 </script>
@@ -31,12 +33,16 @@
     class="theme-{theme} {size}"
     class:disabled
     class:fill
+    class:no-outline={noOutline}
     class:no-text={text.length === 0}
     role="button"
     tabindex="0"
 >
     {#if icon}
-        <Icon icon={isLoading ? "line-md:loading-loop" : icon} />
+        <Icon
+            icon={isLoading ? "line-md:loading-loop" : icon}
+            size={iconSize}
+        />
     {/if}
     {#if isDestructive && isConfirmingAction}
         <p>{confirmText || $LL.button.areYouSure()}</p>
@@ -71,9 +77,11 @@
         &:active {
             opacity: 0.8;
         }
-        &:focus,
-        &:focus-visible {
-            outline: 4px auto -webkit-focus-ring-color;
+        &:not(:no-outline) {
+            &:focus,
+            &:focus-visible {
+                outline: 4px auto -webkit-focus-ring-color;
+            }
         }
 
         // Themes

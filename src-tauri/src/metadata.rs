@@ -60,6 +60,11 @@ pub struct ScanPathsEvent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ScanPlaylistEvent {
+    playlist: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
     pub duration: Option<f64>, //s
@@ -473,6 +478,42 @@ pub async fn scan_paths(
     })
 }
 
+#[tauri::command]
+pub async fn scan_playlist(
+    event: ScanPlaylistEvent,
+    app_handle: tauri::AppHandle,
+) -> Option<ToImportEvent> {
+    let mut songs: Vec<Song> = vec![];
+
+    let read_result = std::fs::read_to_string(event.playlist);
+
+    if let Ok(content) = read_result {
+        let playlist: Playlist = Playlist::from(content.as_str());
+
+        for entry in playlist.list {
+            if let Some(mut song) = crate::metadata::extract_metadata(
+                Path::new(&entry.url),
+                true,
+                false,
+                false,
+                &app_handle,
+            ) {
+                song.artwork = None;
+
+                songs.push(song);
+            }
+        }
+    }
+
+    Some(ToImportEvent {
+        songs,
+        albums: vec![],
+        progress: 100,
+        done: true,
+        error: None,
+    })
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetArtworkEvent {
@@ -516,10 +557,20 @@ pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Op
             Ok(tagged_file) => {
                 if tagged_file.primary_tag().is_some() {
                     if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
+                        let mut format = String::new();
+
+                        if let Some(mime) = pic.mime_type() {
+                            format = mime.to_string();
+                        } else {
+                            let mime = mimetype::detect(pic.data());
+
+                            format = mime.mime.to_string();
+                        }
+
                         return Some(Artwork {
                             data: pic.data().to_vec(),
                             src: None,
-                            format: pic.mime_type().unwrap().to_string(),
+                            format,
                         });
                     }
                 }
@@ -987,8 +1038,17 @@ pub fn extract_metadata(
                             if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first()
                             {
                                 let mut decoded = false;
+                                let mut format = String::new();
 
-                                match pic.mime_type().unwrap().as_str() {
+                                if let Some(mime) = pic.mime_type() {
+                                    format = mime.to_string();
+                                } else {
+                                    let mime = mimetype::detect(pic.data());
+
+                                    format = mime.mime.to_string();
+                                }
+
+                                match format.as_str() {
                                     "image/jpeg" => {
                                         let mut decoder = zune_jpeg::JpegDecoder::new(pic.data());
 
@@ -1015,7 +1075,7 @@ pub fn extract_metadata(
                                     artwork = Some(Artwork {
                                         data: pic.data().to_vec(),
                                         src: None,
-                                        format: pic.mime_type().unwrap().to_string(),
+                                        format,
                                     })
                                 } else {
                                     artwork_origin = Some(ArtworkOrigin::Broken);

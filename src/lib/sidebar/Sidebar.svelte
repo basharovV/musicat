@@ -2276,16 +2276,19 @@
                 right: 5px;
                 top: 5px;
                 bottom: 5px;
-                background-color: color-mix(
-                    in srgb,
-                    var(--background) 50%,
-                    transparent
-                );
-                border: 1px solid
-                    color-mix(in srgb, var(--inverse) 10%, transparent);
-                box-shadow: 0px 0px 5px 1px
-                    color-mix(in srgb, var(--type-bw) 20%, transparent);
-                backdrop-filter: blur(5px);
+                background-color: transparent;
+                @media only screen and (max-height: 820px) {
+                    background-color: color-mix(
+                        in srgb,
+                        var(--background) 30%,
+                        transparent
+                    );
+
+                    box-shadow: 0px 0px 10px 1px
+                        color-mix(in srgb, var(--type-bw) 10%, transparent);
+
+                    backdrop-filter: blur(5px);
+                }
                 border-radius: 5px;
                 z-index: -1;
             }

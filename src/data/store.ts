@@ -39,6 +39,7 @@ import SmartQuery from "../lib/smart-query/Query";
 import { scanPlaylists } from "./M3UUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
+import { persistentWritable } from "./storeUtils";
 
 export const L = derived(locale, (l) => {
     return i18nString(l);
@@ -177,12 +178,6 @@ export const uiView: Writable<UiView> = writable("library");
 export const arrowFocus: Writable<ArrowFocus> = writable("library");
 export const draggedColumnIdx: Writable<number | null> = writable(null);
 
-export const isWelcomeSeen: Writable<boolean> = writable(
-    Boolean(localStorage.getItem("isWelcomeSeen") || false),
-);
-isWelcomeSeen.subscribe((val) =>
-    localStorage.setItem("isWelcomeSeen", String(val)),
-);
 // File drop
 export const droppedFiles: Writable<string[]> = writable([]);
 export const hoveredFiles: Writable<string[]> = writable([]);
@@ -295,15 +290,10 @@ const defaultUIPreferences: UIPreferences = {
 };
 
 // UI preferences
-export const uiPreferences: Writable<UIPreferences> = writable({
-    ...defaultUIPreferences,
-    ...JSON.parse(localStorage.getItem("uiPreferences") || "{}"),
-});
-
-uiPreferences.subscribe((val) => {
-    console.log("uiPreferences", val);
-    localStorage.setItem("uiPreferences", JSON.stringify(val));
-});
+export const uiPreferences = persistentWritable(
+    defaultUIPreferences,
+    "uiPreferences",
+);
 
 export const foldersToWatch = derived(
     userSettings,
@@ -322,16 +312,9 @@ playlistLocation.subscribe((pl) => {
     }
 });
 
-export const libraryScrollPos: Writable<number> = writable(
-    localStorage.getItem("libraryScrollPos")
-        ? parseFloat(localStorage.getItem("libraryScrollPos"))
-        : 0,
-);
-export const scrollToSong: Writable<Song> = writable(null);
+export const libraryScrollPos = persistentWritable(0, "libraryScrollPos");
 
-libraryScrollPos.subscribe((scrollPos) => {
-    localStorage.setItem("libraryScrollPos", String(scrollPos));
-});
+export const scrollToSong: Writable<Song> = writable(null);
 
 export const os: Writable<OsType> = writable("macos");
 
@@ -361,12 +344,7 @@ export const isLyricsHovered = writable(false);
 export const currentSongLyrics: Writable<CurrentSongLyrics> = writable(null);
 
 // Queue
-export const isQueueOpen: Writable<boolean> = writable(
-    localStorage.getItem("isQueueOpen") === "true",
-);
-isQueueOpen.subscribe((val) =>
-    localStorage.setItem("isQueueOpen", String(val)),
-);
+export const isQueueOpen = persistentWritable(false, "isQueueOpen");
 export const isQueueCleared = writable(false);
 export const isQueueShowing = writable(false);
 
@@ -375,21 +353,13 @@ export const isWikiOpen = writable(false);
 export const wikiArtist: Writable<string> = writable(null);
 
 // Sidebar
-export const isSidebarOpen: Writable<boolean> = writable(
-    localStorage.getItem("isSidebarOpen") === "true",
-);
-isSidebarOpen.subscribe((val) =>
-    localStorage.setItem("isSidebarOpen", String(val)),
-);
+export const isSidebarOpen = persistentWritable(true, "isSidebarOpen");
+
 export const isSidebarFloating = writable(false);
 export const isSidebarShowing = writable(true);
 
-export const isWaveformOpen: Writable<boolean> = writable(
-    localStorage.getItem("isWaveformOpen") === "true",
-);
-isWaveformOpen.subscribe((val) => {
-    localStorage.setItem("isWaveformOpen", String(val));
-});
+export const isWaveformOpen = persistentWritable(false, "isWaveformOpen");
+
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,
     data: [],
@@ -407,11 +377,9 @@ export const waveformPeaks: Writable<WaveformPlayerState> = writable({
  */
 export const lastWrittenSongs: Writable<Song[]> = writable([]);
 
-export const artworkDirectory: Writable<string> = writable(
-    localStorage.getItem("artworkDirectory"),
-);
-artworkDirectory.subscribe((val) =>
-    localStorage.setItem("artworkDirectory", val),
+export const artworkDirectory = persistentWritable<string>(
+    null,
+    "artworkDirectory",
 );
 
 async function init() {
@@ -488,20 +456,14 @@ let defaultColumnOrder = [
     "tags",
 ];
 
-export const columnOrder = writable(
-    JSON.parse(localStorage.getItem("columnOrder")) || defaultColumnOrder,
+export const columnOrder = persistentWritable(
+    defaultColumnOrder,
+    "columnOrder",
 );
 
-// Auto-persist column order
-columnOrder.subscribe((val) =>
-    localStorage.setItem("columnOrder", JSON.stringify(val)),
-);
-
-export const albumColumnOrder = writable(
-    JSON.parse(localStorage.getItem("albumColumnOrder")) || defaultColumnOrder,
-);
-albumColumnOrder.subscribe((val) =>
-    localStorage.setItem("albumColumnOrder", JSON.stringify(val)),
+export const albumColumnOrder = persistentWritable(
+    defaultColumnOrder,
+    "albumColumnOrder",
 );
 
 // Internet Archive

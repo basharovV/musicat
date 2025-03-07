@@ -275,6 +275,21 @@ class AudioPlayer {
             this.isRunningTransition = false;
         });
 
+        appWindow.listen("get_next_song", async (event: Event<string>) => {
+            // if the player is at the end of the current song and the next song is broken,
+            // then, the index hasn't been incremented
+            // so, it needs to be incremented
+            if (
+                this.currentSongIdx + 1 < this.queue?.length &&
+                this.queue[this.currentSongIdx + 1].path === event.payload
+            ) {
+                this.currentSongIdx += 1;
+            }
+
+            this.setNextUpSong();
+            this.isRunningTransition = false;
+        });
+
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
         });
@@ -614,16 +629,27 @@ class AudioPlayer {
 
         console.log("handleOpenedUrls paths", paths);
 
-        const response = await invoke<ToImport>("scan_paths", {
-            event: {
-                paths: paths,
-                recursive: false,
-                process_albums: false,
-                process_m3u: true,
-                is_async: false,
-                is_cover_fullcheck: get(userSettings).isArtistsToolkitEnabled,
-            },
-        });
+        let response;
+
+        if (paths.length === 1 && paths[0].endsWith(".m3u")) {
+            response = await invoke<ToImport>("scan_playlist", {
+                event: {
+                    playlist: paths[0],
+                },
+            });
+        } else {
+            response = await invoke<ToImport>("scan_paths", {
+                event: {
+                    paths: paths,
+                    recursive: false,
+                    process_albums: false,
+                    process_m3u: true,
+                    is_async: false,
+                    is_cover_fullcheck:
+                        get(userSettings).isCoverFullCheckEnabled,
+                },
+            });
+        }
         console.log("scan_paths response", response);
         if (response.songs) {
             setQueue(response.songs, 0);
