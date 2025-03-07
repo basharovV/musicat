@@ -7,9 +7,11 @@
     import {
         compressionSelected,
         current,
+        importStatus,
         isPlaying,
         query,
         queue,
+        selectedSmartQuery,
         uiPreferences,
         uiView,
     } from "../../data/store";
@@ -23,6 +25,9 @@
     import { debounce } from "lodash-es";
     import { getAlbumDetailsHeight } from "../albums/util";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import SmartQuery from "../smart-query/Query";
+    import BuiltInQueries from "../../data/SmartQueries";
+    import ImportPlaceholder from "../library/ImportPlaceholder.svelte";
 
     const PADDING = 14;
 
@@ -40,7 +45,6 @@
     let highlightedAlbum;
     let isCurrentAlbumInView = false;
     let isInit = true;
-    let isLoading = true;
     let itemSizes = [];
     let lastOffset = 0;
     let rowCount = 0;
@@ -48,18 +52,52 @@
     let virtualList;
 
     $: albums = liveQuery(async () => {
-        let albums = await db.albums.toArray();
+        let albums: Album[];
 
-        if ($compressionSelected === "lossless") {
-            albums = albums.filter(
-                ({ title, lossless }) => title.length && lossless,
-            );
-        } else if ($compressionSelected === "lossy") {
-            albums = albums.filter(
-                ({ title, lossless }) => title.length && !lossless,
-            );
+        if ($uiView === "smart-query:icon") {
+            let songs: Song[];
+
+            if ($selectedSmartQuery.startsWith("~usq:")) {
+                // Run the query from the user-built blocks
+                const query = await SmartQuery.loadWithUQI($selectedSmartQuery);
+                songs = await query.run();
+            } else {
+                // Run the query from built-in functions
+                songs = await BuiltInQueries[$selectedSmartQuery].run();
+            }
+
+            const byAlbumIds = {};
+
+            for (const song of songs) {
+                if (song.albumId) {
+                    if (byAlbumIds[song.albumId]) {
+                        byAlbumIds[song.albumId].push(song);
+                    } else {
+                        byAlbumIds[song.albumId] = [song];
+                    }
+                }
+            }
+
+            albums = await db.albums.bulkGet(Object.keys(byAlbumIds));
+
+            albums = albums.map((album) => ({
+                ...album,
+                tracksIds: byAlbumIds[album.id].map(({ id }) => id),
+            }));
         } else {
-            albums = albums.filter(({ title }) => title.length);
+            albums = await db.albums.toArray();
+
+            if ($compressionSelected === "lossless") {
+                albums = albums.filter(
+                    ({ title, lossless }) => title.length && lossless,
+                );
+            } else if ($compressionSelected === "lossy") {
+                albums = albums.filter(
+                    ({ title, lossless }) => title.length && !lossless,
+                );
+            } else {
+                albums = albums.filter(({ title }) => title.length);
+            }
         }
 
         if ($uiPreferences.albumsViewSortBy === "title") {
@@ -85,8 +123,6 @@
                 return 0;
             });
         }
-
-        isLoading = false;
 
         return albums;
     });
@@ -166,7 +202,7 @@
 
         updatePlayingAlbumOffset();
 
-        return true;
+        return !!virtualList;
     }
 
     function updatePlayingAlbumOffset() {
@@ -262,6 +298,10 @@
     }
 
     async function onRightClick(e, album) {
+        if (e.button !== 2) {
+            return;
+        }
+
         highlightedAlbum = album.id;
 
         const songs = (await db.songs.bulkGet(album.tracksIds))
@@ -356,13 +396,15 @@
 />
 
 <div class="albums-container" bind:this={container}>
-    {#if isLoading}
+    {#if !$albums}
         <!-- <div
             class="loading"
             out:fade={{ duration: 90, easing: cubicInOut }}
         >
             <p>💿 one sec...</p>
         </div> -->
+    {:else if ($importStatus.isImporting && $importStatus.backgroundImport === false) || ($albums.length === 0 && $query.query.length === 0 && !/^(smart-query|favourites|to-delete)/.test($uiView))}
+        <ImportPlaceholder />
     {:else}
         <div class="grid-container">
             <VirtualList

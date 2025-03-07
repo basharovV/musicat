@@ -1,12 +1,15 @@
 <script lang="ts">
-    import { db } from "../../data/db";
+    import { onMount } from "svelte";
     import {
         forceRefreshLibrary,
         isQueueOpen,
+        isQueueShowing,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         isSidebarOpen,
+        isSidebarShowing,
+        os,
         queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
@@ -15,6 +18,7 @@
         uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
+    import AlbumOptions from "../albums/AlbumOptions.svelte";
     import SmartQuery from "../smart-query/Query";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -23,12 +27,26 @@
     export let selectedQuery;
 
     let durationText;
+    let element: HTMLElement;
+
+    $: innerWidth = 800;
+    $: showAllOptions = innerWidth >= 1200;
 
     $: if ($queueDuration) {
         durationText = secondsToFriendlyTime($queueDuration);
     } else {
         durationText = null;
     }
+
+    onMount(() => {
+        const resizeObserver = new ResizeObserver(() => {
+            innerWidth = element.getBoundingClientRect().width;
+        });
+
+        resizeObserver.observe(element);
+
+        return () => resizeObserver.unobserve(element);
+    });
 
     function closeSmartPlaylist() {
         if ($smartQueryInitiator === "library-cell") {
@@ -37,7 +55,6 @@
             $uiView = "library";
         } else {
             $isSmartQueryBuilderOpen = false;
-            // $uiView = "smart-query";
 
             if ($smartQueryInitiator.startsWith("smart-query:")) {
                 $selectedSmartQuery = $smartQueryInitiator.substring(12);
@@ -90,73 +107,104 @@
     }
 </script>
 
-{#if $isSmartQueryBuilderOpen}
-    <form
-        on:submit|preventDefault={save}
-        class:window-padding={!$isSidebarOpen && !$isQueueOpen}
-    >
-        <Input
-            bind:value={$smartQuery.name}
-            fullWidth
-            alt
-            placeholder={$LL.smartPlaylists.builder.placeholder()}
-        />
-    </form>
-{:else}
-    <h3 class="title">
-        <span>
-            <Icon
-                icon="ic:round-star-outline"
-                size={15}
-                color={$uiView === "smart-query" ? "#45fffcf3" : "currentColor"}
-            /></span
-        >&nbsp;{selectedQuery?.name}
-    </h3>
-{/if}
-{#if durationText}
-    <p class="duration">{durationText}</p>
-{/if}
-<div class="line" />
-<div class="playlist-info">
-    <p class="count"></p>
-    <!-- TODO -->
+<div
+    class="header"
+    class:shift-controls={!$isSidebarShowing &&
+        !$isQueueShowing &&
+        $os === "macos"}
+    bind:this={element}
+>
+    <div class="left">
+        {#if !$isSmartQueryBuilderOpen}
+            <ButtonWithIcon
+                size="small"
+                icon="material-symbols:add"
+                onClick={newSmartPlaylist}
+                theme="active"
+            />
+            {#if $selectedSmartQuery?.startsWith("~usq:")}
+                <ButtonWithIcon
+                    size="small"
+                    icon="material-symbols:edit-outline"
+                    onClick={editSmartPlaylist}
+                    theme="active"
+                />
+            {/if}
+        {:else}
+            <ButtonWithIcon
+                size="small"
+                icon="material-symbols:close"
+                onClick={closeSmartPlaylist}
+                text={$LL.smartPlaylists.builder.close()}
+                theme="transparent"
+            />
+            <ButtonWithIcon
+                size="small"
+                icon="material-symbols:save-outline"
+                onClick={save}
+                text={$LL.smartPlaylists.builder.save()}
+                disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
+                theme="transparent"
+            />
+        {/if}
+    </div>
+    <div class="center">
+        {#if $isSmartQueryBuilderOpen}
+            <form
+                on:submit|preventDefault={save}
+                class:window-padding={!$isSidebarOpen && !$isQueueOpen}
+            >
+                <Input
+                    bind:value={$smartQuery.name}
+                    fullWidth
+                    alt
+                    placeholder={$LL.smartPlaylists.builder.placeholder()}
+                />
+            </form>
+        {:else}
+            <h3 class="title">
+                <span>
+                    <Icon
+                        icon="ic:round-star-outline"
+                        size={15}
+                        color={$uiView.startsWith("smart-query")
+                            ? "#45fffcf3"
+                            : "currentColor"}
+                    /></span
+                >&nbsp;{selectedQuery?.name}
+            </h3>
+        {/if}
+        {#if durationText}
+            <p class="duration">{durationText}</p>
+        {/if}
+        <div class="line" />
+        <div class="playlist-info">
+            <p class="count"></p>
+            <!-- TODO -->
+        </div>
+    </div>
+    <div class="right">
+        {#if $uiView === "smart-query:icon"}
+            <AlbumOptions bind:showAllOptions />
+        {/if}
+    </div>
 </div>
-{#if !$isSmartQueryBuilderOpen}
-    {#if $selectedSmartQuery?.startsWith("~usq:")}
-        <ButtonWithIcon
-            size="small"
-            icon="material-symbols:edit-outline"
-            onClick={editSmartPlaylist}
-            text={$LL.smartPlaylists.editSmartPlaylist()}
-            theme="active"
-        />
-    {/if}
-    <ButtonWithIcon
-        size="small"
-        icon="material-symbols:add"
-        onClick={newSmartPlaylist}
-        text={$LL.smartPlaylists.newSmartPlaylist()}
-        theme="active"
-    />
-{:else}
-    <ButtonWithIcon
-        size="small"
-        icon="material-symbols:close"
-        onClick={closeSmartPlaylist}
-        text={$LL.smartPlaylists.builder.close()}
-        theme="transparent"
-    />
-    <ButtonWithIcon
-        size="small"
-        icon="material-symbols:save-outline"
-        onClick={save}
-        text={$LL.smartPlaylists.builder.save()}
-        disabled={!$isSmartQueryValid || !$smartQuery.isNameSet}
-        theme="transparent"
-    />
-{/if}
 
 <style lang="scss">
+    .header {
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+
+        &.shift-controls {
+            .left {
+                margin-left: 70px;
+            }
+        }
+    }
+
     form {
         &.window-padding {
             padding-left: 70px;
@@ -164,6 +212,22 @@
     }
     * {
         user-select: none;
+    }
+    .left,
+    .center,
+    .right {
+        display: flex;
+        gap: 8px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .center {
+        @media only screen and (min-width: 1800px) {
+            position: fixed;
+            left: 50%;
+            transform: translate(-50%, 0%);
+        }
     }
     .label {
         font-size: 1em;

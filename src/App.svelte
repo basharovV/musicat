@@ -14,6 +14,7 @@
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
+        isQueueShowing,
         isSidebarFloating,
         isSidebarOpen,
         isSidebarShowing,
@@ -251,6 +252,7 @@
     }
 
     $: {
+        $isQueueShowing = showQueue;
         $isSidebarShowing = showSidebar;
 
         if (showSidebar) {
@@ -388,29 +390,31 @@
             {/if}
         </div>
 
-        <div class="header">
-            {#if $uiView === "playlists"}
-                <div class="content" data-tauri-drag-region>
-                    {#if $selectedPlaylistFile}
-                        <PlaylistHeader playlist={$selectedPlaylistFile} />
-                    {/if}
-                </div>
-            {:else if $uiView === "to-delete"}
-                <div class="content" data-tauri-drag-region>
-                    <ToDeleteHeader />
-                </div>
-            {:else if $uiView === "smart-query" || $uiView === "favourites"}
-                <div class="content" data-tauri-drag-region>
-                    {#await selectedQuery then query}
-                        <SmartPlaylistHeader selectedQuery={query} />
-                    {/await}
-                </div>
-            {:else if $uiView === "albums"}
-                <div class="content" data-tauri-drag-region>
-                    <AlbumsHeader />
-                </div>
-            {/if}
-        </div>
+        {#if showMainPanel}
+            <div class="header">
+                {#if $uiView === "playlists"}
+                    <div class="content" data-tauri-drag-region>
+                        {#if $selectedPlaylistFile}
+                            <PlaylistHeader playlist={$selectedPlaylistFile} />
+                        {/if}
+                    </div>
+                {:else if $uiView === "to-delete"}
+                    <div class="content" data-tauri-drag-region>
+                        <ToDeleteHeader />
+                    </div>
+                {:else if $uiView.startsWith("smart-query") || $uiView === "favourites"}
+                    <div class="content" data-tauri-drag-region>
+                        {#await selectedQuery then query}
+                            <SmartPlaylistHeader selectedQuery={query} />
+                        {/await}
+                    </div>
+                {:else if $uiView === "albums"}
+                    <div class="content" data-tauri-drag-region>
+                        <AlbumsHeader />
+                    </div>
+                {/if}
+            </div>
+        {/if}
 
         <div class="subheader">
             {#if $isTagCloudOpen}
@@ -424,7 +428,7 @@
                 >
                     <TagCloud />
                 </div>
-            {:else if $uiView.match(/^(smart-query)/)}
+            {:else if $uiView.startsWith("smart-query")}
                 {#if $isSmartQueryBuilderOpen}
                     <div
                         class="content"
@@ -442,11 +446,9 @@
 
         {#if showMainPanel}
             <div class="panel">
-                {#if $uiView === "library" || $uiView.match(/^(smart-query|favourites|to-delete)/)}
+                {#if $uiView === "library" || $uiView === "favourites" || $uiView === "playlists" || $uiView === "smart-query:list" || $uiView === "to-delete"}
                     <CanvasLibraryView />
-                {:else if $uiView === "playlists" || $uiView === "to-delete"}
-                    <CanvasLibraryView />
-                {:else if $uiView === "albums"}
+                {:else if $uiView === "albums" || $uiView === "smart-query:icon"}
                     <AlbumView />
                 {:else if $uiView === "your-music"}
                     <ArtistsToolkitView />

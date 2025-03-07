@@ -76,7 +76,7 @@
                             .includes($query.query.toLowerCase()),
                 );
             }
-        } else if ($uiView === "smart-query") {
+        } else if ($uiView === "smart-query:list") {
             /**
              * User-built smart queries don't support indexing
              */
