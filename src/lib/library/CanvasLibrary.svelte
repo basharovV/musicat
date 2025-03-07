@@ -485,7 +485,7 @@
             $smartQuery.isEmpty);
 
     // Trigger: on songs updated
-    $: if (songs !== undefined && libraryContainer !== undefined) {
+    $: if (songs && libraryContainer && prevSongCount !== songs.length) {
         console.log("Library::songs updated", songs.length);
         drawSongDataGrid();
         prevSongCount = songs.length;
@@ -556,8 +556,8 @@
         ready = true;
     }
 
-    function drawSongDataGrid(isResize = false) {
-        calculateCanvasSize();
+    function drawSongDataGrid(isResize: boolean = false) {
+        calculateCanvasSize(isResize);
         calculateColumns();
         if (isResize) {
             onScroll(null, scrollNormalized, null, true);
@@ -578,7 +578,7 @@
         // );
     }
 
-    function calculateCanvasSize() {
+    function calculateCanvasSize(isResize: boolean) {
         contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
         viewportHeight = libraryContainer.getBoundingClientRect().height;
         // console.log("contentHeight", contentHeight, "viewportHeight", viewportHeight);
@@ -596,13 +596,16 @@
         isScrollable = contentHeight > viewportHeight;
         // console.log("scrollableArea", scrollableArea);
 
-        setTimeout(() => {
-            width =
-                scrollContainer?.clientWidth ??
-                libraryContainer?.clientWidth ??
-                0;
-            calculateColumns();
-        }, 50);
+        if (!isResize) {
+            setTimeout(() => {
+                width =
+                    scrollContainer?.clientWidth ??
+                    libraryContainer?.clientWidth ??
+                    0;
+
+                calculateColumns();
+            }, 50);
+        }
     }
 
     function calculateColumns() {

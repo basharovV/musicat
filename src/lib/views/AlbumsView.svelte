@@ -2,7 +2,7 @@
     import { liveQuery } from "dexie";
     import md5 from "md5";
     import { onMount } from "svelte";
-    import type { Album } from "../../App";
+    import type { Album, Song } from "../../App";
     import { db } from "../../data/db";
     import {
         compressionSelected,
@@ -131,12 +131,6 @@
             activeAlbums = activeAlbums.filter((a) => a.tracksIds.length > 1);
         }
 
-        rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
-
-        if (detailsAlbum) {
-            rowCount += 1;
-        }
-
         onResize();
     }
 
@@ -200,6 +194,23 @@
             return;
         }
 
+        if (columnCount) {
+            rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
+
+            if (detailsAlbum) {
+                const index = activeAlbums.findIndex(
+                    (album) => album === detailsAlbum,
+                );
+
+                if (index === -1) {
+                    unselectAlbum();
+                } else {
+                    rowCount += 1;
+                    detailsAlbumIndex = index;
+                }
+            }
+        }
+
         height = container?.clientHeight;
         width = container?.clientWidth;
 
@@ -227,11 +238,6 @@
             columnWidth = minWidth + perColumn;
         }
 
-        // album might have moved, details need to follow
-        if (detailsAlbum && columnCount !== count) {
-            detailsAlbumRow = Math.floor(detailsAlbumIndex / count) + 2;
-        }
-
         columnCount = count;
 
         rowHeight = Math.floor(columnWidth + (showInfo ? 55 : 0));
@@ -241,7 +247,10 @@
         itemSizes[itemSizes.length - 1] = PADDING;
 
         if (detailsAlbum) {
-            itemSizes[detailsAlbumRow] = detailsAlbumHeight;
+            const row = Math.floor(detailsAlbumIndex / count) + 2;
+
+            itemSizes[row] = detailsAlbumHeight;
+            detailsAlbumRow = row;
         }
 
         if (currentAlbum) {
@@ -266,25 +275,17 @@
 
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
-            detailsAlbum = null;
-            detailsAlbumTracks = null;
-            detailsAlbumHeight = 0;
-            detailsAlbumIndex = -1;
-            detailsAlbumRow = -1;
-
-            itemSizes.splice(Math.floor(index / columnCount) + 2, 1);
-            rowCount -= 1;
+            unselectAlbum(index);
         } else {
             const oldRow = detailsAlbumRow;
 
             detailsAlbum = album;
             detailsAlbumTracks = await db.songs.bulkGet(album.tracksIds);
             detailsAlbumIndex = index;
-            detailsAlbumRow = Math.floor(index / columnCount) + 2;
-
             detailsAlbumHeight = await getAlbumDetailsHeight(
                 detailsAlbumTracks.length,
             );
+            detailsAlbumRow = Math.floor(index / columnCount) + 2;
 
             if (oldRow >= 0) {
                 var sizes = [...itemSizes];
@@ -295,6 +296,19 @@
                 itemSizes.splice(detailsAlbumRow, 0, detailsAlbumHeight);
                 rowCount += 1;
             }
+        }
+    }
+
+    function unselectAlbum(index?: number) {
+        detailsAlbum = null;
+        detailsAlbumTracks = null;
+        detailsAlbumHeight = 0;
+        detailsAlbumIndex = -1;
+        detailsAlbumRow = -1;
+
+        if (typeof index === "number") {
+            itemSizes.splice(Math.floor(index / columnCount) + 2, 1);
+            rowCount -= 1;
         }
     }
 
@@ -325,9 +339,7 @@
             onResize();
         });
 
-        const resizeObserver = new ResizeObserver((entries) => {
-            onResize();
-        });
+        const resizeObserver = new ResizeObserver(debounce(onResize, 5));
 
         resizeObserver.observe(container);
 
@@ -370,11 +382,13 @@
                         <AlbumDetails
                             album={detailsAlbum}
                             tracks={detailsAlbumTracks}
+                            onUnselect={() => unselectAlbum(detailsAlbumIndex)}
                         />
                     {:else}
                         {#each Array(columnCount) as _, col (col)}
                             {@const albumIdx =
-                                detailsAlbumRow == -1 || index < detailsAlbumRow
+                                detailsAlbumRow === -1 ||
+                                index < detailsAlbumRow
                                     ? (index - 1) * columnCount + col
                                     : (index - 2) * columnCount + col}
                             {@const album =
