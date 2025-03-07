@@ -822,11 +822,6 @@
                 scrollNormalized *
                     (contentHeight - viewportHeight - HEADER_HEIGHT),
             );
-            // console.log(
-            //     "NEW SCROLL POS",
-            //     newScrollPos,
-            //     contentHeight - viewportHeight - HEADER_HEIGHT
-            // );
         } else if (e) {
             // From mouse wheel
             newScrollPos = scrollPos + e.detail.evt.deltaY;
@@ -835,13 +830,18 @@
             newScrollPos = scrollPosY;
         }
         // Handle boundaries
-        if (newScrollPos < HEADER_HEIGHT) {
-            newScrollPos = HEADER_HEIGHT;
+        if (newScrollPos < 0) {
+            newScrollPos = 0;
         } else if (
             newScrollPos >
             contentHeight - viewportHeight - HEADER_HEIGHT
         ) {
             newScrollPos = contentHeight - viewportHeight - HEADER_HEIGHT;
+        } else if (
+            newScrollPos ===
+            contentHeight - viewportHeight - HEADER_HEIGHT
+        ) {
+            scrollNormalized = 1;
         }
 
         if (newScrollPos === scrollPos) {
