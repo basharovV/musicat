@@ -614,16 +614,27 @@ class AudioPlayer {
 
         console.log("handleOpenedUrls paths", paths);
 
-        const response = await invoke<ToImport>("scan_paths", {
-            event: {
-                paths: paths,
-                recursive: false,
-                process_albums: false,
-                process_m3u: true,
-                is_async: false,
-                is_cover_fullcheck: get(userSettings).isCoverFullCheckEnabled,
-            },
-        });
+        let response;
+
+        if (paths.length === 1 && paths[0].endsWith(".m3u")) {
+            response = await invoke<ToImport>("scan_playlist", {
+                event: {
+                    playlist: paths[0],
+                },
+            });
+        } else {
+            response = await invoke<ToImport>("scan_paths", {
+                event: {
+                    paths: paths,
+                    recursive: false,
+                    process_albums: false,
+                    process_m3u: true,
+                    is_async: false,
+                    is_cover_fullcheck:
+                        get(userSettings).isCoverFullCheckEnabled,
+                },
+            });
+        }
         console.log("scan_paths response", response);
         if (response.songs) {
             setQueue(response.songs, 0);
