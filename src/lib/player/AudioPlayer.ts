@@ -635,7 +635,6 @@ class AudioPlayer {
                 },
             });
         }
-
         console.log("scan_paths response", response);
         if (response.songs) {
             setQueue(response.songs, 0);

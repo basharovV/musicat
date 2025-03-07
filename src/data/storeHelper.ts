@@ -1,6 +1,9 @@
+import { remove } from "lodash-es";
 import type { Album, PlaylistFile, Song } from "src/App";
+import type SmartQuery from "src/lib/smart-query/Query";
+import { get } from "svelte/store";
+import AudioPlayer from "../lib/player/AudioPlayer";
 import {
-    type DragSource,
     current,
     draggedOrigin,
     draggedSongs,
@@ -10,11 +13,8 @@ import {
     queue,
     queueDuration,
     shuffledQueue,
+    type DragSource,
 } from "./store";
-import AudioPlayer from "../lib/player/AudioPlayer";
-import { get } from "svelte/store";
-import { remove } from "lodash-es";
-import type SmartQuery from "src/lib/smart-query/Query";
 
 export function findQueueIndex({ id }: Song): number {
     return get(queue).findIndex((song) => song.id === id);

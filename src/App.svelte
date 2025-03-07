@@ -566,7 +566,7 @@
 
         .sidebar {
             width: 100%;
-            grid-row: 1 / 6;
+            grid-row: 1 / 8;
             grid-column: 1;
             width: 0;
             overflow: hidden;
