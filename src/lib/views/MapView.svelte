@@ -9,7 +9,7 @@
 
     import { onMount } from "svelte";
 
-    import type { MapTooltipData, Song } from "src/App";
+    import type { MapTooltipData, Song, SongOrder } from "src/App";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -28,20 +28,17 @@
     } from "../../data/store";
     import SmartQuery from "../smart-query/Query";
     import { codes, countries } from "../data/CountryCodes";
-    import audioPlayer from "../player/AudioPlayer";
     import { getFlagEmoji } from "../../utils/EmojiUtils";
-    import Particles from "svelte-particles";
     import { loadSlim } from "tsparticles-slim";
-    import { groupBy, shuffleArray } from "../../utils/ArrayUtils";
+    import { groupBy } from "../../utils/ArrayUtils";
     import MapTooltip from "../map/MapTooltip.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import {
-        addCountryDataAllSongs,
-        findCountryByArtist,
-    } from "../data/LibraryEnrichers";
+    import { addCountryDataAllSongs } from "../data/LibraryEnrichers";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { currentThemeObject } from "../../theming/store";
     import { setQueue } from "../../data/storeHelper";
+
+    export let songOrder: SongOrder;
 
     let isLoading = true;
 
@@ -62,18 +59,16 @@
             results = await db.songs.bulkGet(playlist.tracks);
             isIndexed = false;
             // Filter within playlist
-            if ($query.query.length) {
+            if ($query.length) {
                 results = results.filter(
                     (song) =>
                         song.title
                             .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
+                            .includes($query.toLowerCase()) ||
                         song.artist
                             .toLowerCase()
-                            .includes($query.query.toLowerCase()) ||
-                        song.album
-                            .toLowerCase()
-                            .includes($query.query.toLowerCase()),
+                            .includes($query.toLowerCase()) ||
+                        song.album.toLowerCase().includes($query.toLowerCase()),
                 );
             }
         } else if ($uiView === "smart-query") {
@@ -110,41 +105,41 @@
                 }
                 isSmartQueryResults = true;
             }
-        } else if ($query.query.length) {
+        } else if ($query.length) {
             results = db.songs
                 .orderBy(
-                    $query.orderBy === "artist"
+                    songOrder.orderBy === "artist"
                         ? "[artist+year+album+trackNumber]"
-                        : $query.orderBy === "album"
+                        : songOrder.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy,
+                          : songOrder.orderBy,
                 )
                 .and(
                     (song) =>
                         song.title
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase()) ||
+                            .startsWith($query.toLowerCase()) ||
                         song.artist
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase()) ||
+                            .startsWith($query.toLowerCase()) ||
                         song.album
                             .toLowerCase()
-                            .startsWith($query.query.toLowerCase()),
+                            .startsWith($query.toLowerCase()),
                 );
         } else {
             results = db.songs.orderBy(
-                $query.orderBy === "artist"
+                songOrder.orderBy === "artist"
                     ? "[artist+year+album+trackNumber]"
-                    : $query.orderBy === "album"
+                    : songOrder.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy,
+                      : songOrder.orderBy,
             );
         }
         let resultsArray: Song[] = [];
 
         // Depending whether this is a smart query or not
         if (isIndexed) {
-            if ($query.reverse) {
+            if (songOrder.reverse) {
                 results = results.reverse();
             }
             resultsArray = await results.toArray();
@@ -155,15 +150,15 @@
         // Do sorting for non-indexed results
         if (!isIndexed) {
             resultsArray = resultsArray.sort((a, b) => {
-                switch ($query.orderBy) {
+                switch (songOrder.orderBy) {
                     case "title":
                     case "album":
                     case "track":
                     case "year":
                     case "duration":
                     case "genre":
-                        return a[$query.orderBy].localeCompare(
-                            b[$query.orderBy],
+                        return a[songOrder.orderBy].localeCompare(
+                            b[songOrder.orderBy],
                         );
                     case "artist":
                         // TODO this one needs to match the multiple indexes sorting from Dexie

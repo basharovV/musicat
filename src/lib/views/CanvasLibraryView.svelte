@@ -1,6 +1,6 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
-    import type { Song } from "src/App";
+    import type { Song, SongOrder } from "src/App";
     import { get } from "svelte/store";
     import { songMatchesQuery } from "../../data/LibraryUtils";
     import { parsePlaylist } from "../../data/M3UUtils";
@@ -30,6 +30,8 @@
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
+
+    export let songOrder: SongOrder;
 
     let isLoading = true;
 
@@ -69,9 +71,9 @@
             }));
             isIndexed = false;
             // Filter within playlist
-            if ($query.query.length) {
+            if ($query.length) {
                 results = results.filter((song) =>
-                    songMatchesQuery(song, $query.query),
+                    songMatchesQuery(song, $query),
                 );
             }
         } else if ($uiView === "smart-query" || $uiView === "favourites") {
@@ -107,34 +109,34 @@
                 }
                 isSmartQueryResults = true;
             }
-        } else if ($query.query.length) {
+        } else if ($query.length) {
             results = db.songs
                 .orderBy(
-                    $query.orderBy === "artist"
+                    songOrder.orderBy === "artist"
                         ? "[artist+year+album+trackNumber]"
-                        : $query.orderBy === "album"
+                        : songOrder.orderBy === "album"
                           ? "[album+trackNumber]"
-                          : $query.orderBy,
+                          : songOrder.orderBy,
                 )
-                .and((song) => songMatchesQuery(song, $query.query));
+                .and((song) => songMatchesQuery(song, $query));
         } else {
             results = db.songs.orderBy(
-                $query.orderBy === "artist"
+                songOrder.orderBy === "artist"
                     ? "[artist+year+album+trackNumber]"
-                    : $query.orderBy === "album"
+                    : songOrder.orderBy === "album"
                       ? "[album+trackNumber]"
-                      : $query.orderBy,
+                      : songOrder.orderBy,
             );
         }
         let resultsArray: Song[] = [];
 
         // Depending whether this is a smart query or not
         if (isIndexed) {
-            if ($query.reverse) {
+            if (songOrder.reverse) {
                 results = results.reverse();
             }
-            if ($uiView === "smart-query" && $query.orderBy !== "none") {
-                resultsArray = await results.sortBy($query.orderBy);
+            if ($uiView === "smart-query" && songOrder.orderBy !== "none") {
+                resultsArray = await results.sortBy(songOrder.orderBy);
             } else {
                 resultsArray = await results.toArray();
                 // console.log("results", resultsArray);
@@ -173,15 +175,15 @@
         if (!isIndexed) {
             resultsArray = resultsArray.sort((a, b) => {
                 let result = 0;
-                switch ($query.orderBy) {
+                switch (songOrder.orderBy) {
                     case "title":
                     case "album":
                     case "track":
                     case "year":
                     case "duration":
                     case "genre":
-                        result = String(a[$query.orderBy]).localeCompare(
-                            String(b[$query.orderBy]),
+                        result = String(a[songOrder.orderBy]).localeCompare(
+                            String(b[songOrder.orderBy]),
                         );
                         break;
                     case "artist":
@@ -190,7 +192,7 @@
                         result = a.artist.localeCompare(b.artist);
                         break;
                 }
-                if ($query.reverse) {
+                if (songOrder.reverse) {
                     result *= -1;
                 }
                 return result;
@@ -219,7 +221,7 @@
 
         if ($queueMirrorsSearch) {
             setQueue(resultsArray, false);
-            if ($query.query.length === 0) {
+            if ($query.length === 0) {
                 $queueMirrorsSearch = false;
             }
         }
@@ -232,6 +234,8 @@
 <div class="container" class:has-lyrics={$isLyricsOpen}>
     <CanvasLibrary
         bind:columnOrder={$columnOrder}
+        bind:query={$query}
+        bind:songOrder
         allSongs={songs}
         dim={$isLyricsHovered}
         {isLoading}
