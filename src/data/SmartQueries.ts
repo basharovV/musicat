@@ -44,12 +44,12 @@ async function jazzFromThe50s() {
         .and((song) => song.year < 1960 && song.year > 1949);
 }
 
-async function favourites() {
-    return db.songs.filter((s) => s.isFavourite);
+async function favourites(): Promise<Song[]> {
+    return db.songs.filter((s) => s.isFavourite).toArray();
 }
 
-async function recentlyAdded() {
-    return db.songs.orderBy("dateAdded").reverse();
+async function recentlyAdded(): Promise<Song[]> {
+    return db.songs.orderBy("dateAdded").reverse().toArray();
 }
 
 async function whereGenreIs(genre: string) {

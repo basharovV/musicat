@@ -108,6 +108,7 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     pub album: String,
+    album_id: Option<String>,
     album_artist: Option<String>,
     compilation: i32,
     year: i32,
@@ -789,6 +790,8 @@ fn process_directory(
                                     app,
                                 ) {
                                     // info!("Album: {:?}", album);
+                                    song.album_id = Some(album.id.clone());
+
                                     let existing_album =
                                         albums.lock().unwrap().get_mut(&album.id).cloned();
                                     let existing_album_subalbums =
@@ -1114,6 +1117,7 @@ pub fn extract_metadata(
                             title,
                             artist,
                             album,
+                            album_id: None,
                             album_artist,
                             compilation,
                             year,

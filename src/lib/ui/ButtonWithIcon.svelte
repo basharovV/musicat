@@ -11,6 +11,7 @@
     export let size: "small" | "medium" = "medium";
     export let isLoading = false;
     export let disabled = false;
+    export let fill = false;
     export let confirmText = null;
     export let isDestructive = false;
     export let noOutline = false;
@@ -31,7 +32,9 @@
     }}
     class="theme-{theme} {size}"
     class:disabled
+    class:fill
     class:no-outline={noOutline}
+    class:no-text={text.length === 0}
     role="button"
     tabindex="0"
 >
@@ -159,6 +162,14 @@
                     transparent
                 );
             }
+
+            &.fill {
+                background-color: color-mix(
+                    in srgb,
+                    var(--inverse) 40%,
+                    transparent
+                );
+            }
         }
 
         // Sizes
@@ -168,6 +179,16 @@
 
         &.medium {
             padding: 0.6em 1.2em;
+        }
+
+        &.no-text {
+            &.small {
+                padding: 0.3em;
+            }
+
+            &.medium {
+                padding: 0.6em;
+            }
         }
     }
 </style>

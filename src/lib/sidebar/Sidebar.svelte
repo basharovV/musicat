@@ -647,11 +647,18 @@
 
     function onClickSmartPlaylist(e, smartQuery, reset) {
         $selectedPlaylistFile = null;
-        $uiView = "smart-query";
+
+        if ($userSettings.preferredView === "track") {
+            $uiView = "smart-query:list";
+        } else {
+            $uiView = "smart-query:icon";
+        }
+
         if (reset) {
             $query.orderBy = "none";
             $query.reverse = false;
         }
+
         $selectedSmartQuery = smartQuery;
         $isSidebarFloating = false;
     }
@@ -1314,7 +1321,7 @@
                             </div>
                         {/if}
                         <item
-                            class:selected={$uiView === "smart-query"}
+                            class:selected={$uiView.startsWith("smart-query")}
                             on:click={() => {
                                 $smartQueryInitiator = "sidebar";
                                 isSmartPlaylistsExpanded =
@@ -1324,7 +1331,7 @@
                             <Icon
                                 icon="ic:round-star-outline"
                                 size={15}
-                                color={$uiView === "smart-query"
+                                color={$uiView.startsWith("smart-query")
                                     ? $currentThemeObject["accent"]
                                     : "currentColor"}
                             />{$LL.sidebar.smartPlaylists()}
