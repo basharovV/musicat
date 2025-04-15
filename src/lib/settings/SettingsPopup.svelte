@@ -15,13 +15,17 @@
     import tippy from "svelte-tippy";
     import { importPaths } from "../../data/LibraryUtils";
     import { importStatus, popupOpen, userSettings } from "../../data/store";
-    import LL from "../../i18n/i18n-svelte";
+    import LL, { locale } from "../../i18n/i18n-svelte";
     import { darkThemes, lightThemes } from "../../theming/themes";
     import { clickOutside } from "../../utils/ClickOutside";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { setLocale } from "../../i18n/i18n-svelte";
+    import { loadLocale } from "../../i18n/i18n-util.sync";
+    import { locales } from "../../i18n/i18n-util";
+    import type { Locales } from "../../i18n/i18n-types";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
@@ -49,6 +53,13 @@
 
     function onClose() {
         $popupOpen = null;
+    }
+
+    function onLanguageChange(event: Event) {
+        const selectedLocale = (event.target as HTMLSelectElement)
+            .value as Locales;
+        loadLocale(selectedLocale);
+        setLocale(selectedLocale);
     }
 
     async function openFolderSelector() {
@@ -337,7 +348,9 @@
                             <label>
                                 <input
                                     type="checkbox"
-                                    bind:checked={$userSettings.followSystemOutput}
+                                    bind:checked={
+                                        $userSettings.followSystemOutput
+                                    }
                                     on:change={onFollowSystemOutputChange}
                                 />
                             </label>
@@ -355,6 +368,18 @@
                         <select bind:value={$userSettings.miniPlayerLocation}>
                             {#each miniPlayerLocations as location}
                                 <option value={location}>{location}</option>
+                            {/each}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Language</td>
+                    <td>
+                        <select on:change={onLanguageChange} value={$locale}>
+                            {#each locales as locale}
+                                <option value={locale}
+                                    >{locale.toUpperCase()}</option
+                                >
                             {/each}
                         </select>
                     </td>
