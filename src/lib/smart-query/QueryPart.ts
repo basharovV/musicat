@@ -4,7 +4,7 @@ import type { Comparison, DataType } from "src/App";
  * At the moment we just create query parts per field.
  * This can expand to more complex queries
  */
-type FieldKey =
+export type FieldKey =
     | "title"
     | "artist"
     | "album"

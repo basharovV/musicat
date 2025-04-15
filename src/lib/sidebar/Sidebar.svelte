@@ -13,14 +13,18 @@
     import { flip } from "svelte/animate";
     import { cubicInOut } from "svelte/easing";
     import { fade, fly } from "svelte/transition";
-    import type { PlaylistFile, Song } from "../../App";
+    import type {
+        StaticPlaylistFile,
+        Song,
+        DynamicPlaylistFile,
+    } from "../../App";
     import {
-        addSongsToPlaylist,
-        createNewPlaylistFile,
+        addSongsToStaticPlaylist,
+        createNewStaticPlaylistFile,
         deletePlaylistFile,
-        parsePlaylist,
-        renamePlaylist,
-    } from "../../data/M3UUtils";
+        loadStaticPlaylist,
+        renameStaticPlaylist,
+    } from "../../data/PlaylistUtils";
     import SmartQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -57,7 +61,8 @@
         smartQueryInitiator,
         toDeletePlaylist,
         uiView,
-        userPlaylists,
+        userDynamicPlaylists,
+        userStaticPlaylists,
         userSettings,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
@@ -519,11 +524,11 @@
     let menuX = 0;
     let menuY = 0;
     let isConfirmingPlaylistDelete = false;
-    let playlistToEdit: PlaylistFile = null;
-    let draggingOverPlaylist: PlaylistFile = null;
+    let playlistToEdit: StaticPlaylistFile = null;
+    let draggingOverPlaylist: StaticPlaylistFile = null;
     let hoveringOverPlaylistId: string = null;
     let isRenamingPlaylist = false;
-    let activePlaylist: PlaylistFile = null;
+    let activePlaylist: StaticPlaylistFile = null;
     let activeSmartPlaylist: string = null;
 
     let isSmartPlaylistsExpanded = false;
@@ -534,8 +539,8 @@
     let isRenamingSmartPlaylist = false;
     let hoveringOverSmartPlaylistId: number | string = null;
 
-    async function onCreatePlaylist() {
-        createNewPlaylistFile(newPlaylistTitle);
+    async function onCreateStaticPlaylist() {
+        createNewStaticPlaylistFile(newPlaylistTitle);
         newPlaylistTitle = "";
     }
 
@@ -545,24 +550,24 @@
             return;
         }
         await deletePlaylistFile(playlistToEdit);
-        $selectedPlaylistFile = $userPlaylists[0];
+        $selectedPlaylistFile = $userStaticPlaylists[0];
         showPlaylistMenu = false;
         isConfirmingPlaylistDelete = false;
     }
 
-    async function playPlaylist(playlist: PlaylistFile) {
-        const songs = await parsePlaylist(playlist);
+    async function playStaticPlaylist(playlist: StaticPlaylistFile) {
+        const songs = await loadStaticPlaylist(playlist);
         setQueue(songs, 0);
     }
 
-    async function onRenamePlaylist(playlist: PlaylistFile) {
-        await renamePlaylist(playlist, updatedPlaylistName);
+    async function onRenameStaticPlaylist(playlist: StaticPlaylistFile) {
+        await renameStaticPlaylist(playlist, updatedPlaylistName);
         updatedPlaylistName = "";
 
         isRenamingPlaylist = false;
     }
 
-    function onMouseEnterPlaylist(playlist: PlaylistFile) {
+    function onMouseEnterStaticPlaylist(playlist: StaticPlaylistFile) {
         if (
             $draggedSongs.length &&
             draggingOverPlaylist?.title !== playlist?.title
@@ -570,16 +575,16 @@
             draggingOverPlaylist = playlist;
             hoveringOverPlaylistId = null;
         } else {
-            hoveringOverPlaylistId = playlist?.title;
+            hoveringOverPlaylistId = playlist?.path;
         }
     }
 
-    async function onMouseLeavePlaylist(e) {
+    async function onMouseLeaveStaticPlaylist(e) {
         draggingOverPlaylist = null;
         hoveringOverPlaylistId = null;
 
         if (activePlaylist) {
-            const songs = await parsePlaylist(activePlaylist);
+            const songs = await loadStaticPlaylist(activePlaylist);
 
             setDraggedPlaylist(activePlaylist, songs, "Sidebar");
 
@@ -587,18 +592,18 @@
         }
     }
 
-    function onMouseDownPlaylist(playlist: PlaylistFile) {
+    function onMouseDownStaticPlaylist(playlist: StaticPlaylistFile) {
         if (!$draggedSongs.length) {
             activePlaylist = playlist;
         }
     }
 
-    async function onMouseUpPlaylist(playlist: PlaylistFile) {
+    async function onMouseUpStaticPlaylist(playlist: StaticPlaylistFile) {
         if ($draggedOrigin === "Playlist" && $draggedTitle === playlist.title) {
             resetDraggedSongs();
         } else if ($draggedSongs.length) {
             console.log("[Sidebar] Adding to playlist: ", playlist);
-            await addSongsToPlaylist(playlist, $draggedSongs);
+            await addSongsToStaticPlaylist(playlist, $draggedSongs);
             $selectedPlaylistFile = $selectedPlaylistFile; // trigger re-render
             toast.success(
                 `${
@@ -617,7 +622,7 @@
         activePlaylist = null;
     }
 
-    function onClickPlaylist(e, playlist) {
+    function onClickStaticPlaylist(e, playlist) {
         $uiView = "playlists";
         // Opening a playlist will reset the query
         $query = {
@@ -633,17 +638,12 @@
         activePlaylist = null;
     }
 
-    function onClickPlaylistOptions(e, playlist) {
+    function onClickStaticPlaylistOptions(e, playlist) {
         menuX = e.clientX;
         menuY = e.clientY;
         playlistToEdit = playlist;
         showPlaylistMenu = !showPlaylistMenu;
     }
-
-    $: savedSmartQueries = liveQuery(async () => {
-        const queries = await db.smartQueries.toArray();
-        return queries.sort((a, b) => a.name.localeCompare(b.name));
-    });
 
     function onClickSmartPlaylist(e, smartQuery, reset) {
         $selectedPlaylistFile = null;
@@ -656,12 +656,12 @@
         $isSidebarFloating = false;
     }
 
-    function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
-        menuX = e.clientX;
-        menuY = e.clientY;
-        smartPlaylistToEdit = query;
-        showSmartPlaylistMenu = !showSmartPlaylistMenu;
-    }
+    // function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
+    //     menuX = e.clientX;
+    //     menuY = e.clientY;
+    //     smartPlaylistToEdit = query;
+    //     showSmartPlaylistMenu = !showSmartPlaylistMenu;
+    // }
 
     async function playSmartPlaylist(queryId: string) {
         const query = queryId.startsWith("~usq:")
@@ -672,12 +672,12 @@
         setQueue(songs, 0);
     }
 
-    async function onRenameSmartPlaylist(query: SavedSmartQuery) {
-        query.name = updatedSmartPlaylistName;
-        await db.smartQueries.put(query);
-        updatedSmartPlaylistName = "";
-        isRenamingSmartPlaylist = false;
-    }
+    // async function onRenameSmartPlaylist(query: SavedSmartQuery) {
+    //     query.name = updatedSmartPlaylistName;
+    //     await db.smartQueries.put(query);
+    //     updatedSmartPlaylistName = "";
+    //     isRenamingSmartPlaylist = false;
+    // }
 
     async function deleteSmartPlaylist() {
         if (!isConfirmingSmartPlaylistDelete) {
@@ -729,6 +729,69 @@
         }
 
         activeSmartPlaylist = null;
+    }
+
+    function onClickDynamicPlaylist(e, playlist: DynamicPlaylistFile) {
+        $uiView = "smart-query";
+        // Opening a playlist will reset the query
+        $query = {
+            ...$query,
+            orderBy: "none",
+            reverse: false,
+            query: "",
+        };
+        $selectedPlaylistFile = playlist;
+        $selectedSmartQuery = null;
+        $isSidebarFloating = false;
+
+        activePlaylist = null;
+    }
+
+    function onClickDynamicPlaylistOptions(e, playlist: DynamicPlaylistFile) {
+        menuX = e.clientX;
+        menuY = e.clientY;
+        playlistToEdit = playlist;
+        showPlaylistMenu = !showPlaylistMenu;
+    }
+
+    function onMouseDownDynamicPlaylist(playlist: DynamicPlaylistFile) {
+        if (!$draggedSongs.length) {
+            activePlaylist = playlist;
+        }
+    }
+
+    function onMouseEnterDynamicPlaylist(playlist: StaticPlaylistFile) {
+        hoveringOverPlaylistId = playlist?.path;
+    }
+
+    async function onMouseLeaveDynamicPlaylist(e) {
+        draggingOverPlaylist = null;
+        hoveringOverPlaylistId = null;
+
+        if (activePlaylist) {
+            // const songs = await loadStaticPlaylist(activePlaylist);
+            // setDraggedPlaylist(activePlaylist, songs, "Sidebar");
+            // activePlaylist = null;
+        }
+    }
+
+    async function onMouseUpDynamicPlaylist(playlist: DynamicPlaylistFile) {
+        if ($draggedOrigin === "Playlist" && $draggedTitle === playlist.title) {
+            resetDraggedSongs();
+        } else if ($draggedSongs.length) {
+            resetDraggedSongs();
+        }
+
+        activePlaylist = null;
+    }
+
+    async function onRenameDynamicPlaylist(playlist: DynamicPlaylistFile) {
+        updatedPlaylistName = "";
+        isRenamingPlaylist = false;
+    }
+
+    async function playDynamicPlaylist(playlist: DynamicPlaylistFile) {
+        console.log(playlist);
     }
 
     async function favouriteCurrentSong() {
@@ -1127,11 +1190,11 @@
                             class:selected={$uiView === "library" &&
                                 !$selectedPlaylistFile}
                             on:click={() => {
+                                $uiView = "library";
                                 $isSmartQueryBuilderOpen = false;
                                 $selectedPlaylistFile = null;
                                 $selectedSmartQuery = null;
                                 $query.orderBy = $query.libraryOrderBy;
-                                $uiView = "library";
                                 $isSidebarFloating = false;
                             }}
                         >
@@ -1233,7 +1296,7 @@
 
                         {#if isPlaylistsExpanded}
                             <div class="playlists">
-                                {#each $userPlaylists as playlist (playlist.path)}
+                                {#each $userStaticPlaylists as playlist (playlist.path)}
                                     <div
                                         animate:flip={{
                                             duration: 300,
@@ -1243,28 +1306,35 @@
                                         class:dragover={draggingOverPlaylist ===
                                             playlist}
                                         class:hover={hoveringOverPlaylistId ===
-                                            playlist?.title}
+                                            playlist.path}
                                         class:selected={$selectedPlaylistFile?.path ===
                                             playlist.path}
                                         on:contextmenu|preventDefault={(e) =>
-                                            onClickPlaylistOptions(e, playlist)}
+                                            onClickStaticPlaylistOptions(
+                                                e,
+                                                playlist,
+                                            )}
                                         on:click={(e) =>
-                                            onClickPlaylist(e, playlist)}
+                                            onClickStaticPlaylist(e, playlist)}
                                         on:dblclick={() =>
-                                            playPlaylist(playlist)}
+                                            playStaticPlaylist(playlist)}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseEnterPlaylist(playlist)}
-                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeavePlaylist}
+                                            onMouseEnterStaticPlaylist(
+                                                playlist,
+                                            )}
+                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeaveStaticPlaylist}
                                         on:mousedown|preventDefault|stopPropagation={() =>
-                                            onMouseDownPlaylist(playlist)}
+                                            onMouseDownStaticPlaylist(playlist)}
                                         on:mouseup|preventDefault|stopPropagation={() =>
-                                            onMouseUpPlaylist(playlist)}
+                                            onMouseUpStaticPlaylist(playlist)}
                                     >
                                         {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                             <Input
                                                 bind:value={updatedPlaylistName}
                                                 onEnterPressed={() => {
-                                                    onRenamePlaylist(playlist);
+                                                    onRenameStaticPlaylist(
+                                                        playlist,
+                                                    );
                                                 }}
                                                 fullWidth
                                                 minimal
@@ -1293,7 +1363,7 @@
                                                     color="#898989"
                                                     size={14}
                                                     onClick={(e) =>
-                                                        onClickPlaylistOptions(
+                                                        onClickStaticPlaylistOptions(
                                                             e,
                                                             playlist,
                                                         )}
@@ -1306,7 +1376,7 @@
                                     <Input
                                         bind:value={newPlaylistTitle}
                                         placeholder="New playlist"
-                                        onEnterPressed={onCreatePlaylist}
+                                        onEnterPressed={onCreateStaticPlaylist}
                                         fullWidth
                                         minimal
                                     />
@@ -1371,47 +1441,44 @@
                                         <p>{smartQuery.name}</p>
                                     </div>
                                 {/each}
-                                {#each $savedSmartQueries as query (query.id)}
+                                {#each $userDynamicPlaylists as playlist (playlist.path)}
                                     <div
                                         animate:flip={{
                                             duration: 300,
                                             easing: cubicInOut,
                                         }}
                                         class="playlist"
-                                        class:selected={$selectedSmartQuery ===
-                                            `~usq:${query.id}`}
-                                        class:hover={hoveringOverSmartPlaylistId ===
-                                            query.id}
+                                        class:hover={hoveringOverPlaylistId ===
+                                            playlist.path}
+                                        class:selected={$selectedPlaylistFile?.path ===
+                                            playlist.path}
                                         on:contextmenu|preventDefault={(e) =>
-                                            onClickSmartPlaylistOptions(
+                                            onClickDynamicPlaylistOptions(
                                                 e,
-                                                query,
+                                                playlist,
                                             )}
                                         on:click={(e) =>
-                                            onClickSmartPlaylist(
-                                                e,
-                                                `~usq:${query.id}`,
-                                                false,
-                                            )}
+                                            onClickDynamicPlaylist(e, playlist)}
                                         on:dblclick={() =>
-                                            playSmartPlaylist(
-                                                `~usq:${query.id}`,
-                                            )}
-                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeaveSmartPlaylist}
+                                            playDynamicPlaylist(playlist)}
                                         on:mouseenter|preventDefault|stopPropagation={() =>
-                                            onMouseEnterSmartPlaylist(query.id)}
-                                        on:mousedown|preventDefault|stopPropagation={() =>
-                                            onMouseDownSmartPlaylist(
-                                                `~usq:${query.id}`,
+                                            onMouseEnterDynamicPlaylist(
+                                                playlist,
                                             )}
-                                        on:mouseup|preventDefault|stopPropagation={onMouseUpSmartPlaylist}
+                                        on:mouseleave|preventDefault|stopPropagation={onMouseLeaveDynamicPlaylist}
+                                        on:mousedown|preventDefault|stopPropagation={() =>
+                                            onMouseDownDynamicPlaylist(
+                                                playlist,
+                                            )}
+                                        on:mouseup|preventDefault|stopPropagation={() =>
+                                            onMouseUpDynamicPlaylist(playlist)}
                                     >
-                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
+                                        {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                             <Input
-                                                bind:value={updatedSmartPlaylistName}
+                                                bind:value={updatedPlaylistName}
                                                 onEnterPressed={() => {
-                                                    onRenameSmartPlaylist(
-                                                        query,
+                                                    onRenameDynamicPlaylist(
+                                                        playlist,
                                                     );
                                                 }}
                                                 fullWidth
@@ -1419,46 +1486,37 @@
                                                 autoFocus
                                             />
                                         {:else}
-                                            <p>{query.name}</p>
+                                            <p>{playlist.title}</p>
                                         {/if}
-                                        {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
+                                        {#if isRenamingPlaylist && playlistToEdit.title === playlist.title}
                                             <Icon
                                                 icon="mingcute:close-circle-fill"
                                                 size={14}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    isRenamingSmartPlaylist = false;
+                                                    isRenamingPlaylist = false;
                                                 }}
                                             />
                                         {:else}
                                             <div
                                                 class="playlist-options"
-                                                class:visible={showSmartPlaylistMenu &&
-                                                    smartPlaylistToEdit.id ===
-                                                        query.id}
+                                                class:visible={showPlaylistMenu &&
+                                                    playlistToEdit === playlist}
                                             >
                                                 <Icon
                                                     icon="charm:menu-kebab"
                                                     color="#898989"
                                                     size={14}
                                                     onClick={(e) =>
-                                                        onClickSmartPlaylistOptions(
+                                                        onClickDynamicPlaylistOptions(
                                                             e,
-                                                            query,
+                                                            playlist,
                                                         )}
                                                 />
                                             </div>
                                         {/if}
                                     </div>
                                 {/each}
-
-                                <!-- {#if $savedSmartQueries}
-                                    {#each $savedSmartQueries as query}
-                                        <option value={`~usq:${query.name}`}
-                                            >{query.name}</option
-                                        >
-                                    {/each}
-                                {/if} -->
                             </div>
                         {/if}
                         {#if $userSettings.isArtistsToolkitEnabled}
@@ -1559,7 +1617,7 @@
             >
                 <MenuOption
                     onClick={() => {
-                        playPlaylist(playlistToEdit);
+                        playStaticPlaylist(playlistToEdit);
                         showPlaylistMenu = false;
                     }}
                     text="Play playlist"

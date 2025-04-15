@@ -22,7 +22,7 @@ import type {
     IAFile,
     IAItem,
     ImportStatus,
-    PlaylistFile,
+    StaticPlaylistFile,
     PopupType,
     UiView,
     Song,
@@ -31,12 +31,13 @@ import type {
     UserSettings,
     WaveformPlayerState,
     PlayingSong,
+    DynamicPlaylistFile,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
-import { scanPlaylists } from "./M3UUtils";
+import { scanPlaylists } from "./PlaylistUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
 import { persistentWritable } from "./storeUtils";
@@ -159,7 +160,7 @@ export const playbackSpeed = writable(1.0);
 export const isFullScreenVisualiser = writable(false);
 
 // Playlists (populated from folder)
-export const userPlaylists: Writable<PlaylistFile[]> = writable([]);
+export const userStaticPlaylists: Writable<StaticPlaylistFile[]> = writable([]);
 export const toDeletePlaylist = liveQuery(async () => {
     try {
         if (!db.hasBeenClosed()) {
@@ -172,6 +173,9 @@ export const toDeletePlaylist = liveQuery(async () => {
     }
     return null;
 });
+export const userDynamicPlaylists: Writable<DynamicPlaylistFile[]> = writable(
+    [],
+);
 
 export const popupOpen: Writable<PopupType> = writable(null);
 export const uiView: Writable<UiView> = writable("library");
@@ -232,7 +236,9 @@ export const isTagOrCondition = writable(false);
 // Playlists
 export type DragSource = "Library" | "Player" | "Queue" | "Sidebar";
 export type SongOrigin = "Album" | "Playlist" | "SmartPlaylist";
-export const selectedPlaylistFile: Writable<PlaylistFile> = writable(null);
+export const selectedPlaylistFile: Writable<
+    StaticPlaylistFile | DynamicPlaylistFile
+> = writable(null);
 export const draggedOrigin: Writable<SongOrigin> = writable(null);
 export const draggedSongs: Writable<Song[]> = writable([]);
 export const draggedSource: Writable<DragSource> = writable(null);

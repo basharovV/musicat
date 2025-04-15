@@ -1,4 +1,5 @@
 import type { UserQueryPart } from "./lib/smart-query/UserQueryPart";
+import type { Playlist as DynamicPlaylist } from "@zokugun/dynopl";
 
 interface MetadataEntry {
     /** Musicat's cross-file tag identifier */
@@ -102,9 +103,16 @@ interface Playlist {
     tracks: string[];
 }
 
-interface PlaylistFile {
+interface StaticPlaylistFile {
     path: string;
     title: string; // the filename
+}
+
+interface DynamicPlaylistFile {
+    path: string;
+    title: string; // the filename
+    schema: DynamicPlaylist;
+    query?: SmartQuery;
 }
 
 /**

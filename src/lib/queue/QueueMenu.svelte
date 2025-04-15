@@ -10,7 +10,7 @@
     import { setQueue } from "../../data/storeHelper";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuInput from "../ui/menu/MenuInput.svelte";
-    import { createNewPlaylistFile } from "../../data/M3UUtils";
+    import { createNewStaticPlaylistFile } from "../../data/PlaylistUtils";
 
     let playlistInput = "";
     let position = { x: 0, y: 0 };
@@ -43,7 +43,7 @@
     }
 
     function saveAsPlaylist() {
-        createNewPlaylistFile(playlistInput, $queue);
+        createNewStaticPlaylistFile(playlistInput, $queue);
 
         playlistInput = "";
 
