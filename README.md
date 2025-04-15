@@ -47,10 +47,14 @@
 
 ![screenshot](docs/musicat-aug-2024-promo.webp)
 
+> [!IMPORTANT]
+> I am temporarily pausing feature contributions for this repository while busy with another project. You can still create issues and PRs for bug fixes. I hope to be back working on this app soon. 🪕
+
+
 > [!WARNING]
 > musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
 
-> [!IMPORTANT]
+> [!NOTE]
 > musicat has moved from WebAudio towards native playback in Rust, read more and discuss [here](https://github.com/basharovV/musicat/discussions/6)
 
 ## Introduction
