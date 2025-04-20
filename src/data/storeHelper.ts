@@ -1,5 +1,5 @@
 import { remove } from "lodash-es";
-import type { Album, PlaylistFile, Song } from "src/App";
+import type { Album, StaticPlaylistFile, Song } from "src/App";
 import type SmartQuery from "src/lib/smart-query/Query";
 import { get } from "svelte/store";
 import AudioPlayer from "../lib/player/AudioPlayer";
@@ -54,7 +54,7 @@ export function setDraggedAlbum(
 }
 
 export function setDraggedPlaylist(
-    playlist: PlaylistFile,
+    playlist: StaticPlaylistFile,
     songs: Song[],
     source: DragSource,
 ) {

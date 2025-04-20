@@ -1,9 +1,13 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
-    import type { Song } from "src/App";
+    import type { DynamicPlaylistFile, Song } from "src/App";
     import { get } from "svelte/store";
     import { songMatchesQuery } from "../../data/LibraryUtils";
-    import { parsePlaylist } from "../../data/M3UUtils";
+    import {
+        composeComparator,
+        getComparator,
+        loadStaticPlaylist,
+    } from "../../data/PlaylistUtils";
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
@@ -56,8 +60,8 @@
             }));
             console.log("to delete songs", results);
             isIndexed = false;
-        } else if ($selectedPlaylistFile !== null) {
-            results = await parsePlaylist($selectedPlaylistFile);
+        } else if ($uiView === "playlists") {
+            results = await loadStaticPlaylist($selectedPlaylistFile);
             console.log("m3uresults", results);
 
             // Add display ID
@@ -83,6 +87,50 @@
                     results = [];
                 } else if ($smartQueryUpdater) {
                     results = await $smartQuery.run();
+                }
+
+                isSmartQueryResults = true;
+                isIndexed = false;
+            } else if ($selectedPlaylistFile) {
+                const playlist = $selectedPlaylistFile as DynamicPlaylistFile;
+
+                console.log("selected playlist: ", playlist);
+
+                if (!playlist.query) {
+                    SmartQuery.fromDynoPL(playlist);
+                }
+
+                results = await playlist.query.run();
+                console.log("results query: ", results);
+
+                if (playlist.schema.sort) {
+                    let compare = null;
+                    const descending = playlist.schema.order === "desc";
+
+                    if (playlist.schema.sort === "random") {
+                        compare = () => 0.5 - Math.random();
+                    } else if (Array.isArray(playlist.schema.sort)) {
+                        const keys = [...playlist.schema.sort].reverse();
+
+                        compare = getComparator(keys.shift(), descending);
+
+                        for (const key of keys) {
+                            compare = composeComparator(
+                                key,
+                                descending,
+                                compare,
+                            );
+                        }
+                    } else {
+                        compare = getComparator(
+                            playlist.schema.sort,
+                            descending,
+                        );
+                    }
+
+                    if (compare) {
+                        results.sort(compare);
+                    }
                 }
 
                 isSmartQueryResults = true;

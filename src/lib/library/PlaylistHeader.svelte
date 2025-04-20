@@ -1,7 +1,10 @@
 <script lang="ts">
     import { open } from "@tauri-apps/plugin-shell";
-    import type { PlaylistFile } from "../../App";
-    import { parsePlaylist, writePlaylist } from "../../data/M3UUtils";
+    import type { StaticPlaylistFile } from "../../App";
+    import {
+        loadStaticPlaylist,
+        writeStaticPlaylist,
+    } from "../../data/PlaylistUtils";
     import {
         queriedSongs,
         query,
@@ -12,7 +15,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
 
-    export let playlist: PlaylistFile;
+    export let playlist: StaticPlaylistFile;
 
     let tracks = [];
 
@@ -21,7 +24,7 @@
     }
 
     async function readPlaylist() {
-        tracks = await parsePlaylist(playlist);
+        tracks = await loadStaticPlaylist(playlist);
     }
 
     let durationText;
@@ -90,7 +93,7 @@
         text="Save order"
         disabled={$query.orderBy === "none"}
         onClick={async () => {
-            await writePlaylist($selectedPlaylistFile, $queriedSongs);
+            await writeStaticPlaylist($selectedPlaylistFile, $queriedSongs);
             $query.orderBy = "none";
         }}
     />
