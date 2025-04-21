@@ -24,13 +24,15 @@ import type {
     ImportStatus,
     PlaylistFile,
     PopupType,
-    UiView,
+    PlayingSong,
+    Query,
     Song,
+    SongOrder,
     StreamInfo,
     UIPreferences,
+    UiView,
     UserSettings,
     WaveformPlayerState,
-    PlayingSong,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale } from "../i18n/i18n-svelte";
@@ -45,21 +47,58 @@ export const L = derived(locale, (l) => {
     return i18nString(l);
 });
 
-interface Query {
-    orderBy: string;
-    libraryOrderBy: string;
-    reverse: boolean;
-    query: string;
-}
-
 export const isInit = writable(true);
 export const isSongReady = writable(false);
 export const forceRefreshLibrary = writable(false);
-export const query: Writable<Query> = writable({
-    orderBy: "artist",
-    libraryOrderBy: "artist",
-    reverse: false,
-    query: "",
+export const query: Writable<Query> = writable("", (set) => {
+    const item = localStorage.getItem("query");
+
+    if (typeof item === "string") {
+        set(item);
+    } else {
+        set("");
+    }
+});
+query.subscribe((query) => {
+    localStorage.setItem("query", query);
+});
+
+export const librarySongOrder: Writable<SongOrder> = writable(
+    {
+        orderBy: "artist",
+        reverse: false,
+    },
+    (set) => {
+        const item = localStorage.getItem("librarySongOrder");
+
+        if (item) {
+            const data = JSON.parse(item);
+
+            set(data);
+        }
+    },
+);
+librarySongOrder.subscribe((query) => {
+    localStorage.setItem("librarySongOrder", JSON.stringify(query));
+});
+
+export const genericSongOrder: Writable<SongOrder> = writable(
+    {
+        orderBy: "artist",
+        reverse: false,
+    },
+    (set) => {
+        const item = localStorage.getItem("genericSongOrder");
+
+        if (item) {
+            const data = JSON.parse(item);
+
+            set(data);
+        }
+    },
+);
+genericSongOrder.subscribe((query) => {
+    localStorage.setItem("genericSongOrder", JSON.stringify(query));
 });
 
 export const allSongs: Writable<Song[]> = writable([]);

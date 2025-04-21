@@ -7,7 +7,7 @@
     import { Stage as Stg } from "konva/lib/Stage";
     import { Rect as Rct } from "konva/lib/shapes/Rect";
     import { debounce } from "lodash-es";
-    import type { Song } from "src/App";
+    import type { Query, Song, SongOrder } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import {
         Group,
@@ -51,7 +51,6 @@
         os,
         popupOpen,
         queriedSongs,
-        query,
         queueMirrorsSearch,
         rightClickedTrack,
         rightClickedTracks,
@@ -91,10 +90,12 @@
     import ScrollTo from "../ui/ScrollTo.svelte";
 
     export let allSongs: Observable<Song[]> = null;
-    export let columnOrder;
+    export let columnOrder: String[];
     export let dim = false;
     export let isInit = true;
     export let isLoading = false;
+    export let query: Query = null;
+    export let songOrder: SongOrder = null;
     export let theme = "default";
 
     $: songs =
@@ -331,6 +332,7 @@
         JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
 
     let showColumnPicker = false;
+    let columnPickerIndex;
     let columnPickerPos;
 
     $: displayFields = fields.filter((f) => f.show);
@@ -978,7 +980,7 @@
             setQueue($queriedSongs, song.viewModel.index);
         }
 
-        if ($query.query.length) {
+        if (query?.length) {
             $queueMirrorsSearch = true;
         }
     }
@@ -1019,7 +1021,7 @@
      * - if multiple songs are highlighted, they will be unhighlighted and the first song will be highlighted as you type
      */
     $: {
-        if ($query.query?.length && $popupOpen !== "track-info") {
+        if (query?.length && $popupOpen !== "track-info") {
             if (songs?.length === 0) {
                 resetHighlight();
             } else {
@@ -1224,7 +1226,7 @@
                 return;
             }
 
-            if ($query.orderBy !== "none") {
+            if (songOrder?.orderBy !== "none") {
                 toast.error($LL.library.orderDisabledHint());
             }
 
@@ -1383,7 +1385,7 @@
             AudioPlayer.shouldPlay = true;
             setQueue($queriedSongs, highlightedSongIdx);
 
-            if ($query.query.length) {
+            if (query?.length) {
                 $queueMirrorsSearch = true;
             }
         }
@@ -1409,17 +1411,14 @@
     // COLUMNS
 
     function updateOrderBy(newOrderBy) {
+        if (!songOrder) return;
         if (newOrderBy === "trackNumber") return; // Not supported
-        if ($query.orderBy === newOrderBy) {
-            $query.reverse = !$query.reverse;
+        if (songOrder.orderBy === newOrderBy) {
+            songOrder.reverse = !songOrder.reverse;
+        } else {
+            songOrder.orderBy = newOrderBy;
         }
-        $query.orderBy = newOrderBy;
-        if ($uiView === "library") {
-            // This is used to restore the orderBy
-            // when going back to the library from a playlist (custom order)
-            $query.libraryOrderBy = newOrderBy;
-        }
-        $query = $query;
+        songOrder = songOrder;
     }
 
     // Re-order columns
@@ -1510,13 +1509,19 @@
                     x: ev.detail.evt.clientX - rect.left,
                     y: ev.detail.evt.clientY - rect.top + 300,
                 };
-                console.log(columnPickerPos);
             } else {
                 columnPickerPos = {
                     x: ev.detail.evt.clientX,
                     y: 15,
                 };
             }
+            const list = ev.detail.evt.target.closest(".konvajs-content");
+            const rect = list.getBoundingClientRect();
+            const x = ev.detail.evt.clientX - rect.left;
+            columnPickerIndex = displayFields.findIndex(
+                ({ viewProps }) =>
+                    viewProps.x <= x && x <= viewProps.x + viewProps.width,
+            );
             showColumnPicker = !showColumnPicker;
         }
     }
@@ -1746,6 +1751,7 @@
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
     bind:fields
+    bind:columnIndex={columnPickerIndex}
     bind:columnOrder
     onResetOrder={resetColumnOrder}
     {isOrderChanged}
@@ -1777,7 +1783,7 @@
                 <p>🪣</p>
             </div>
         </div>
-    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query.query.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
+    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && query?.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
         <ImportPlaceholder />
     {:else}
         <div
@@ -2469,18 +2475,19 @@
                                                     $draggedColumnIdx
                                                     ? DROP_HIGHLIGHT_BG_COLOR
                                                     : f.name === "none" &&
-                                                        $query.orderBy ===
+                                                        songOrder?.orderBy ===
                                                             "none"
                                                       ? HEADER_BG_COLOR_ACCENT
-                                                      : hoveredColumnIdx ===
+                                                      : query !== null &&
+                                                          (hoveredColumnIdx ===
                                                               idx ||
-                                                          $query.orderBy ===
-                                                              f.value
+                                                              songOrder?.orderBy ===
+                                                                  f.value)
                                                         ? HEADER_BG_COLOR_HOVERED
                                                         : HEADER_BG_COLOR,
                                         }}
                                     />
-                                    {#if hoveredColumnIdx === idx}
+                                    {#if query !== null && hoveredColumnIdx === idx}
                                         <Path
                                             config={{
                                                 x: -2,
@@ -2519,31 +2526,37 @@
                                     {/if}
 
                                     <!-- Sort arrow icons -->
-                                    {#if $query.orderBy === f.value || ($query.orderBy === "none" && f.name === "none")}
-                                        {#if $query.reverse}
-                                            <Path
-                                                config={{
-                                                    x: f.viewProps.width - 16,
-                                                    y: 4,
-                                                    listening: false,
-                                                    scaleX: 0.6,
-                                                    scaleY: 0.6,
-                                                    data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
-                                                    fill: "rgba(255, 255, 255, 0.8)",
-                                                }}
-                                            />
-                                        {:else}
-                                            <Path
-                                                config={{
-                                                    x: f.viewProps.width - 16,
-                                                    y: 4,
-                                                    listening: false,
-                                                    scaleX: 0.6,
-                                                    scaleY: 0.6,
-                                                    data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
-                                                    fill: "rgba(255, 255, 255, 0.8)",
-                                                }}
-                                            />
+                                    {#if songOrder}
+                                        {#if songOrder.orderBy === f.value || (songOrder.orderBy === "none" && f.name === "none")}
+                                            {#if songOrder.reverse}
+                                                <Path
+                                                    config={{
+                                                        x:
+                                                            f.viewProps.width -
+                                                            16,
+                                                        y: 4,
+                                                        listening: false,
+                                                        scaleX: 0.6,
+                                                        scaleY: 0.6,
+                                                        data: "m7.293 8.293l3.995-4a1 1 0 0 1 1.32-.084l.094.083l4.006 4a1 1 0 0 1-1.32 1.499l-.094-.083l-2.293-2.291v11.584a1 1 0 0 1-.883.993L12 20a1 1 0 0 1-.993-.884L11 19.001V7.41L8.707 9.707a1 1 0 0 1-1.32.084l-.094-.084a1 1 0 0 1-.084-1.32zl3.995-4z",
+                                                        fill: "rgba(255, 255, 255, 0.8)",
+                                                    }}
+                                                />
+                                            {:else}
+                                                <Path
+                                                    config={{
+                                                        x:
+                                                            f.viewProps.width -
+                                                            16,
+                                                        y: 4,
+                                                        listening: false,
+                                                        scaleX: 0.6,
+                                                        scaleY: 0.6,
+                                                        data: "M11.883 4.01L12 4.005a1 1 0 0 1 .993.883l.007.117v11.584l2.293-2.294a1 1 0 0 1 1.32-.084l.094.083a1 1 0 0 1 .084 1.32l-.084.095l-3.996 4a1 1 0 0 1-1.32.083l-.094-.083l-4.004-4a1 1 0 0 1 1.32-1.498l.094.083L11 16.583V5.004a1 1 0 0 1 .883-.992L12 4.004z",
+                                                        fill: "rgba(255, 255, 255, 0.8)",
+                                                    }}
+                                                />
+                                            {/if}
                                         {/if}
                                     {/if}
 
@@ -2633,7 +2646,7 @@
                 {#if $isSmartQueryBuilderOpen && noSongs}
                     <SmartQueryResultsPlaceholder />
                 {/if}
-                {#if $query.query?.length && noSongs}
+                {#if query?.length && noSongs}
                     <QueryResultsPlaceholder />
                 {/if}
             </div>
