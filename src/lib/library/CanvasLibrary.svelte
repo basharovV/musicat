@@ -332,6 +332,7 @@
         JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
 
     let showColumnPicker = false;
+    let columnPickerIndex;
     let columnPickerPos;
 
     $: displayFields = fields.filter((f) => f.show);
@@ -1505,13 +1506,19 @@
                     x: ev.detail.evt.clientX - rect.left,
                     y: ev.detail.evt.clientY - rect.top + 300,
                 };
-                console.log(columnPickerPos);
             } else {
                 columnPickerPos = {
                     x: ev.detail.evt.clientX,
                     y: 15,
                 };
             }
+            const list = ev.detail.evt.target.closest(".konvajs-content");
+            const rect = list.getBoundingClientRect();
+            const x = ev.detail.evt.clientX - rect.left;
+            columnPickerIndex = displayFields.findIndex(
+                ({ viewProps }) =>
+                    viewProps.x <= x && x <= viewProps.x + viewProps.width,
+            );
             showColumnPicker = !showColumnPicker;
         }
     }
@@ -1741,6 +1748,7 @@
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
     bind:fields
+    bind:columnIndex={columnPickerIndex}
     bind:columnOrder
     onResetOrder={resetColumnOrder}
     {isOrderChanged}

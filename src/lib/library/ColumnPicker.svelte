@@ -3,6 +3,7 @@
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
 
+    export let columnIndex = 0;
     export let columnOrder: String[];
     export let fields;
     export let isOrderChanged = false;
@@ -28,12 +29,24 @@
 
         if (index === -1) {
             if (found.show) {
-                columnOrder = [...columnOrder, field.value];
+                columnOrder = [
+                    ...columnOrder.slice(0, columnIndex + 1),
+                    field.value,
+                    ...columnOrder.slice(columnIndex + 1),
+                ];
+                columnIndex += 1;
             }
         } else {
             if (!found.show) {
                 columnOrder.splice(index, 1);
                 columnOrder = [...columnOrder];
+
+                if (index === columnIndex) {
+                    columnIndex -= 1;
+                    if (columnIndex < -1) {
+                        columnIndex = 0;
+                    }
+                }
             }
         }
     }
