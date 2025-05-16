@@ -303,12 +303,20 @@ class AudioPlayer {
         appWindow.listen("song_change", async (event: Event<Song>) => {
             this.currentSong = event.payload;
             this.currentSongIdx += 1;
+            
+            // Reset scrobble flag when a new song is loaded via autoplay
+            this.scrobbleSent = false;
 
             current.set({
                 song: this.currentSong,
                 index: this.currentSongIdx,
                 position: 0,
             });
+            
+            // Update Last.fm now playing status when song changes during autoplay
+            if (get(userSettings).lastfmEnabled) {
+                updateNowPlaying();
+            }
 
             this.setNextUpSong();
             this.isRunningTransition = false;
@@ -598,6 +606,9 @@ class AudioPlayer {
 
     async playSong(song: Song, position = 0, play = true, index = null) {
         this.seek = 0;
+        
+        // Reset scrobble flag when playing a new song
+        this.scrobbleSent = false;
 
         if (song) {
             // Reset Last.fm scrobble flag for the new song
@@ -642,11 +653,6 @@ class AudioPlayer {
                     },
                 });
                 this.incrementPlayCounter(song);
-                
-                // Update Last.fm now playing status if enabled
-                if (get(userSettings).lastfmEnabled) {
-                    updateNowPlaying();
-                }
             }
             this.shouldPlay = play;
             let newCurrentSongIdx =
@@ -660,6 +666,11 @@ class AudioPlayer {
             }
             this.currentSongIdx = newCurrentSongIdx;
             current.set({ song, index: newCurrentSongIdx, position });
+            
+            // Update Last.fm now playing status after current is set
+            if (get(userSettings).lastfmEnabled) {
+                updateNowPlaying();
+            }
             this.setNextUpSong();
             this.setMediaSessionData();
         } else {
