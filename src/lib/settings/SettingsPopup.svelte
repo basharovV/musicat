@@ -26,6 +26,10 @@
     import { loadLocale } from "../../i18n/i18n-util.sync";
     import { locales } from "../../i18n/i18n-util";
     import type { Locales } from "../../i18n/i18n-types";
+    import {
+        initLastFmClient,
+        authenticateLastFm,
+    } from "../lastfm/LastFmClient";
 
     let version = getVersion();
     let commaSeparatedFilenames = $userSettings.albumArtworkFilenames.join(",");
@@ -155,6 +159,58 @@
             $userSettings.songbookLocation = selected;
             $userSettings = $userSettings;
         }
+    }
+
+    let isAuthenticating = false;
+    let lastfmAuthError = "";
+    let lastfmUsername = "";
+    let lastfmPassword = "";
+
+    async function connectToLastFm() {
+        if (!lastfmUsername || !lastfmPassword) {
+            lastfmAuthError = "Please enter both username and password";
+            return;
+        }
+
+        try {
+            isAuthenticating = true;
+            lastfmAuthError = "Connecting to Last.fm...";
+
+            // Initialize Last.fm client
+            const lastFmClient = initLastFmClient();
+
+            // Get session with username and password
+            const session = await lastFmClient.getMobileSession(
+                lastfmUsername,
+                lastfmPassword,
+            );
+
+            // Update user settings
+            userSettings.update((settings) => {
+                settings.lastfmSessionKey = session.key;
+                settings.lastfmUsername = session.name;
+                settings.lastfmEnabled = true;
+                return settings;
+            });
+
+            // Reset form
+            lastfmUsername = "";
+            lastfmPassword = "";
+            lastfmAuthError = "";
+        } catch (error) {
+            console.error("Error connecting to Last.fm:", error);
+            lastfmAuthError = "Authentication failed: " + error.message;
+        } finally {
+            isAuthenticating = false;
+        }
+    }
+
+    function disconnectLastFm() {
+        // Reset Last.fm settings
+        $userSettings.lastfmEnabled = false;
+        $userSettings.lastfmSessionKey = null;
+        $userSettings.lastfmUsername = null;
+        $userSettings = $userSettings;
     }
 
     function removeFolder(folder) {
@@ -487,6 +543,86 @@
                         /></td
                     >
                 </tr>
+                <tr>
+                    <th colspan="2">Last.fm</th>
+                </tr>
+                <tr>
+                    <td>Enable scrobbling</td>
+                    <td>
+                        <input
+                            type="checkbox"
+                            bind:checked={$userSettings.lastfmEnabled}
+                            disabled={!$userSettings.lastfmSessionKey}
+                        />
+                    </td>
+                </tr>
+                {#if $userSettings.lastfmSessionKey}
+                    <tr>
+                        <td>Account</td>
+                        <td>
+                            <p>
+                                {$userSettings.lastfmUsername || "Connected"}
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <ButtonWithIcon
+                                theme="transparent"
+                                icon="mingcute:close-circle-fill"
+                                text="Disconnect"
+                                onClick={disconnectLastFm}
+                                size="small"
+                            />
+                        </td>
+                    </tr>
+                {:else}
+                    <tr>
+                        <td>Username</td>
+                        <td>
+                            <Input
+                                bind:value={lastfmUsername}
+                                fullWidth
+                                small
+                                disabled={isAuthenticating}
+                            />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Password</td>
+                        <td>
+                            <Input
+                                bind:value={lastfmPassword}
+                                fullWidth
+                                small
+                                disabled={isAuthenticating}
+                            />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <div class="connect">
+                                <ButtonWithIcon
+                                    theme="transparent"
+                                    icon="material-symbols:login"
+                                    text={isAuthenticating
+                                        ? "Connecting..."
+                                        : "Connect to Last.fm"}
+                                    onClick={connectToLastFm}
+                                    size="small"
+                                    disabled={isAuthenticating}
+                                />
+                                {#if lastfmAuthError}
+                                    <p class="error-message">
+                                        {lastfmAuthError}
+                                    </p>
+                                {/if}
+                            </div>
+                        </td>
+                    </tr>
+                {/if}
             </tbody>
         </table>
     </section>
@@ -496,8 +632,7 @@
     container {
         width: fit-content;
         max-height: 85%;
-        min-width: 500px;
-        max-width: 550px;
+        width: 550px; /* Add fixed width to prevent resizing */
         margin: auto;
         display: flex;
         flex-direction: column;
@@ -668,5 +803,22 @@
             max-width: 300px;
             line-height: initial;
         }
+    }
+
+    .error-message {
+        color: var(--error, #ff5555) !important;
+        width: 100%;
+        overflow-wrap: break-word;
+        white-space: normal;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    .connect {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        align-items: flex-start;
     }
 </style>
