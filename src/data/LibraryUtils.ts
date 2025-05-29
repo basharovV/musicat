@@ -490,13 +490,15 @@ async function reImportAlbum(
 }
 
 async function reImportTracks(newSongs: Song[], oldSongs: Song[]) {
-    const favorites = oldSongs.filter(({ isFavourite }) => isFavourite);
-
-    for (const { id } of favorites) {
-        const song = newSongs.find((song) => song.id === id);
-
-        if (song) {
-            song.isFavourite = true;
+    // Map user-specific fields
+    for (const oldSong of oldSongs) {
+        const newSong = newSongs.find((s) => s.id === oldSong.id);
+        if (newSong) {
+            newSong.isFavourite = oldSong.isFavourite;
+            newSong.playCount = oldSong.playCount;
+            newSong.originCountry = oldSong.originCountry;
+            newSong.tags = oldSong.tags;
+            newSong.markers = oldSong.markers;
         }
     }
 
