@@ -157,15 +157,9 @@
     }
 
     function getDurationText(durationInSeconds: number) {
-        return `${(~~(
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration /
-            60
-        ))
+        return `${(~~(durationInSeconds / 60))
             .toString()
-            .padStart(2, "0")}:${(~~(
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.duration %
-            60
-        ))
+            .padStart(2, "0")}:${(~~(durationInSeconds % 60))
             .toString()
             .padStart(2, "0")}`;
     }
