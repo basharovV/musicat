@@ -36,6 +36,7 @@
     import MetadataSection from "./MetadataSection.svelte";
     import CountrySection from "./CountrySection.svelte";
     import { searchArtworkOnBrave } from "../menu/search";
+    import { clickOutside } from "../../utils/ClickOutside";
 
     // The artwork for this track(s)
     let artworkBuffer: Buffer;
@@ -423,7 +424,7 @@
     }
 </script>
 
-<container use:focusTrap>
+<container use:focusTrap use:clickOutside={onClose}>
     <header>
         <div class="close">
             <Icon icon="mingcute:close-circle-fill" onClick={onClose} />
