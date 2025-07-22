@@ -88,6 +88,7 @@
     } from "../../data/storeHelper";
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import AltTrackMenu from "./AltTrackMenu.svelte";
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder: String[];
@@ -955,6 +956,7 @@
     let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
     let trackMenu: TrackMenu;
+    let altTrackMenu: AltTrackMenu;
     let currentSongInView = false;
     let currentSongScrollIdx = null;
 
@@ -998,19 +1000,29 @@
             $rightClickedTrack = song;
         }
 
+        let position = null;
+
         // reposition menu if in a virtual-list
         const list = e.target.closest(".virtual-list-inner");
         if (list) {
             const rect = list.getBoundingClientRect();
 
-            trackMenu.open(
+            position = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        } else {
+            position = { x: e.clientX, y: e.clientY };
+        }
+
+        console.log(e);
+
+        if (($os === "macos" && e.metaKey) || e.ctrlKey) {
+            altTrackMenu.open(
                 songsHighlighted.length > 1 ? songsHighlighted : song,
-                { x: e.clientX - rect.left, y: e.clientY - rect.top },
+                position,
             );
         } else {
             trackMenu.open(
                 songsHighlighted.length > 1 ? songsHighlighted : song,
-                { x: e.clientX, y: e.clientY },
+                position,
             );
         }
     }
@@ -1747,6 +1759,7 @@
     bind:this={trackMenu}
     onUnselect={() => (songsHighlighted.length = 0)}
 />
+<AltTrackMenu bind:this={altTrackMenu} />
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
