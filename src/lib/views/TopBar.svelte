@@ -261,6 +261,8 @@
 
             @media screen and (max-width: 600px) {
                 grid-row: 3;
+            }
+            @media screen and (max-width: 340px) {
                 .favourite,
                 .shuffle {
                     display: none;

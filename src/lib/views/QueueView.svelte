@@ -34,6 +34,7 @@
         singleKeyShortcutsEnabled,
         uiView,
         rightClickedAlbum,
+        isCompactView,
     } from "../../data/store";
     import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
     import Konva from "konva";
@@ -256,7 +257,7 @@
             top: 0,
         });
         ready = true;
-    } else if ($uiView.match(/^(smart-query|favourites)/)) {
+    } else if ($uiView.match(/^(smart-query|favourites|queue)/)) {
         scrollContainer?.scrollTo({
             top: 0,
         });
@@ -930,6 +931,7 @@
     class="library-container"
     class:dragover={isDraggingOver}
     class:auto-width={autoWidth}
+    class:compact={$isCompactView}
     bind:this={libraryContainer}
 >
     {#if isLoading}
@@ -1037,7 +1039,9 @@
                                             x: 0,
                                             y:
                                                 sandwichTopHeight +
-                                                HEADER_HEIGHT +
+                                                ($isCompactView
+                                                    ? 0
+                                                    : HEADER_HEIGHT) +
                                                 ROW_HEIGHT * songIdx +
                                                 -DUMMY_PADDING +
                                                 scrollOffset,
@@ -1327,75 +1331,78 @@
                                     }}
                                 />
                             {/if}
-                            <!-- HEADER -->
-                            <Group
-                                config={{
-                                    x: 0,
-                                    y: sandwichTopHeight,
-                                    width: width,
-                                }}
-                                on:mouseenter={() => {
-                                    isHeaderOver = true;
-                                }}
-                                on:mouseleave={() => {
-                                    isHeaderOver = false;
-                                }}
-                                on:click={onHeaderClick}
-                            >
-                                <Rect
-                                    config={{
-                                        width: width - 0.5,
-                                        height: HEADER_HEIGHT,
-                                        listening: true,
-                                        fill: HEADER_BG_COLOR,
-                                    }}
-                                />
-                                <Rect
+
+                            {#if !$isCompactView}
+                                <!-- HEADER -->
+                                <Group
                                     config={{
                                         x: 0,
-                                        y: HEADER_HEIGHT,
+                                        y: sandwichTopHeight,
                                         width: width,
-                                        height: 0.5,
-                                        fill: "#544e55",
                                     }}
-                                />
-                                <Text
-                                    config={{
-                                        x:
-                                            !$isSidebarShowing &&
-                                            $os === "macos"
-                                                ? WINDOW_CONTROLS_WIDTH
-                                                : null,
-                                        text: "Queue",
-                                        align: "left",
-                                        padding: 10,
-                                        height: HEADER_HEIGHT,
-                                        fontSize: 14,
-                                        letterSpacing: 0,
-                                        fontStyle: "bold",
-                                        verticalAlign: "middle",
-                                        fontFamily:
-                                            "-apple-system, Avenir, Helvetica, Arial, sans-serif",
-                                        fill: TEXT_COLOR,
-                                        listening: false,
+                                    on:mouseenter={() => {
+                                        isHeaderOver = true;
                                     }}
-                                />
-                                <Path
-                                    config={{
-                                        x: width - 16,
-                                        y: 5,
-                                        width: 16,
-                                        height: HEADER_HEIGHT,
-                                        scaleX: 0.8,
-                                        scaleY: 0.8,
-                                        data: "M7.25 2.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 8a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 13.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0",
-                                        fill: "transparent",
-                                        stroke: isHeaderOver
-                                            ? TEXT_COLOR
-                                            : "transparent",
+                                    on:mouseleave={() => {
+                                        isHeaderOver = false;
                                     }}
-                                />
-                            </Group>
+                                    on:click={onHeaderClick}
+                                >
+                                    <Rect
+                                        config={{
+                                            width: width - 0.5,
+                                            height: HEADER_HEIGHT,
+                                            listening: true,
+                                            fill: HEADER_BG_COLOR,
+                                        }}
+                                    />
+                                    <Rect
+                                        config={{
+                                            x: 0,
+                                            y: HEADER_HEIGHT,
+                                            width: width,
+                                            height: 0.5,
+                                            fill: "#544e55",
+                                        }}
+                                    />
+                                    <Text
+                                        config={{
+                                            x:
+                                                !$isSidebarShowing &&
+                                                $os === "macos"
+                                                    ? WINDOW_CONTROLS_WIDTH
+                                                    : null,
+                                            text: "Queue",
+                                            align: "left",
+                                            padding: 10,
+                                            height: HEADER_HEIGHT,
+                                            fontSize: 14,
+                                            letterSpacing: 0,
+                                            fontStyle: "bold",
+                                            verticalAlign: "middle",
+                                            fontFamily:
+                                                "-apple-system, Avenir, Helvetica, Arial, sans-serif",
+                                            fill: TEXT_COLOR,
+                                            listening: false,
+                                        }}
+                                    />
+                                    <Path
+                                        config={{
+                                            x: width - 16,
+                                            y: 5,
+                                            width: 16,
+                                            height: HEADER_HEIGHT,
+                                            scaleX: 0.8,
+                                            scaleY: 0.8,
+                                            data: "M7.25 2.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 8a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0 M7.25 13.5a0.75 0.75 0 1 0 1.5 0a0.75 0.75 0 1 0 -1.5 0",
+                                            fill: "transparent",
+                                            stroke: isHeaderOver
+                                                ? TEXT_COLOR
+                                                : "transparent",
+                                        }}
+                                    />
+                                </Group>
+                            {/if}
                         </Layer>
                     </Stage>
                 {/if}
@@ -1423,13 +1430,16 @@
         border-left: 1px solid var(--panel-secondary-border-main);
         border-bottom: 1px solid var(--panel-secondary-border-main);
         overflow: hidden;
-        margin: 4px 0 0 0;
+        margin: 0 0 0;
         &.dragover {
             border-color: var(--accent-secondary);
         }
         &.auto-width {
             width: 100%;
             max-width: initial;
+        }
+        &.compact {
+            border-top: 1px solid var(--panel-secondary-border-main);
         }
     }
     .container {

@@ -153,7 +153,9 @@ async function readQueueFromFile() {
     if (!persistedQueue) {
         return;
     }
-    const songs = await db.songs.bulkGet(persistedQueue.split(","));
+    let songs = (await db.songs.bulkGet(persistedQueue.split(","))).filter(
+        (song) => song,
+    );
     queue.set(songs);
 }
 
@@ -213,7 +215,15 @@ export const toDeletePlaylist = liveQuery(async () => {
 });
 
 export const popupOpen: Writable<PopupType> = writable(null);
+
+// The ui view for the main panel (also applies in compact view)
 export const uiView: Writable<UiView> = writable("library");
+
+// In compact view (410px or less) only the main panel is visible (no split view),
+// All "secondary" views (eg. queue, wiki) are treated as main
+export const isCompactView = writable(false);
+export const uiViewToRestore: Writable<UiView> = writable("library");
+
 export const arrowFocus: Writable<ArrowFocus> = writable("library");
 export const draggedColumnIdx: Writable<number | null> = writable(null);
 

@@ -371,7 +371,7 @@
         height: auto;
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
-        margin: 5px 5px 0 0;
+        margin: 0;
         row-gap: 5px;
         border-radius: 5px;
         box-sizing: border-box;

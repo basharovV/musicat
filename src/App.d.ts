@@ -213,7 +213,10 @@ type UiView =
     | "analytics"
     | "internet-archive"
     | "prune"
-    | "to-delete";
+    | "to-delete"
+    /* Only in compact mode - see isCompactView */
+    | "queue"
+    | "wiki";
 
 type ArtistContentItem = ArtistFileItem | ArtistLinkItem;
 

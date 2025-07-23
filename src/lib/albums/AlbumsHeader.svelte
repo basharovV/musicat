@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import {
+        isCompactView,
         isQueueOpen,
         isSidebarOpen,
         os,
@@ -21,7 +22,7 @@
     $: innerWidth = 800;
     $: showInfo = $uiPreferences.albumsViewShowInfo;
     $: minWidth = $uiPreferences.albumsViewGridSize;
-    $: showAllOptions = innerWidth >= 480;
+    $: showAllOptions = innerWidth >= 410;
     $: showSingles = $uiPreferences.albumsViewShowSingles;
 
     const fields = [
@@ -64,14 +65,6 @@
 </script>
 
 <div class="header" data-tauri-drag-region bind:this={element}>
-    <h1
-        class:window-controls-offset={!$isSidebarOpen &&
-            !$isQueueOpen &&
-            $os === "macos"}
-        data-tauri-drag-region
-    >
-        {$LL.albums.title()}
-    </h1>
     <div class="options" data-tauri-drag-region>
         {#if showAllOptions}
             <div class="order-by">

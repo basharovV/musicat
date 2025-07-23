@@ -11,6 +11,7 @@ import {
     shouldFocusFind,
     uiView,
     queue,
+    isCompactView,
 } from "../data/store";
 import { db, deleteDatabase, exportDatabase, importDatabase } from "../data/db";
 import type { ToImport } from "../App";
@@ -44,6 +45,9 @@ export function startMenuListener() {
                 openTauriImportDialog();
                 break;
             case "queue":
+                if (get(isCompactView)) {
+                    uiView.set("queue");
+                }
                 isQueueOpen.set(!get(isQueueOpen));
                 break;
             case "albums":

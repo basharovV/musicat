@@ -230,7 +230,7 @@
             overflow: visible;
             pointer-events: none;
             transition: all 0.16s cubic-bezier(0.075, 0.82, 0.165, 1);
-            z-index: 3;
+            z-index: 11;
             top: -4px;
 
             &.hoverhead {

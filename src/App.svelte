@@ -12,6 +12,7 @@
         foldersToWatch,
         genericSongOrder,
         hoveredFiles,
+        isCompactView,
         isLyricsOpen,
         isMiniPlayer,
         isQueueOpen,
@@ -28,6 +29,7 @@
         selectedPlaylistFile,
         selectedSmartQuery,
         uiView,
+        uiViewToRestore,
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
@@ -72,6 +74,8 @@
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
     import { startMenuListener } from "./window/EventListener";
     import { resetDraggedSongs } from "./data/storeHelper";
+    import TopNav from "./lib/nav/TopNav.svelte";
+    import { get } from "svelte/store";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -227,7 +231,33 @@
     $: selectedQuery = findQuery($selectedSmartQuery);
     $: showCursorInfo = $draggedSongs.length > 0 && mouseX + mouseY > 0;
     $: showMainPanel = innerWidth >= 300;
-    $: showQueue = !showMiniPlayer && (innerWidth < 460 || $isQueueOpen);
+
+    $: {
+        if (innerWidth < 410 && !get(isCompactView)) {
+            isCompactView.set(true);
+            if (get(isQueueOpen)) {
+                uiViewToRestore.set(get(uiView));
+                uiView.set("queue");
+            }
+        } else if (innerWidth >= 410 && get(isCompactView)) {
+            isCompactView.set(false);
+            if (get(uiView) === "queue") {
+                isQueueOpen.set(true);
+                uiView.set(get(uiViewToRestore));
+            } else {
+                isQueueOpen.set(false);
+            }
+        }
+    }
+
+    $: {
+        if (!$uiView.match(/^(queue|wiki)$/)) {
+            uiViewToRestore.set($uiView);
+        }
+    }
+
+    $: showQueue = !showMiniPlayer && !$isCompactView && $isQueueOpen;
+
     $: showSidebar =
         showMiniPlayer ||
         (innerHeight >= 650 &&
@@ -334,6 +364,7 @@
         class:split-view={isSplitView}
         class:floating-sidebar={!showSidebar}
         class:transparent={$os === "macos"}
+        class:compact={$isCompactView}
         bind:this={container}
     >
         <div
@@ -387,6 +418,12 @@
                 >
                     <QueueView autoWidth={isQueueAutoWidth} />
                 </div>
+            {/if}
+        </div>
+
+        <div class="window-padding" data-tauri-drag-region>
+            {#if $isCompactView}
+                <TopNav />
             {/if}
         </div>
 
@@ -446,7 +483,7 @@
         </div>
 
         {#if showMainPanel}
-            <div class="panel">
+            <div class="panel {$uiView}" class:compact={$isCompactView}>
                 {#if $uiView === "library" || $uiView === "favourites"}
                     <CanvasLibraryView bind:songOrder={$librarySongOrder} />
                 {:else if $uiView === "playlists" || $uiView === "to-delete" || $uiView.startsWith("smart-query")}
@@ -463,6 +500,23 @@
                     <InternetArchiveView />
                 {:else if $uiView === "prune"}
                     <PrunePopup />
+                {:else if $uiView === "queue"}<QueueView autoWidth={true} />
+                {:else if $uiView === "wiki"}
+                    <div
+                        class="wiki-container"
+                        style={`width: 100%;overflow:hidden;`}
+                        transition:fly={{ duration: 200, x: -200 }}
+                    >
+                        {#if showCloseWikiPrompt}
+                            <div
+                                class="close-wiki-prompt"
+                                transition:blur={{ duration: 100 }}
+                            >
+                                <h2>Close wiki</h2>
+                            </div>
+                        {/if}
+                        <WikiView />
+                    </div>
                 {/if}
             </div>
         {/if}
@@ -627,6 +681,16 @@
                 height: 30px;
             }
         }
+
+        .nav {
+            grid-row: 2;
+            grid-column: 3;
+        }
+
+        &.compact .header > .content {
+            margin-top: -22px;
+        }
+
         .header {
             grid-row: 2;
             grid-column: 3;
@@ -663,6 +727,16 @@
             border-bottom: 0.7px solid var(--panel-secondary-border-main);
             margin: 3.5px 5px 0 0;
             border-radius: 5px;
+            box-sizing: border-box;
+
+            &.internet-archive,
+            &.your-music {
+                border: none;
+            }
+
+            &.compact {
+                box-shadow: -4px 8px 20px 5px var(--panel-shadow-bg);
+            }
         }
 
         .waveform {
@@ -703,7 +777,7 @@
             }
         }
 
-        .queue {
+        .queue:not(.panel.queue) {
             grid-row: 2/5;
             grid-column: 2;
             overflow: hidden;
@@ -718,14 +792,14 @@
                 box-sizing: border-box;
                 overflow: hidden;
                 border-radius: 5px;
-                margin: 0px 8px 0 0;
+                margin: 4px 8px 0 0;
                 display: grid;
                 grid-template-rows: 1fr auto;
                 gap: 5px;
             }
         }
 
-        .wiki {
+        .wiki:not(.panel.wiki) {
             grid-row: 2/5;
             grid-column: 5;
             overflow-y: hidden;
@@ -794,7 +868,7 @@
         &.floating-sidebar {
             grid-template-columns: auto 1fr auto auto; // queue, panel, resizer, wiki
 
-            .queue {
+            .queue:not(.panel.queue) {
                 grid-column: 1;
                 margin-left: 5px;
             }

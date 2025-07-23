@@ -605,8 +605,7 @@
     container {
         position: relative;
         cursor: grab;
-        border: 0.7px solid var(--panel-primary-border-main);
-        margin: 5px 0 0 0;
+        margin: 0px 0 0 0;
         border-radius: 5px;
         overflow: hidden;
         background-color: var(--panel-background);
