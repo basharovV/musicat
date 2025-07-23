@@ -159,22 +159,25 @@
 
             // Country
             let groupedByCountry = groupBy($songs, "originCountry");
+            // Filter out undefined/empty countries
+            let validCountries = Object.entries(groupedByCountry).filter(
+                (c) => c[0] !== "undefined" && c[0] !== "",
+            );
+
             let mostPlayedCountryTitle = null;
             let mostPlayedCountry = null;
-            Object.entries(groupedByCountry)
-                .filter((c) => c[0] !== "undefined")
-                .forEach((g: [string, any]) => {
-                    if (
-                        !mostPlayedCountry ||
-                        g[1].data.length > mostPlayedCountry?.length
-                    ) {
-                        mostPlayedCountry = g[1].data;
-                        mostPlayedCountryTitle = g[0];
-                    }
-                });
+            validCountries.forEach((g: [string, any]) => {
+                if (
+                    !mostPlayedCountry ||
+                    g[1].data.length > mostPlayedCountry?.length
+                ) {
+                    mostPlayedCountry = g[1].data;
+                    mostPlayedCountryTitle = g[0];
+                }
+            });
             stats.country.mostPlayed = mostPlayedCountryTitle;
             stats.country.playCount = mostPlayedCountry?.length;
-            stats.country.count = Object.keys(groupedByCountry).length;
+            stats.country.count = validCountries.length;
 
             // Derived stats
             stats.percentageListened =

@@ -18,6 +18,7 @@ import {
     volume,
 } from "../../data/store";
 import { shuffleArray } from "../../utils/ArrayUtils";
+import { scrobbleCurrentSong, updateNowPlaying } from "../lastfm/LastFmClient";
 
 import type { Event } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -83,6 +84,44 @@ class AudioPlayer {
         totalPacketCounter: 0,
     };
     flowControlSendInterval;
+    
+    // Last.fm scrobbling
+    lastfmScrobbleTimer: number = null;
+    scrobbleSent: boolean = false;
+
+    // Checks if the current song should be scrobbled based on playback position and scrobbles it if the threshold is met
+    checkAndScrobbleSong(currentTime: number): boolean {
+        if (!this.currentSong || this.scrobbleSent || !get(userSettings).lastfmEnabled) {
+            return false;
+        }
+
+        // Parse the duration string to get seconds
+        let songDurationSeconds = 240; // Default to 4 minutes if duration is unknown
+        if (this.currentSong.duration) {
+            const durationStr = this.currentSong.duration.toString();
+            const durationParts = durationStr.split(':');
+            // MM:SS format
+            if (durationParts.length === 2) {
+                songDurationSeconds = parseInt(durationParts[0]) * 60 + parseInt(durationParts[1]);
+            } 
+            // HH:MM:SS format
+            else if (durationParts.length === 3) {
+                songDurationSeconds = parseInt(durationParts[0]) * 3600 + parseInt(durationParts[1]) * 60 + parseInt(durationParts[2]);
+            }
+        }
+
+        // 50% of song or 4 minutes
+        const scrobbleThreshold = Math.min(songDurationSeconds / 2, 240);
+        
+        if (currentTime >= scrobbleThreshold) {
+            // Scrobble the track
+            scrobbleCurrentSong();
+            this.scrobbleSent = true;
+            return true;
+        }
+        
+        return false;
+    }
 
     private constructor() {
         this.webRTCReceiver = new WebRTCReceiver();
@@ -264,12 +303,20 @@ class AudioPlayer {
         appWindow.listen("song_change", async (event: Event<Song>) => {
             this.currentSong = event.payload;
             this.currentSongIdx += 1;
+            
+            // Reset scrobble flag when a new song is loaded via autoplay
+            this.scrobbleSent = false;
 
             current.set({
                 song: this.currentSong,
                 index: this.currentSongIdx,
                 position: 0,
             });
+            
+            // Update Last.fm now playing status when song changes during autoplay
+            if (get(userSettings).lastfmEnabled) {
+                updateNowPlaying();
+            }
 
             this.setNextUpSong();
             this.isRunningTransition = false;
@@ -292,6 +339,11 @@ class AudioPlayer {
 
         appWindow.listen("timestamp", async (event: any) => {
             playerTime.set(event.payload);
+            
+            // Check if we should scrobble the current track
+            if (get(isPlaying)) {
+                this.checkAndScrobbleSong(event.payload);
+            }
         });
 
         appWindow.listen("end_of_queue", async (event: any) => {
@@ -554,8 +606,14 @@ class AudioPlayer {
 
     async playSong(song: Song, position = 0, play = true, index = null) {
         this.seek = 0;
+        
+        // Reset scrobble flag when playing a new song
+        this.scrobbleSent = false;
 
         if (song) {
+            // Reset Last.fm scrobble flag for the new song
+            this.scrobbleSent = false;
+            
             if (get(isIAPlaying)) {
                 webAudioPlayer.pause();
             }
@@ -608,6 +666,11 @@ class AudioPlayer {
             }
             this.currentSongIdx = newCurrentSongIdx;
             current.set({ song, index: newCurrentSongIdx, position });
+            
+            // Update Last.fm now playing status after current is set
+            if (get(userSettings).lastfmEnabled) {
+                updateNowPlaying();
+            }
             this.setNextUpSong();
             this.setMediaSessionData();
         } else {
@@ -680,6 +743,10 @@ class AudioPlayer {
                 decoding_active: false,
             },
         });
+        
+        // Check if we've played enough of it to scrobble
+        this.checkAndScrobbleSong(get(playerTime));
+        
         this.onPause();
     }
 

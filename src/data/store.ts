@@ -302,6 +302,9 @@ const defaultSettings: UserSettings = {
     theme: "dark",
     outputDevice: null, // default system device,
     followSystemOutput: true,
+    lastfmEnabled: false,
+    lastfmSessionKey: null,
+    lastfmUsername: null,
 };
 
 /**

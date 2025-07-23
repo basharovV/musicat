@@ -176,6 +176,9 @@ interface UserSettings {
     followSystemOutput: boolean;
     geniusApiKey?: string;
     discogsApiKey?: string;
+    lastfmEnabled?: boolean;
+    lastfmSessionKey?: string;
+    lastfmUsername?: string;
 }
 
 interface UIPreferences {
