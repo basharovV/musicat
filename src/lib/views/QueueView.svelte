@@ -1256,7 +1256,9 @@
                                                 x: 0,
                                                 y:
                                                     sandwichTopHeight +
-                                                    HEADER_HEIGHT +
+                                                    ($isCompactView
+                                                        ? 0
+                                                        : HEADER_HEIGHT) +
                                                     ROW_HEIGHT * songIdx +
                                                     -DUMMY_PADDING +
                                                     scrollOffset +
