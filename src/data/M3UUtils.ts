@@ -193,7 +193,7 @@ export async function deleteSongsFromPlaylist(
 ): Promise<Song[]> {
     const playlist = await parsePlaylist(playlistFile);
     const newPlaylist = playlist.filter(
-        (ps) => !songs.find((s) => s.id === ps.id),
+        (ps, idx) => !songs.find((s) => s.viewModel.index === idx),
     );
     await writePlaylist(playlistFile, newPlaylist);
     return parsePlaylist(playlistFile);
