@@ -1,3 +1,27 @@
+### 📦 0.13.0
+
+#### New
+
+- **Language switcher**. In settings you can now select between English (EN), Spanish (ES) and Turkish (TR). Thanks to [Fatih Yılmaz](https://github.com/Queaxtra) for the contribution!
+- **New themes**. Mocha, Nord and Nord-light. Plus, themes support base16 now, making it easy to support any theme with a palette of 16 colors. Thanks to [@daiyam](https://github.com/daiyam).
+
+#### Enhancements
+
+- UI improvements - floating sidebar, compact view
+- Waveform generation has been optimized and should be a little faster.
+- Waveform playback position is now updated multiple times per second, instead of every second.
+- Playlists are now automatically opened after creation
+- External M3u playlists now supported (open with)
+- Arch Linux package compatibility
+
+#### Fixes
+
+- Fix for user-generated data lost on metadata edit (origin country, tags, favorites, etc)
+- Clicking outside the track info popup to close
+- Fixed M3U order
+
+Thanks to contributors: [@daiyam](https://github.com/daiyam), [Fatih Yılmaz](https://github.com/Queaxtra), and [Niels Demeyer](https://github.com/niels-demeyer)
+
 ### 📦 0.12.0
 
 #### New
