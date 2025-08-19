@@ -367,7 +367,7 @@ interface Waveform {
 }
 
 interface WaveformPlayerState {
-    data: number[];
+    data: Float32Array;
     songId: string;
     loopEnabled: boolean;
     loopStartPos: number;

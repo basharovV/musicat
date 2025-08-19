@@ -208,9 +208,11 @@
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
+            const bytes = new Uint8Array(event.payload.data);
+            const floats = new Float32Array(bytes.buffer);
             await wavesurfer.load(
                 null,
-                event.payload.data,
+                floats,
                 $current.song.fileInfo.duration,
             );
             pxPerSec = wavesurfer.options.minPxPerSec;
@@ -218,10 +220,10 @@
                 $waveformPeaks = {
                     ...$waveformPeaks,
                     songId: $current.song.id,
-                    data: event.payload.data,
+                    data: floats,
                 };
             } else {
-                $waveformPeaks.data = event.payload.data;
+                $waveformPeaks.data = floats;
             }
         });
     });

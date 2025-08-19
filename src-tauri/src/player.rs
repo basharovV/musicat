@@ -3,21 +3,23 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Instant;
 
-use std::collections::HashMap;
-use std::fs::File;
-use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicU32};
-use std::sync::Arc;
-
 use atomic_wait::wake_all;
 use cpal::traits::{DeviceTrait, HostTrait};
 use log::{error, info, warn};
+use memmap2::Mmap;
 use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Cursor;
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, AtomicU32};
+use std::sync::Arc;
 use symphonia::core::audio::{AudioBufferRef, Layout, SampleBuffer, SignalSpec};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
 use symphonia::core::errors::Error::ResetRequired;
 use symphonia::core::formats::{FormatOptions, SeekTo, Track};
-use symphonia::core::io::MediaSourceStream;
+use symphonia::core::io::{MediaSourceStream, ReadOnlySource};
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::core::units::Time;
@@ -41,6 +43,7 @@ use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
 use crate::constants::*;
+use crate::dsp::calculate_peak_value;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::metadata::Song;
@@ -1295,8 +1298,6 @@ pub fn get_peaks(
 
     // Create a hint to help the format registry guess what format reader is appropriate.
     let mut hint = Hint::new();
-    let source = Box::new(File::open(path).unwrap());
-    info!("source {:?}", source);
 
     // Provide the file extension as a hint.
     info!("extension: {:?}", path.extension());
@@ -1306,8 +1307,19 @@ pub fn get_peaks(
         }
     }
 
+    // let file = File::open(path)?;
+    // let buf_reader = std::io::BufReader::with_capacity(16 * 1024 * 1024, file);
+    // let source = ReadOnlySource::new(buf_reader);
+    // let mss = MediaSourceStream::new(Box::new(source), Default::default());
+
+    let file = File::open(path)?;
+    let mmap = unsafe { Mmap::map(&file)? };
+    // Wrap mmap inside Cursor and then Box it
+    let cursor = Cursor::new(mmap); // now Cursor owns the mmap
+    let mss = MediaSourceStream::new(Box::new(cursor), Default::default());
+
     // Create the media source stream using the boxed media source from above.
-    let mss = MediaSourceStream::new(source, Default::default());
+    // let mss = MediaSourceStream::new(source, Default::default());
 
     // Use the default options for format readers other than for gapless playback.
     let format_opts = FormatOptions {
@@ -1322,12 +1334,7 @@ pub fn get_peaks(
     };
 
     // Get the value of the track option, if provided.
-    info!("probing {:?}", hint);
-    info!("opts {:?}", format_opts);
-    info!("meta {:?}", metadata_opts);
-
     let probe_result = get_probe().format(&hint, mss, &format_opts, &metadata_opts);
-    info!("probe format {:?}", probe_result.is_ok());
 
     if probe_result.is_err() {
         return Err(probe_result.err().unwrap());
@@ -1338,23 +1345,45 @@ pub fn get_peaks(
 
     let track_id = track.id;
 
-    info!("codec params: {:?}", &track.codec_params);
-
     // Create a decoder for the track.
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec_params, &DecoderOptions { verify: false })
         .unwrap();
 
+    // Details
+    let sample_rate = track.codec_params.sample_rate.unwrap_or(44100);
+    let channels = track.codec_params.channels.map_or(2, |ch| ch.count());
     let new_spec = SignalSpec::new_with_layout(44100, Layout::Stereo);
 
-    let expected_peaks_size =
-        (track.codec_params.n_frames.unwrap() * new_spec.channels.count() as u64 / 4000) as usize;
+    let estimated_peaks = if let Some(n_frames) = track.codec_params.n_frames {
+        (n_frames * channels as u64 / WAVEFORM_WINDOW_SIZE as u64) as usize
+    } else {
+        500
+    };
 
-    let mut window: Vec<f32> = Vec::with_capacity(4000);
+    let duration = track.codec_params.n_frames.map_or(
+        estimated_peaks as f64 * WAVEFORM_WINDOW_SIZE as f64 / sample_rate as f64,
+        |n_frames| n_frames as f64 / sample_rate as f64,
+    );
+
+    println!("Info:");
+    println!("  Sample Rate: {} Hz", sample_rate);
+    println!("  Duration: {:.2} seconds", duration);
+    println!("  Channels: {}", channels);
+    println!("  Estimated Peaks: {}", estimated_peaks);
+    println!("  Window Size: {} samples", WAVEFORM_WINDOW_SIZE);
+    println!("  Peak function: {:?}", WAVEFORM_PEAK_METHOD);
+    println!();
+
+    let mut window: Vec<f32> = Vec::with_capacity(WAVEFORM_WINDOW_SIZE);
     let mut peaks: Vec<f32> = Vec::new();
+    let mut processed_packets = 0;
 
     let mut total_count = 0;
     let n_frames = 0;
+
+    // reusable sample buffer, start empty
+    let mut reusable_buf: Option<SampleBuffer<f32>> = None;
 
     let result = loop {
         let packet = match reader.next_packet() {
@@ -1368,33 +1397,58 @@ pub fn get_peaks(
         }
         // Decode the packet into audio samples.
         match decoder.decode(&packet) {
-            Ok(_decoded) => {
+            Ok(decoded) => {
                 if cancel_token.is_cancelled() {
                     break Err(symphonia::core::errors::Error::LimitError("cancelled"));
                 }
-                // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
-                let mut sample_buf =
-                    SampleBuffer::<f32>::new(_decoded.capacity() as u64, *_decoded.spec());
+                // // Create a raw sample buffer that matches the parameters of the decoded audio buffer.
+                // let mut sample_buf =
+                //     SampleBuffer::<f32>::new(_decoded.capacity() as u64, *_decoded.spec());
+                // sample_buf.copy_interleaved_ref(_decoded);
+
+                let mut sample_buf = if let Some(buf) = &mut reusable_buf {
+                    buf.copy_interleaved_ref(decoded);
+                    buf
+                } else {
+                    // first time: allocate
+                    let mut buf =
+                        SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
+                    buf.copy_interleaved_ref(decoded);
+                    reusable_buf = Some(buf);
+                    reusable_buf.as_mut().unwrap()
+                };
+
+                let processed_samples = dsp::process_samples(sample_buf.samples(), channels, false);
 
                 // Copy the contents of the decoded audio buffer into the sample buffer whilst performing
                 // any required conversions.
-                sample_buf.copy_interleaved_ref(_decoded);
-                sample_buf.samples().iter().for_each(|f| {
-                    if window.len() < 4000 {
-                        window.push(*f);
-                    } else {
-                        peaks.push(dsp::calculate_rms(&window));
+
+                // Add samples to window and generate peaks
+                for sample in processed_samples {
+                    window.push(sample);
+                    if window.len() >= WAVEFORM_WINDOW_SIZE {
+                        peaks.push(calculate_peak_value(&window, WAVEFORM_PEAK_METHOD));
                         window.clear();
                     }
-                });
+                }
+
+                processed_packets += 1;
+                if processed_packets % 1000 == 0 {
+                    print!(
+                        "\rProcessed {} packets, generated {} peaks",
+                        processed_packets,
+                        peaks.len()
+                    );
+                }
 
                 total_count += 1;
                 if total_count > 100 {
                     total_count = 0;
-                    let len = expected_peaks_size.saturating_sub(peaks.len());
+                    let len = estimated_peaks.saturating_sub(peaks.len());
                     // info!("expected peaks size: {}, len: {}, n_adds: {}", expected_peaks_size, peaks.len(), n_adds);
                     let cln = [peaks.clone().as_slice(), vec![0f32; len].as_slice()].concat();
-                    let _ = app_handle.emit("waveform", GetWaveformResponse { data: Some(cln) });
+                    let bytes = peaks_to_bytes(&cln);
+                    let _ = app_handle.emit("waveform", GetWaveformResponse { data: Some(bytes) });
                 }
 
                 // Get waveform here
@@ -1426,6 +1480,19 @@ pub fn get_peaks(
         _ => result,
     };
     res
+}
+
+fn peaks_to_bytes(peaks: &[f32]) -> ByteBuf {
+    // Convert &[f32] into &[u8]
+    let byte_slice: &[u8] = unsafe {
+        std::slice::from_raw_parts(
+            peaks.as_ptr() as *const u8,
+            peaks.len() * std::mem::size_of::<f32>(),
+        )
+    };
+
+    let bytes = ByteBuf::from(byte_slice);
+    bytes
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

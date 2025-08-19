@@ -328,6 +328,7 @@ mod cpal {
             let volume_state = Arc::new(RwLock::new(vol.unwrap()));
             let frame_idx_state = Arc::new(RwLock::new(0.0f64));
             let elapsed_time_state = Arc::new(RwLock::new(0));
+            let elapsed_frac_time_state = Arc::new(RwLock::new(0.0));
             let playback_state: Arc<RwLock<PlaybackState>> = Arc::new(RwLock::new(PlaybackState {
                 is_playing: true,
                 playback_speed: 1.0f64,
@@ -458,6 +459,7 @@ mod cpal {
 
                             let prev_duration = { *elapsed_time_state.read().unwrap() };
 
+                            // Second changed
                             if prev_duration != next_duration {
                                 let new_duration =
                                     Duration::from_secs((next_duration as f64) as u64);
@@ -473,6 +475,27 @@ mod cpal {
 
                                 let mut duration = elapsed_time_state.write().unwrap();
                                 *duration = new_duration.as_secs();
+                            } else {
+                                // Also emit events multiple times per second
+
+                                // new duration
+                                let current_frac =
+                                    time_base.calc_time(new_sample_offset as u64).frac;
+                                // info!("Next duration: {:?}", next_duration);
+
+                                let prev_frac_emit = { *elapsed_frac_time_state.read().unwrap() };
+                                // Every 0.2 seconds
+                                if (current_frac - prev_frac_emit).abs() > 0.2 {
+                                    let new_duration = Duration::from_secs_f64(
+                                        (next_duration as f64 + current_frac),
+                                    );
+
+                                    let _ = app_handle
+                                        .emit("timestamp", Some(new_duration.as_secs_f64()));
+
+                                    let mut duration = elapsed_frac_time_state.write().unwrap();
+                                    *duration = current_frac;
+                                }
                             }
                             let viz = viz_data.clone();
                             // Every x samples - send viz data to frontend

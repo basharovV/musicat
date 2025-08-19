@@ -69,6 +69,8 @@ zune-png = "0.4.10"
 serde_repr = "0.1.19"
 serde-m3u = "0.1.0"
 mimetype = "0.1.6"
+serde_bytes = "0.11.17"
+memmap2 = "0.9.7"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.5.2"

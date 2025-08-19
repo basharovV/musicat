@@ -13,6 +13,7 @@ use reqwest;
 use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
 use std::error::Error;
 use std::sync::Mutex;
 use std::{env, fs};
@@ -143,7 +144,7 @@ pub struct GetWaveformRequest {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 struct GetWaveformResponse {
-    data: Option<Vec<f32>>,
+    data: Option<ByteBuf>,
 }
 
 #[tauri::command]
