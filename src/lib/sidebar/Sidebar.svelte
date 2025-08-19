@@ -536,7 +536,12 @@
     let hoveringOverSmartPlaylistId: number | string = null;
 
     async function onCreatePlaylist() {
-        createNewPlaylistFile(newPlaylistTitle);
+        await createNewPlaylistFile(newPlaylistTitle);
+        // Navigate to the new playlist
+        onClickPlaylist(
+            null,
+            $userPlaylists.find((p) => p.title === newPlaylistTitle),
+        );
         newPlaylistTitle = "";
     }
 
@@ -1404,7 +1409,9 @@
                                     >
                                         {#if isRenamingSmartPlaylist && smartPlaylistToEdit.id === query.id}
                                             <Input
-                                                bind:value={updatedSmartPlaylistName}
+                                                bind:value={
+                                                    updatedSmartPlaylistName
+                                                }
                                                 onEnterPressed={() => {
                                                     onRenameSmartPlaylist(
                                                         query,
