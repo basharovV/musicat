@@ -35,13 +35,14 @@ import type {
     WaveformPlayerState,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
-import { locale } from "../i18n/i18n-svelte";
+import { locale, setLocale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import { scanPlaylists } from "./M3UUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
 import { persistentWritable } from "./storeUtils";
+import { loadLocale } from "../i18n/i18n-util.sync";
 
 export const L = derived(locale, (l) => {
     return i18nString(l);

@@ -76,21 +76,25 @@
     import { resetDraggedSongs } from "./data/storeHelper";
     import TopNav from "./lib/nav/TopNav.svelte";
     import { get } from "svelte/store";
+    import type { Locales } from "./i18n/i18n-types";
 
     const appWindow = getCurrentWebviewWindow();
 
-    console.log("locale", getLocaleFromNavigator());
+    const savedLocale = (localStorage.getItem("locale") ||
+        navigator.languages.find((l) => !l.includes("-")) ||
+        "en") as Locales;
+    console.log("locale", savedLocale);
 
     register("en", () => import("./i18n/en"));
     register("es", () => import("./i18n/es"));
 
     init({
         fallbackLocale: "en",
-        initialLocale: getLocaleFromNavigator(),
+        initialLocale: savedLocale,
     });
 
-    loadLocale("en");
-    setLocale("en");
+    loadLocale(savedLocale);
+    setLocale(savedLocale);
 
     startMenuListener();
     startImportListener();

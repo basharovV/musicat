@@ -60,6 +60,7 @@
             .value as Locales;
         loadLocale(selectedLocale);
         setLocale(selectedLocale);
+        localStorage.setItem("locale", selectedLocale);
     }
 
     async function openFolderSelector() {
