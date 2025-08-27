@@ -1,4 +1,10 @@
-### 📦 0.13.0
+### 📦 0.13.1
+
+#### Fixes
+
+- Fixed album artworks not loading on Windows.
+
+### 📦 0.13.1
 
 #### New
 
