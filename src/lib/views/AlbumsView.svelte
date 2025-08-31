@@ -8,6 +8,7 @@
         compressionSelected,
         current,
         isPlaying,
+        os,
         query,
         queue,
         uiPreferences,
@@ -23,11 +24,13 @@
     import { debounce } from "lodash-es";
     import { getAlbumDetailsHeight } from "../albums/util";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import AltAlbumMenu from "../albums/AltAlbumMenu.svelte";
 
     const PADDING = 14;
 
     let activeAlbums: Album[] = [];
     let albumMenu: AlbumMenu;
+    let altAlbumMenu: AltAlbumMenu;
     let columnWidth = 0;
     let container: HTMLDivElement;
     let currentAlbum: Album;
@@ -268,7 +271,11 @@
             // sort by track number
             .sort((a, b) => a.trackNumber - b.trackNumber);
 
-        albumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
+        if (($os === "macos" && e.metaKey) || e.ctrlKey) {
+            altAlbumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
+        } else {
+            albumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
+        }
     }
 
     async function onLeftClick(e, album, index) {
@@ -348,6 +355,12 @@
 
 <AlbumMenu
     bind:this={albumMenu}
+    onClose={() => {
+        highlightedAlbum = null;
+    }}
+/>
+<AltAlbumMenu
+    bind:this={altAlbumMenu}
     onClose={() => {
         highlightedAlbum = null;
     }}
