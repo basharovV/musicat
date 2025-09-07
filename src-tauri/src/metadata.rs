@@ -102,7 +102,7 @@ pub struct AlbumArtwork {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {
-    id: String,
+    pub id: String,
     path: String,
     file: String,
     pub title: String,

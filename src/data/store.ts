@@ -300,6 +300,7 @@ const defaultSettings: UserSettings = {
     songbookLocation: null,
     downloadLocation: null,
     playlistsLocation: null,
+    generatedStemsLocation: null,
     theme: "dark",
     outputDevice: null, // default system device,
     followSystemOutput: true,
@@ -446,7 +447,17 @@ async function init() {
     if (typeof fileSettings.playlistsLocation != "string") {
         fileSettings.playlistsLocation = await path.join(
             await audioDir(),
-            "Musicat Playlists",
+            "Musicat",
+            "Playlists",
+        );
+    }
+
+    // Same for stems location (generated - eg. "no vocals")
+    if (typeof fileSettings.generatedStemsLocation != "string") {
+        fileSettings.generatedStemsLocation = await path.join(
+            await audioDir(),
+            "Musicat",
+            "Stems",
         );
     }
 

@@ -63,99 +63,64 @@
         localStorage.setItem("locale", selectedLocale);
     }
 
-    async function openFolderSelector() {
-        // Open a selection dialog for directories
+    async function openDirectorySelector(
+        settingsKey: string,
+        defaultPathFn: () => Promise<string>,
+        onSelect?: (selected: string) => Promise<void> | void,
+    ) {
         const selected = await open({
             directory: true,
             multiple: false,
-            defaultPath: await audioDir(),
+            defaultPath: await defaultPathFn(),
         });
+
         if (Array.isArray(selected)) {
-            // user selected multiple directories
+            // user selected multiple directories (currently unused)
         } else if (selected === null) {
             // user cancelled the selection
         } else {
             console.log("selected", selected);
-            // user selected a single directory
 
-            $userSettings.foldersToWatch.push(selected);
+            // Update the user settings
+            $userSettings[settingsKey] = selected;
             $userSettings = $userSettings;
 
-            await importPaths([selected], false);
+            // Optional additional action
+            if (onSelect) {
+                await onSelect(selected);
+            }
         }
+    }
+    async function openFolderSelector() {
+        await openDirectorySelector(
+            "foldersToWatch",
+            audioDir,
+            async (selected) => {
+                $userSettings.foldersToWatch.push(selected);
+                $userSettings = $userSettings;
+                await importPaths([selected], false);
+            },
+        );
     }
 
     async function openDefaultDownloadDirSelector() {
-        // Open a selection dialog for directories
-        const selected = await open({
-            directory: true,
-            multiple: false,
-            defaultPath: await downloadDir(),
-        });
-        if (Array.isArray(selected)) {
-            // user selected multiple directories
-        } else if (selected === null) {
-            // user cancelled the selection
-        } else {
-            console.log("selected", selected);
-            // user selected a single directory
-            $userSettings.downloadLocation = selected;
-            $userSettings = $userSettings;
-        }
+        await openDirectorySelector("downloadLocation", downloadDir);
     }
+
     async function openDefaultPlaylistsDirSelector() {
-        // Open a selection dialog for directories
-        const selected = await open({
-            directory: true,
-            multiple: false,
-            defaultPath: await audioDir(),
-        });
-        if (Array.isArray(selected)) {
-            // user selected multiple directories
-        } else if (selected === null) {
-            // user cancelled the selection
-        } else {
-            console.log("selected", selected);
-            // user selected a single directory
-            $userSettings.playlistsLocation = selected;
-            $userSettings = $userSettings;
-        }
+        await openDirectorySelector("playlistsLocation", audioDir);
     }
+
+    async function openGeneratedStemsDirSelector() {
+        await openDirectorySelector("playlistsLocation", audioDir);
+    }
+
     async function openScrapbookDirSelector() {
-        // Open a selection dialog for directories
-        const selected = await open({
-            directory: true,
-            multiple: false,
-            defaultPath: await downloadDir(),
-        });
-        if (Array.isArray(selected)) {
-            // user selected multiple directories
-        } else if (selected === null) {
-            // user cancelled the selection
-        } else {
-            console.log("selected", selected);
-            // user selected a single directory
-            $userSettings.scrapbookLocation = selected;
-            $userSettings = $userSettings;
-        }
+        await openDirectorySelector("scrapbookLocation", downloadDir);
     }
+
     async function openSongbookDirSelector() {
-        // Open a selection dialog for directories
-        const selected = await open({
-            directory: true,
-            multiple: false,
-            defaultPath: await downloadDir(),
-        });
-        if (Array.isArray(selected)) {
-            // user selected multiple directories
-        } else if (selected === null) {
-            // user cancelled the selection
-        } else {
-            console.log("selected", selected);
-            // user selected a single directory
-            $userSettings.songbookLocation = selected;
-            $userSettings = $userSettings;
-        }
+        await openDirectorySelector("songbookLocation", downloadDir);
     }
 
     function removeFolder(folder) {
@@ -282,7 +247,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Cover art file names</td>
+                    <td>{$LL.settings.coverArtFilenames()}</td>
                     <td
                         ><Input
                             bind:value={commaSeparatedFilenames}
@@ -293,7 +258,7 @@
                     >
                 </tr>
                 <tr>
-                    <td>Download location</td>
+                    <td>{$LL.settings.downloadLocation()}</td>
                     <td>
                         <div class="download-location">
                             <p>{$userSettings.downloadLocation}</p>
@@ -307,7 +272,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Playlists location</td>
+                    <td>{$LL.settings.playlistsLocation()}</td>
                     <td>
                         <div class="download-location">
                             <p>{$userSettings.playlistsLocation}</p>
@@ -315,6 +280,20 @@
                                 icon="material-symbols:folder"
                                 onClick={() => {
                                     openDefaultPlaylistsDirSelector();
+                                }}
+                            />
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>{$LL.settings.generatedStemsLocation()}</td>
+                    <td>
+                        <div class="download-location">
+                            <p>{$userSettings.generatedStemsLocation}</p>
+                            <Icon
+                                icon="material-symbols:folder"
+                                onClick={() => {
+                                    openGeneratedStemsDirSelector();
                                 }}
                             />
                         </div>

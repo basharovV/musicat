@@ -171,6 +171,7 @@ interface UserSettings {
     songbookLocation?: string;
     downloadLocation: string;
     playlistsLocation: string;
+    generatedStemsLocation: string;
     theme: string;
     outputDevice?: string;
     followSystemOutput: boolean;
@@ -447,3 +448,8 @@ type SongOrder = {
     orderBy: string;
     reverse: boolean;
 };
+
+interface Stem {
+    name: string;
+    path: string;
+}

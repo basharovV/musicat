@@ -596,6 +596,10 @@ type RootTranslation = {
 		 */
 		importing: string
 		/**
+		 * C​o​v​e​r​ ​a​r​t​ ​f​i​l​e​n​a​m​e​s
+		 */
+		coverArtFilenames: string
+		/**
 		 * E​n​a​b​l​e​ ​A​r​t​i​s​t​'​s​ ​T​o​o​l​k​i​t
 		 */
 		enableArtistsToolkit: string
@@ -607,6 +611,18 @@ type RootTranslation = {
 		 * S​c​r​a​p​b​o​o​k​ ​l​o​c​a​t​i​o​n
 		 */
 		scrapbookLocation: string
+		/**
+		 * D​o​w​n​l​o​a​d​ ​l​o​c​a​t​i​o​n
+		 */
+		downloadLocation: string
+		/**
+		 * G​e​n​e​r​a​t​e​d​ ​s​t​e​m​s​ ​l​o​c​a​t​i​o​n
+		 */
+		generatedStemsLocation: string
+		/**
+		 * P​l​a​y​l​i​s​t​s​ ​l​o​c​a​t​i​o​n
+		 */
+		playlistsLocation: string
 		/**
 		 * E​n​a​b​l​e​ ​A​I​ ​f​e​a​t​u​r​e​s
 		 */
@@ -1412,6 +1428,10 @@ export type TranslationFunctions = {
 		 */
 		importing: () => LocalizedString
 		/**
+		 * Cover art filenames
+		 */
+		coverArtFilenames: () => LocalizedString
+		/**
 		 * Enable Artist's Toolkit
 		 */
 		enableArtistsToolkit: () => LocalizedString
@@ -1423,6 +1443,18 @@ export type TranslationFunctions = {
 		 * Scrapbook location
 		 */
 		scrapbookLocation: () => LocalizedString
+		/**
+		 * Download location
+		 */
+		downloadLocation: () => LocalizedString
+		/**
+		 * Generated stems location
+		 */
+		generatedStemsLocation: () => LocalizedString
+		/**
+		 * Playlists location
+		 */
+		playlistsLocation: () => LocalizedString
 		/**
 		 * Enable AI features
 		 */
