@@ -1,0 +1,12 @@
+[package]
+name = "libflac"
+version = "0.1.0"
+edition = "2021"
+authors = ["yurzhang <yurzhang.oi@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Nikaidou-Shinku/portable-vocal-remover"
+
+[dependencies]
+paste = "1.0.14"
+thiserror = "1.0.58"
+libflac-sys = { path = "../libflac-sys" }

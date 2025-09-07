@@ -24,5 +24,4 @@ dist-ssr
 *.sln
 *.sw?
 
-src-tauri/lib/
 test-files/

@@ -1,0 +1,35 @@
+[package]
+name = "pvr"
+version = "0.1.0"
+edition = "2021"
+authors = ["yurzhang <yurzhang.oi@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Nikaidou-Shinku/portable-vocal-remover"
+
+[dependencies]
+anyhow = "1.0.81"
+smallvec = { version = "1.13.1", features = ["union"] }
+ndarray = "0.16.1"
+# Audio resample
+rubato = "0.15.0"
+# WAV encode
+hound = "3.5.1"
+clap = { version = "4.5.2", features = ["derive"] }
+
+libflac = { path = "../libflac" }
+pvr-core = { path = "../pvr-core" }
+
+# Logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["parking_lot"] }
+tracing-log = "0.2"
+
+symphonia = { workspace = true }
+
+[lib]
+name = "pvr"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pvr"
+path = "src/main.rs"
