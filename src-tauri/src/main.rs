@@ -2,13 +2,13 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-
 use futures_util::StreamExt;
 use log::info;
 #[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
 use player::AudioPlayer;
+
 use reqwest;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -37,6 +37,7 @@ mod output;
 mod player;
 mod resampler;
 mod scrape;
+mod stem_separator;
 mod store;
 
 #[cfg(test)]
@@ -364,8 +365,7 @@ fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     info!("Starting Musicat");
     // std::env::set_var("RUST_LOG", "debug");
     // env_logger::init();
@@ -415,6 +415,13 @@ async fn main() {
                     .expect("failed to resolve resource");
                 log4rs::init_file(resource_path, Default::default()).unwrap();
             }
+            // ONLY WHEN RUNNING PVR in LIB mode (TODO: Remove)
+            // pvr::init_tracing(Level::INFO);
+
+            // let subscriber = FmtSubscriber::builder()
+            //     .with_max_level(tracing::Level::INFO) // or INFO
+            //     .finish();
+            // tracing::subscriber::set_global_default(subscriber).unwrap();
 
             info!("Goes to stderr and file");
 
@@ -699,6 +706,8 @@ async fn main() {
             player::volume_control,
             player::playback_speed_control,
             get_waveform,
+            stem_separator::separate_stems,
+            stem_separator::get_stems,
             player::loop_region,
             player::change_audio_device,
             download_file,
@@ -719,6 +728,7 @@ async fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_opener::init())
         .build(tauri::generate_context!())
         .unwrap()
         .run(|app, event| {

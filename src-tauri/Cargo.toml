@@ -1,3 +1,8 @@
+[workspace]
+members = [
+    "lib/pvr"
+]
+
 [package]
 name = "Musicat"
 version = "0.13.1"
@@ -10,6 +15,9 @@ edition = "2021"
 rust-version = "1.70"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[workspace.dependencies]
+symphonia = { version = "0.5.4", features = ["aac", "flac", "isomp4", "mp3", "opt-simd"] }
 
 [build-dependencies]
 tauri-build = { version = "2.4.0", features = [] }
@@ -31,7 +39,7 @@ http-range = "0.1.5"
 tauri-utils = "2.6.0"
 percent-encoding = "2.3.1"
 symphonia = { version = "0.5.4", features = ["aac", "flac", "isomp4", "mp3", "opt-simd"] }
-webrtc = "0.12.0"
+webrtc = "0.13.0"
 crc = { version = "3.2.1" }
 log = "0.4.22"
 bytes = "1.7.2"
@@ -55,8 +63,16 @@ tauri-plugin-dialog = "2.3.2"
 tauri-plugin-shell = "2.3.0"
 tauri-plugin-http = "2.5.1"
 tauri-plugin-clipboard-manager = "2.3.0"
+tauri-plugin-opener = "2"
 url = "2.5.2"
 log4rs = "1.3.0"
+
+# Only for when running PVR in lib mode instead of sidecar
+# tracing = "0.1"                 # tracing macros
+# tracing-log = "0.2"             # bridge tracing -> log
+# tracing-subscriber = "0.3"      # subscriber for global tracing
+# pvr = { path = "lib/pvr" }
+
 urlencoding = "2.1.3"
 trash = "5.1.1"
 kuchiki = "0.8"

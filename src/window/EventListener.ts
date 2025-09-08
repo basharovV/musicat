@@ -20,6 +20,9 @@ import { open } from "@tauri-apps/plugin-shell";
 import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
 import { openTauriImportDialog } from "../data/LibraryUtils";
 import { path } from "@tauri-apps/api";
+
+import toast from "svelte-french-toast";
+
 const appWindow = getCurrentWebviewWindow();
 
 export function startMenuListener() {
@@ -107,6 +110,51 @@ export async function listenForFileDrop(): Promise<Event<any>> {
                     console.log("event", event);
                     resolve(event);
                     unlisten();
+                },
+            );
+        } catch (e) {
+            console.error(e);
+            reject(e);
+        }
+    });
+}
+
+interface StemSeparationEvent {
+    event: string;
+    message: string;
+}
+
+export async function listenForStemSeparation() {
+    const toastId = toast.loading("Loading...");
+
+    await new Promise(async (resolve, reject) => {
+        try {
+            const unlisten = await appWindow.listen<StemSeparationEvent>(
+                "stem-separation",
+                (event) => {
+                    switch (event.payload?.event) {
+                        case "progress":
+                            toast.loading(event.payload.message, {
+                                id: toastId,
+                            });
+                            break;
+                        case "complete":
+                            toast.success(event.payload.message, {
+                                id: toastId,
+                            });
+                            resolve(event.payload);
+                            console.log("event", event);
+                            unlisten();
+                            break;
+                        case "error":
+                            toast.error(event.payload.message, {
+                                id: toastId,
+                            });
+                            reject(event.payload);
+                            console.log("event", event);
+                            unlisten();
+                            break;
+                    }
                 },
             );
         } catch (e) {
