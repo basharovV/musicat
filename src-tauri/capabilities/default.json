@@ -25,6 +25,14 @@
         "fs:allow-unwatch",
         "fs:allow-log-write",
         {
+            "identifier": "opener:allow-open-path",
+            "allow": [
+                {
+                    "path": "$HOME/**"
+                }
+            ]
+        },
+        {
             "identifier": "fs:allow-exists",
             "allow": [
                 {

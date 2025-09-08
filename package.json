@@ -74,6 +74,7 @@
         "wtf_wikipedia": "^10.3.2"
     },
     "dependencies": {
+        "@tauri-apps/plugin-opener": "^2.5.0",
         "chord-symbol": "^4.0.0",
         "is-dark-color": "^1.2.0",
         "mousetrap": "^1.6.5",
