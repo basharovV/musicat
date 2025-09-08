@@ -89,6 +89,7 @@
 
         const rect = menuEl.getBoundingClientRect();
         x = Math.min(window.innerWidth - rect.width - 30, x);
+        y = Math.min(window.innerHeight - rect.height - 30, y - 10);
         if (y > window.innerHeight - rect.height) y -= rect.height;
     })();
 
