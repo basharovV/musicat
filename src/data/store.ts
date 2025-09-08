@@ -33,6 +33,7 @@ import type {
     UiView,
     UserSettings,
     WaveformPlayerState,
+    RepeatMode,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale, setLocale } from "../i18n/i18n-svelte";
@@ -181,6 +182,7 @@ export const queueMirrorsSearch = writable(false);
 export const queueCountry = writable(null); // ISO Country code
 export const queueDuration: Writable<number> = writable(0);
 export const isShuffleEnabled = writable(false);
+export const repeatMode = writable<RepeatMode>("none");
 export const shuffledQueue: Writable<Song[]> = writable([]);
 
 export const nextUpSong: Writable<Song> = writable(null);

@@ -13,6 +13,7 @@
         isFolderWatchUpdate,
         isLyricsOpen,
         isQueueOpen,
+        isWaveformOpen,
         nextUpSong,
         uiView,
         userSettings,
@@ -94,11 +95,22 @@
                 <p>{$LL.bottomBar.lyrics()}</p>
             </div>
         {/if}
-        {#if $uiView.match(/(library|albums|playlists|favourites|smart-query)/)}
+        <div
+            class="toggle-button waveform"
+            class:selected={$isWaveformOpen}
+            on:click={() => ($isWaveformOpen = !$isWaveformOpen)}
+        >
+            <Icon
+                class={$isWaveformOpen ? "active" : "inactive"}
+                icon="ph:wave-sine-duotone"
+            />
+            <p>{$LL.bottomBar.waveform()}</p>
+        </div>
+        <!-- {#if $uiView.match(/(library|albums|playlists|favourites|smart-query)/)}
             <div class="lossy-selector">
                 <CompressionSelector />
             </div>
-        {/if}
+        {/if} -->
         {#if !$isIAPlaying && $nextUpSong}
             <div class="next-up" bind:this={nextUp}>
                 <p class="label">{$LL.bottomBar.nextUp()}:</p>
@@ -147,14 +159,14 @@
                     {$counts.songs}
                     {$LL.bottomBar.stats.songs()}
                 </p>
-                <p class="artists">
+                <!-- <p class="artists">
                     {$counts.artists}
                     {$LL.bottomBar.stats.artists()}
                 </p>
                 <p class="albums">
                     {$counts.albums}
                     {$LL.bottomBar.stats.albums()}
-                </p>
+                </p> -->
             </div>
         {:else}
             <p>...</p>

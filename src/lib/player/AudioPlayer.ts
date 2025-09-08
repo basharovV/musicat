@@ -12,6 +12,7 @@ import {
     os,
     playerTime,
     queue,
+    repeatMode,
     seekTime,
     shuffledQueue,
     userSettings,
@@ -263,8 +264,21 @@ class AudioPlayer {
 
         appWindow.listen("song_change", async (event: Event<Song>) => {
             this.currentSong = event.payload;
-            this.currentSongIdx += 1;
-
+            const repeat = get(repeatMode);
+            switch (repeat) {
+                case "none":
+                    this.currentSongIdx += 1;
+                    break;
+                case "track":
+                    // Do nothing
+                    break;
+                case "queue":
+                    // Go back to 0 if we're at the end
+                    const nextIndex =
+                        (this.currentSongIdx + 1) % this.queue.length;
+                    this.currentSongIdx = nextIndex;
+                    break;
+            }
             current.set({
                 song: this.currentSong,
                 index: this.currentSongIdx,
@@ -416,6 +430,28 @@ class AudioPlayer {
 
     restart() {}
 
+    cycleRepeat() {
+        const mode = get(repeatMode);
+        const newMode =
+            mode === "none" ? "queue" : mode === "queue" ? "track" : "none";
+        repeatMode.set(newMode);
+
+        // If going from one to none, clear the queue and re-send
+        if (newMode === "none") {
+            invoke("queue_next", {
+                event: {
+                    path: null,
+                    seek: 0,
+                    file_info: null,
+                    volume: get(volume),
+                },
+            });
+            this.setNextUpSong();
+        } else {
+            this.setNextUpSong();
+        }
+    }
+
     setAudioFinishedCallback(callback) {
         this.isFinishedCallback = callback;
     }
@@ -509,28 +545,59 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
-        if (this.currentSongIdx + 1 < this.queue?.length) {
-            const nextSong = this.queue[this.currentSongIdx + 1];
-            nextUpSong.set(nextSong);
-            invoke("queue_next", {
-                event: {
-                    path: nextSong.path,
-                    seek: 0,
-                    file_info: nextSong.fileInfo,
-                    volume: get(volume),
-                },
-            });
-        } else {
-            nextUpSong.set(null);
-            // Tell the backend to clear the queue
-            invoke("queue_next", {
-                event: {
-                    path: null,
-                    seek: 0,
-                    file_info: null,
-                    volume: get(volume),
-                },
-            });
+        let repeat = get(repeatMode);
+
+        switch (repeat) {
+            case "none":
+                if (this.currentSongIdx + 1 < this.queue?.length) {
+                    const nextSong = this.queue[this.currentSongIdx + 1];
+                    nextUpSong.set(nextSong);
+                    invoke("queue_next", {
+                        event: {
+                            path: nextSong.path,
+                            seek: 0,
+                            file_info: nextSong.fileInfo,
+                            volume: get(volume),
+                        },
+                    });
+                } else {
+                    nextUpSong.set(null);
+                    // Tell the backend to clear the queue
+                    invoke("queue_next", {
+                        event: {
+                            path: null,
+                            seek: 0,
+                            file_info: null,
+                            volume: get(volume),
+                        },
+                    });
+                }
+                break;
+            case "track":
+                nextUpSong.set(this.currentSong);
+                invoke("queue_next", {
+                    event: {
+                        path: this.currentSong.path,
+                        seek: 0,
+                        file_info: this.currentSong.fileInfo,
+                        volume: get(volume),
+                    },
+                });
+                break;
+            case "queue":
+                const nextIndex = (this.currentSongIdx + 1) % this.queue.length;
+                nextUpSong.set(this.queue[nextIndex]);
+                invoke("queue_next", {
+                    event: {
+                        path: this.queue[nextIndex].path,
+                        seek: 0,
+                        file_info: this.queue[nextIndex].fileInfo,
+                        volume: get(volume),
+                    },
+                });
+                break;
+            default:
+                break;
         }
     }
 

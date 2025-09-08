@@ -210,6 +210,7 @@ transport-favorite: "#59cd7a"
 transport-favorite-hover: rgb(from var(--transport-favorite) r g b / 0.4)
 transport-shuffle: "#e1ff00"
 transport-shuffle-hover: rgb(from var(--transport-shuffle) r g b / 0.4)
+transport-repeat: "#00C56C"
 transport-volume-line-bg: color-mix(in srgb, var(--inverse) 20%, transparent)
 transport-volume-thumb-bg: "#FDFDFD"
 transport-volume-thumb-icon: "#5123DD"

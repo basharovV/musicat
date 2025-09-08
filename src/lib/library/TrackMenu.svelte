@@ -2,7 +2,7 @@
     import { invoke } from "@tauri-apps/api/core";
     import { type } from "@tauri-apps/plugin-os";
     import { onMount } from "svelte";
-    import type { Album, Song, ToImport } from "../../App";
+    import type { Album, Song, Stem, ToImport } from "../../App";
     import { db } from "../../data/db";
     import { deleteSongsFromPlaylist } from "../../data/M3UUtils";
     import {
@@ -34,6 +34,8 @@
     import { removeQueuedSongs } from "../../data/storeHelper";
     import { get } from "svelte/store";
     import toast from "svelte-french-toast";
+    import { listenForStemSeparation } from "../../window/EventListener";
+    import audioPlayer from "../player/AudioPlayer";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
@@ -79,14 +81,35 @@
         if (Array.isArray(_songs)) {
             song = null;
             songs = _songs;
+            stems = [];
         } else {
             song = _songs;
             songs = [];
+            getStems(song);
         }
 
         confirmingType = null;
 
         showMenu = true;
+    }
+
+    let stems: Stem[] = [];
+
+    async function getStems(song: Song) {
+        stems = await invoke("get_stems", {
+            event: {
+                song_id: song.id,
+            },
+        });
+        console.log("Got stems", stems);
+    }
+
+    async function playStem(stem: Stem) {
+        audioPlayer.playSong({
+            ...song,
+            title: stem.name,
+            path: stem.path,
+        });
     }
 
     function compose(action, ...args) {
@@ -347,7 +370,32 @@
         />
         {#if song}
             <MenuDivider />
+            <MenuOption isDisabled={true} text="Stems (click to play)" />
+            {#if stems.length === 0}
+                <MenuOption
+                    onClick={async () => {
+                        await invoke("separate_stems", {
+                            event: {
+                                path: song.path,
+                            },
+                        });
+                        listenForStemSeparation();
+                    }}
+                    text="Separate stems"
+                />
+            {:else}
+                {#each stems as stem}
+                    <MenuOption
+                        isDisabled={false}
+                        text={stem.name}
+                        onClick={() => {
+                            playStem(stem);
+                        }}
+                    />
+                {/each}
+            {/if}
 
+            <MenuDivider />
             <MenuOption isDisabled={true} text="Edit tags" />
             {#if song.tags}
                 <div class="tags">

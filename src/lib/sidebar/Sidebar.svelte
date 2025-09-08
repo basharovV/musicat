@@ -21,7 +21,10 @@
         parsePlaylist,
         renamePlaylist,
     } from "../../data/M3UUtils";
-    import SmartQueries from "../../data/SmartQueries";
+    import {
+        default as BuiltInQueries,
+        default as SmartQueries,
+    } from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
         current,
@@ -32,14 +35,13 @@
         draggedTitle,
         genericSongOrder,
         isFindFocused,
-        isSidebarFloating,
         isMiniPlayer,
         isPlaying,
         isShuffleEnabled,
+        isSidebarFloating,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
-        isWaveformOpen,
         isWikiOpen,
         lastWrittenSongs,
         os,
@@ -47,6 +49,7 @@
         popupOpen,
         query,
         queue,
+        repeatMode,
         rightClickedAlbum,
         rightClickedTrack,
         rightClickedTracks,
@@ -61,21 +64,6 @@
         userPlaylists,
         userSettings,
     } from "../../data/store";
-    import LL from "../../i18n/i18n-svelte";
-    import { currentThemeObject } from "../../theming/store";
-    import Menu from "../ui/menu/Menu.svelte";
-    import MenuOption from "../ui/menu/MenuOption.svelte";
-    import audioPlayer from "../player/AudioPlayer";
-    import { isIAPlaying } from "../player/WebAudioPlayer";
-    import type { SavedSmartQuery } from "../smart-query/QueryPart";
-    import "../tippy.css";
-    import Icon from "../ui/Icon.svelte";
-    import Input from "../ui/Input.svelte";
-    import PlaybackSpeed from "../ui/PlaybackSpeed.svelte";
-    import { optionalTippy } from "../ui/TippyAction";
-    import VolumeSlider from "../ui/VolumeSlider.svelte";
-    import Seekbar from "./Seekbar.svelte";
-    import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import {
         resetDraggedSongs,
         setDraggedPlaylist,
@@ -83,8 +71,22 @@
         setDraggedSongs,
         setQueue,
     } from "../../data/storeHelper";
+    import LL from "../../i18n/i18n-svelte";
+    import { currentThemeObject } from "../../theming/store";
+    import audioPlayer from "../player/AudioPlayer";
+    import { isIAPlaying } from "../player/WebAudioPlayer";
     import SmartQuery from "../smart-query/Query";
-    import BuiltInQueries from "../../data/SmartQueries";
+    import type { SavedSmartQuery } from "../smart-query/QueryPart";
+    import "../tippy.css";
+    import Icon from "../ui/Icon.svelte";
+    import Input from "../ui/Input.svelte";
+    import PlaybackSpeed from "../ui/PlaybackSpeed.svelte";
+    import { optionalTippy } from "../ui/TippyAction";
+    import VolumeSlider from "../ui/VolumeSlider.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
+    import Seekbar from "./Seekbar.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -349,6 +351,7 @@
     let heightToRestore = 0;
     let paddingPx = 40;
     let isMiniToggleHovered = false;
+    let showClickCurtain = false; // temporary container to consume focus click event
     let isMiniPlayerHovered = false;
 
     /**
@@ -363,9 +366,11 @@
     }
     function onMiniPlayerMouseOver() {
         isMiniPlayerHovered = true;
+        showClickCurtain = false;
     }
     function onMiniPlayerMouseOut() {
         isMiniPlayerHovered = false;
+        showClickCurtain = true;
     }
 
     async function toggleMiniPlayer() {
@@ -1066,6 +1071,14 @@
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
 >
+    {#if showClickCurtain}
+        <div
+            class="click-curtain"
+            on:click={() => {
+                showClickCurtain = false;
+            }}
+        />
+    {/if}
     <!-- <div class="knob">
     <Knob bind:value={volumeKnob} max={100} min={0} pixelRange={200} />
   </div> -->
@@ -1816,15 +1829,15 @@
                         onClick={() => audioPlayer.playNext()}
                     />
                     <Icon
-                        class="transport-side favourite {$current.song
-                            ?.isFavourite
+                        class="transport-side repeat {$repeatMode === 'track' ||
+                        $repeatMode === 'queue'
                             ? 'active'
                             : 'inactive'}"
-                        icon={$current.song?.isFavourite
-                            ? "clarity:heart-solid"
-                            : "clarity:heart-line"}
+                        icon={$repeatMode === "track"
+                            ? "ph:repeat-once"
+                            : "ph:repeat-bold"}
                         onClick={() => {
-                            favouriteCurrentSong();
+                            audioPlayer.cycleRepeat();
                         }}
                     />
                 </transport>
@@ -1844,19 +1857,18 @@
 
                     <VolumeSlider />
 
-                    <div
-                        class="visualizer-icon"
-                        use:tippy={{
-                            content: "waveform, loop region, marker editor",
-                            placement: "top",
+                    <Icon
+                        class="transport-side favourite {$current.song
+                            ?.isFavourite
+                            ? 'active'
+                            : 'inactive'}"
+                        icon={$current.song?.isFavourite
+                            ? "clarity:heart-solid"
+                            : "clarity:heart-line"}
+                        onClick={() => {
+                            favouriteCurrentSong();
                         }}
-                    >
-                        <Icon
-                            class={$isWaveformOpen ? "active" : "inactive"}
-                            icon="ph:wave-sine-duotone"
-                            onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                        />
-                    </div>
+                    />
                 </div>
             </div>
         </div>
@@ -1883,17 +1895,24 @@
                 &.favourite.active {
                     color: var(--transport-favorite);
 
-                    &:hover {
-                        color: var(--transport-favorite-hover);
-                    }
+                    // &:hover {
+                    //     color: var(--transport-favorite-hover);
+                    // }
                 }
 
                 &.shuffle.active {
                     color: var(--transport-shuffle);
 
-                    &:hover {
-                        color: var(--transport-shuffle-hover);
-                    }
+                    // &:hover {
+                    //     color: var(--transport-shuffle-hover);
+                    // }
+                }
+                &.repeat.active {
+                    color: var(--transport-repeat);
+
+                    // &:hover {
+                    //     color: var(--transport-shuffle-hover);
+                    // }
                 }
             }
 
@@ -1920,6 +1939,17 @@
         max-width: 210px;
         min-width: 210px;
         background-color: $sidebar_primary_color;
+
+        .click-curtain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100%;
+            width: 100%;
+            z-index: 100;
+        }
 
         &.floating {
             grid-template-rows: 1fr;
@@ -2587,7 +2617,7 @@
             display: flex;
         }
         @media only screen and (max-height: 210px) and (max-width: 210px) {
-            padding: 0 2em 1em;
+            // padding: 0 2em 1em;
             .track-info-icon,
             .visualizer-icon {
                 display: none;
@@ -2778,6 +2808,7 @@
         @media only screen and (max-height: 210px) and (max-width: 210px) {
             .top {
                 padding-top: 0em;
+                display: none;
             }
             .track-info,
             .bottom,
@@ -2789,12 +2820,12 @@
                 right: 0px;
             }
             .track-info-content {
-                margin-top: 1.9em;
-                margin-bottom: 1em;
+                margin-top: 0.75em;
+                margin-bottom: 2.5em;
             }
 
             .other-controls {
-                padding: 0.5em 2em 1em;
+                padding: 0 0 0.75em;
             }
 
             .seekbar {

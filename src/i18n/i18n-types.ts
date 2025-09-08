@@ -197,6 +197,10 @@ type RootTranslation = {
 			both: string
 		}
 		/**
+		 * W​a​v​e​f​o​r​m
+		 */
+		waveform: string
+		/**
 		 * N​e​x​t​ ​U​p
 		 */
 		nextUp: string
@@ -490,7 +494,7 @@ type RootTranslation = {
 		 */
 		artworkTooltipBody: string
 		/**
-		 * E​n​c​o​d​e​d​ ​i​n​ ​f​i​l​e
+		 * I​n​ ​m​e​t​a​d​a​t​a
 		 */
 		encodedInFile: string
 		/**
@@ -1030,6 +1034,10 @@ export type TranslationFunctions = {
 			both: () => LocalizedString
 		}
 		/**
+		 * Waveform
+		 */
+		waveform: () => LocalizedString
+		/**
 		 * Next Up
 		 */
 		nextUp: () => LocalizedString
@@ -1322,7 +1330,7 @@ export type TranslationFunctions = {
 		 */
 		artworkTooltipBody: () => LocalizedString
 		/**
-		 * Encoded in file
+		 * In metadata
 		 */
 		encodedInFile: () => LocalizedString
 		/**

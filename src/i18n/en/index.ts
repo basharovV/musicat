@@ -54,6 +54,7 @@ const en = {
             lossless: "lossless",
             both: "lossy + lossless",
         },
+        waveform: "Waveform",
         nextUp: "Next Up",
         stats: {
             songs: "songs",

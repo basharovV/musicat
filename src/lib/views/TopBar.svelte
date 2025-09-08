@@ -19,6 +19,7 @@
         seekTime,
         lastWrittenSongs,
         rightClickedAlbum,
+        repeatMode,
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
@@ -137,6 +138,17 @@
                 $current.index === $queue?.length - 1}
             onClick={() => audioPlayer.playNext()}
             color={$currentThemeObject["transport-controls"]}
+        />
+
+        <Icon
+            class="transport-side repeat"
+            icon={$repeatMode === "track" ? "ph:repeat-once" : "ph:repeat-bold"}
+            color={$repeatMode === "none"
+                ? $currentThemeObject["icon-secondary"]
+                : $currentThemeObject["transport-repeat"]}
+            onClick={() => {
+                audioPlayer.cycleRepeat();
+            }}
         />
         <div class="favourite">
             <Icon

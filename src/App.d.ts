@@ -453,3 +453,5 @@ interface Stem {
     name: string;
     path: string;
 }
+
+type RepeatMode = "none" | "queue" | "track";
