@@ -87,6 +87,7 @@
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import { timeSince } from "../../utils/DateUtils";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -828,6 +829,7 @@
         console.log("x", x, "x2", x2);
         let started = false;
         var lastFrameTime = 0;
+        var startTime = 0;
         let yPos = 35;
 
         function animate(elapsedTime) {
@@ -835,20 +837,33 @@
             let textWidth = context.measureText(displayTitle).width;
             let isOverflowing = textWidth > canvas.width;
             if (isOverflowing) {
+                // console.log("isOverflowing", isOverflowing, started);
                 if (!started) {
                     started = true;
-                    setTimeout(() => {
-                        animation = requestAnimationFrame(animate);
-                    }, 200);
+                    startTime = elapsedTime;
+                    x = 0; // Initial x-coordinate for the text
+                    x2 = x + context.measureText(displayTitle).width + gap;
+                    animation = requestAnimationFrame(animate);
                 } else {
                     animation = requestAnimationFrame(animate);
                 }
                 // calculate the delta since the last frame
                 var delta = elapsedTime - (lastFrameTime || 0);
 
+                // Hold the marquee for 500ms
+                let timeSinceStart = elapsedTime - startTime;
+
+                if (timeSinceStart < 500) {
+                    clearMarquee();
+                    context.fillText(displayTitle, x, yPos);
+                    context.fillText(displayTitle, x2, yPos);
+                    return;
+                }
+
                 // if we *don't* already have a first frame, and the
                 // delta is less than 33ms (30fps in this case) then
                 // don't do anything and return
+
                 if (lastFrameTime && delta < 20) {
                     return;
                 }
@@ -886,7 +901,7 @@
                 );
             }
         }
-        animate(0);
+        animation = requestAnimationFrame(animate);
     }
 
     /**
