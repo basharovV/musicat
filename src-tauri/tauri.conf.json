@@ -1,8 +1,8 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/schema.json",
     "build": {
-        "beforeBuildCommand": "npm run build",
-        "beforeDevCommand": "npm run dev",
+        "beforeBuildCommand": "npm run build:pvr && npm run build",
+        "beforeDevCommand": "npm run build:pvr && npm run dev",
         "frontendDist": "../dist",
         "devUrl": "http://localhost:5173"
     },
@@ -11,7 +11,7 @@
         "category": "DeveloperTool",
         "copyright": "Copyright (c) 2022-2025 Slav Basharov",
         "targets": "all",
-        "externalBin": ["./target/release/pvr"],
+        "externalBin": ["./lib/portable-vocal-remover/target/release/pvr"],
         "icon": [
             "icons/32x32.png",
             "icons/128x128.png",

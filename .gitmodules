@@ -1,0 +1,3 @@
+[submodule "src-tauri/lib/portable-vocal-remover"]
+	path = src-tauri/lib/portable-vocal-remover
+	url = git@github.com:basharovV/portable-vocal-remover.git

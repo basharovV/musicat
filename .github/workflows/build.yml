@@ -48,6 +48,6 @@ jobs:
 
       - name: install frontend dependencies
         run: npm ci
-
+      
       - name: build tauri
         run: npm run tauri build
