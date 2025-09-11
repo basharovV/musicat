@@ -26,6 +26,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive  # 👈 ensures submodules are cloned and updated
 
       - name: setup node
         uses: actions/setup-node@v4
