@@ -79,7 +79,6 @@
         "chord-symbol": "^4.0.0",
         "is-dark-color": "^1.2.0",
         "mousetrap": "^1.6.5",
-        "music-metadata-browser": "^2.5.8",
         "rollup-plugin-node-polyfills": "^0.2.1",
         "svelecte": "^4.5.1",
         "svelte-tiny-virtual-list": "^2.1.2",

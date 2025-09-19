@@ -802,6 +802,7 @@ fn decode_loop(
                 false,
                 false,
                 true,
+                false,
                 &app_handle,
             );
 

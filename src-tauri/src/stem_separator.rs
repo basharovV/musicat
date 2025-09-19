@@ -77,7 +77,7 @@ pub async fn separate_stems(
         .ok_or("Stems directory not set")?;
 
     let input_file = std::path::PathBuf::from(&input_path);
-    let song_result = extract_metadata(&input_file, false, false, false, &app_handle);
+    let song_result = extract_metadata(&input_file, false, false, false, false, &app_handle);
 
     let song = song_result.ok_or("Failed to extract metadata")?;
     let output_dir = std::path::PathBuf::from(format!("{}/{}/", stems_directory, song.id));

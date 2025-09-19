@@ -2,10 +2,9 @@
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { open } from "@tauri-apps/plugin-shell";
     import type { ArtistFileItem, Song } from "src/App";
-    import { getMetadataFromFile } from "../../data/LibraryUtils";
     import { draggedScrapbookItems } from "../../data/store";
-    import Icon from "../ui/Icon.svelte";
     import { setQueue } from "../../data/storeHelper";
+    import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistFileItem;
     export let style: "dashed" | "outline" = "outline";
@@ -13,18 +12,18 @@
     async function openFile() {
         if (item.fileType.type === "audio") {
             // Play it in this app
-            const metadata = await getMetadataFromFile(item.path, item.name);
-            if (!metadata) {
-                open(item.path);
-                return;
-            }
             const song = await invoke<Song>("get_song_metadata", {
                 event: {
                     path: item.path,
                     isImport: false,
                     includeFolderArtwork: false,
+                    includeRawTags: false,
                 },
             });
+            if (!song) {
+                open(item.path);
+                return;
+            }
             setQueue([song], 0);
         } else {
             // Play in default system app

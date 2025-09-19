@@ -37,6 +37,7 @@
     import CountrySection from "./CountrySection.svelte";
     import { searchArtworkOnBrave } from "../menu/search";
     import { clickOutside } from "../../utils/ClickOutside";
+    import { openPath } from "@tauri-apps/plugin-opener";
 
     // The artwork for this track(s)
     let artworkBuffer: Buffer;
@@ -106,7 +107,12 @@
         let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
         if (path) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
-                event: { path, isImport: false, includeFolderArtwork: true },
+                event: {
+                    path,
+                    isImport: false,
+                    includeFolderArtwork: true,
+                    includeRawTags: false,
+                },
             });
             console.log(songWithArtwork);
 
@@ -480,7 +486,7 @@
                                     <td class="file-path">
                                         <div
                                             on:click={() =>
-                                                fileOpen(
+                                                openPath(
                                                     track.path.replace(
                                                         track.file,
                                                         "",

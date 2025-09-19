@@ -1,15 +1,15 @@
 use artwork_cacher::look_for_art;
 use chksum_md5::MD5;
-use lofty::config::WriteOptions;
+use lofty::config::{ParseOptions, WriteOptions};
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
 use lofty::picture::{MimeType, Picture};
 use lofty::probe::Probe;
 use lofty::read_from_path;
-use lofty::tag::{Accessor, ItemKey, ItemValue, TagItem, TagType};
+use lofty::tag::{Accessor, ItemKey, ItemValue, TagExt, TagItem, TagType};
 use log::info;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use serde_m3u::Playlist;
 use std::collections::HashMap;
@@ -20,8 +20,9 @@ use std::ops::Mul;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
-use std::{thread, time};
+use std::{fmt, thread, time};
 use tauri::{AppHandle, Emitter};
+use webrtc::media::audio::buffer::info;
 
 use crate::store::{load_settings, UserSettings};
 
@@ -29,9 +30,48 @@ mod artwork_cacher;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MetadataEntry {
-    id: String,
-    value: Value,
+    id: String, // format-specific tag key eg. for ID3v2, "TIT2"
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub value: Option<Option<String>>, // value eg. "Canon in D"
 }
+
+impl Default for MetadataEntry {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            value: None,
+        }
+    }
+}
+
+// Any value that is present is considered Some value, including null.
+fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Deserialize::deserialize(deserializer).map(Some)
+}
+
+pub const ALBUM: &str = "album";
+pub const ALBUM_ARTIST: &str = "albumArtist";
+pub const ARTIST: &str = "artist";
+pub const BPM: &str = "bpm";
+pub const YEAR: &str = "year";
+pub const COMPILATION: &str = "compilation";
+pub const COMPOSER: &str = "composer";
+pub const COPYRIGHT: &str = "copyright";
+pub const DISC_NUMBER: &str = "discNumber";
+pub const DISC_TOTAL: &str = "discTotal";
+pub const ENCODING_TOOL: &str = "encodingTool";
+pub const GENRE: &str = "genre";
+pub const ISRC: &str = "isrc";
+pub const LICENSE: &str = "license";
+pub const PERFORMER: &str = "performer";
+pub const PUBLISHER: &str = "publisher";
+pub const TRACK_NUMBER: &str = "trackNumber";
+pub const TRACK_TOTAL: &str = "trackTotal";
+pub const TITLE: &str = "title";
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct WriteMetatadaEvent {
@@ -68,6 +108,7 @@ pub struct ScanPlaylistEvent {
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
     pub duration: Option<f64>, //s
+    duration_display: Option<String>,
     overall_bitrate: Option<u32>,
     audio_bitrate: Option<u32>,
     sample_rate: Option<u32>,
@@ -105,6 +146,15 @@ pub struct Song {
     pub id: String,
     path: String,
     file: String,
+    pub file_info: FileInfo,
+
+    /// The metadata from the file, only needed for the tagger
+    /// Not stored in database, retrieved on request
+    pub metadata: HashMap<String, MetadataEntry>,
+
+    // Derived metadata, stored for performance
+    // because it's used in the library UI
+    /// file name or title from metadata
     pub title: String,
     pub artist: String,
     pub album: String,
@@ -118,8 +168,10 @@ pub struct Song {
     disc_number: i32,
     disc_total: i32,
     duration: String,
-    pub file_info: FileInfo,
+
+    /// Artwork on request
     pub artwork: Option<Artwork>,
+
     artwork_origin: Option<ArtworkOrigin>,
     origin_country: Option<String>,
     date_added: Option<u128>,
@@ -156,6 +208,7 @@ pub struct GetSongMetadataEvent {
     path: String,
     is_import: bool,
     include_folder_artwork: bool,
+    include_raw_tags: bool,
 }
 
 #[tauri::command]
@@ -182,6 +235,7 @@ pub async fn write_metadatas(
                     true,
                     false,
                     false,
+                    true,
                     &app_handle,
                 ) {
                     if let Some(album) = process_new_album(
@@ -254,6 +308,7 @@ pub async fn get_song_metadata(event: GetSongMetadataEvent, app: AppHandle) -> O
             event.is_import,
             false,
             event.include_folder_artwork,
+            event.include_raw_tags,
             &app,
         ) {
             return Some(song);
@@ -293,6 +348,7 @@ pub async fn scan_paths(
                     &path,
                     true,
                     event.is_cover_fullcheck,
+                    false,
                     false,
                     &app_handle,
                 ) {
@@ -493,6 +549,7 @@ pub async fn scan_playlist(
             if let Some(mut song) = crate::metadata::extract_metadata(
                 Path::new(&entry.url),
                 true,
+                false,
                 false,
                 false,
                 &app_handle,
@@ -777,6 +834,7 @@ fn process_directory(
                             true,
                             is_cover_fullcheck,
                             false,
+                            false,
                             &app,
                         ) {
                             if process_albums {
@@ -862,9 +920,14 @@ fn process_playlist(playlist_path: &Path, app: &AppHandle) -> Option<ProcessPlay
         let playlist: Playlist = Playlist::from(content.as_str());
 
         for entry in playlist.list {
-            if let Some(mut song) =
-                crate::metadata::extract_metadata(Path::new(&entry.url), true, false, false, &app)
-            {
+            if let Some(mut song) = crate::metadata::extract_metadata(
+                Path::new(&entry.url),
+                true,
+                false,
+                false,
+                false,
+                &app,
+            ) {
                 song.artwork = None;
                 subsongs.lock().unwrap().insert(song.id.clone(), song);
             }
@@ -881,6 +944,7 @@ pub fn extract_metadata(
     is_import: bool,
     is_cover_fullcheck: bool,
     include_folder_artwork: bool,
+    include_raw_tags: bool,
     app: &AppHandle,
 ) -> Option<Song> {
     info!("extract_metadata: {}", file_path.display());
@@ -919,13 +983,14 @@ pub fn extract_metadata(
                         let file_info;
                         let mut artwork = None;
                         let mut artwork_origin = None;
+                        let mut metadata: HashMap<String, MetadataEntry> = HashMap::new();
 
-                        if tagged_file.tags().is_empty() {
-                            title = file.to_string();
-                        }
                         // info!("bit depth {:?}", tagged_file.properties().bit_depth());
                         file_info = FileInfo {
                             duration: Some(tagged_file.properties().duration().as_secs_f64()),
+                            duration_display: Some(seconds_to_hms(
+                                tagged_file.properties().duration().as_secs(),
+                            )),
                             channels: tagged_file.properties().channels(),
                             bit_depth: tagged_file.properties().bit_depth().or(Some(16)),
                             sample_rate: tagged_file.properties().sample_rate(),
@@ -967,67 +1032,89 @@ pub fn extract_metadata(
                             },
                         };
 
-                        if duration.is_empty() {
-                            duration =
-                                seconds_to_hms(tagged_file.properties().duration().as_secs());
+                        if tagged_file.tags().is_empty() {
+                            title = file.to_string();
                         }
 
-                        // info!("Tag properties {:?}", file_info);
                         tagged_file.tags().iter().for_each(|tag| {
-                            // info!("Tag type {:?}", tag.tag_type());
-                            // info!("Tag items {:?}", tag.items());
-                            if title.is_empty() {
-                                title = tag
-                                    .title()
-                                    .filter(|x| !x.is_empty())
-                                    .unwrap_or(std::borrow::Cow::Borrowed(&file))
-                                    .to_string();
-                            }
-                            if artist.is_empty() {
-                                artist = tag.artist().unwrap_or_default().to_string();
-                            }
-                            if album.is_empty() {
-                                album = tag.album().unwrap_or_default().to_string();
-                            }
-                            if album_artist.is_none() {
-                                // album_artist = Some(tag.get_string(&ItemKey::AlbumArtist).unwrap_or_default().to_string());
-                                album_artist =
-                                    tag.get_string(&ItemKey::AlbumArtist).map(|s| s.to_string());
-                            }
-                            if compilation == 0 {
-                                compilation =
-                                    tag.get_string(&ItemKey::FlagCompilation)
+                            for item in tag.items() {
+                                // info!("Tag type {:?}", tag.tag_type());
+                                // info!("Tag items {:?}", tag.items());
+                                if title.is_empty() {
+                                    title = tag
+                                        .title()
+                                        .filter(|x| !x.is_empty())
+                                        .unwrap_or(std::borrow::Cow::Borrowed(&file))
+                                        .to_string();
+                                }
+                                if artist.is_empty() {
+                                    artist = tag.artist().unwrap_or_default().to_string();
+                                }
+                                if album.is_empty() {
+                                    album = tag.album().unwrap_or_default().to_string();
+                                }
+                                if album_artist.is_none() {
+                                    // album_artist = Some(tag.get_string(&ItemKey::AlbumArtist).unwrap_or_default().to_string());
+                                    album_artist = tag
+                                        .get_string(&ItemKey::AlbumArtist)
+                                        .map(|s| s.to_string());
+                                }
+                                if compilation == 0 {
+                                    compilation = tag
+                                        .get_string(&ItemKey::FlagCompilation)
                                         .unwrap_or_default()
                                         .parse::<u32>()
                                         .ok()
-                                        .unwrap_or(0) as i32;
-                            }
-                            if genre.is_empty() {
-                                genre = tag.genre().map_or_else(Vec::new, |g| {
-                                    g.split('/').map(String::from).collect()
-                                });
-                            }
-                            if year == 0 {
-                                year = tag.year().unwrap_or(0) as i32;
-                            }
-                            if composer.is_empty() {
-                                composer = tag
-                                    .get_items(&ItemKey::Composer)
-                                    .map(|c| c.value().to_owned().into_string().unwrap_or_default())
-                                    .clone()
-                                    .collect()
-                            }
-                            if track_number == -1 {
-                                track_number = tag.track().unwrap_or(0) as i32;
-                            }
-                            if track_total == -1 {
-                                track_total = tag.track_total().unwrap_or(0) as i32;
-                            }
-                            if disc_number == -1 {
-                                disc_number = tag.disk().unwrap_or(0) as i32;
-                            }
-                            if disc_total == -1 {
-                                disc_total = tag.disk_total().unwrap_or(0) as i32;
+                                        .unwrap_or(0)
+                                        as i32;
+                                }
+                                if genre.is_empty() {
+                                    genre = tag.genre().map_or_else(Vec::new, |g| {
+                                        g.split('/').map(String::from).collect()
+                                    });
+                                }
+                                if year == 0 {
+                                    year = tag.year().unwrap_or(0) as i32;
+                                }
+                                if composer.is_empty() {
+                                    composer = tag
+                                        .get_items(&ItemKey::Composer)
+                                        .map(|c| {
+                                            c.value().to_owned().into_string().unwrap_or_default()
+                                        })
+                                        .clone()
+                                        .collect()
+                                }
+                                if track_number == -1 {
+                                    track_number = tag.track().unwrap_or(0) as i32;
+                                }
+                                if track_total == -1 {
+                                    track_total = tag.track_total().unwrap_or(0) as i32;
+                                }
+                                if disc_number == -1 {
+                                    disc_number = tag.disk().unwrap_or(0) as i32;
+                                }
+                                if disc_total == -1 {
+                                    disc_total = tag.disk_total().unwrap_or(0) as i32;
+                                }
+
+                                if (include_raw_tags) {
+                                    let key = item
+                                        .key()
+                                        .map_key(tag.tag_type(), true)
+                                        .unwrap_or_default()
+                                        .to_string();
+                                    let value =
+                                        item.value().clone().into_string().unwrap_or_default();
+
+                                    metadata.insert(
+                                        key.clone(),
+                                        MetadataEntry {
+                                            id: key,
+                                            value: Some(Some(value)),
+                                        },
+                                    );
+                                }
                             }
                         });
 
@@ -1125,6 +1212,7 @@ pub fn extract_metadata(
                             disc_total,
                             duration,
                             file_info,
+                            metadata,
                             artwork,
                             artwork_origin,
                             // We default the origin country to "" to allow Dexie to return results when using orderBy,
@@ -1159,19 +1247,37 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
         if !v.metadata.is_empty() {
             // info!("{:?}", v.metadata);
             let tag_type_evt = v.tag_type.as_deref().unwrap();
-            let tag_type = match tag_type_evt {
+            let tag_type = match tag_type_evt.to_lowercase().as_str() {
                 "vorbis" => TagType::VorbisComments,
-                "ID3v1" => TagType::Id3v2,
-                "ID3v2.2" => TagType::Id3v2,
-                "ID3v2.3" => TagType::Id3v2,
-                "ID3v2.4" => TagType::Id3v2,
-                "iTunes" => TagType::Mp4Ilst,
+                "id3v1" => TagType::Id3v1,
+                "id3v2" => TagType::Id3v2,
+                "id3v2.2" => TagType::Id3v2,
+                "id3v2.3" => TagType::Id3v2,
+                "id3v2.4" => TagType::Id3v2,
+                "mp4ilst" => TagType::Mp4Ilst,
                 _ => panic!("Unhandled tag type: {:?}", v.tag_type),
             };
             info!("tag fileType: {:?}", &tag_type);
-            let probe = Probe::open(&v.file_path).unwrap().guess_file_type()?;
+            let options = ParseOptions::new().max_junk_bytes(2048);
+
+            let mut file = File::options().read(true).write(true).open(&v.file_path)?;
+
+            let reader = BufReader::new(&file);
+            let probe = Probe::new(reader).options(options);
+            // Try to guess the file type
+            let probe = probe.guess_file_type();
+            // Handle error
+            let probe = match probe {
+                Ok(probe) => probe,
+                Err(e) => {
+                    info!("Error probing file: {}", e);
+                    return Err(anyhow::anyhow!(e));
+                }
+            };
+
             let file_type = &probe.file_type();
             info!("fileType: {:?}", &file_type);
+            // let mut tagged_file = read_from_path(&v.file_path)?;
             let mut tagged_file = probe.read().expect("ERROR: Failed to read file!");
 
             let tag = if let Some(primary_tag) = tagged_file.primary_tag_mut() {
@@ -1186,6 +1292,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
 
             if tag.tag_type() == TagType::Id3v1 {
                 // upgrade to ID3v2.4
+                info!("Upgrading to ID3v2.4");
                 tag.re_map(TagType::Id3v2);
             }
 
@@ -1193,45 +1300,24 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 if item.id == "METADATA_BLOCK_PICTURE" {
                     // Ignore picture, set by artwork_file_to_set
                 } else if item.id == "year" {
-                    if item.value.is_null() {
-                        tag.remove_year();
-                    } else {
-                        if let Ok(num) = item.value.as_str().unwrap().parse::<u64>() {
-                            if let Some(u32_num) = num.try_into().ok() {
-                                tag.set_year(u32_num);
-                            }
+                    match &item.value {
+                        None => {}
+                        Some(None) => tag.remove_year(),
+                        Some(Some(year)) => {
+                            tag.set_year(year.parse().unwrap());
                         }
                     }
                 } else {
-                    let item_key = match item.id.as_str() {
-                        "album" => ItemKey::AlbumTitle,
-                        "albumArtist" => ItemKey::AlbumArtist,
-                        "artist" => ItemKey::TrackArtist,
-                        "bpm" => ItemKey::Bpm,
-                        "compilation" => ItemKey::FlagCompilation,
-                        "composer" => ItemKey::Composer,
-                        "copyright" => ItemKey::CopyrightMessage,
-                        "discNumber" => ItemKey::DiscNumber,
-                        "discTotal" => ItemKey::DiscTotal,
-                        "encodingTool" => ItemKey::EncoderSoftware,
-                        "genre" => ItemKey::Genre,
-                        "isrc" => ItemKey::Isrc,
-                        "license" => ItemKey::License,
-                        "performer" => ItemKey::Performer,
-                        "publisher" => ItemKey::Publisher,
-                        "trackNumber" => ItemKey::TrackNumber,
-                        "trackTotal" => ItemKey::TrackTotal,
-                        "title" => ItemKey::TrackTitle,
-                        _ => panic!("Unhandled key: {:?}", item.id),
-                    };
+                    let item_key = ItemKey::from_key(tag.tag_type(), item.id.as_str());
 
-                    if item.value.is_null() {
-                        tag.remove_key(&item_key);
-                    } else {
-                        let item_value: ItemValue =
-                            ItemValue::Text(String::from(item.value.as_str().unwrap()));
+                    match &item.value {
+                        None => {}
+                        Some(None) => tag.remove_key(&item_key),
+                        Some(Some(value)) => {
+                            let item_value: ItemValue = ItemValue::Text(value.to_string());
 
-                        tag.insert(TagItem::new(item_key, item_value));
+                            tag.insert(TagItem::new(item_key, item_value));
+                        }
                     }
                 }
             }
@@ -1276,13 +1362,21 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 info!("{:?}", item);
             }
 
-            let mut file = File::options().read(true).write(true).open(&v.file_path)?;
-            info!("{:?}", file);
-            info!("FILETYPE: {:?}", file_type);
+            info!("{:?}", &file);
 
             // Keep picture, overwrite everything else
             let _pictures = tag.pictures();
 
+            // Writing file
+
+            let mut file = File::options().read(true).write(true).open(&v.file_path)?;
+
+            let reader = BufReader::new(&file);
+            let probe = Probe::new(reader).options(options);
+            // Try to guess the file type
+            let probe = probe.guess_file_type()?;
+            let file_type = &probe.file_type();
+            info!("fileType just before save: {:?}", &file_type);
             tagged_file.save_to(&mut file, WriteOptions::new())?;
             info!("File saved succesfully!");
         }

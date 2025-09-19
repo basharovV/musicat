@@ -50,13 +50,14 @@ interface Song {
     albumArtist?: string;
     year: number;
     genre: string[];
+    compilation: number;
     composer: string[];
     trackNumber: number;
     trackTotal: number;
     discNumber: number;
     discTotal: number;
     duration: string;
-    metadata: MetadataEntry[];
+    metadata: Map<String, MetadataEntry>;
     fileInfo: FileInfo;
     viewModel?: {
         isFirstArtist?: boolean;
@@ -143,6 +144,7 @@ interface SongProjectRecording {
 type TagType =
     | "vorbis"
     | "ID3v1"
+    | "ID3v2"
     | "ID3v2.2"
     | "ID3v2.3"
     | "ID3v2.4"

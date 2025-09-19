@@ -48,6 +48,7 @@
                                 path: entry,
                                 isImport: false,
                                 includeFolderArtwork: false,
+                                includeRawTags: false,
                             },
                         });
                         if (song) {

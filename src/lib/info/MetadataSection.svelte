@@ -390,8 +390,8 @@
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
     export async function writeMetadata() {
-        const toWrite = data.mappedMetadata.map(({ genericId, value }) => ({
-            id: genericId,
+        const toWrite = data.mappedMetadata.map(({ id, genericId, value }) => ({
+            id: id,
             value: value?.length ? value : null,
         }));
         console.log("Writing: ", toWrite);
@@ -427,6 +427,7 @@
 
             if (toImport) {
                 if (toImport.error) {
+                    console.error("Error writing metadata: ", toImport.error);
                     // Show error
                     toast.error(toImport.error);
                     // Roll back to current artwork

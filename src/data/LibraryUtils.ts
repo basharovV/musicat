@@ -1,64 +1,55 @@
-import { open } from "@tauri-apps/plugin-dialog";
-import ImportWorker from "../ImportWorker?worker";
-import { invoke } from "@tauri-apps/api/core";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { path } from "@tauri-apps/api";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { audioDir } from "@tauri-apps/api/path";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readDir } from "@tauri-apps/plugin-fs";
+import { uniq } from "lodash-es";
 import md5 from "md5";
-import * as musicMetadata from "music-metadata-browser";
+import { get } from "svelte/store";
 import type {
-    ToImportAlbums,
     Album,
     LookForArtResult,
     MetadataEntry,
     Song,
     TagType,
     ToImport,
+    ToImportAlbums,
 } from "../App";
-import { get } from "svelte/store";
-import { getImageFormat, isAudioFile, isImageFile } from "../utils/FileUtils";
-import { getMapForTagType, getTagTypeFromCodec } from "./LabelMap";
+import ImportWorker from "../ImportWorker?worker";
+import { getImageFormat, isImageFile } from "../utils/FileUtils";
+import { getMapForTagType } from "./LabelMap";
 import { db } from "./db";
 import { bottomBarNotification, importStatus, userSettings } from "./store";
-import { path } from "@tauri-apps/api";
-import { uniq } from "lodash-es";
 
 const appWindow = getCurrentWebviewWindow();
 
-let addedSongs: Song[] = [];
-
-export async function getMetadataFromFile(filePath: string, fileName: string) {
-    if (!isAudioFile(fileName)) {
-        return null;
-    }
-    return await musicMetadata.fetchFromUrl(convertFileSrc(filePath), {
-        duration: false,
-        skipCovers: false,
-        skipPostHeaders: true,
-        includeChapters: false,
-    });
-}
-
 /**
- * When we need to get the metadata directly from the file on disk.
- * @param song
- * @returns
+ * Reads metadata from Rust (lofty) and adds in generic IDs for common fields.
  */
 export async function readMappedMetadataFromSong(
     song: Song,
-): Promise<{ mappedMetadata: MetadataEntry[]; tagType: TagType }> {
-    console.log("song read", song);
-    const metadata = await getMetadataFromFile(song.path, song.file);
-    console.log("meta", metadata);
-    const tagType = metadata.format.tagTypes.length
-        ? metadata.format.tagTypes[0]
-        : getTagTypeFromCodec(metadata.format.codec);
-    const map = getMapForTagType(tagType, false);
+): Promise<{ mappedMetadata: MetadataEntry[]; tagType: string | null }> {
+    // 1. Fetch metadata from Rust
+    const metadata: Song | null = await invoke("get_song_metadata", {
+        event: {
+            path: song.path,
+            isImport: false,
+            includeFolderArtwork: false,
+            includeRawTags: true,
+        },
+    });
+    if (!metadata) return { mappedMetadata: [], tagType: null };
+
+    const tagType = metadata.fileInfo?.tagType || null;
+    const map = getMapForTagType(tagType as TagType, false);
+
     const mappedMetadata: MetadataEntry[] = [];
 
     if (map) {
-        for (let { id, value } of metadata?.native[tagType]) {
+        for (let { id, value } of Object.values(metadata?.metadata) || []) {
+            if (id?.length === 0) continue;
+
             if (typeof value === "number") {
                 value = `${value}`;
             } else if (typeof value !== "string") {
@@ -77,7 +68,7 @@ export async function readMappedMetadataFromSong(
                         value: values[index],
                     });
                 }
-            } else if (genericId) {
+            } else {
                 mappedMetadata.push({
                     genericId,
                     id,
