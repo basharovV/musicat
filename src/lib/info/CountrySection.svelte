@@ -1,18 +1,18 @@
 <script lang="ts">
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { db } from "../../data/db";
-    import { findCountryByArtist } from "../data/LibraryEnrichers";
-    import Icon from "../ui/Icon.svelte";
-    import LL from "../../i18n/i18n-svelte";
-    import { rightClickedTrack, rightClickedTracks } from "../../data/store";
-    import Svelecte from "svelecte";
     import tippy from "svelte-tippy";
     import list from "../../data/countries.json";
+    import { db } from "../../data/db";
+    import { rightClickedTrack, rightClickedTracks } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
+    import { findCountryByArtist } from "../data/LibraryEnrichers";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import Icon from "../ui/Icon.svelte";
+    import InputDropdown from "../ui/InputDropdown.svelte";
 
     let isFetchingOriginCountry = false;
     let originCountry =
         ($rightClickedTrack || $rightClickedTracks[0])?.originCountry || null;
-    let originCountryEdited = originCountry;
+    let originCountryEdited = { label: originCountry, value: originCountry };
 
     async function fetchFromWikipedia() {
         if (isFetchingOriginCountry) {
@@ -35,7 +35,7 @@
 
     async function saveTrack() {
         ($rightClickedTrack || $rightClickedTracks[0]).originCountry =
-            originCountryEdited;
+            originCountryEdited.value;
 
         // Find all songs with this artist
         const artistSongs = await db.songs
@@ -44,10 +44,10 @@
             .toArray();
 
         artistSongs.forEach((s) => {
-            db.songs.update(s.id, { originCountry: originCountryEdited });
+            db.songs.update(s.id, { originCountry: originCountryEdited.value });
         });
 
-        originCountry = originCountryEdited;
+        originCountry = originCountryEdited.value;
     }
 </script>
 
@@ -67,21 +67,16 @@
         </div>
     </div>
     <div class="country">
-        <Svelecte
-            options={list}
-            max={1}
-            clearable={true}
-            bind:value={originCountryEdited}
-            placeholder={isFetchingOriginCountry
-                ? $LL.trackInfo.fetchingOriginCountry()
-                : ""}
+        <InputDropdown
+            options={list.map((c) => ({ value: c, label: c }))}
+            bind:selected={originCountryEdited}
         />
         <ButtonWithIcon
             onClick={saveTrack}
             text={$LL.trackInfo.save()}
             icon="material-symbols:save-outline"
             theme="translucent"
-            disabled={originCountry === originCountryEdited}
+            disabled={originCountry === originCountryEdited.value}
         />
         <ButtonWithIcon
             onClick={fetchFromWikipedia}
@@ -126,7 +121,7 @@
         }
         .country {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             width: fit-content;
             gap: 5px;

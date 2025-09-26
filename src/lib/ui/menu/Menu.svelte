@@ -16,8 +16,9 @@
     export let padding = 0;
     export let sections: MenuSection[] = null;
     export let submenu = false;
-
+    export let scrollable = false;
     export let hoveredSection = sections !== null ? 0 : null;
+    export let fullWidth = false;
 
     let hoveredItemIdx = 0;
     $: numberOfItems =
@@ -138,12 +139,17 @@
 
 <menu
     class:fixed
+    class:scrollable
     class:relative={position === "relative"}
     class:submenu
+    class:fullWidth
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
-    use:clickOutside={() => {
-        onClickOutside && onClickOutside();
+    use:clickOutside={{
+        callbackFunction: () => {
+            onClickOutside && onClickOutside();
+        },
+        stopPropagation: true,
     }}
     style="top: {y}px; left: {x}px;gap: {padding}px;{maxHeight
         ? `max-height: ${maxHeight}px`
@@ -216,6 +222,13 @@
         }
         &.submenu {
             margin: -8px 0 0 8px;
+        }
+        &.scrollable {
+            max-height: 300px;
+            overflow: auto;
+        }
+        &.fullWidth {
+            width: 100%;
         }
     }
 
