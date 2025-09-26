@@ -1,5 +1,5 @@
 # cd into script dir
-cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd "$(dirname "$0")"
 
 cd ./portable-vocal-remover/pvr && cargo build -r -p pvr
 
