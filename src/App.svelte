@@ -640,7 +640,11 @@
                 position: fixed;
                 z-index: 16;
                 height: 100vh;
-                background-color: rgb(from var(--background) r g b / 1);
+                background-color: color-mix(
+                    in srgb,
+                    var(--background) 100%,
+                    transparent 0%
+                );
             }
         }
 
@@ -929,41 +933,5 @@
         z-index: 30;
         display: flex;
         background-color: var(--popup-backdrop);
-    }
-
-    :global(.svelecte-control) {
-        --sv-bg: var(--input-bg);
-        --sv-disabled-bg: #eee;
-        --sv-border: 1px solid
-            color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
-        --sv-control-bg: var(--sv-bg);
-        --sv-item-selected-bg: #efefef;
-        --sv-item-btn-color: #000;
-        --sv-item-btn-color-hover: var(--icon-secondary-hover);
-        --sv-item-btn-bg: #efefef;
-        --sv-item-btn-bg-hover: #ddd;
-        --sv-icon-color: var(--icon-secondary);
-        --sv-icon-color-hover: var(--icon-secondary-hover);
-        --sv-icon-bg: transparent;
-        --sv-separator-bg: var(--icon-secondary);
-        --sv-dropdown-bg: rgb(from var(--input-bg) r g b / 0.95);
-        --sv-dropdown-border: 1px solid rgba(0, 0, 0, 0.15);
-        --sv-dropdown-shadow: 0 6px 12px #0000002d;
-        --sv-dropdown-active-bg: var(--input-focus-bg);
-        --sv-dropdown-selected-bg: #ecf3f9;
-        --sv-create-kbd-border: 1px solid #efefef;
-        --sv-create-kbd-bg: #fff;
-        --sv-create-disabled-bg: #fcbaba;
-        --sv-loader-border: 2px solid #ccc;
-    }
-    :global(.sv-control) {
-        min-height: 36px !important;
-        max-height: 36px !important;
-    }
-    :global(.sv_dropdown) {
-        z-index: 20 !important;
-    }
-    :global(.sv-input--text::placeholder) {
-        color: var(--input-placeholder-text);
     }
 </style>

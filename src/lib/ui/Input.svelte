@@ -2,11 +2,11 @@
     import { onMount } from "svelte";
 
     export let value;
-    export let onChange = (val) => {};
+    export let onChange = (val: string) => {};
     export let fullWidth = false;
     export let autoCompleteValue: string | null = null;
     export let tabBehavesAsEnter = false;
-    export let onEnterPressed = null;
+    export let onEnterPressed: (evt: KeyboardEvent) => void = null;
     export let onBackspacePressed = null;
     export let onEscPressed = null;
     export let autoFocus = false;
@@ -16,19 +16,21 @@
     export let small = false;
     export let alt = false;
     export let disabled = false;
+    export let onBlur = null;
+    export let name = null;
 
-    function onKeyDown(evt) {
-        if (evt.keyCode === 13) {
+    function onKeyDown(evt: KeyboardEvent) {
+        if (evt.key === "Enter") {
             if (onEnterPressed) {
-                evt.preventDefault();
-                onEnterPressed();
+                // evt.preventDefault();
+                onEnterPressed(evt);
             }
         } else if (evt.keyCode === 9) {
             // Tab
             if (autoCompleteValue?.length && autoCompleteValue !== value) {
                 evt.preventDefault();
                 if (tabBehavesAsEnter) {
-                    onEnterPressed && onEnterPressed();
+                    onEnterPressed && onEnterPressed(evt);
                 } else {
                     value = autoCompleteValue;
                 }
@@ -61,6 +63,7 @@
         bind:value
         {placeholder}
         on:input={(evt) => onChange(evt.target.value)}
+        on:blur={(evt) => onBlur && onBlur()}
         class:full-width={fullWidth}
         class:minimal
         class:small
@@ -70,6 +73,7 @@
         spellcheck="false"
         autocomplete="off"
         {disabled}
+        data-name={name}
     />
 
     {#if autoCompleteValue && autoCompleteValue?.toLowerCase() !== value?.toLowerCase()}

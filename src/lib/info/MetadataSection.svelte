@@ -31,8 +31,10 @@
     } from "../../utils/EncodingUtils";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
-    import { getMapForTagType } from "../../data/LabelMap";
     import { onMount } from "svelte";
+    import tippy from "svelte-tippy";
+    import { type IndexableTypeArray } from "dexie";
+    import hotkeys from "hotkeys-js";
 
     type ValidationErrors = "err:invalid-chars" | "err:null-chars";
     type ValidationWarnings = "warn:custom-tag" | "warn:cyrillic-encoding";
@@ -80,16 +82,10 @@
      * show a prompt to fix this with the user's permission.
      */
     let containsError: ValidationErrors = null;
-    let distinctArtists;
-    let firstMatch: string = null;
     let isUnsupportedFormat: boolean;
     let metadataFromFile: MetadataEntry[] = [];
     // Encodings
     let selectedEncoding = "placeholder";
-
-    $: artistInput =
-        data?.mappedMetadata?.find((m) => m.genericId === "artist")?.value ??
-        "";
 
     /**
      * A map of tag id <-> errors that apply to this tag
@@ -146,63 +142,58 @@
             return errors;
         }, {}) ?? {};
 
-    $: firstMatchRemainder = firstMatch?.startsWith(artistInput)
-        ? firstMatch.substring(artistInput.length, firstMatch.length)
-        : "";
-    $: {
-        console.log(firstMatchRemainder);
-    }
-
     $: hasChanges = !isEqual(data?.mappedMetadata, metadataFromFile);
+
+    const defaultTags = [
+        "TrackTitle",
+        "TrackArtist",
+        "AlbumArtist",
+        "AlbumTitle",
+        "Composer",
+        "Genre",
+        "Year",
+        "TrackNumber",
+        "TrackTotal",
+        "DiscNumber",
+        "DiscTotal",
+        "Copyright",
+        "Publisher",
+        "Isrc",
+        "Bpm",
+        "Compilation",
+    ];
 
     function addDefaults(entry: MetadataEntry[], format: TagType) {
         // Map eg. 'TITLE' (FLAC/Vorbis) -> title (Musicat generic identifier)
-        const map = getMapForTagType(format, false);
+
         // Add empty default fields
         const defaults: MetadataEntry[] = [];
         const others: MetadataEntry[] = [];
-        console.log("map", map);
-        if (!map) return { defaults, others };
-        for (const [id, genericId] of Object.entries(map)) {
-            if (Array.isArray(genericId)) {
-                for (const genId of genericId) {
-                    // Check if this default field already exists in the file
-                    const existingField = entry?.find(
-                        (m) => m.genericId === genId,
-                    );
+        for (const defaultTag of defaultTags) {
+            // Check if this default field already exists in the file
+            const existingField = entry?.find((m) => m.id === defaultTag);
 
-                    defaults.push({
-                        id,
-                        genericId: genId,
-                        value: existingField ? existingField.value : null,
-                    });
-                }
-            } else {
-                // Check if this default field already exists in the file
-                const existingField = entry?.find(
-                    (m) => m.genericId === genericId,
-                );
-
-                defaults.push({
-                    id,
-                    genericId,
-                    value: existingField ? existingField.value : null,
-                });
-            }
+            defaults.push({
+                id: defaultTag,
+                value: existingField ? existingField.value : null,
+                values: existingField ? existingField.values : null,
+                originalValue: existingField ? existingField.value : null,
+            });
         }
 
         for (const field of entry) {
-            const inDefaults = defaults.find(
-                (t) => t.genericId === field.genericId,
-            );
+            const inDefaults = defaults.find((t) => t.id === field.id);
             if (!inDefaults) {
                 others.push({
                     id: field.id,
-                    genericId: field.genericId,
                     value: field.value,
+                    values: field.values,
+                    originalValue: field.value,
                 });
             }
         }
+
+        console.log("default tags", defaults, others);
 
         return { defaults, others };
     }
@@ -231,13 +222,13 @@
         metadata: MetadataEntry[],
         format: TagType,
     ): MetadataEntry[] {
-        if (
-            ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
-            "WAV"
-        ) {
-            isUnsupportedFormat = true;
-            return []; // UNSUPPORTED FORMAT, for now...
-        }
+        // if (
+        //     ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
+        //     "WAV"
+        // ) {
+        //     isUnsupportedFormat = true;
+        //     return []; // UNSUPPORTED FORMAT, for now...
+        // }
 
         console.log("adding defaults", metadata, format);
         if (!format) return [];
@@ -247,58 +238,158 @@
         const { defaults, others } = addDefaults(cloned, format);
         const result = uniqBy(
             [...defaults, ...others.sort((a, b) => a.id.localeCompare(b.id))],
-            "genericId",
+            "id",
         );
         return result;
     }
 
-    function onArtistAutocompleteSelected() {
-        if (firstMatch?.length) {
-            console.log("firstMatch", firstMatch);
-            console.log("artistInput", artistInput);
-            const artistField = data?.mappedMetadata?.find(
-                (m) => m.genericId === "artist",
+    /**
+     * Get the representation of metadata for mutliple tracks.
+     * If a tag's value is common across tracks, it will be in @see {MetadataEntry.value}
+     * If a tag's value is different across tracks, they will be in @see {MetadataEntry.values}
+     * @param metadata the combined metadata
+     */
+    function combineMultipleTrackMetadata(metadata: MetadataEntry[][]) {
+        const result: MetadataEntry[] = [];
+        for (const field of metadata[0]) {
+            // eg. tracks in an album will all have the same "album" field
+            const allValues = metadata
+                .map((m) => m.find((f) => f.id === field.id))
+                .filter((f) => f);
+            const allValuesUnique = Array.from(
+                new Set(allValues.map((f) => f.value)),
             );
-            if (artistField) {
-                artistField.value = firstMatch;
-                artistInput = firstMatch;
+            if (allValuesUnique.length === 1) {
+                result.push({
+                    id: field.id,
+                    value: allValuesUnique[0],
+                    originalValue: allValuesUnique[0],
+                });
+            } else {
+                result.push({
+                    id: field.id,
+                    value: null,
+                    originalValue: null,
+                    values: allValuesUnique,
+                });
+            }
+        }
+        return result;
+    }
+
+    // Auto complete
+    const autoCompleteConfig = Object.fromEntries(
+        [
+            {
+                id: "TrackArtist",
+                songField: "artist",
+            },
+            {
+                id: "AlbumArtist",
+                songField: "artist",
+            },
+            {
+                id: "AlbumTitle",
+                songField: "album",
+            },
+        ].map((f) => [f.id, f]),
+    );
+
+    let autoCompleteFieldId: string = null;
+    $: autoCompleteFieldValue = data.mappedMetadata?.find(
+        (m) => m.id === autoCompleteFieldId,
+    )?.value;
+
+    let autoCompleteDistinctMatches: IndexableTypeArray | null = null;
+    let firstMatch: string = null;
+
+    $: firstMatchRemainder = firstMatch?.startsWith(autoCompleteFieldValue)
+        ? firstMatch.substring(autoCompleteFieldValue.length, firstMatch.length)
+        : "";
+    $: {
+        console.log(firstMatchRemainder);
+    }
+
+    function onEnterPressedInInputField(evt: KeyboardEvent) {
+        console.log("Enter pressed: ", evt);
+        if (firstMatch?.length && autoCompleteFieldId) {
+            console.log("firstMatch", firstMatch);
+            console.log("artistInput", autoCompleteFieldValue);
+
+            // Set the field
+            const field = data?.mappedMetadata?.find(
+                (m) => m.id === autoCompleteFieldId,
+            );
+            if (field) {
+                field.value = firstMatch;
+                autoCompleteFieldValue = firstMatch;
             }
             data = data;
-            firstMatch = null;
+            resetAutoComplete();
+        } else {
+            // Do nothing
         }
     }
 
-    async function onArtistUpdated(value) {
-        console.log("artist updated");
-        artistInput = value;
-        const artistField = data?.mappedMetadata?.find(
-            (m) => m.genericId === "artist",
-        );
-        if (artistField) {
-            artistField.value = artistInput;
-        }
-        data = data;
-        let matched = [];
-        const artist = value;
-        if (artist && artist.trim().length > 0) {
-            if (distinctArtists === undefined) {
-                distinctArtists = await db.songs.orderBy("artist").uniqueKeys();
-            }
-            distinctArtists.forEach((a) => {
-                if (a.toLowerCase().startsWith(artist.toLowerCase())) {
-                    matched.push(a);
-                }
-            });
+    function resetAutoComplete() {
+        autoCompleteFieldId = null;
+        autoCompleteDistinctMatches = null;
+        firstMatch = null;
+    }
 
-            firstMatch = matched.length && matched[0] ? matched[0] : null;
+    async function onFieldUpdated(field: MetadataEntry, value: string) {
+        // First update the value
+        field.value = value;
+
+        let autoCompleteConfigForField = autoCompleteConfig[field.id];
+        // Handle autocomplete
+        if (autoCompleteConfigForField) {
+            console.log("autocomplete enabled for", field.id);
+            // Set up for auto complete if enabled
+            autoCompleteFieldId = field.id;
+
+            data = data;
+            let matched = [];
+            if (value && value.trim().length > 0) {
+                if (autoCompleteDistinctMatches === null) {
+                    autoCompleteDistinctMatches = await db.songs
+                        .orderBy(autoCompleteConfigForField.songField)
+                        .uniqueKeys();
+                }
+                console.log(
+                    "found distinct matches",
+                    autoCompleteDistinctMatches,
+                );
+                autoCompleteDistinctMatches.forEach((a) => {
+                    if (
+                        a
+                            .toString()
+                            .toLowerCase()
+                            .startsWith(value.toLowerCase())
+                    ) {
+                        matched.push(a);
+                    }
+                });
+
+                firstMatch = matched.length && matched[0] ? matched[0] : null;
+            } else {
+                firstMatch = null;
+            }
         } else {
-            firstMatch = null;
+            autoCompleteFieldId = null;
+            return;
+        }
+    }
+
+    function onFieldBlur(field: MetadataEntry) {
+        if (multipleValuesEditEnabledFor === field.id && !field.value) {
+            multipleValuesEditEnabledFor = null;
         }
     }
 
     function onTagLabelClick(tag: MetadataEntry) {
         // Double-clicking on title populates the title from the filename
-        if (tag.genericId === "title") {
+        if (tag.id === "title") {
             // Strip file extension from filename if any
             const filename = $rightClickedTrack.file;
             const extension = filename.split(".").pop();
@@ -311,65 +402,52 @@
         }
     }
 
+    let multipleValuesEditEnabledFor = null;
+    function onMultipleValuesClick(tag: MetadataEntry) {
+        if (multipleValuesEditEnabledFor === tag.id) {
+            multipleValuesEditEnabledFor = null;
+        } else {
+            multipleValuesEditEnabledFor = tag.id;
+            const input = document.querySelector(`[data-name=` + tag.id + `]`);
+            if (input instanceof HTMLInputElement) {
+                input.focus();
+            }
+        }
+    }
+
     export async function resetMetadata() {
         containsError = null;
-        const { mappedMetadata, tagType } = await readMappedMetadataFromSong(
-            $rightClickedTrack || $rightClickedTracks[0],
-        );
-        let metadata = mergeDefault(mappedMetadata, tagType);
+
+        // The fields to display
+        let displayMetadata: MetadataEntry[] = [];
+        // The tag type to write back to file
+        let tagType: TagType = null;
 
         if ($rightClickedTracks.length) {
-            const isCompilation =
-                metadata.find((m) => m.genericId === "compilation")?.value ===
-                "1";
-            const hasAlbumArtist = metadata.find(
-                (m) => m.genericId === "albumArtist",
-            )?.value?.length;
-            let hideArtist = false;
+            const mappedMetadata = await Promise.all(
+                $rightClickedTracks.map((t) => readMappedMetadataFromSong(t)),
+            );
+            // Check if every track has the same tag type.
+            const tagTypes = mappedMetadata.map((s) => s.tagType);
+            if (tagTypes.every((t) => t === tagTypes[0])) {
+                tagType = tagTypes[0];
 
-            if (!isCompilation) {
-                const artist = metadata.find(
-                    (m) => m.genericId === "artist",
-                )?.value;
-
-                if (artist?.length) {
-                    for (let i = 1; i < $rightClickedTracks.length; i += 1) {
-                        const { mappedMetadata } =
-                            await readMappedMetadataFromSong(
-                                $rightClickedTracks[i],
-                            );
-                        const newArtist = mappedMetadata.find(
-                            (m) => m.genericId === "artist",
-                        )?.value;
-
-                        if (artist !== newArtist) {
-                            hideArtist = true;
-                            break;
-                        }
-                    }
-                }
+                displayMetadata = mergeDefault(
+                    combineMultipleTrackMetadata(
+                        mappedMetadata.map((s) => s.mappedMetadata),
+                    ),
+                    tagType,
+                );
             }
-
-            metadata = metadata.filter(({ genericId }) => {
-                if (!ALBUM_FIELDS.includes(genericId)) {
-                    return false;
-                }
-                if (genericId === "artist") {
-                    return (
-                        !isCompilation &&
-                        ((hasAlbumArtist && !hideArtist) || !hasAlbumArtist)
-                    );
-                }
-                if (genericId === "albumArtist") {
-                    return !isCompilation;
-                }
-
-                return true;
-            });
+        } else {
+            const { mappedMetadata, tagType: tag } =
+                await readMappedMetadataFromSong($rightClickedTrack);
+            tagType = tag;
+            displayMetadata = mergeDefault(mappedMetadata, tagType);
         }
 
         data = {
-            mappedMetadata: metadata,
+            mappedMetadata: displayMetadata,
             tagType,
         };
         metadataFromFile = cloneDeep(data.mappedMetadata);
@@ -390,11 +468,18 @@
      * Send an event to the backend to write the new metadata, overwriting any existing tags.
      */
     export async function writeMetadata() {
-        const toWrite = data.mappedMetadata.map(({ id, genericId, value }) => ({
-            id: id,
-            value: value?.length ? value : null,
-        }));
-        console.log("Writing: ", toWrite);
+        const toWrite = data.mappedMetadata
+            .filter((m) => m.originalValue !== m.value) // only changed values
+            .map((m) => {
+                if (m.originalValue?.length && !m.value) {
+                    m.value = null;
+                }
+                return m;
+            })
+            .map(({ id, value }) => ({
+                id: id,
+                value: value?.length ? value : null,
+            }));
 
         const writtenTracks = $rightClickedTrack
             ? [$rightClickedTrack]
@@ -414,6 +499,7 @@
 
             songIdToOldAlbumId[song.id] = getAlbumId(song);
         }
+        console.log("Writing: ", tracks);
 
         if (tracks.length) {
             const toImport = await invoke<ToImport>("write_metadatas", {
@@ -422,8 +508,7 @@
                 },
             });
 
-            console.log($rightClickedTrack || $rightClickedTracks[0]);
-            console.log(toImport);
+            console.log("To reimport: ", toImport);
 
             if (toImport) {
                 if (toImport.error) {
@@ -496,81 +581,71 @@
             {/if}
             <form>
                 {#each data?.mappedMetadata as tag}
-                    {#if tag.genericId === "artist"}
-                        <div class="tag">
-                            <p class="label">
-                                {$LL.trackInfo.artist()}
-                            </p>
-                            <div class="line" />
-                            <div
-                                class="artist-input"
-                                use:optionalTippy={{
-                                    content: $LL.input.enterHintTooltip(),
-                                    placement: "bottom",
-                                    show:
-                                        firstMatch !== null &&
-                                        firstMatch.toLowerCase() !==
-                                            artistInput?.toLowerCase() &&
-                                        artistInput?.length > 0,
-                                    showOnCreate: true,
-                                    trigger: "manual",
-                                }}
-                            >
-                                <Input
-                                    small
-                                    value={artistInput}
-                                    autoCompleteValue={firstMatch}
-                                    onChange={onArtistUpdated}
-                                    onEnterPressed={onArtistAutocompleteSelected}
-                                    tabBehavesAsEnter
-                                    fullWidth
-                                />
-                            </div>
-                        </div>
-                    {:else}
-                        <div
-                            use:optionalTippy={{
-                                content: errors[tag.id]?.errors
-                                    .map((e) => VALIDATION_STRINGS[e])
-                                    .concat(
-                                        errors[tag.id]?.warnings.map(
-                                            (e) => VALIDATION_STRINGS[e],
-                                        ),
-                                    )
-                                    .join(","),
-                                placement: "bottom",
-                                theme: "error",
-                                show:
-                                    errors[tag.id]?.errors.length > 0 ||
-                                    errors[tag.id]?.warnings.length > 0,
-                            }}
-                            class="tag
+                    <div
+                        use:optionalTippy={{
+                            content: errors[tag.id]?.errors
+                                .map((e) => VALIDATION_STRINGS[e])
+                                .concat(
+                                    errors[tag.id]?.warnings.map(
+                                        (e) => VALIDATION_STRINGS[e],
+                                    ),
+                                )
+                                .join(","),
+                            placement: "bottom",
+                            theme: "error",
+                            show:
+                                errors[tag.id]?.errors.length > 0 ||
+                                errors[tag.id]?.warnings.length > 0,
+                        }}
+                        class="tag
                                 {errors[tag.id]?.warnings.length > 0
-                                ? 'validation-warning'
-                                : ''}
+                            ? 'validation-warning'
+                            : ''}
                                     {errors[tag.id]?.errors.length > 0
-                                ? 'validation-error'
-                                : ''}"
+                            ? 'validation-error'
+                            : ''}"
+                    >
+                        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                        <p
+                            class="label"
+                            class:unmapped={tag.id === undefined}
+                            data-tag-id={tag.id || tag.id}
+                            on:click={() => onTagLabelClick(tag)}
+                            use:optionalTippy={{
+                                content:
+                                    $LL.trackInfo.setTitleFromFileNameHint(),
+                                show: tag.id === "title",
+                                placement: "bottom",
+                            }}
                         >
-                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                            <p
-                                class="label"
-                                class:unmapped={tag.genericId === undefined}
-                                data-tag-id={tag.genericId || tag.id}
-                                on:click={() => onTagLabelClick(tag)}
-                                use:optionalTippy={{
-                                    content:
-                                        $LL.trackInfo.setTitleFromFileNameHint(),
-                                    show: tag.genericId === "title",
-                                    placement: "bottom",
-                                }}
-                            >
-                                {tag.genericId ? tag.genericId : tag.id}
-                            </p>
-                            <div class="line" />
-                            <Input bind:value={tag.value} fullWidth small />
+                            {tag.id.replace(/([a-z])([A-Z])/g, "$1 $2")}
+                        </p>
+                        <div class="line" />
+                        <div class="input">
+                            <Input
+                                name={tag.id}
+                                value={tag.value}
+                                fullWidth
+                                small
+                                autoCompleteValue={autoCompleteFieldId ===
+                                    tag.id && firstMatch}
+                                onChange={(val) => onFieldUpdated(tag, val)}
+                                onEnterPressed={onEnterPressedInInputField}
+                                tabBehavesAsEnter
+                                onBlur={() => onFieldBlur(tag)}
+                            />
+                            {#if tag.values && multipleValuesEditEnabledFor !== tag.id}
+                                <p
+                                    class="multiple-values-label"
+                                    on:click|stopPropagation={() =>
+                                        onMultipleValuesClick(tag)}
+                                >
+                                    <Icon icon="fe:music" size={16} />Multiple
+                                    Values
+                                </p>
+                            {/if}
                         </div>
-                    {/if}
+                    </div>
                 {/each}
             </form>
             {#if data?.mappedMetadata?.length}
@@ -584,7 +659,12 @@
                                 {$LL.trackInfo.fixLegacyEncodings.title()}
                             </p>
                             <small
-                                >{$LL.trackInfo.fixLegacyEncodings.body()}</small
+                                use:tippy={{
+                                    allowHTML: true,
+                                    content:
+                                        $LL.trackInfo.fixLegacyEncodings.body(),
+                                    placement: "top",
+                                }}><Icon icon="ic:round-info" /></small
                             >
                         </div>
                         <select bind:value={selectedEncoding}>
@@ -605,7 +685,8 @@
                         </select>
                         <ButtonWithIcon
                             text={$LL.trackInfo.fix()}
-                            theme="transparent"
+                            theme="translucent"
+                            size="small"
                             onClick={fixEncoding}
                             disabled={selectedEncoding === "placeholder"}
                         />
@@ -699,7 +780,6 @@
                 white-space: nowrap;
                 text-transform: uppercase;
                 border: 1px solid transparent;
-
                 &.unmapped {
                     opacity: 0.5;
                 }
@@ -716,11 +796,47 @@
                 }
             }
 
+            .input {
+                position: relative;
+                width: 175px;
+                > .multiple-values-label {
+                    width: fit-content;
+                    margin: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: color-mix(
+                        in srgb,
+                        var(--inverse) 60%,
+                        transparent
+                    );
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 1;
+                    gap: 5px;
+                    font-weight: 500;
+                    color: var(--text-secondary);
+                    cursor: default;
+                    &:hover {
+                        background-color: color-mix(
+                            in srgb,
+                            var(--inverse) 40%,
+                            transparent
+                        );
+                    }
+                }
+            }
+
             .line {
                 height: 1px;
                 background-color: color-mix(
                     in srgb,
-                    var(--background) 60%,
+                    var(--input-bg) 80%,
                     var(--inverse)
                 );
                 width: 40px;
@@ -759,6 +875,11 @@
 
             .description {
                 text-align: left;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 5px;
+                flex: 1;
                 p {
                     margin: 0;
                 }

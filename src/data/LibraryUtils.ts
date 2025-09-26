@@ -18,10 +18,8 @@ import type {
 } from "../App";
 import ImportWorker from "../ImportWorker?worker";
 import { getImageFormat, isImageFile } from "../utils/FileUtils";
-import { getMapForTagType } from "./LabelMap";
 import { db } from "./db";
 import { bottomBarNotification, importStatus, userSettings } from "./store";
-
 const appWindow = getCurrentWebviewWindow();
 
 /**
@@ -29,7 +27,7 @@ const appWindow = getCurrentWebviewWindow();
  */
 export async function readMappedMetadataFromSong(
     song: Song,
-): Promise<{ mappedMetadata: MetadataEntry[]; tagType: string | null }> {
+): Promise<{ mappedMetadata: MetadataEntry[]; tagType: TagType | null }> {
     // 1. Fetch metadata from Rust
     const metadata: Song | null = await invoke("get_song_metadata", {
         event: {
@@ -41,44 +39,24 @@ export async function readMappedMetadataFromSong(
     });
     if (!metadata) return { mappedMetadata: [], tagType: null };
 
-    const tagType = metadata.fileInfo?.tagType || null;
-    const map = getMapForTagType(tagType as TagType, false);
-
     const mappedMetadata: MetadataEntry[] = [];
 
-    if (map) {
-        for (let { id, value } of Object.values(metadata?.metadata) || []) {
-            if (id?.length === 0) continue;
+    for (let { id, value } of Object.values(metadata?.metadata) || []) {
+        if (id?.length === 0) continue;
 
-            if (typeof value === "number") {
-                value = `${value}`;
-            } else if (typeof value !== "string") {
-                continue;
-            }
-
-            const genericId = map[id];
-
-            if (Array.isArray(genericId)) {
-                const values = value.split("/");
-
-                for (const [index, genId] of genericId.entries()) {
-                    mappedMetadata.push({
-                        genericId: genId,
-                        id,
-                        value: values[index],
-                    });
-                }
-            } else {
-                mappedMetadata.push({
-                    genericId,
-                    id,
-                    value,
-                });
-            }
+        if (typeof value === "number") {
+            value = `${value}`;
+        } else if (typeof value !== "string") {
+            continue;
         }
+
+        mappedMetadata.push({
+            id,
+            value,
+        });
     }
 
-    return { mappedMetadata, tagType };
+    return { mappedMetadata, tagType: metadata.fileInfo.tagType as TagType };
 }
 
 export async function importPaths(

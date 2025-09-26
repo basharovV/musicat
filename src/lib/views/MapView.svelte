@@ -1,10 +1,10 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
 
-    import "../../deps/jsvectormap/scss/jsvectormap.scss";
-    import { world } from "../../deps/jsvectormap/maps/world.js";
     import JsVectorMap from "../../deps/jsvectormap/js";
     import DataVisualization from "../../deps/jsvectormap/js/dataVisualization";
+    import { world } from "../../deps/jsvectormap/maps/world.js";
+    import "../../deps/jsvectormap/scss/jsvectormap.scss";
     JsVectorMap.addMap("world", world);
 
     import { onMount } from "svelte";
@@ -26,17 +26,16 @@
         smartQueryUpdater,
         uiView,
     } from "../../data/store";
-    import SmartQuery from "../smart-query/Query";
-    import { codes, countries } from "../data/CountryCodes";
-    import { getFlagEmoji } from "../../utils/EmojiUtils";
-    import { loadSlim } from "tsparticles-slim";
-    import { groupBy } from "../../utils/ArrayUtils";
-    import MapTooltip from "../map/MapTooltip.svelte";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { addCountryDataAllSongs } from "../data/LibraryEnrichers";
-    import ProgressBar from "../ui/ProgressBar.svelte";
-    import { currentThemeObject } from "../../theming/store";
     import { setQueue } from "../../data/storeHelper";
+    import { currentThemeObject } from "../../theming/store";
+    import { groupBy } from "../../utils/ArrayUtils";
+    import { getFlagEmoji } from "../../utils/EmojiUtils";
+    import { codes, countries } from "../data/CountryCodes";
+    import { addCountryDataAllSongs } from "../data/LibraryEnrichers";
+    import MapTooltip from "../map/MapTooltip.svelte";
+    import SmartQuery from "../smart-query/Query";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import ProgressBar from "../ui/ProgressBar.svelte";
 
     export let songOrder: SongOrder;
 
@@ -247,23 +246,6 @@
         let y = path.getBBox().y + height / 2;
 
         console.log("xy", x, y);
-
-        if (particleContainer) {
-            console.log(particleContainer);
-            // particleContainer._engine.actualOptions.particles.move.center.radius = 100;
-            // particleContainer._engine.actualOptions.particles.move.center.x =
-            //     x;
-            // particleContainer._engine.actualOptions.particles.move.center.y =
-            //     y;
-            particleContainer._engine.plugins.presets.get(
-                "stars",
-            ).particles.move.center.x = x;
-            particleContainer._engine.plugins.presets.get(
-                "stars",
-            ).particles.move.center.y = y;
-            particleContainer._engine.load("stars");
-        }
-
         console.log("x", x, "y", y);
         // path.style.animation =
         //     "playing-outer 2s ease-in-out infinite alternate-reverse";
@@ -441,61 +423,6 @@
     $: artists = [...new Set($queue.map((item) => item.artist))];
     $: numberOfArtists = artists.length;
     $: firstFewArtists = artists.slice(0, Math.min(3, artists.length));
-
-    // Particles
-    let particleContainer;
-    let particlesOptions = {
-        preset: "stars",
-        fullScreen: false,
-        background: {
-            color: "transparent",
-        },
-    };
-
-    let particlesInit = async (engine) => {
-        const options = {
-            particles: {
-                number: {
-                    value: 100,
-                },
-                move: {
-                    center: {
-                        radius: 50,
-                        x: 800,
-                        y: 500,
-                        mode: "precise",
-                    },
-                    bounce: true,
-                    direction: "outside",
-                    enable: true,
-                    outModes: {
-                        default: "out",
-                    },
-                    random: true,
-                    speed: 0.4,
-                    straight: false,
-                },
-                opacity: {
-                    animation: {
-                        enable: true,
-                        speed: 1,
-                        sync: false,
-                    },
-                    value: { min: 0, max: 0.3 },
-                },
-                size: {
-                    value: { min: 1, max: 3 },
-                },
-            },
-        };
-
-        await loadSlim(engine, false);
-        await engine.addPreset("stars", options, true);
-    };
-
-    function onParticlesLoaded(evt) {
-        particleContainer = evt.detail.particles;
-    }
 
     async function addCountryData() {
         await addCountryDataAllSongs();

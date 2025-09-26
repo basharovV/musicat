@@ -2,11 +2,13 @@ import type { UserQueryPart } from "./lib/smart-query/UserQueryPart";
 
 interface MetadataEntry {
     /** Musicat's cross-file tag identifier */
-    genericId: string?;
-    /** The original tag id (from Vorbis / IDv3 / etc) */
-    id: string;
-    /** The tag's value */
-    value: string;
+    id: string?;
+    /** The tag's original value */
+    originalValue?: string;
+    /** The tag's value for editing */
+    value?: string;
+    /** Multi-select mode only */
+    values?: string[];
 }
 
 interface ImportStatus {

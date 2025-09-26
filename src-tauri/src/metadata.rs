@@ -5,12 +5,11 @@ use lofty::file::{AudioFile, FileType, TaggedFileExt};
 use lofty::picture::{MimeType, Picture};
 use lofty::probe::Probe;
 use lofty::read_from_path;
-use lofty::tag::{Accessor, ItemKey, ItemValue, TagExt, TagItem, TagType};
+use lofty::tag::{Accessor, ItemKey, ItemValue, TagItem, TagType};
 use log::info;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::*;
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
 use serde_m3u::Playlist;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -20,9 +19,8 @@ use std::ops::Mul;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
-use std::{fmt, thread, time};
+use std::{thread, time};
 use tauri::{AppHandle, Emitter};
-use webrtc::media::audio::buffer::info;
 
 use crate::store::{load_settings, UserSettings};
 
@@ -52,26 +50,6 @@ where
 {
     Deserialize::deserialize(deserializer).map(Some)
 }
-
-pub const ALBUM: &str = "album";
-pub const ALBUM_ARTIST: &str = "albumArtist";
-pub const ARTIST: &str = "artist";
-pub const BPM: &str = "bpm";
-pub const YEAR: &str = "year";
-pub const COMPILATION: &str = "compilation";
-pub const COMPOSER: &str = "composer";
-pub const COPYRIGHT: &str = "copyright";
-pub const DISC_NUMBER: &str = "discNumber";
-pub const DISC_TOTAL: &str = "discTotal";
-pub const ENCODING_TOOL: &str = "encodingTool";
-pub const GENRE: &str = "genre";
-pub const ISRC: &str = "isrc";
-pub const LICENSE: &str = "license";
-pub const PERFORMER: &str = "performer";
-pub const PUBLISHER: &str = "publisher";
-pub const TRACK_NUMBER: &str = "trackNumber";
-pub const TRACK_TOTAL: &str = "trackTotal";
-pub const TITLE: &str = "title";
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct WriteMetatadaEvent {
@@ -939,6 +917,237 @@ fn process_playlist(playlist_path: &Path, app: &AppHandle) -> Option<ProcessPlay
     });
 }
 
+trait AsStr {
+    fn as_str(&self) -> &'static str;
+    fn from_str(s: &str) -> Self
+    where
+        Self: Sized;
+}
+
+impl AsStr for ItemKey {
+    fn as_str(&self) -> &'static str {
+        match self {
+            // Titles
+            Self::AlbumTitle => "AlbumTitle",
+            Self::SetSubtitle => "SetSubtitle",
+            Self::ShowName => "ShowName",
+            Self::ContentGroup => "ContentGroup",
+            Self::TrackTitle => "TrackTitle",
+            Self::TrackSubtitle => "TrackSubtitle",
+            Self::OriginalAlbumTitle => "OriginalAlbumTitle",
+            Self::OriginalArtist => "OriginalArtist",
+            Self::OriginalLyricist => "OriginalLyricist",
+            Self::AlbumTitleSortOrder => "AlbumTitleSortOrder",
+            Self::AlbumArtistSortOrder => "AlbumArtistSortOrder",
+            Self::TrackTitleSortOrder => "TrackTitleSortOrder",
+            Self::TrackArtistSortOrder => "TrackArtistSortOrder",
+            Self::ShowNameSortOrder => "ShowNameSortOrder",
+            Self::ComposerSortOrder => "ComposerSortOrder",
+            Self::AlbumArtist => "AlbumArtist",
+            Self::TrackArtist => "TrackArtist",
+            Self::TrackArtists => "TrackArtists",
+            Self::Arranger => "Arranger",
+            Self::Writer => "Writer",
+            Self::Composer => "Composer",
+            Self::Conductor => "Conductor",
+            Self::Director => "Director",
+            Self::Engineer => "Engineer",
+            Self::Lyricist => "Lyricist",
+            Self::MixDj => "MixDj",
+            Self::MixEngineer => "MixEngineer",
+            Self::MusicianCredits => "MusicianCredits",
+            Self::Performer => "Performer",
+            Self::Producer => "Producer",
+            Self::Publisher => "Publisher",
+            Self::Label => "Label",
+            Self::InternetRadioStationName => "InternetRadioStationName",
+            Self::InternetRadioStationOwner => "InternetRadioStationOwner",
+            Self::Remixer => "Remixer",
+            Self::DiscNumber => "DiscNumber",
+            Self::DiscTotal => "DiscTotal",
+            Self::TrackNumber => "TrackNumber",
+            Self::TrackTotal => "TrackTotal",
+            Self::Popularimeter => "Popularimeter",
+            Self::ParentalAdvisory => "ParentalAdvisory",
+            Self::RecordingDate => "RecordingDate",
+            Self::Year => "Year",
+            Self::ReleaseDate => "ReleaseDate",
+            Self::OriginalReleaseDate => "OriginalReleaseDate",
+            Self::Isrc => "Isrc",
+            Self::Barcode => "Barcode",
+            Self::CatalogNumber => "CatalogNumber",
+            Self::Work => "Work",
+            Self::Movement => "Movement",
+            Self::MovementNumber => "MovementNumber",
+            Self::MovementTotal => "MovementTotal",
+            Self::MusicBrainzRecordingId => "MusicBrainzRecordingId",
+            Self::MusicBrainzTrackId => "MusicBrainzTrackId",
+            Self::MusicBrainzReleaseId => "MusicBrainzReleaseId",
+            Self::MusicBrainzReleaseGroupId => "MusicBrainzReleaseGroupId",
+            Self::MusicBrainzArtistId => "MusicBrainzArtistId",
+            Self::MusicBrainzReleaseArtistId => "MusicBrainzReleaseArtistId",
+            Self::MusicBrainzWorkId => "MusicBrainzWorkId",
+            Self::FlagCompilation => "FlagCompilation",
+            Self::FlagPodcast => "FlagPodcast",
+            Self::FileType => "FileType",
+            Self::FileOwner => "FileOwner",
+            Self::TaggingTime => "TaggingTime",
+            Self::Length => "Length",
+            Self::OriginalFileName => "OriginalFileName",
+            Self::OriginalMediaType => "OriginalMediaType",
+            Self::EncodedBy => "EncodedBy",
+            Self::EncoderSoftware => "EncoderSoftware",
+            Self::EncoderSettings => "EncoderSettings",
+            Self::EncodingTime => "EncodingTime",
+            Self::ReplayGainAlbumGain => "ReplayGainAlbumGain",
+            Self::ReplayGainAlbumPeak => "ReplayGainAlbumPeak",
+            Self::ReplayGainTrackGain => "ReplayGainTrackGain",
+            Self::ReplayGainTrackPeak => "ReplayGainTrackPeak",
+            Self::AudioFileUrl => "AudioFileUrl",
+            Self::AudioSourceUrl => "AudioSourceUrl",
+            Self::CommercialInformationUrl => "CommercialInformationUrl",
+            Self::CopyrightUrl => "CopyrightUrl",
+            Self::TrackArtistUrl => "TrackArtistUrl",
+            Self::RadioStationUrl => "RadioStationUrl",
+            Self::PaymentUrl => "PaymentUrl",
+            Self::PublisherUrl => "PublisherUrl",
+            Self::Genre => "Genre",
+            Self::InitialKey => "InitialKey",
+            Self::Color => "Color",
+            Self::Mood => "Mood",
+            Self::Bpm => "Bpm",
+            Self::IntegerBpm => "IntegerBpm",
+            Self::CopyrightMessage => "CopyrightMessage",
+            Self::License => "License",
+            Self::PodcastDescription => "PodcastDescription",
+            Self::PodcastSeriesCategory => "PodcastSeriesCategory",
+            Self::PodcastUrl => "PodcastUrl",
+            Self::PodcastGlobalUniqueId => "PodcastGlobalUniqueId",
+            Self::PodcastKeywords => "PodcastKeywords",
+            Self::Comment => "Comment",
+            Self::Description => "Description",
+            Self::Language => "Language",
+            Self::Script => "Script",
+            Self::Lyrics => "Lyrics",
+            Self::AppleXid => "AppleXid",
+            Self::AppleId3v2ContentGroup => "AppleId3v2ContentGroup",
+            &_ => "Unknown",
+        }
+    }
+
+    fn from_str(s: &str) -> Self
+    where
+        Self: Sized,
+    {
+        match s {
+            "AlbumTitle" => Self::AlbumTitle,
+            "SetSubtitle" => Self::SetSubtitle,
+            "ShowName" => Self::ShowName,
+            "ContentGroup" => Self::ContentGroup,
+            "TrackTitle" => Self::TrackTitle,
+            "TrackSubtitle" => Self::TrackSubtitle,
+            "OriginalAlbumTitle" => Self::OriginalAlbumTitle,
+            "OriginalArtist" => Self::OriginalArtist,
+            "OriginalLyricist" => Self::OriginalLyricist,
+            "AlbumTitleSortOrder" => Self::AlbumTitleSortOrder,
+            "AlbumArtistSortOrder" => Self::AlbumArtistSortOrder,
+            "TrackTitleSortOrder" => Self::TrackTitleSortOrder,
+            "TrackArtistSortOrder" => Self::TrackArtistSortOrder,
+            "ShowNameSortOrder" => Self::ShowNameSortOrder,
+            "ComposerSortOrder" => Self::ComposerSortOrder,
+            "AlbumArtist" => Self::AlbumArtist,
+            "TrackArtist" => Self::TrackArtist,
+            "TrackArtists" => Self::TrackArtists,
+            "Arranger" => Self::Arranger,
+            "Writer" => Self::Writer,
+            "Composer" => Self::Composer,
+            "Conductor" => Self::Conductor,
+            "Director" => Self::Director,
+            "Engineer" => Self::Engineer,
+            "Lyricist" => Self::Lyricist,
+            "MixDj" => Self::MixDj,
+            "MixEngineer" => Self::MixEngineer,
+            "MusicianCredits" => Self::MusicianCredits,
+            "Performer" => Self::Performer,
+            "Producer" => Self::Producer,
+            "Publisher" => Self::Publisher,
+            "Label" => Self::Label,
+            "InternetRadioStationName" => Self::InternetRadioStationName,
+            "InternetRadioStationOwner" => Self::InternetRadioStationOwner,
+            "Remixer" => Self::Remixer,
+            "DiscNumber" => Self::DiscNumber,
+            "DiscTotal" => Self::DiscTotal,
+            "TrackNumber" => Self::TrackNumber,
+            "TrackTotal" => Self::TrackTotal,
+            "Popularimeter" => Self::Popularimeter,
+            "ParentalAdvisory" => Self::ParentalAdvisory,
+            "RecordingDate" => Self::RecordingDate,
+            "Year" => Self::Year,
+            "ReleaseDate" => Self::ReleaseDate,
+            "OriginalReleaseDate" => Self::OriginalReleaseDate,
+            "Isrc" => Self::Isrc,
+            "Barcode" => Self::Barcode,
+            "CatalogNumber" => Self::CatalogNumber,
+            "Work" => Self::Work,
+            "Movement" => Self::Movement,
+            "MovementNumber" => Self::MovementNumber,
+            "MovementTotal" => Self::MovementTotal,
+            "MusicBrainzRecordingId" => Self::MusicBrainzRecordingId,
+            "MusicBrainzTrackId" => Self::MusicBrainzTrackId,
+            "MusicBrainzReleaseId" => Self::MusicBrainzReleaseId,
+            "MusicBrainzReleaseGroupId" => Self::MusicBrainzReleaseGroupId,
+            "MusicBrainzArtistId" => Self::MusicBrainzArtistId,
+            "MusicBrainzReleaseArtistId" => Self::MusicBrainzReleaseArtistId,
+            "MusicBrainzWorkId" => Self::MusicBrainzWorkId,
+            "FlagCompilation" => Self::FlagCompilation,
+            "FlagPodcast" => Self::FlagPodcast,
+            "FileType" => Self::FileType,
+            "FileOwner" => Self::FileOwner,
+            "TaggingTime" => Self::TaggingTime,
+            "Length" => Self::Length,
+            "OriginalFileName" => Self::OriginalFileName,
+            "OriginalMediaType" => Self::OriginalMediaType,
+            "EncodedBy" => Self::EncodedBy,
+            "EncoderSoftware" => Self::EncoderSoftware,
+            "EncoderSettings" => Self::EncoderSettings,
+            "EncodingTime" => Self::EncodingTime,
+            "ReplayGainAlbumGain" => Self::ReplayGainAlbumGain,
+            "ReplayGainAlbumPeak" => Self::ReplayGainAlbumPeak,
+            "ReplayGainTrackGain" => Self::ReplayGainTrackGain,
+            "ReplayGainTrackPeak" => Self::ReplayGainTrackPeak,
+            "AudioFileUrl" => Self::AudioFileUrl,
+            "AudioSourceUrl" => Self::AudioSourceUrl,
+            "CommercialInformationUrl" => Self::CommercialInformationUrl,
+            "CopyrightUrl" => Self::CopyrightUrl,
+            "TrackArtistUrl" => Self::TrackArtistUrl,
+            "RadioStationUrl" => Self::RadioStationUrl,
+            "PaymentUrl" => Self::PaymentUrl,
+            "PublisherUrl" => Self::PublisherUrl,
+            "Genre" => Self::Genre,
+            "InitialKey" => Self::InitialKey,
+            "Color" => Self::Color,
+            "Mood" => Self::Mood,
+            "Bpm" => Self::Bpm,
+            "IntegerBpm" => Self::IntegerBpm,
+            "CopyrightMessage" => Self::CopyrightMessage,
+            "License" => Self::License,
+            "PodcastDescription" => Self::PodcastDescription,
+            "PodcastSeriesCategory" => Self::PodcastSeriesCategory,
+            "PodcastUrl" => Self::PodcastUrl,
+            "PodcastGlobalUniqueId" => Self::PodcastGlobalUniqueId,
+            "PodcastKeywords" => Self::PodcastKeywords,
+            "Comment" => Self::Comment,
+            "Description" => Self::Description,
+            "Language" => Self::Language,
+            "Script" => Self::Script,
+            "Lyrics" => Self::Lyrics,
+            "AppleXid" => Self::AppleXid,
+            "AppleId3v2ContentGroup" => Self::AppleId3v2ContentGroup,
+            &_ => Self::Unknown(s.to_string()),
+        }
+    }
+}
+
 pub fn extract_metadata(
     file_path: &Path,
     is_import: bool,
@@ -1010,9 +1219,8 @@ pub fn extract_metadata(
                                 }
                             } else {
                                 match tagged_file.file_type() {
-                                    FileType::Flac | FileType::Wav | FileType::Vorbis => {
-                                        Some("vorbis".to_string())
-                                    }
+                                    FileType::Flac | FileType::Vorbis => Some("vorbis".to_string()),
+                                    FileType::Wav => Some("ID3v2".to_string()),
                                     FileType::Mpeg => Some("ID3v2".to_string()),
                                     FileType::Ape | FileType::Opus | FileType::Speex => None,
                                     _ => None,
@@ -1036,7 +1244,7 @@ pub fn extract_metadata(
                             title = file.to_string();
                         }
 
-                        tagged_file.tags().iter().for_each(|tag| {
+                        if let Some(tag) = tagged_file.primary_tag().or(tagged_file.first_tag()) {
                             for item in tag.items() {
                                 // info!("Tag type {:?}", tag.tag_type());
                                 // info!("Tag items {:?}", tag.items());
@@ -1098,14 +1306,11 @@ pub fn extract_metadata(
                                     disc_total = tag.disk_total().unwrap_or(0) as i32;
                                 }
 
-                                if (include_raw_tags) {
-                                    let key = item
-                                        .key()
-                                        .map_key(tag.tag_type(), true)
-                                        .unwrap_or_default()
-                                        .to_string();
+                                if include_raw_tags {
+                                    // Lofty's ItemKey representation (we don't expose internal tag keys to the UI)
+                                    let key = item.key().as_str().to_string();
                                     let value =
-                                        item.value().clone().into_string().unwrap_or_default();
+                                        tag.get_string(item.key()).unwrap_or_default().to_string();
 
                                     metadata.insert(
                                         key.clone(),
@@ -1116,7 +1321,7 @@ pub fn extract_metadata(
                                     );
                                 }
                             }
-                        });
+                        }
 
                         if tagged_file.primary_tag().is_some() {
                             if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first()
@@ -1290,13 +1495,16 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 tagged_file.first_tag_mut().unwrap()
             };
 
-            if tag.tag_type() == TagType::Id3v1 {
+            if tag.tag_type() == TagType::Id3v1 || tag.tag_type() == TagType::Id3v2 {
                 // upgrade to ID3v2.4
                 info!("Upgrading to ID3v2.4");
                 tag.re_map(TagType::Id3v2);
             }
 
+            tag.remove_empty();
+
             for item in v.metadata.iter() {
+                println!("To write item: {:?}\n", item);
                 if item.id == "METADATA_BLOCK_PICTURE" {
                     // Ignore picture, set by artwork_file_to_set
                 } else if item.id == "year" {
@@ -1308,13 +1516,14 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                         }
                     }
                 } else {
-                    let item_key = ItemKey::from_key(tag.tag_type(), item.id.as_str());
+                    let item_key = ItemKey::from_str(&item.id.as_str());
 
                     match &item.value {
                         None => {}
                         Some(None) => tag.remove_key(&item_key),
                         Some(Some(value)) => {
-                            let item_value: ItemValue = ItemValue::Text(value.to_string());
+                            let item_value: ItemValue = ItemValue::Text(value.clone());
+                            println!("WRITING: {:?} {:?}", item_key, item_value);
 
                             tag.insert(TagItem::new(item_key, item_value));
                         }
@@ -1357,12 +1566,6 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
                 );
                 tag.set_picture(0, pic);
             }
-
-            for item in tag.items() {
-                info!("{:?}", item);
-            }
-
-            info!("{:?}", &file);
 
             // Keep picture, overwrite everything else
             let _pictures = tag.pictures();

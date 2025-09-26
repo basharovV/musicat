@@ -252,6 +252,8 @@
 
     // Shortcuts
     let modifier = $os === "macos" ? "cmd" : "ctrl";
+    hotkeys.filter = (event) => true;
+
     hotkeys(`${modifier}+enter`, "track-info", (event, handler) => {
         if (hasChanges) {
             metadata?.writeMetadata();
