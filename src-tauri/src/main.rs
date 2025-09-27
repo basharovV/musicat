@@ -382,6 +382,9 @@ fn main() {
     //     builder = builder.plugin(devtools);
     // }
 
+    // Workaround for https://github.com/tauri-apps/tauri/issues/5143
+    std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+
     tauri::Builder::default()
         .manage(streamer)
         .manage(OpenedUrls(Default::default()))
