@@ -1,5 +1,3 @@
-#!/usr/bin/env sh
-set -euo pipefail
 
 # --- Parse args / env ---
 TARGET_TRIPLE="${TAURI_ENV_TARGET_TRIPLE-}"
