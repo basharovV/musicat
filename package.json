@@ -13,7 +13,8 @@
         "tm-schema": "npx typescript-json-schema --required --out src/theming/theme.schema.json src/types/theme.d.ts Theme",
         "tm-watch": "chokidar \"base16/**\" -c \"npm run tm-build\"",
         "typesafe-i18n": "typesafe-i18n",
-        "build:pvr": "sh ./src-tauri/lib/build.sh"
+        "build:pvr": "sh ./src-tauri/lib/build.sh",
+        "build:pvr:linux": "sh ./src-tauri/lib/build.sh --target x86_64-unknown-linux-gnu"
     },
     "devDependencies": {
         "@alexanderolsen/libsamplerate-js": "2.1.1",

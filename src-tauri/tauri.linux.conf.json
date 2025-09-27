@@ -1,8 +1,8 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/schema.json",
     "build": {
-        "beforeBuildCommand": "npm run build:pvr && npm run build",
-        "beforeDevCommand": "npm run build:pvr && npm run dev",
+        "beforeBuildCommand": "npm run build:pvr:linux && npm run build",
+        "beforeDevCommand": "npm run build:pvr:linux && npm run dev",
         "frontendDist": "../dist",
         "devUrl": "http://localhost:5173"
     },
