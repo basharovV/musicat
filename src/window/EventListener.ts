@@ -1,25 +1,23 @@
-import { TauriEvent, type Event } from "@tauri-apps/api/event";
+import { type Event } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { get } from "svelte/store";
 
+import { path } from "@tauri-apps/api";
+import { appConfigDir, appDataDir } from "@tauri-apps/api/path";
+import { open } from "@tauri-apps/plugin-shell";
+import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
+import { deleteDatabase, exportDatabase, importDatabase } from "../data/db";
+import { openTauriImportDialog } from "../data/LibraryUtils";
 import {
-    importStatus,
+    isCompactView,
     isFindFocused,
-    popupOpen,
     isLyricsOpen,
     isQueueOpen,
+    popupOpen,
+    queue,
     shouldFocusFind,
     uiView,
-    queue,
-    isCompactView,
 } from "../data/store";
-import { db, deleteDatabase, exportDatabase, importDatabase } from "../data/db";
-import type { ToImport } from "../App";
-import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
-import { open } from "@tauri-apps/plugin-shell";
-import { appConfigDir, appDataDir, dataDir } from "@tauri-apps/api/path";
-import { openTauriImportDialog } from "../data/LibraryUtils";
-import { path } from "@tauri-apps/api";
 
 import toast from "svelte-french-toast";
 
@@ -118,48 +116,8 @@ export async function listenForFileDrop(): Promise<Event<any>> {
         }
     });
 }
-
-interface StemSeparationEvent {
-    event: string;
-    message: string;
-}
-
-export async function listenForStemSeparation() {
-    const toastId = toast.loading("Loading...");
-
-    await new Promise(async (resolve, reject) => {
-        try {
-            const unlisten = await appWindow.listen<StemSeparationEvent>(
-                "stem-separation",
-                (event) => {
-                    switch (event.payload?.event) {
-                        case "progress":
-                            toast.loading(event.payload.message, {
-                                id: toastId,
-                            });
-                            break;
-                        case "complete":
-                            toast.success(event.payload.message, {
-                                id: toastId,
-                            });
-                            resolve(event.payload);
-                            console.log("event", event);
-                            unlisten();
-                            break;
-                        case "error":
-                            toast.error(event.payload.message, {
-                                id: toastId,
-                            });
-                            reject(event.payload);
-                            console.log("event", event);
-                            unlisten();
-                            break;
-                    }
-                },
-            );
-        } catch (e) {
-            console.error(e);
-            reject(e);
-        }
+export async function startErrorListener() {
+    appWindow.listen("error", (event) => {
+        toast.error(event.payload);
     });
 }

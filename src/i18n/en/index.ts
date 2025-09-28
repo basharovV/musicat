@@ -284,6 +284,14 @@ const en = {
     lyrics: {
         autoScroll: "Auto scroll",
     },
+    stemSeparation: {
+        loading: "Separating vocal & instrumental...",
+        complete: "Separation complete",
+        error: "Error: {{error}}",
+        showStems: "Show stems",
+        cancel: "Cancel",
+        close: "Close",
+    },
 } satisfies BaseTranslation;
 
 export default en;

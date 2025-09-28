@@ -851,6 +851,32 @@ type RootTranslation = {
 		 */
 		autoScroll: string
 	}
+	stemSeparation: {
+		/**
+		 * S​e​p​a​r​a​t​i​n​g​ ​v​o​c​a​l​ ​&​ ​i​n​s​t​r​u​m​e​n​t​a​l​.​.​.
+		 */
+		loading: string
+		/**
+		 * S​e​p​a​r​a​t​i​o​n​ ​c​o​m​p​l​e​t​e
+		 */
+		complete: string
+		/**
+		 * E​r​r​o​r​:​ ​{​{​e​r​r​o​r​}​}
+		 */
+		error: string
+		/**
+		 * S​h​o​w​ ​s​t​e​m​s
+		 */
+		showStems: string
+		/**
+		 * C​a​n​c​e​l
+		 */
+		cancel: string
+		/**
+		 * C​l​o​s​e
+		 */
+		close: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -1685,6 +1711,32 @@ export type TranslationFunctions = {
 		 * Auto scroll
 		 */
 		autoScroll: () => LocalizedString
+	}
+	stemSeparation: {
+		/**
+		 * Separating vocal & instrumental...
+		 */
+		loading: () => LocalizedString
+		/**
+		 * Separation complete
+		 */
+		complete: () => LocalizedString
+		/**
+		 * Error: {{error}}
+		 */
+		error: (arg0: number | string | boolean) => LocalizedString
+		/**
+		 * Show stems
+		 */
+		showStems: () => LocalizedString
+		/**
+		 * Cancel
+		 */
+		cancel: () => LocalizedString
+		/**
+		 * Close
+		 */
+		close: () => LocalizedString
 	}
 }
 

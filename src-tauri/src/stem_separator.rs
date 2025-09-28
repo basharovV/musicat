@@ -1,4 +1,4 @@
-use std::path;
+use std::{collections::HashMap, path, sync::Mutex};
 
 use crate::{
     metadata::{extract_metadata, get_song_metadata},
@@ -7,8 +7,9 @@ use crate::{
 use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
-use tauri_plugin_shell::process::CommandEvent;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
+use webrtc::media::audio::buffer::info;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeparateStemsEvent {
@@ -30,11 +31,21 @@ pub struct Stem {
 struct StemSeparationEvent {
     event: String,
     message: String,
+    progress: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GetStemsEvent {
     song_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CancelSeparationEvent {
+    song_id: String,
+}
+
+pub struct StemProcessState {
+    pub processes: Mutex<HashMap<String, CommandChild>>,
 }
 
 #[tauri::command]
@@ -109,30 +120,6 @@ pub async fn separate_stems(
             onnxruntime_path.display()
         );
     }
-
-    // Configure options (LIB mode)
-    // let opts = pvr::SeparateOptions {
-    //     models_dir: Some(models_dir),
-    //     model: Some(model_name),
-    //     onnx_runtime_path: Some(onnxruntime_path),
-    //     backends: vec![pvr::Backend::CoreML, pvr::Backend::CPU],
-    //     output_format: pvr::AudioFormat::Flac,
-    //     ..Default::default()
-    // };
-
-    // // Spawn blocking task so Tauri main thread isn't blocked
-    // let result = tokio::task::spawn_blocking(move || {
-    //     pvr::separate_to_files(&input_file, &output_dir, &opts)
-    // })
-    // .await
-    // .map_err(|e| format!("Task join error: {}", e))? // handle JoinError
-    // .map_err(|e| format!("Separation error: {}", e))?; // handle pvr error
-
-    // let (primary, secondary) = result;
-    // info!("Separated stems: {:?}, {:?}", primary, secondary);
-
-    // Ok(format!("Stems saved to {}", primary.to_str().unwrap()))
-
     let sidecar_command = app_handle.shell().sidecar("pvr").unwrap().args([
         "--input-path",
         input_file.to_str().unwrap_or_default(),
@@ -155,6 +142,13 @@ pub async fn separate_stems(
 
     let window = app_handle.get_webview_window("main").unwrap();
 
+    // save it by song_id
+    {
+        let state: tauri::State<StemProcessState> = app_handle.state();
+        let mut processes = state.processes.lock().unwrap();
+        processes.insert(song.id.clone(), _child);
+    }
+
     tauri::async_runtime::spawn(async move {
         // // read events such as stdout
         // while let Some(event) = rx.recv().await {
@@ -175,7 +169,20 @@ pub async fn separate_stems(
                     // Get everything after last 'INFO'
                     // eg. 2025-09-01T21:12:22.686000Z  INFO 82.14% Processing... (23/28)
                     // We want to get the "82.14% Processing... (23/28)"
-                    let line = line.split("INFO").last().unwrap().trim();
+                    // \u001b[0m 47.62% Processing... (10/21)
+                    let line = line.split("INFO").last().unwrap_or_default().trim();
+                    // Now get the percentage value
+                    let progress = line
+                        .split("%")
+                        .next()
+                        .unwrap_or_default()
+                        .trim()
+                        .split(" ")
+                        .last()
+                        .unwrap_or_default()
+                        .trim();
+                    // To a number
+                    let progress = progress.parse::<f32>().unwrap_or_default();
 
                     info!("stdout: {}", line);
 
@@ -187,16 +194,7 @@ pub async fn separate_stems(
                                 StemSeparationEvent {
                                     event: "progress".to_string(),
                                     message: line.to_string(),
-                                },
-                            )
-                            .expect("failed to emit event");
-                    } else if line.contains("Separation complete primary") {
-                        window
-                            .emit(
-                                "stem-separation",
-                                StemSeparationEvent {
-                                    event: "progress".to_string(),
-                                    message: line.to_string(),
+                                    progress: Some(progress),
                                 },
                             )
                             .expect("failed to emit event");
@@ -213,6 +211,7 @@ pub async fn separate_stems(
                             StemSeparationEvent {
                                 event: "error".to_string(),
                                 message: line.to_string(),
+                                progress: None,
                             },
                         )
                         .expect("failed to emit event");
@@ -226,18 +225,51 @@ pub async fn separate_stems(
                             StemSeparationEvent {
                                 event: "error".to_string(),
                                 message: line.to_string(),
+                                progress: None,
                             },
                         )
                         .expect("failed to emit event");
                 }
                 CommandEvent::Terminated(payload) => {
                     info!("terminated: {:?}", payload);
+
+                    // remove from state
+                    {
+                        let state: tauri::State<StemProcessState> = app_handle.state();
+                        let mut processes = state.processes.lock().unwrap();
+                        processes.remove(&song.id);
+                    }
+
+                    let (event, message, progress) = match (payload.code, payload.signal) {
+                        (Some(0), None) => (
+                            "complete".to_string(),
+                            "Separation complete".to_string(),
+                            Some(100.0),
+                        ),
+                        (Some(code), None) => (
+                            "error".to_string(),
+                            format!("Process exited with code {}", code),
+                            None,
+                        ),
+                        (_, Some(sig)) => (
+                            "killed".to_string(),
+                            format!("Process killed (signal {})", sig),
+                            None,
+                        ),
+                        _ => (
+                            "error".to_string(),
+                            "Process terminated unexpectedly".to_string(),
+                            None,
+                        ),
+                    };
+
                     window
                         .emit(
                             "stem-separation",
                             StemSeparationEvent {
-                                event: "complete".to_string(),
-                                message: "Separation complete".to_string(),
+                                event,
+                                message,
+                                progress,
                             },
                         )
                         .expect("failed to emit event");
@@ -248,4 +280,22 @@ pub async fn separate_stems(
     });
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn cancel_separation(
+    event: CancelSeparationEvent,
+    state: tauri::State<StemProcessState>,
+) -> Result<(), String> {
+    let mut processes = state.processes.lock().unwrap();
+    let song_id = event.song_id.clone();
+    info!("Cancel separation for song_id: {}", song_id);
+    info!("Processes: {:#?}", processes);
+    if let Some(child) = processes.remove(&song_id) {
+        info!("Killing process for song_id: {}", song_id);
+        child.kill().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err(format!("No running process for song_id: {}", song_id))
+    }
 }

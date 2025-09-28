@@ -1,17 +1,11 @@
 // clickOutside.ts
 export function clickOutside(
     element: HTMLElement,
-    options: {
-        callbackFunction: () => void;
-        stopPropagation?: boolean;
-    },
+    callbackFunction: () => void,
 ) {
     function onClick(event: MouseEvent) {
         if (!element.contains(event.target as Node)) {
-            if (options?.stopPropagation) {
-                event.stopPropagation();
-            }
-            options?.callbackFunction();
+            callbackFunction && callbackFunction();
         }
     }
 
@@ -23,7 +17,7 @@ export function clickOutside(
 
     return {
         update(newCallbackFunction: () => void) {
-            options.callbackFunction = newCallbackFunction;
+            callbackFunction = newCallbackFunction;
         },
         destroy() {
             document.removeEventListener("click", onClick);

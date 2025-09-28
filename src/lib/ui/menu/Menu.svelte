@@ -145,12 +145,7 @@
     class:fullWidth
     transition:fade={{ duration: 100 }}
     bind:this={menuEl}
-    use:clickOutside={{
-        callbackFunction: () => {
-            onClickOutside && onClickOutside();
-        },
-        stopPropagation: true,
-    }}
+    use:clickOutside={() => onClickOutside && onClickOutside()}
     style="top: {y}px; left: {x}px;gap: {padding}px;{maxHeight
         ? `max-height: ${maxHeight}px`
         : ''}"

@@ -64,6 +64,7 @@
         smartQueryResults,
         uiView,
         rightClickedAlbum,
+        expandedSongWithStems,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -88,6 +89,7 @@
     } from "../../data/storeHelper";
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import audioPlayer from "../player/AudioPlayer";
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder: String[];
@@ -108,7 +110,11 @@
                 } else return song !== undefined;
             })
             .reduce(
-                (status, s, idx, songsArray) => {
+                (status, s, idx, songsArray: any[]) => {
+                    if (status?.songs?.length === 0) {
+                        status.songs = songsArray;
+                    }
+
                     let timeSinceAdded = s.dateAdded
                         ? timeSince(s.dateAdded)
                         : "";
@@ -122,55 +128,38 @@
                         };
                     }
 
-                    if (s.tags) {
-                        // console.log("songs.tags", s.tags);
+                    if (idx === 0 && $expandedSongWithStems) {
+                        console.log("expandedSong", $expandedSongWithStems);
+                        status.songs.splice(
+                            $expandedSongWithStems.viewModel?.index + 1,
+                            0,
+                            ...$expandedSongWithStems.stems?.map(
+                                (st, stemIdx) => ({
+                                    ...$expandedSongWithStems,
+                                    isStem: true,
+                                    isFirst: stemIdx === 0,
+                                    isLast:
+                                        stemIdx ===
+                                        $expandedSongWithStems.stems?.length -
+                                            1,
+                                    ...st,
+                                    viewModel: {
+                                        viewId: `${$expandedSongWithStems.id}-${stemIdx}`,
+                                        index: idx + 1 + stemIdx,
+                                    },
+                                }),
+                            ),
+                        );
                     }
-                    if (s?.album !== status.state.previousAlbum) {
-                        if (status.state.firstSongInPreviousAlbum) {
-                            // Set the view model property here
-                            const song =
-                                songsArray[
-                                    status.state.firstSongInPreviousAlbum
-                                ];
-                            if (song.viewModel) {
-                                song.viewModel.isFirstAlbum = true;
-                            } else {
-                                song.viewModel = {
-                                    ...song.viewModel,
-                                    isFirstAlbum: true,
-                                    isFirstArtist: false,
-                                };
-                            }
-                        }
-                        status.state.firstSongInPreviousAlbum = idx;
-                    }
-                    if (s?.artist !== status.state.previousArtist) {
-                        if (status.state.firstSongInPreviousArtist) {
-                            // Set the view model property here
-                            const song =
-                                songsArray[
-                                    status.state.firstSongInPreviousArtist
-                                ];
-                            if (song.viewModel) {
-                                song.viewModel.isFirstArtist = true;
-                            } else {
-                                song.viewModel = {
-                                    ...song.viewModel,
-                                    isFirstAlbum: false,
-                                    isFirstArtist: true,
-                                };
-                            }
-                        }
-                        status.state.firstSongInPreviousArtist = idx;
-                    }
-                    status.state.previousAlbum = s?.album;
-                    status.state.previousArtist = s?.artist;
 
                     // Putting this in a separate function to avoid the reactivity loop
-                    updateHighlights(songsArray, idx);
+                    updateHighlights(status.songs, idx);
 
                     return {
-                        songs: songsArray,
+                        songs:
+                            status.songs?.length > 0
+                                ? status.songs
+                                : songsArray,
                         state: status.state,
                     };
                 },
@@ -959,6 +948,10 @@
     let currentSongScrollIdx = null;
 
     async function onDoubleClickSong(song, idx) {
+        if (song.isStem) {
+            audioPlayer.playSong(song);
+            return;
+        }
         if ($uiView.match(/^(albums)/)) {
             const albums = await db.albums
                 .where("displayTitle")
@@ -1406,6 +1399,7 @@
         hotkeys.unbind("esc");
         removeEventListener("keydown", onKeyDown);
         removeEventListener("keyup", onKeyUp);
+        $expandedSongWithStems = null;
     });
 
     // COLUMNS
@@ -1738,6 +1732,8 @@
             },
         );
     }
+
+    let expandChevronHoverSongId = null;
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1851,141 +1847,382 @@
                                     {@const song = songs[idx]}
                                     <!-- {@debug idx} -->
                                     <!-- {@debug song} -->
-                                    <Group
-                                        on:dblclick={() =>
-                                            onDoubleClickSong(song, songIdx)}
-                                        on:click={(e) => {
-                                            // console.log("e", e);
-                                            if (e.detail.evt.button === 0) {
-                                                toggleHighlight(
+                                    <!-- MAIN ROW -->
+                                    {#if !song.isStem}
+                                        <Group
+                                            on:dblclick={() =>
+                                                onDoubleClickSong(
                                                     song,
-                                                    song.viewModel.index,
-                                                );
-                                            } else if (
-                                                e.detail.evt.button === 2
-                                            ) {
-                                                onRightClick(
-                                                    e.detail.evt,
+                                                    songIdx,
+                                                )}
+                                            on:click={(e) => {
+                                                // console.log("e", e);
+                                                if (e.detail.evt.button === 0) {
+                                                    toggleHighlight(
+                                                        song,
+                                                        song.viewModel.index,
+                                                    );
+                                                } else if (
+                                                    e.detail.evt.button === 2
+                                                ) {
+                                                    onRightClick(
+                                                        e.detail.evt,
+                                                        song,
+                                                        song.viewModel.index,
+                                                    );
+                                                }
+                                            }}
+                                            on:mouseenter={() => {
+                                                hoveredSongIdx = songIdx;
+                                                if (
+                                                    draggingSongIdx !== null &&
+                                                    songIdx >
+                                                        songsSlice.length - 15
+                                                ) {
+                                                    scrollContainer?.scrollBy({
+                                                        top: ROW_HEIGHT,
+                                                    });
+                                                } else if (
+                                                    draggingSongIdx !== null &&
+                                                    songIdx < 10
+                                                ) {
+                                                    scrollContainer?.scrollBy({
+                                                        top: -ROW_HEIGHT,
+                                                    });
+                                                }
+                                            }}
+                                            on:mouseleave={() => {
+                                                hoveredSongIdx = null;
+                                            }}
+                                            on:mousedown={(e) =>
+                                                e.detail.evt.button === 0 &&
+                                                onSongDragStart(
                                                     song,
-                                                    song.viewModel.index,
-                                                );
-                                            }
-                                        }}
-                                        on:mouseenter={() => {
-                                            hoveredSongIdx = songIdx;
-                                            if (
-                                                draggingSongIdx !== null &&
-                                                songIdx > songsSlice.length - 15
-                                            ) {
-                                                scrollContainer?.scrollBy({
-                                                    top: ROW_HEIGHT,
-                                                });
-                                            } else if (
-                                                draggingSongIdx !== null &&
-                                                songIdx < 10
-                                            ) {
-                                                scrollContainer?.scrollBy({
-                                                    top: -ROW_HEIGHT,
-                                                });
-                                            }
-                                        }}
-                                        on:mouseleave={() => {
-                                            hoveredSongIdx = null;
-                                        }}
-                                        on:mousedown={(e) =>
-                                            e.detail.evt.button === 0 &&
-                                            onSongDragStart(
-                                                song,
-                                                song.viewModel?.index,
-                                            )}
-                                        config={{
-                                            visible: !song.dummy,
-                                        }}
-                                        on:mouseup={(e) => {
-                                            onMouseUpSong(
-                                                song,
-                                                song.viewModel.index,
-                                            );
-                                        }}
-                                    >
-                                        <Rect
+                                                    song.viewModel?.index,
+                                                )}
                                             config={{
-                                                id:
-                                                    song.viewModel?.viewId ??
-                                                    song?.id,
-                                                x: 0,
                                                 y:
                                                     sandwichTopHeight +
-                                                    ROW_HEIGHT * songIdx +
-                                                    scrollOffset,
-                                                width: width,
+                                                    ROW_HEIGHT * songIdx,
                                                 height: ROW_HEIGHT,
-                                                listening: true,
-                                                fill:
-                                                    draggingSongIdx ===
-                                                    song.viewModel?.index
-                                                        ? DRAGGING_SOURCE_COLOR
-                                                        : $current.song?.id ===
-                                                            song?.id
-                                                          ? PLAYING_BG_COLOR
-                                                          : songsHighlighted &&
-                                                              isSongIdxHighlighted(
-                                                                  idx,
-                                                              )
-                                                            ? HIGHLIGHT_BG_COLOR
-                                                            : hoveredSongIdx ===
-                                                                songIdx
-                                                              ? ROW_BG_COLOR_HOVERED
-                                                              : songIdx % 2 ===
-                                                                  0
-                                                                ? ROW_BG_COLOR
-                                                                : ROW_ODD_BG_COLOR,
+                                                width: width,
+                                                visible: !song.dummy,
                                             }}
-                                        />
-                                        {#each displayFields as f, idx (f.value)}
-                                            <!-- Smart query fields -->
-                                            {#if f.value.match(/^(year|genre|originCountry)/) !== null && !isInvalidValue(getValue(song, f))}
-                                                <Label
-                                                    config={{
-                                                        x: f.viewProps.x + 5,
-                                                        y:
-                                                            sandwichTopHeight +
-                                                            ROW_HEIGHT *
-                                                                songIdx +
-                                                            2.5,
-                                                        width:
-                                                            f.viewProps.width -
-                                                            10,
-                                                        height: ROW_HEIGHT - 5,
-                                                    }}
-                                                    on:mouseenter={() => {
-                                                        hoveredField = f.value;
-                                                    }}
-                                                    on:mouseleave={() => {
-                                                        hoveredField = null;
-                                                    }}
-                                                    on:click={() => {
-                                                        filterByField(
-                                                            f.value,
-                                                            getValue(song, f),
-                                                        );
-                                                    }}
-                                                >
-                                                    <Tag
+                                            on:mouseup={(e) => {
+                                                onMouseUpSong(
+                                                    song,
+                                                    song.viewModel.index,
+                                                );
+                                            }}
+                                        >
+                                            <Rect
+                                                config={{
+                                                    id:
+                                                        song.viewModel
+                                                            ?.viewId ??
+                                                        song?.id,
+                                                    x: 0,
+                                                    y: 0,
+                                                    width: width,
+                                                    height: ROW_HEIGHT,
+                                                    listening: true,
+                                                    fill:
+                                                        draggingSongIdx ===
+                                                        song.viewModel?.index
+                                                            ? DRAGGING_SOURCE_COLOR
+                                                            : $current.song
+                                                                    ?.id ===
+                                                                song?.id
+                                                              ? PLAYING_BG_COLOR
+                                                              : songsHighlighted &&
+                                                                  isSongIdxHighlighted(
+                                                                      idx,
+                                                                  )
+                                                                ? HIGHLIGHT_BG_COLOR
+                                                                : hoveredSongIdx ===
+                                                                    songIdx
+                                                                  ? ROW_BG_COLOR_HOVERED
+                                                                  : songIdx %
+                                                                          2 ===
+                                                                      0
+                                                                    ? ROW_BG_COLOR
+                                                                    : ROW_ODD_BG_COLOR,
+                                                }}
+                                            />
+                                            {#each displayFields as f, idx (f.value)}
+                                                <!-- Smart query fields -->
+                                                {#if f.value.match(/^(year|genre|originCountry)/) !== null && !isInvalidValue(getValue(song, f))}
+                                                    <Label
                                                         config={{
-                                                            fill:
-                                                                hoveredSongIdx ===
-                                                                    songIdx &&
-                                                                hoveredField ===
-                                                                    f.value
-                                                                    ? CLICKABLE_CELL_BG_COLOR_HOVERED
-                                                                    : CLICKABLE_CELL_BG_COLOR,
-                                                            padding: 10,
-                                                            cornerRadius: 2,
+                                                            x:
+                                                                f.viewProps.x +
+                                                                5,
+                                                            y: 2.5,
+                                                            width:
+                                                                f.viewProps
+                                                                    .width - 10,
+                                                            height:
+                                                                ROW_HEIGHT - 5,
                                                         }}
-                                                    />
+                                                        on:mouseenter={() => {
+                                                            hoveredField =
+                                                                f.value;
+                                                        }}
+                                                        on:mouseleave={() => {
+                                                            hoveredField = null;
+                                                        }}
+                                                        on:click={() => {
+                                                            filterByField(
+                                                                f.value,
+                                                                getValue(
+                                                                    song,
+                                                                    f,
+                                                                ),
+                                                            );
+                                                        }}
+                                                    >
+                                                        <Tag
+                                                            config={{
+                                                                fill:
+                                                                    hoveredSongIdx ===
+                                                                        songIdx &&
+                                                                    hoveredField ===
+                                                                        f.value
+                                                                        ? CLICKABLE_CELL_BG_COLOR_HOVERED
+                                                                        : CLICKABLE_CELL_BG_COLOR,
+                                                                padding: 10,
+                                                                cornerRadius: 2,
+                                                            }}
+                                                        />
+                                                        <Text
+                                                            config={{
+                                                                text: validatedValue(
+                                                                    getValue(
+                                                                        song,
+                                                                        f,
+                                                                    ),
+                                                                ),
+                                                                listening: false,
+                                                                y: 0,
+                                                                x: 0,
+                                                                width:
+                                                                    f.viewProps
+                                                                        .width -
+                                                                    10,
+                                                                height:
+                                                                    ROW_HEIGHT -
+                                                                    5,
+                                                                align: "center",
+                                                                fontSize: 13.5,
+                                                                verticalAlign:
+                                                                    "middle",
+                                                                fill: TEXT_COLOR,
+                                                                ellipsis:
+                                                                    f.value.match(
+                                                                        /^(title|artist|album|genre)/,
+                                                                    ) !== null,
+                                                            }}
+                                                        />
+                                                    </Label>
+                                                {:else if f.value.match(/^(tags)/) !== null && !isInvalidValue(getValue(song, f))}
+                                                    {#if song.tags}
+                                                        {#await getSongTags(song, f.viewProps.width) then tags}
+                                                            {#each tags.visible as tag, idx (tag)}
+                                                                <Label
+                                                                    config={{
+                                                                        x:
+                                                                            f
+                                                                                .viewProps
+                                                                                .x +
+                                                                            tag
+                                                                                .viewProps
+                                                                                .x,
+                                                                        y: 2.5,
+                                                                        height:
+                                                                            ROW_HEIGHT -
+                                                                            5,
+                                                                    }}
+                                                                    on:mouseenter={() => {
+                                                                        hoveredField =
+                                                                            f.value;
+                                                                        hoveredTag =
+                                                                            tag;
+                                                                    }}
+                                                                    on:mouseleave={() => {
+                                                                        hoveredField =
+                                                                            null;
+                                                                        hoveredTag =
+                                                                            null;
+                                                                    }}
+                                                                    on:click={() => {
+                                                                        $isTagCloudOpen = true;
+                                                                        $isSmartQueryBuilderOpen = false;
+                                                                        $uiView =
+                                                                            "library";
+                                                                        $selectedTags.add(
+                                                                            tag.name,
+                                                                        );
+                                                                        $selectedTags =
+                                                                            $selectedTags;
+                                                                    }}
+                                                                >
+                                                                    <Tag
+                                                                        config={{
+                                                                            fill:
+                                                                                hoveredSongIdx ===
+                                                                                    songIdx &&
+                                                                                hoveredField ===
+                                                                                    f.value &&
+                                                                                hoveredTag ===
+                                                                                    tag
+                                                                                    ? CLICKABLE_CELL_BG_COLOR_HOVERED
+                                                                                    : CLICKABLE_CELL_BG_COLOR,
+                                                                            cornerRadius: 10,
+                                                                        }}
+                                                                    />
+                                                                    <Text
+                                                                        config={{
+                                                                            text: validatedValue(
+                                                                                tag.name,
+                                                                            ),
+                                                                            listening: false,
+                                                                            y: 0,
+                                                                            x: 0,
+                                                                            padding:
+                                                                                TAG_PADDING,
+                                                                            height:
+                                                                                ROW_HEIGHT -
+                                                                                5,
+                                                                            align: "center",
+                                                                            fontSize: 13.5,
+                                                                            verticalAlign:
+                                                                                "middle",
+                                                                            fill:
+                                                                                $current
+                                                                                    .song
+                                                                                    ?.id ===
+                                                                                song.id
+                                                                                    ? PLAYING_TEXT_COLOR
+                                                                                    : TEXT_COLOR,
+                                                                            ellipsis:
+                                                                                f.value.match(
+                                                                                    /^(title|artist|album|genre)/,
+                                                                                ) !==
+                                                                                null,
+                                                                        }}
+                                                                    />
+                                                                </Label>
+                                                            {/each}
+                                                            {#if tags.hidden?.length}
+                                                                <Label
+                                                                    config={{
+                                                                        x:
+                                                                            f
+                                                                                .viewProps
+                                                                                .x +
+                                                                            tags.hiddenLabelOffset,
+                                                                        y: 2.5,
+                                                                        height:
+                                                                            ROW_HEIGHT -
+                                                                            5,
+                                                                    }}
+                                                                    on:mouseenter={() => {
+                                                                        hoveredField =
+                                                                            f.value;
+                                                                        hoveredTag =
+                                                                            "+overflow";
+                                                                    }}
+                                                                    on:mouseleave={() => {
+                                                                        hoveredField =
+                                                                            null;
+                                                                        hoveredTag =
+                                                                            null;
+                                                                    }}
+                                                                    on:click={(
+                                                                        e,
+                                                                    ) => {
+                                                                        // TODO: Show overflowed tags in menu
+                                                                        trackMenu.open(
+                                                                            song,
+                                                                            {
+                                                                                x: e
+                                                                                    .detail
+                                                                                    .evt
+                                                                                    .clientX,
+                                                                                y: e
+                                                                                    .detail
+                                                                                    .evt
+                                                                                    .clientY,
+                                                                            },
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <Tag
+                                                                        config={{
+                                                                            fill:
+                                                                                hoveredSongIdx ===
+                                                                                    songIdx &&
+                                                                                hoveredField ===
+                                                                                    f.value &&
+                                                                                hoveredTag ===
+                                                                                    "+overflow"
+                                                                                    ? CLICKABLE_CELL_BG_COLOR_HOVERED
+                                                                                    : CLICKABLE_CELL_BG_COLOR,
+                                                                            cornerRadius: 10,
+                                                                        }}
+                                                                    />
+                                                                    <Text
+                                                                        config={{
+                                                                            text: validatedValue(
+                                                                                `+${tags.hidden.length}`,
+                                                                            ),
+                                                                            listening: false,
+                                                                            y: 0,
+                                                                            x: 0,
+                                                                            padding: 10,
+                                                                            height:
+                                                                                ROW_HEIGHT -
+                                                                                5,
+                                                                            align: "center",
+                                                                            fontSize: 13.5,
+                                                                            verticalAlign:
+                                                                                "middle",
+                                                                            fill:
+                                                                                $current
+                                                                                    .song
+                                                                                    ?.id ===
+                                                                                song.id
+                                                                                    ? PLAYING_TEXT_COLOR
+                                                                                    : TEXT_COLOR,
+                                                                            ellipsis:
+                                                                                f.value.match(
+                                                                                    /^(title|artist|album|genre)/,
+                                                                                ) !==
+                                                                                null,
+                                                                        }}
+                                                                    />
+                                                                </Label>
+                                                            {/if}
+                                                        {/await}
+                                                    {/if}
+                                                {:else}
                                                     <Text
                                                         config={{
+                                                            x:
+                                                                idx === 0
+                                                                    ? 12.5
+                                                                    : f.value.match(
+                                                                            /^(title|artist|album|track)/,
+                                                                        ) !==
+                                                                        null
+                                                                      ? f
+                                                                            .viewProps
+                                                                            .x +
+                                                                        10
+                                                                      : f
+                                                                            .viewProps
+                                                                            .x,
+                                                            y: 1,
                                                             text: validatedValue(
                                                                 getValue(
                                                                     song,
@@ -1993,425 +2230,343 @@
                                                                 ),
                                                             ),
                                                             listening: false,
-                                                            y: 0,
-                                                            x: 0,
+                                                            align:
+                                                                f.value.match(
+                                                                    /^(title|artist|album|track)/,
+                                                                ) !== null
+                                                                    ? "left"
+                                                                    : "center",
                                                             width:
-                                                                f.viewProps
-                                                                    .width - 10,
-                                                            height:
-                                                                ROW_HEIGHT - 5,
-                                                            align: "center",
+                                                                idx ===
+                                                                displayFields.length -
+                                                                    1
+                                                                    ? f
+                                                                          .viewProps
+                                                                          .width -
+                                                                      10
+                                                                    : f.value.match(
+                                                                            /^(title|artist|album|track)/,
+                                                                        ) !==
+                                                                        null
+                                                                      ? f.value ===
+                                                                            "title" &&
+                                                                        $current
+                                                                            .song
+                                                                            ?.id ===
+                                                                            song.id
+                                                                          ? f
+                                                                                .viewProps
+                                                                                .width -
+                                                                            38
+                                                                          : f
+                                                                                .viewProps
+                                                                                .width -
+                                                                            12
+                                                                      : f
+                                                                            .viewProps
+                                                                            .width,
+                                                            padding:
+                                                                f.value.match(
+                                                                    /^(genre)/,
+                                                                ) !== null
+                                                                    ? 10
+                                                                    : 2,
+                                                            height: HEADER_HEIGHT,
                                                             fontSize: 13.5,
                                                             verticalAlign:
                                                                 "middle",
-                                                            fill: TEXT_COLOR,
+                                                            fill:
+                                                                $current.song
+                                                                    ?.id ===
+                                                                song.id
+                                                                    ? PLAYING_TEXT_COLOR
+                                                                    : f.name ===
+                                                                        "none"
+                                                                      ? TEXT_COLOR_SECONDARY
+                                                                      : TEXT_COLOR,
                                                             ellipsis:
                                                                 f.value.match(
                                                                     /^(title|artist|album|genre)/,
                                                                 ) !== null,
                                                         }}
                                                     />
-                                                </Label>
-                                            {:else if f.value.match(/^(tags)/) !== null && !isInvalidValue(getValue(song, f))}
-                                                {#if song.tags}
-                                                    {#await getSongTags(song, f.viewProps.width) then tags}
-                                                        {#each tags.visible as tag, idx (tag)}
-                                                            <Label
-                                                                config={{
-                                                                    x:
-                                                                        f
-                                                                            .viewProps
-                                                                            .x +
-                                                                        tag
-                                                                            .viewProps
-                                                                            .x,
-                                                                    y:
-                                                                        sandwichTopHeight +
-                                                                        ROW_HEIGHT *
-                                                                            songIdx +
-                                                                        scrollOffset +
-                                                                        2.5,
-                                                                    height:
-                                                                        ROW_HEIGHT -
-                                                                        5,
-                                                                }}
-                                                                on:mouseenter={() => {
-                                                                    hoveredField =
-                                                                        f.value;
-                                                                    hoveredTag =
-                                                                        tag;
-                                                                }}
-                                                                on:mouseleave={() => {
-                                                                    hoveredField =
-                                                                        null;
-                                                                    hoveredTag =
-                                                                        null;
-                                                                }}
-                                                                on:click={() => {
-                                                                    $isTagCloudOpen = true;
-                                                                    $isSmartQueryBuilderOpen = false;
-                                                                    $uiView =
-                                                                        "library";
-                                                                    $selectedTags.add(
-                                                                        tag.name,
-                                                                    );
-                                                                    $selectedTags =
-                                                                        $selectedTags;
-                                                                }}
-                                                            >
-                                                                <Tag
-                                                                    config={{
-                                                                        fill:
-                                                                            hoveredSongIdx ===
-                                                                                songIdx &&
-                                                                            hoveredField ===
-                                                                                f.value &&
-                                                                            hoveredTag ===
-                                                                                tag
-                                                                                ? CLICKABLE_CELL_BG_COLOR_HOVERED
-                                                                                : CLICKABLE_CELL_BG_COLOR,
-                                                                        cornerRadius: 10,
-                                                                    }}
-                                                                />
-                                                                <Text
-                                                                    config={{
-                                                                        text: validatedValue(
-                                                                            tag.name,
-                                                                        ),
-                                                                        listening: false,
-                                                                        y: 0,
-                                                                        x: 0,
-                                                                        padding:
-                                                                            TAG_PADDING,
-                                                                        height:
-                                                                            ROW_HEIGHT -
-                                                                            5,
-                                                                        align: "center",
-                                                                        fontSize: 13.5,
-                                                                        verticalAlign:
-                                                                            "middle",
-                                                                        fill:
-                                                                            $current
-                                                                                .song
-                                                                                ?.id ===
-                                                                            song.id
-                                                                                ? PLAYING_TEXT_COLOR
-                                                                                : TEXT_COLOR,
-                                                                        ellipsis:
-                                                                            f.value.match(
-                                                                                /^(title|artist|album|genre)/,
-                                                                            ) !==
-                                                                            null,
-                                                                    }}
-                                                                />
-                                                            </Label>
-                                                        {/each}
-                                                        {#if tags.hidden?.length}
-                                                            <Label
-                                                                config={{
-                                                                    x:
-                                                                        f
-                                                                            .viewProps
-                                                                            .x +
-                                                                        tags.hiddenLabelOffset,
-                                                                    y:
-                                                                        sandwichTopHeight +
-                                                                        ROW_HEIGHT *
-                                                                            songIdx +
-                                                                        scrollOffset +
-                                                                        2.5,
-                                                                    height:
-                                                                        ROW_HEIGHT -
-                                                                        5,
-                                                                }}
-                                                                on:mouseenter={() => {
-                                                                    hoveredField =
-                                                                        f.value;
-                                                                    hoveredTag =
-                                                                        "+overflow";
-                                                                }}
-                                                                on:mouseleave={() => {
-                                                                    hoveredField =
-                                                                        null;
-                                                                    hoveredTag =
-                                                                        null;
-                                                                }}
-                                                                on:click={(
-                                                                    e,
-                                                                ) => {
-                                                                    // TODO: Show overflowed tags in menu
-                                                                    trackMenu.open(
-                                                                        song,
-                                                                        {
-                                                                            x: e
-                                                                                .detail
-                                                                                .evt
-                                                                                .clientX,
-                                                                            y: e
-                                                                                .detail
-                                                                                .evt
-                                                                                .clientY,
-                                                                        },
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <Tag
-                                                                    config={{
-                                                                        fill:
-                                                                            hoveredSongIdx ===
-                                                                                songIdx &&
-                                                                            hoveredField ===
-                                                                                f.value &&
-                                                                            hoveredTag ===
-                                                                                "+overflow"
-                                                                                ? CLICKABLE_CELL_BG_COLOR_HOVERED
-                                                                                : CLICKABLE_CELL_BG_COLOR,
-                                                                        cornerRadius: 10,
-                                                                    }}
-                                                                />
-                                                                <Text
-                                                                    config={{
-                                                                        text: validatedValue(
-                                                                            `+${tags.hidden.length}`,
-                                                                        ),
-                                                                        listening: false,
-                                                                        y: 0,
-                                                                        x: 0,
-                                                                        padding: 10,
-                                                                        height:
-                                                                            ROW_HEIGHT -
-                                                                            5,
-                                                                        align: "center",
-                                                                        fontSize: 13.5,
-                                                                        verticalAlign:
-                                                                            "middle",
-                                                                        fill:
-                                                                            $current
-                                                                                .song
-                                                                                ?.id ===
-                                                                            song.id
-                                                                                ? PLAYING_TEXT_COLOR
-                                                                                : TEXT_COLOR,
-                                                                        ellipsis:
-                                                                            f.value.match(
-                                                                                /^(title|artist|album|genre)/,
-                                                                            ) !==
-                                                                            null,
-                                                                    }}
-                                                                />
-                                                            </Label>
-                                                        {/if}
-                                                    {/await}
                                                 {/if}
-                                            {:else}
-                                                <Text
-                                                    config={{
-                                                        x:
-                                                            f.value.match(
-                                                                /^(title|artist|album|track)/,
-                                                            ) !== null
-                                                                ? f.viewProps
-                                                                      .x + 10
-                                                                : f.viewProps.x,
-                                                        y:
-                                                            sandwichTopHeight +
-                                                            ROW_HEIGHT *
-                                                                songIdx +
-                                                            1,
-                                                        text: validatedValue(
-                                                            getValue(song, f),
-                                                        ),
-                                                        listening: false,
-                                                        align:
-                                                            f.value.match(
-                                                                /^(title|artist|album|track)/,
-                                                            ) !== null
-                                                                ? "left"
-                                                                : "center",
-                                                        width:
-                                                            idx ===
-                                                            displayFields.length -
-                                                                1
-                                                                ? f.viewProps
-                                                                      .width -
-                                                                  10
-                                                                : f.value.match(
-                                                                        /^(title|artist|album|track)/,
-                                                                    ) !== null
-                                                                  ? f.value ===
-                                                                        "title" &&
+                                                {#if f.value === "title"}
+                                                    <!-- Now playing icon -->
+                                                    {#if $current.song?.id === song.id}
+                                                        <Path
+                                                            config={{
+                                                                x:
+                                                                    f.viewProps
+                                                                        .x +
+                                                                    f.viewProps
+                                                                        .width -
+                                                                    40,
+                                                                y: 7,
+                                                                listening: false,
+                                                                scaleX: 0.65,
+                                                                scaleY: 0.65,
+                                                                data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
+                                                                fill: $currentThemeObject[
+                                                                    "library-playing-icon"
+                                                                ],
+                                                            }}
+                                                        />
+                                                    {/if}
+
+                                                    <!-- Favourite icon button -->
+                                                    {#if song.isFavourite}
+                                                        <Path
+                                                            on:click={() =>
+                                                                unfavouriteSong(
+                                                                    song,
+                                                                )}
+                                                            config={{
+                                                                x:
+                                                                    f.viewProps
+                                                                        .x +
+                                                                    f.viewProps
+                                                                        .width -
+                                                                    20,
+                                                                y: 6,
+                                                                scaleX: 0.36,
+                                                                scaleY: 0.36,
+                                                                data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
+                                                                fill:
                                                                     $current
                                                                         .song
                                                                         ?.id ===
-                                                                        song.id
-                                                                      ? f
-                                                                            .viewProps
-                                                                            .width -
-                                                                        38
-                                                                      : f
-                                                                            .viewProps
-                                                                            .width -
-                                                                        12
-                                                                  : f.viewProps
-                                                                        .width,
-                                                        padding:
-                                                            f.value.match(
-                                                                /^(genre)/,
-                                                            ) !== null
-                                                                ? 10
-                                                                : 2,
-                                                        height: HEADER_HEIGHT,
-                                                        fontSize: 13.5,
-                                                        verticalAlign: "middle",
-                                                        fill:
-                                                            $current.song
-                                                                ?.id === song.id
-                                                                ? PLAYING_TEXT_COLOR
-                                                                : f.name ===
-                                                                    "none"
-                                                                  ? TEXT_COLOR_SECONDARY
-                                                                  : TEXT_COLOR,
-                                                        ellipsis:
-                                                            f.value.match(
-                                                                /^(title|artist|album|genre)/,
-                                                            ) !== null,
-                                                    }}
-                                                />
-                                            {/if}
-                                            <!-- Drag handle icon-->
-                                            {#if hoveredSongIdx === songIdx && !(draggingSongIdx !== null || (draggingSongIdx === null && $draggedSongs?.length))}
+                                                                    song.id
+                                                                        ? $currentThemeObject[
+                                                                              "library-playing-icon"
+                                                                          ]
+                                                                        : $currentThemeObject[
+                                                                              "library-favourite-icon"
+                                                                          ],
+                                                            }}
+                                                        />
+                                                    {:else if hoveredSongIdx === songIdx}
+                                                        <Path
+                                                            on:click={() =>
+                                                                favouriteSong(
+                                                                    song,
+                                                                )}
+                                                            config={{
+                                                                x:
+                                                                    f.viewProps
+                                                                        .x +
+                                                                    f.viewProps
+                                                                        .width -
+                                                                    20,
+                                                                y: 6,
+                                                                scaleX: 0.36,
+                                                                scaleY: 0.36,
+                                                                data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
+                                                                fill: "transparent",
+                                                                stroke:
+                                                                    $current
+                                                                        .song
+                                                                        ?.id ===
+                                                                    song.id
+                                                                        ? $currentThemeObject[
+                                                                              "library-playing-icon"
+                                                                          ]
+                                                                        : $currentThemeObject[
+                                                                              "library-favourite-hover-icon"
+                                                                          ],
+                                                            }}
+                                                        />
+                                                    {/if}
+                                                {/if}
+                                            {/each}
+                                            <!-- Show stems/expand track indicator -->
+                                            {#if song.stems?.length}
                                                 <Path
                                                     config={{
-                                                        x: -2,
-                                                        y:
-                                                            sandwichTopHeight +
-                                                            ROW_HEIGHT *
-                                                                songIdx +
-                                                            6,
+                                                        x:
+                                                            expandChevronHoverSongId ===
+                                                            song.id
+                                                                ? 0
+                                                                : -3,
+                                                        y: ROW_HEIGHT / 2 - 8,
                                                         listening: false,
-                                                        scaleX: 0.9,
-                                                        scaleY: 0.9,
-                                                        data: "M7.375 3.67c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m0 8.66c0-.646-.56-1.17-1.25-1.17s-1.25.524-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17m-1.25-5.5c.69 0 1.25.525 1.25 1.17c0 .645-.56 1.17-1.25 1.17S4.875 8.645 4.875 8c0-.645.56-1.17 1.25-1.17m5-3.16c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .646.56 1.17 1.25 1.17s1.25-.524 1.25-1.17m-1.25 7.49c.69 0 1.25.524 1.25 1.17c0 .645-.56 1.17-1.25 1.17s-1.25-.525-1.25-1.17c0-.646.56-1.17 1.25-1.17M11.125 8c0-.645-.56-1.17-1.25-1.17s-1.25.525-1.25 1.17c0 .645.56 1.17 1.25 1.17s1.25-.525 1.25-1.17",
-                                                        fill: "rgba(255, 255, 255, 0.05)",
+                                                        scaleX: 0.6,
+                                                        scaleY: 0.6,
+                                                        data:
+                                                            $expandedSongWithStems ===
+                                                            song
+                                                                ? "m6 9l6 6l6-6"
+                                                                : "m9 18l6-6l-6-6",
+                                                        stroke: $currentThemeObject[
+                                                            "accent"
+                                                        ],
+                                                    }}
+                                                />
+                                                <!-- Slightly bigger hitbox for clicking -->
+                                                <Rect
+                                                    config={{
+                                                        x: -2,
+                                                        y: 0,
+                                                        width: 15,
+                                                        height: ROW_HEIGHT,
+                                                        listening: true,
+                                                        strokeWidth: 2,
+                                                    }}
+                                                    on:click={() => {
+                                                        console.log("CLICKED");
+                                                        $expandedSongWithStems =
+                                                            $expandedSongWithStems
+                                                                ? null
+                                                                : song;
+                                                    }}
+                                                    on:mouseenter={() => {
+                                                        expandChevronHoverSongId =
+                                                            song.id;
+                                                    }}
+                                                    on:mouseleave={() => {
+                                                        expandChevronHoverSongId =
+                                                            null;
+                                                    }}
+                                                />
+                                                {#if expandChevronHoverSongId === song.id}
+                                                    <Label
+                                                        config={{
+                                                            x: 15,
+                                                            height: ROW_HEIGHT,
+                                                            listening: false,
+                                                        }}
+                                                    >
+                                                        <Tag
+                                                            config={{
+                                                                fill: $currentThemeObject[
+                                                                    "button-solid-bg"
+                                                                ],
+                                                                stroke: $currentThemeObject[
+                                                                    "menu-border"
+                                                                ],
+                                                                strokeWidth: 1,
+                                                                cornerRadius: 2,
+                                                            }}
+                                                        />
+                                                        <Text
+                                                            config={{
+                                                                fill: "white",
+                                                                text: "Expand stems",
+                                                                height: ROW_HEIGHT,
+                                                                fontSize: 13,
+                                                                padding: 10,
+                                                                verticalAlign:
+                                                                    "middle",
+                                                            }}
+                                                        />
+                                                    </Label>
+                                                {/if}
+                                            {/if}
+                                            {#if hoveredSongIdx === songIdx && draggingSongIdx !== null}
+                                                <Rect
+                                                    config={{
+                                                        x: 0,
+                                                        y:
+                                                            song.viewModel
+                                                                ?.index >
+                                                            draggingSongIdx
+                                                                ? ROW_HEIGHT
+                                                                : 0,
+                                                        width: width,
+                                                        height: DROP_HINT_HEIGHT,
+                                                        fill: PLAYING_BG_COLOR,
+                                                        listening: false,
                                                     }}
                                                 />
                                             {/if}
-                                            {#if f.value === "title"}
-                                                <!-- Now playing icon -->
-                                                {#if $current.song?.id === song.id}
-                                                    <Path
-                                                        config={{
-                                                            x:
-                                                                f.viewProps.x +
-                                                                f.viewProps
-                                                                    .width -
-                                                                40,
-                                                            y:
-                                                                sandwichTopHeight +
-                                                                ROW_HEIGHT *
-                                                                    songIdx +
-                                                                scrollOffset +
-                                                                7,
-                                                            listening: false,
-                                                            scaleX: 0.65,
-                                                            scaleY: 0.65,
-                                                            data: "M9.383 3.076A1 1 0 0 1 10 4v12a1 1 0 0 1-1.707.707L4.586 13H2a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h2.586l3.707-3.707a1 1 0 0 1 1.09-.217m5.274-.147a1 1 0 0 1 1.414 0A9.972 9.972 0 0 1 19 10a9.972 9.972 0 0 1-2.929 7.071a1 1 0 0 1-1.414-1.414A7.971 7.971 0 0 0 17 10a7.97 7.97 0 0 0-2.343-5.657a1 1 0 0 1 0-1.414m-2.829 2.828a1 1 0 0 1 1.415 0A5.983 5.983 0 0 1 15 10a5.984 5.984 0 0 1-1.757 4.243a1 1 0 0 1-1.415-1.415A3.984 3.984 0 0 0 13 10a3.983 3.983 0 0 0-1.172-2.828a1 1 0 0 1 0-1.415",
-                                                            fill: $currentThemeObject[
-                                                                "library-playing-icon"
-                                                            ],
-                                                        }}
-                                                    />
-                                                {/if}
-
-                                                <!-- Favourite icon button -->
-                                                {#if song.isFavourite}
-                                                    <Path
-                                                        on:click={() =>
-                                                            unfavouriteSong(
-                                                                song,
-                                                            )}
-                                                        config={{
-                                                            x:
-                                                                f.viewProps.x +
-                                                                f.viewProps
-                                                                    .width -
-                                                                20,
-                                                            y:
-                                                                sandwichTopHeight +
-                                                                ROW_HEIGHT *
-                                                                    songIdx +
-                                                                scrollOffset +
-                                                                6,
-                                                            scaleX: 0.36,
-                                                            scaleY: 0.36,
-                                                            data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
-                                                            fill:
-                                                                $current.song
-                                                                    ?.id ===
-                                                                song.id
-                                                                    ? $currentThemeObject[
-                                                                          "library-playing-icon"
-                                                                      ]
-                                                                    : $currentThemeObject[
-                                                                          "library-favourite-icon"
-                                                                      ],
-                                                        }}
-                                                    />
-                                                {:else if hoveredSongIdx === songIdx}
-                                                    <Path
-                                                        on:click={() =>
-                                                            favouriteSong(song)}
-                                                        config={{
-                                                            x:
-                                                                f.viewProps.x +
-                                                                f.viewProps
-                                                                    .width -
-                                                                20,
-                                                            y:
-                                                                sandwichTopHeight +
-                                                                ROW_HEIGHT *
-                                                                    songIdx +
-                                                                scrollOffset +
-                                                                6,
-                                                            scaleX: 0.36,
-                                                            scaleY: 0.36,
-                                                            data: "M33 7.64c-1.34-2.75-5.2-5-9.69-3.69A9.87 9.87 0 0 0 18 7.72a9.87 9.87 0 0 0-5.31-3.77C8.19 2.66 4.34 4.89 3 7.64c-1.88 3.85-1.1 8.18 2.32 12.87C8 24.18 11.83 27.9 17.39 32.22a1 1 0 0 0 1.23 0c5.55-4.31 9.39-8 12.07-11.71c3.41-4.69 4.19-9.02 2.31-12.87",
-                                                            fill: "transparent",
-                                                            stroke:
-                                                                $current.song
-                                                                    ?.id ===
-                                                                song.id
-                                                                    ? $currentThemeObject[
-                                                                          "library-playing-icon"
-                                                                      ]
-                                                                    : $currentThemeObject[
-                                                                          "library-favourite-hover-icon"
-                                                                      ],
-                                                        }}
-                                                    />
-                                                {/if}
-                                            {/if}
-                                        {/each}
-                                    </Group>
-
-                                    {#if hoveredSongIdx === songIdx && draggingSongIdx !== null}
-                                        <Rect
+                                        </Group>
+                                    {:else if song.isStem}
+                                        <Group
                                             config={{
-                                                x: 0,
                                                 y:
                                                     sandwichTopHeight +
-                                                    ROW_HEIGHT * songIdx +
-                                                    scrollOffset +
-                                                    (song.viewModel?.index >
-                                                    draggingSongIdx
-                                                        ? ROW_HEIGHT
-                                                        : 0),
+                                                    ROW_HEIGHT * songIdx,
+                                                height: ROW_HEIGHT,
                                                 width: width,
-                                                height: DROP_HINT_HEIGHT,
-                                                fill: PLAYING_BG_COLOR,
-                                                listening: false,
+                                                listening: true,
                                             }}
-                                        />
+                                            on:dblclick={() =>
+                                                onDoubleClickSong(
+                                                    song,
+                                                    songIdx,
+                                                )}
+                                            on:click={(e) => {
+                                                // console.log("e", e);
+                                                if (e.detail.evt.button === 0) {
+                                                    toggleHighlight(
+                                                        song,
+                                                        song.viewModel.index,
+                                                    );
+                                                } else if (
+                                                    e.detail.evt.button === 2
+                                                ) {
+                                                    onRightClick(
+                                                        e.detail.evt,
+                                                        song,
+                                                        song.viewModel.index,
+                                                    );
+                                                }
+                                            }}
+                                            on:mouseenter={() => {
+                                                hoveredSongIdx = songIdx;
+                                            }}
+                                            on:mouseleave={() => {
+                                                hoveredSongIdx = null;
+                                            }}
+                                        >
+                                            <Rect
+                                                config={{
+                                                    x: 5,
+                                                    y: song.isFirst ? 2 : 0,
+                                                    width: width - 10,
+                                                    height: song.isFirst
+                                                        ? ROW_HEIGHT - 2
+                                                        : song.isLast
+                                                          ? ROW_HEIGHT - 2
+                                                          : ROW_HEIGHT,
+                                                    stroke: $currentThemeObject[
+                                                        "library-column-divider"
+                                                    ],
+                                                    fill:
+                                                        $current.song?.path ===
+                                                        song.path
+                                                            ? PLAYING_BG_COLOR
+                                                            : songsHighlighted &&
+                                                                isSongIdxHighlighted(
+                                                                    idx,
+                                                                )
+                                                              ? HIGHLIGHT_BG_COLOR
+                                                              : hoveredSongIdx ===
+                                                                  songIdx
+                                                                ? ROW_BG_COLOR_HOVERED
+                                                                : "transparent",
+                                                    strokeWidth: 1,
+                                                    cornerRadius: song.isFirst
+                                                        ? [5, 5, 0, 0]
+                                                        : [0, 0, 5, 5],
+                                                    listening: true,
+                                                }}
+                                            />
+                                            <Text
+                                                config={{
+                                                    x: 10,
+                                                    y: 0,
+                                                    text: song.name,
+                                                    height: ROW_HEIGHT,
+                                                    fill: $currentThemeObject[
+                                                        "library-text"
+                                                    ],
+                                                    fontSize: 13,
+                                                    verticalAlign: "middle",
+                                                    listening: false,
+                                                }}
+                                            />
+                                        </Group>
                                     {/if}
                                 {/each}
                             {/if}

@@ -250,7 +250,7 @@ class AudioPlayer {
                 // If the WebRTC receiver is ready to receive data, invoke the streamer
                 this.webRTCReceiver.prepareForNewStream();
 
-                invoke("stream_file", {
+                invoke("play_file", {
                     event: {
                         path: this.currentSong.path,
                         seek: 0,
@@ -653,7 +653,7 @@ class AudioPlayer {
 
                 // If the WebRTC receiver is ready to receive data, invoke the streamer
                 this.webRTCReceiver.prepareForNewStream();
-                invoke("stream_file", {
+                invoke("play_file", {
                     event: {
                         path: this.currentSong.path,
                         seek: position,

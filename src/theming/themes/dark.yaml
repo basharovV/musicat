@@ -85,6 +85,8 @@ library-scrollbar-bg: "#71658e7e"
 library-scrollbar-hover-bg: "#a59bbc77"
 library-text: "#d3d3d3"
 library-title: "#ffffff"
+library-stem-bg: "#332e3e"
+library-stem-hover-bg: "#4e465e"
 # Lyrics
 lyrics-text: "#ecd5deb2"
 # Map View

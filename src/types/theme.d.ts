@@ -98,6 +98,8 @@ export interface Theme {
     "library-scrollbar-hover-bg": string;
     "library-text": string;
     "library-title": string;
+    "library-stem-bg": string;
+    "library-stem-hover-bg": string;
     /** Lyrics */
     "lyrics-text": string;
     /** Map View */

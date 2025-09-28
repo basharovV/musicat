@@ -1,9 +1,13 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import { type } from "@tauri-apps/plugin-os";
+    import { liveQuery } from "dexie";
     import { onMount } from "svelte";
+    import toast from "svelte-french-toast";
+    import { get } from "svelte/store";
     import type { Album, Song, Stem, ToImport } from "../../App";
     import { db } from "../../data/db";
+    import { deleteFromLibrary, reImport } from "../../data/LibraryUtils";
     import { deleteSongsFromPlaylist } from "../../data/M3UUtils";
     import {
         canShowInfoPopup,
@@ -15,27 +19,23 @@
         rightClickedTracks,
         selectedPlaylistFile,
         selectedTags,
+        songToSeparate,
         toDeletePlaylist,
         uiView,
         userSettings,
     } from "../../data/store";
+    import { removeQueuedSongs } from "../../data/storeHelper";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
     import { enrichSongCountry } from "../data/LibraryEnrichers";
+    import { openInFinder } from "../menu/file";
+    import { searchArtistOnWikiPanel } from "../menu/search";
+    import audioPlayer from "../player/AudioPlayer";
+    import Icon from "../ui/Icon.svelte";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuInput from "../ui/menu/MenuInput.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
-    import Icon from "../ui/Icon.svelte";
-    import { deleteFromLibrary, reImport } from "../../data/LibraryUtils";
-    import { liveQuery } from "dexie";
-    import { searchArtistOnWikiPanel } from "../menu/search";
-    import { openInFinder } from "../menu/file";
-    import { removeQueuedSongs } from "../../data/storeHelper";
-    import { get } from "svelte/store";
-    import toast from "svelte-french-toast";
-    import { listenForStemSeparation } from "../../window/EventListener";
-    import audioPlayer from "../player/AudioPlayer";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
@@ -379,7 +379,8 @@
                                 path: song.path,
                             },
                         });
-                        listenForStemSeparation();
+                        $songToSeparate = song;
+                        close();
                     }}
                     text="Separate stems"
                 />

@@ -5,6 +5,9 @@ accent: "#e54a5c"
 accent-secondary: "#F25769"
 background: "#27282aa8"
 overlay-bg: "#252527ec"
+button-active-bg: "#ef6172"
+button-active-disabled-bg: "#a54651"
+button-active-disabled-text: "#747272"
 # Album
 album-playing-shadow: var(--accent)
 album-playing-play-bg: "#2f2c2c"

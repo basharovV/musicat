@@ -185,6 +185,9 @@ export const isShuffleEnabled = writable(false);
 export const repeatMode = writable<RepeatMode>("none");
 export const shuffledQueue: Writable<Song[]> = writable([]);
 
+/** Song with stems that will be expanded when opening a CanvasLibrary */
+export const expandedSongWithStems: Writable<Song> = writable(null);
+
 export const nextUpSong: Writable<Song> = writable(null);
 export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
@@ -535,5 +538,8 @@ export const fileToDownload: Writable<IAFile> = writable(null);
 
 // Info Popup
 export const canShowInfoPopup = writable(true);
+
+// Stem separation (vocal/instrumental)
+export const songToSeparate: Writable<Song> = writable(null);
 
 init();

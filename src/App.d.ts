@@ -83,6 +83,7 @@ interface Song {
     markers: Marker[];
     dateAdded?: number; // unix timestamp
     tags: string[];
+    stems: Stem[]; // for stem separation feature
 }
 
 interface Album {

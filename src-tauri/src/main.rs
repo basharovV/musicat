@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 use futures_util::StreamExt;
-use log::info;
+use log::{error, info, warn};
 #[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
@@ -14,7 +14,9 @@ use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+use std::collections::HashMap;
 use std::error::Error;
+use std::fs::File;
 use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
@@ -25,6 +27,8 @@ use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+use crate::stem_separator::StemProcessState;
 
 mod constants;
 mod dsp;
@@ -128,7 +132,7 @@ fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct StreamFileRequest {
+pub struct PlayFileRequest {
     path: Option<String>,
     seek: Option<f64>,
     file_info: Option<FileInfo>,
@@ -149,8 +153,17 @@ struct GetWaveformResponse {
 }
 
 #[tauri::command]
-fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
-    info!("Stream file {:?}", event);
+fn play_file(event: PlayFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
+    info!("Play file {:?}", event);
+
+    // First check if the file exists
+    let fl = File::open(event.path.clone().unwrap());
+
+    if fl.is_err() {
+        error!("Error opening file: {}", fl.err().unwrap());
+        _app_handle.emit("error", "file-not-found").unwrap();
+        return;
+    }
 
     let boot = event.boot.clone();
     let waiting_for_boot = state
@@ -186,7 +199,7 @@ fn stream_file(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle:
 }
 
 #[tauri::command]
-fn queue_next(event: StreamFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
+fn queue_next(event: PlayFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
     info!("Queue next file {:?}", event);
     // If we receive a null path - the queue will be cleared
     let _ = state.next_track_sender.send(event);
@@ -388,6 +401,9 @@ fn main() {
     tauri::Builder::default()
         .manage(streamer)
         .manage(OpenedUrls(Default::default()))
+        .manage(StemProcessState {
+            processes: Mutex::new(HashMap::new()),
+        })
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app_.clone();
@@ -702,7 +718,7 @@ fn main() {
             player::get_devices,
             get_lyrics,
             get_file_size,
-            stream_file,
+            play_file,
             queue_next,
             init_streamer,
             decode_control,
@@ -711,6 +727,7 @@ fn main() {
             get_waveform,
             stem_separator::separate_stems,
             stem_separator::get_stems,
+            stem_separator::cancel_separation,
             player::loop_region,
             player::change_audio_device,
             download_file,

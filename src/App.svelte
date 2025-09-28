@@ -28,6 +28,7 @@
         popupOpen,
         selectedPlaylistFile,
         selectedSmartQuery,
+        songToSeparate,
         uiView,
         uiViewToRestore,
     } from "./data/store";
@@ -72,11 +73,15 @@
     import TopBar from "./lib/views/TopBar.svelte";
     import WikiView from "./lib/views/WikiView.svelte";
     import ThemeWrapper from "./theming/ThemeWrapper.svelte";
-    import { startMenuListener } from "./window/EventListener";
+    import {
+        startErrorListener,
+        startMenuListener,
+    } from "./window/EventListener";
     import { resetDraggedSongs } from "./data/storeHelper";
     import TopNav from "./lib/nav/TopNav.svelte";
     import { get } from "svelte/store";
     import type { Locales } from "./i18n/i18n-types";
+    import StemSeparatePopup from "./lib/library/StemSeparatePopup.svelte";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -98,6 +103,7 @@
 
     startMenuListener();
     startImportListener();
+    startErrorListener();
 
     let unlistenFileDrop: UnlistenFn;
     let unlistenFolderWatch: UnlistenFn;
@@ -571,6 +577,10 @@
 
         {#if $fileToDownload}
             <DownloadPopup />
+        {/if}
+
+        {#if $songToSeparate}
+            <StemSeparatePopup />
         {/if}
 
         {#if showWiki}
