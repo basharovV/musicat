@@ -108,6 +108,7 @@ mod cpal {
             playback_state_receiver: Arc<Mutex<Receiver<PlaybackState>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             device_change_receiver: Arc<Mutex<Receiver<String>>>,
+            device_disconnected_sender: Arc<Mutex<Sender<bool>>>,
             timestamp_sender: Arc<Mutex<Sender<f64>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             vol: Option<f64>,
@@ -174,6 +175,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    device_disconnected_sender,
                     timestamp_sender,
                     data_channel,
                     |packet, volume| ((packet as f64) * volume) as f32,
@@ -196,6 +198,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    device_disconnected_sender,
                     timestamp_sender,
                     data_channel,
                     |packet: i16, volume: f64| {
@@ -222,6 +225,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    device_disconnected_sender,
                     timestamp_sender,
                     data_channel,
                     |packet: u16, volume: f64| {
@@ -248,6 +252,7 @@ mod cpal {
                     playback_state_receiver,
                     reset_control_receiver,
                     device_change_receiver,
+                    device_disconnected_sender,
                     timestamp_sender,
                     data_channel,
                     |packet, volume| ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0)) as f32,
@@ -289,6 +294,7 @@ mod cpal {
             playback_state_receiver: Arc<Mutex<Receiver<PlaybackState>>>,
             reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
             device_change_receiver: Arc<Mutex<Receiver<String>>>,
+            device_disconnected_sender: Arc<Mutex<Sender<bool>>>,
             timestamp_sender: Arc<Mutex<Sender<f64>>>,
             data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
             volume_change: fn(T, f64) -> T,
@@ -312,7 +318,7 @@ mod cpal {
                     .config()
             };
 
-            let mut time_base = TimeBase {
+            let time_base = TimeBase {
                 numer: 1,
                 denom: config.sample_rate.0 * config.channels as u32,
             };
@@ -487,7 +493,7 @@ mod cpal {
                                 // Every 0.2 seconds
                                 if (current_frac - prev_frac_emit).abs() > 0.2 {
                                     let new_duration = Duration::from_secs_f64(
-                                        (next_duration as f64 + current_frac),
+                                        next_duration as f64 + current_frac,
                                     );
 
                                     let _ = app_handle
@@ -518,7 +524,21 @@ mod cpal {
                         data.iter_mut().for_each(|s| *s = T::MID);
                     }
                 },
-                move |err| error!("audio output error: {}", err),
+                move |err| {
+                    match err {
+                        cpal::StreamError::DeviceNotAvailable => {
+                            error!("audio output stream device not available: {}", err);
+                            if let Ok(guard) = device_disconnected_sender.try_lock() {
+                                info!("Sending device disconnected");
+                                guard.send(true).unwrap();
+                            }
+                        }
+                        _ => {
+                            error!("audio output stream error: {}", err);
+                            // TODO: Handle?
+                        }
+                    }
+                },
                 None,
             );
 
@@ -616,7 +636,11 @@ mod cpal {
             };
 
             // Write all samples to the ring buffer.
-            while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+            // info!("Writing samples: {}", samples.len());
+            while let Ok(Some(written)) = self
+                .ring_buf_producer
+                .write_blocking_timeout(samples, Duration::from_secs_f64(0.5))
+            {
                 samples = &samples[written..];
                 // Print written
                 // info!("written: {}", written);
@@ -670,7 +694,7 @@ mod cpal {
 
         fn update_resampler(
             &mut self,
-            mut spec: SignalSpec,
+            spec: SignalSpec,
             max_frames: u64,
             playback_speed: f64,
             is_reset: bool,
@@ -792,6 +816,7 @@ pub fn try_open(
     playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<PlaybackState>>>,
     reset_control_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
     device_change_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<String>>>,
+    device_disconnected_sender: Arc<tokio::sync::Mutex<std::sync::mpsc::Sender<bool>>>,
     timestamp_sender: Arc<tokio::sync::Mutex<std::sync::mpsc::Sender<f64>>>,
     data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
     vol: Option<f64>,
@@ -806,6 +831,7 @@ pub fn try_open(
         playback_state_receiver,
         reset_control_receiver,
         device_change_receiver,
+        device_disconnected_sender,
         timestamp_sender,
         data_channel,
         vol,

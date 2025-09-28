@@ -49,7 +49,7 @@ use crate::mediakeys;
 use crate::metadata::Song;
 use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState};
 use crate::store::load_settings;
-use crate::{dsp, GetWaveformRequest, GetWaveformResponse, SampleOffsetEvent, StreamFileRequest};
+use crate::{dsp, GetWaveformRequest, GetWaveformResponse, PlayFileRequest, SampleOffsetEvent};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LoopRegionRequest {
@@ -66,7 +66,7 @@ pub struct ChangeAudioDeviceRequest {
 
 #[derive(Debug)]
 pub enum PlayerControlEvent {
-    StreamFile(StreamFileRequest), // path, seekpos
+    StreamFile(PlayFileRequest), // path, seekpos
     LoopRegion(LoopRegionRequest),
     ChangeAudioDevice(ChangeAudioDeviceRequest),
     ChangePlaybackSpeed(PlaybackSpeedControlEvent),
@@ -149,8 +149,8 @@ pub struct AudioPlayer<'a> {
     pub cancel_tokens: Arc<Mutex<HashMap<String, CancellationToken>>>,
     pub player_control_receiver: Arc<Mutex<Receiver<PlayerControlEvent>>>,
     pub player_control_sender: Sender<PlayerControlEvent>,
-    pub next_track_receiver: Arc<Mutex<Receiver<StreamFileRequest>>>,
-    pub next_track_sender: Sender<StreamFileRequest>,
+    pub next_track_receiver: Arc<Mutex<Receiver<PlayFileRequest>>>,
+    pub next_track_sender: Sender<PlayFileRequest>,
     pub decoding_active: Arc<AtomicU32>,
     pub volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
     pub volume_control_sender: Sender<VolumeControlEvent>,
@@ -167,7 +167,7 @@ impl<'a> AudioPlayer<'a> {
         let (sender_tx, receiver_rx): (Sender<PlayerControlEvent>, Receiver<PlayerControlEvent>) =
             std::sync::mpsc::channel();
 
-        let (sender_next, receiver_next): (Sender<StreamFileRequest>, Receiver<StreamFileRequest>) =
+        let (sender_next, receiver_next): (Sender<PlayFileRequest>, Receiver<PlayFileRequest>) =
             std::sync::mpsc::channel();
 
         Ok(AudioPlayer {
@@ -393,7 +393,7 @@ pub fn start_audio(
     decoding_active: &Arc<AtomicU32>,
     volume_control_receiver: &Arc<Mutex<Receiver<VolumeControlEvent>>>,
     player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
-    next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
+    next_track_receiver: &Arc<Mutex<Receiver<PlayFileRequest>>>,
     data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
     app_handle: &AppHandle,
 ) {
@@ -422,7 +422,7 @@ pub fn start_audio(
 fn decode_loop(
     volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
     player_control_receiver: &Arc<Mutex<Receiver<PlayerControlEvent>>>,
-    next_track_receiver: &Arc<Mutex<Receiver<StreamFileRequest>>>,
+    next_track_receiver: &Arc<Mutex<Receiver<PlayFileRequest>>>,
     decoding_active: Arc<AtomicU32>,
     data_channel: Arc<Mutex<Option<Arc<RTCDataChannel>>>>,
     app_handle: &AppHandle,
@@ -455,6 +455,7 @@ fn decode_loop(
     let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
     let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
     let (device_change_sender, device_change_receiver) = std::sync::mpsc::channel();
+    let (device_disconnected_sender, device_disconnected_receiver) = std::sync::mpsc::channel();
     let (sender_sample_offset, receiver_sample_offset) = std::sync::mpsc::channel();
     let sample_offset_receiver = Arc::new(Mutex::new(receiver_sample_offset));
     let (timestamp_sender, timestamp_receiver) = std::sync::mpsc::channel();
@@ -462,6 +463,7 @@ fn decode_loop(
     let playback_state = Arc::new(Mutex::new(playback_state_receiver));
     let reset_control = Arc::new(Mutex::new(reset_control_receiver));
     let device_change = Arc::new(Mutex::new(device_change_receiver));
+    let device_disconnect_sender = Arc::new(Mutex::new(device_disconnected_sender));
 
     /* Devices are cached to avoid accessing current audio device during playback
     (which can cause an audible glitch when switching tracks automatically ie. gapless transition).
@@ -855,6 +857,7 @@ fn decode_loop(
                     playback_state.clone(),
                     reset_control.clone(),
                     device_change.clone(),
+                    device_disconnect_sender.clone(),
                     timestamp_send.clone(),
                     data_channel.clone(),
                     volume.clone(),
@@ -1004,6 +1007,24 @@ fn decode_loop(
                             // to restore the previous state
 
                             let mut should_resume = true;
+
+                            // If the device has been disconnected, reset to default
+                            let disconnected = device_disconnected_receiver.try_recv();
+                            if let Ok(result) = disconnected {
+                                if result {
+                                    info!(
+                                        "Device disconnected, resetting to default system output"
+                                    );
+                                    audio_device_name = None;
+                                    path_str.replace(path_str_clone.clone().unwrap());
+                                    guard.flush();
+                                    guard.pause();
+                                    seek.replace(timestamp); // Restore current seek position
+                                    is_reset = true;
+                                    is_transition = false;
+                                    should_resume = false;
+                                }
+                            }
 
                             if is_paused {
                                 let ctrl_event = receiver.try_recv();
