@@ -1,7 +1,14 @@
 <p align="center">
-<img height="140" src="src-tauri/icons/Square310x310Logo.png">
+  <img height="140" src="src-tauri/icons/Square310x310Logo.png">
 </p>
 <h1 align="center">Musicat</h1>
+
+<p align="center">
+  <a href="https://github.com/basharovV/musicat/actions"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/basharovV/musicat/build.yml?branch=main"></a>
+  <a href="https://github.com/basharovV/musicat/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/basharovV/musicat"></a>
+  <a href="https://github.com/basharovV/musicat/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/basharovV/musicat"></a>
+</p>
+
 <p align="center">
 <b>A sleek player for your local music library</b>
 <br/>
@@ -9,15 +16,13 @@
 <br/>
 <small>🎵 supports MP3, FLAC, WAV, AAC, OGG</small>
 <br/>
-<small>🔊 gapless playback (same sample rate only)</small>
-<br/>
-<small>🎛️ auto-switch device sample rate</small>
-<br/>
 <small>🔗 linked library, using original files on disk</small>
 <br/>
-<small>👀 auto-watch and re-scan folders</small>
+<small>🔊 gapless playback (same sample rate only)</small>
 <br/>
-<small>🏷 with metadata tagging support (read and write ID3v2, Vorbis)</small>
+<small>🏷 metadata tagger (read and write ID3v2, Vorbis)</small>
+<br/>
+<small>👀 auto-watch and re-scan folders</small>
 <br/>
 <small>🧠 smart playlists</small>
 <br/>
@@ -47,15 +52,8 @@
 
 ![screenshot](docs/musicat-aug-2024-promo.webp)
 
-> [!IMPORTANT]
-> I am temporarily pausing feature contributions for this repository while busy with another project. You can still create issues and PRs for bug fixes. I hope to be back working on this app soon. 🪕
-
-
 > [!WARNING]
 > musicat is currently in major version zero (0.x) active development, and features are being added regularly. Things may break or change at any time! Keep an eye out for new releases, report bugs and give feedback!
-
-> [!NOTE]
-> musicat has moved from WebAudio towards native playback in Rust, read more and discuss [here](https://github.com/basharovV/musicat/discussions/6)
 
 ## Introduction
 
@@ -69,76 +67,36 @@ Musicat also strives to be a meta-layer on top of your library. Features like Ma
 
 As a musician, I also wanted to organize my own music that I've made over the years, or tag bands that I've played in, and use the app as a way to build your own discography, as well as a knowledge base of new song ideas and lyrics. I created a prototype feature called "Artist's Toolkit" (enable in Settings) that captures this idea. It's half-baked at the moment, but it has already proven useful as a concept.
 
-
-## Features in progress
-There's a lot of things in my personal wishlist, but here are the things that I'm working on or thinking about currently: 
-
-🌐 **Internationalization**
-<small>&nbsp;&nbsp;&nbsp;●●●●●○○○○○</small>
-</br>
-<small>Once done, contributors can add new languages by adding a locale file eg. `src/i18n/it/index.ts`.</small>
-
-🎨 **Theme Support**
-<small>&nbsp;&nbsp;&nbsp;●●●●●●●●○○</small>
-</br>
-<small>[→ See built-in themes and discuss here](https://github.com/basharovV/musicat/discussions/15)</small>
-
-📖 **Knowledge/Wiki panel**
-<small>&nbsp;&nbsp;&nbsp;●●●○○○○○○○</small>
-</br>
-<small>A built-in Wikipedia reader for artists/albums/songs which makes interesting connections to your library.</small>
-
-📖 **Linux/Windows builds**
-<small>&nbsp;&nbsp;&nbsp;●○○○○○○○○○</small>
-</br>
-<small>via Tauri's Github action</small>
-
-📖 **Auto-updates**
-<small>&nbsp;&nbsp;&nbsp;○○○○○○○○○○</small>
-</br>
-<small>Need to see how to do this with Tauri and Github releases</small>
-
 ## Screenshots
 
-![screenshot](docs/albums.webp)
-![screenshot](docs/queue.jpg)
-![screenshot](docs/track-info.webp)
-![screenshot](docs/smart-query.webp)
-![screenshot](docs/map.jpg)
-![screenshot](docs/stats.jpg)
+<table>
+  <tr>
+    <td align="center"><p>Albums</p><img src="docs/albums.webp" width="320" alt="Albums"></td>
+    <td align="center"><p>Queue</p><img src="docs/queue.jpg" width="320" alt="Queue"></td>
+    <td align="center"><p>Track Info / Tagger</p><img src="docs/track-info.webp" width="320" alt="Track Info"></td>
+  </tr>
+  <tr>
+    <td align="center"><p>Smart Playlists</p><img src="docs/smart-query.webp" width="320" alt="Smart Query"></td>
+    <td align="center"><p>Map</p><img src="docs/map.jpg" width="320" alt="Map"></td>
+    <td align="center"><p>Stats</p><img src="docs/stats.jpg" width="320" alt="Stats"></td>
+  </tr>
+</table>
 
 ## Keyboard Shortcuts
 
--   <small><kbd>**`Cmd`**</kbd> + <kbd>**`F`**</kbd></small> : Search
--   <small><kbd>**`Up`**</kbd> / <kbd>**`Down`**</kbd></small> : Highlight next, prev track (also in metadata viewer/editor)
--   <small><kbd>**`ENTER`**</kbd></small> : Play highlighted track
--   <small><kbd>**`Shift`**</kbd> + <kbd>**`Click`**</kbd></small> : Highlight multiple tracks
--   <small><kbd>**`Space`**</kbd></small> : Play / pause
--   <small><kbd>**`I`**</kbd></small>: Show Info & Metadata
--   <small><kbd>**`Q`**</kbd></small>: Open the Queue
--   <small><kbd>**`A`**</kbd></small>: Go to Albums
--   <small><kbd>**`L`**</kbd></small>: Go to Library
+- <small><kbd>**`Cmd/Ctrl`**</kbd> + <kbd>**`F`**</kbd></small> : Search
+- <small><kbd>**`Up`**</kbd> / <kbd>**`Down`**</kbd></small> : Highlight next, prev track (also in metadata viewer/editor). <small><kbd>**`Shift`**</kbd> to multi-select
+- <small><kbd>**`ENTER`**</kbd></small> : Play highlighted track
+- <small><kbd>**`Shift`**</kbd> + <kbd>**`Click`**</kbd></small> : Highlight multiple tracks
+- <small><kbd>**`Space`**</kbd></small> : Play / pause
+- <small><kbd>**`I`**</kbd></small>: Show Info & Metadata
+- <small><kbd>**`Alt`**</kbd> + <kbd>**`Q`**</kbd></small>: Open the Queue
+- <small><kbd>**`Alt`**</kbd> + <kbd>**`A`**</kbd></small>: Go to Albums
+- <small><kbd>**`Alt`**</kbd> + <kbd>**`L`**</kbd></small>: Go to Library
+- <small><kbd>**`Cmd/Ctrl`**</kbd> + <kbd>**`L`**</kbd></small>: Open Lyrics
 
 `This app is built using Svelte + Tauri.`
 
 ## Running on Linux 🐧
 
 Musicat uses ALSA on Linux, install it if you don't already have it on your system:
-
-```
-sudo apt-get install libasound2-dev
-```
-
-## Build locally
-
-1. Set up the [Tauri](https://tauri.app/) framework and it's [prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites/) depending on your platform
-2. Run `npm install` (using Node version 18)
-3. You can then create a development build using `npm run tauri dev`.
-
-## Contributing
-
-Pull requests are very welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## License
-
-[GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
