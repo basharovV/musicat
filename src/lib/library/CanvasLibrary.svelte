@@ -90,6 +90,8 @@
     import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
     import audioPlayer from "../player/AudioPlayer";
+    import SongHighlighter from "./SongHighlighter.svelte";
+    import { isInputFocused } from "../../utils/ActiveElementUtils";
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder: String[];
@@ -153,7 +155,10 @@
                     }
 
                     // Putting this in a separate function to avoid the reactivity loop
-                    updateHighlights(status.songs, idx);
+                    if (idx === status.songs.length - 1) {
+                        // Run once on last song
+                        updateHighlights(status.songs, idx);
+                    }
 
                     return {
                         songs:
@@ -933,7 +938,11 @@
                 y -= viewportHeight / 2.3;
             }
             onScroll(null, null, y, false, true);
-            highlightSong(found, found.viewModel.index, false);
+            songHighlighter?.toggleHighlight(
+                found,
+                found.viewModel.index,
+                false,
+            );
         }
     }
 
@@ -980,7 +989,7 @@
 
     function onRightClick(e, song, idx) {
         if (!songsHighlighted.includes(song)) {
-            highlightSong(song, idx, false, false);
+            songHighlighter?.toggleHighlight(song, idx, false, false);
         }
 
         // console.log("songIdsHighlighted", songsHighlighted);
@@ -1016,138 +1025,27 @@
     $: {
         if (query?.length && $popupOpen !== "track-info") {
             if (songs?.length === 0) {
-                resetHighlight();
+                songHighlighter?.reset();
             } else {
-                highlightFirst();
+                songHighlighter?.highlightFirst();
             }
         }
     }
 
+    let songHighlighter: SongHighlighter;
     export let songsHighlighted: Song[] = [];
     export let onSongsHighlighted = null;
 
-    function isSongIdxHighlighted(songIdx: number) {
-        return songsHighlighted.find((s) => s?.viewModel?.index === songIdx);
-    }
-
-    function toggleHighlight(song, idx, isKeyboardArrows = false) {
-        if (!song) song = songs[0];
-        highlightedSongIdx = idx;
-        if (isSongIdxHighlighted(idx)) {
-            if (songsHighlighted.length) {
-                songsHighlighted = [];
-                highlightSong(song, idx, isKeyboardArrows);
-            } else {
-                unhighlightSong(song);
-            }
-        } else {
-            highlightSong(song, idx, isKeyboardArrows);
-        }
-    }
-
-    function highlightSong(
-        song: Song,
-        idx,
-        isKeyboardArrows: boolean,
-        isDefault = false,
-    ) {
-        // console.log("highlighted", song, idx, isKeyboardArrows, isDefault);
-        if (!isKeyboardArrows && isShiftPressed) {
-            if (rangeStartSongIdx === null) {
-                rangeStartSongIdx = idx;
-            } else {
-                rangeEndSongIdx = idx;
-                // Highlight all the songs in between
-
-                if (rangeEndSongIdx < rangeStartSongIdx) {
-                    let startIdx = rangeStartSongIdx;
-                    rangeStartSongIdx = rangeEndSongIdx;
-                    rangeEndSongIdx = startIdx;
-                }
-                songsHighlighted = songs.slice(
-                    rangeStartSongIdx,
-                    rangeEndSongIdx + 1,
-                );
-                rangeStartSongIdx = null;
-                rangeEndSongIdx = null;
-                $rightClickedTrack = null;
-                // console.log("highlighted2", songsHighlighted);
-            }
-        } else if (
-            (isKeyboardArrows && isShiftPressed) ||
-            hotkeys.isPressed(91)
-        ) {
-            songsHighlighted.push(song);
-            rangeStartSongIdx = idx;
-            $rightClickedTrack = null;
-        } else if (
-            isDefault &&
-            $popupOpen !== "track-info" &&
-            $rightClickedTracks?.length
-        ) {
-            songsHighlighted = $rightClickedTracks;
-        } else if (
-            isDefault &&
-            $popupOpen !== "track-info" &&
-            $rightClickedTrack
-        ) {
-            songsHighlighted = [$rightClickedTrack];
-        } else {
-            // Highlight single song, via a good old click
-            if (!isDefault) {
-                $shouldFocusFind = { target: "search", action: "unfocus" };
-            }
-            songsHighlighted = [song];
-            highlightedSongIdx = idx;
-            $rightClickedTracks = [];
-            $rightClickedTracks = $rightClickedTracks;
-            rangeStartSongIdx = idx;
-
-            // Extra - if the Info overlay is shown, use the arrows to replace the track shown in the overlay
-            if ($popupOpen === "track-info" && isKeyboardArrows) {
-                $rightClickedTrack = song;
-            }
-        }
-        // console.log("start", rangeStartSongIdx);
-
-        songsHighlighted = songsHighlighted;
-        onSongsHighlighted && onSongsHighlighted(songsHighlighted);
-    }
-
-    function unhighlightSong(song: Song) {
-        songsHighlighted.splice(songsHighlighted.indexOf(song), 1);
-        songsHighlighted = songsHighlighted;
-        onSongsHighlighted && onSongsHighlighted(songsHighlighted);
-    }
-
-    function resetHighlight() {
-        songsHighlighted = [];
-    }
-
-    function highlightFirst() {
-        // Only highlight first if previous highlight no longer exists after query update
-        if (
-            songsHighlighted.length === 0 ||
-            (songsHighlighted.length === 1 &&
-                !songs?.find((s) => s?.id === songsHighlighted[0]?.id)) ||
-            songsHighlighted.length > 1
-        ) {
-            highlightSong(songs[0], 0, false, true);
-        }
-    }
-
     function updateHighlights(songs: Song[], idx: number) {
         // Highlighted songs indexes might need to be updated
-        if (idx === songs.length - 1) {
-            if (songsHighlighted.length > 0) {
-                songsHighlighted = songsHighlighted.map((s) => {
-                    s.viewModel.index = songs?.find(
-                        (song) => song.id === s.id,
-                    )?.viewModel?.index;
-                    highlightedSongIdx = s.viewModel.index;
-                    return s;
-                });
-            }
+        if (songsHighlighted.length > 0) {
+            songsHighlighted = songsHighlighted.map((s) => {
+                s.viewModel.index = songs?.find(
+                    (song) => song.id === s.id,
+                )?.viewModel?.index;
+                highlightedSongIdx = s.viewModel.index;
+                return s;
+            });
         }
     }
 
@@ -1157,7 +1055,10 @@
         console.log("dragstart", idx);
         $arrowFocus = "library";
         // console.log("songshighlighted", songsHighlighted);
-        if (songsHighlighted.length > 1) {
+        if (
+            songsHighlighted.length > 1 &&
+            songHighlighter?.isSongIdxHighlighted(idx)
+        ) {
             setDraggedSongs(songsHighlighted, "Library");
         } else {
             setDraggedSongs([song], "Library");
@@ -1234,90 +1135,42 @@
     }
 
     // Shortcuts
-
-    hotkeys("esc", function (event, handler) {
-        if (
-            $popupOpen !== "track-info" &&
-            $singleKeyShortcutsEnabled &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
-        ) {
-            if (trackMenu.isOpen()) {
-                trackMenu.close();
-            } else {
-                songsHighlighted = [];
-            }
-        }
-    });
-
     function onKeyDown(event) {
+        // Allow ctrl/cmd+a to select all songs
         if (
             isOver &&
-            event.keyCode === 65 &&
+            event.code === "KeyA" &&
             (($os === "macos" && event.metaKey) || event.ctrlKey)
         ) {
             event.preventDefault();
-
-            songsHighlighted = [...songs];
+            songHighlighter?.highlightAll();
         }
 
         if ($arrowFocus !== "library") return;
 
-        if (event.keyCode === 16) {
-            isShiftPressed = true;
-            console.log("shift pressed");
-        } else if (
-            event.keyCode === 38 &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
-        ) {
-            event.preventDefault();
-            // up
-            if (highlightedSongIdx > 0) {
-                toggleHighlight(
-                    songs[highlightedSongIdx - 1],
-                    highlightedSongIdx - 1,
-                    true,
-                );
-            }
-        } else if (
-            event.keyCode === 40 &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
-        ) {
-            // down
-            event.preventDefault();
-            if (highlightedSongIdx < songs.length) {
-                toggleHighlight(
-                    songs[highlightedSongIdx + 1],
-                    highlightedSongIdx + 1,
-                    true,
-                );
-            }
-        } else if (
-            event.keyCode === 73 &&
+        if (
+            event.key === "Escape" &&
             $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
+            !isInputFocused()
+        ) {
+            if (trackMenu.isOpen()) {
+                trackMenu.close();
+            } else {
+                songHighlighter?.reset();
+            }
+        }
+        // Single key shortcuts
+        else if (
+            event.code === "KeyI" &&
+            $popupOpen !== "track-info" &&
+            $singleKeyShortcutsEnabled &&
+            !isInputFocused()
         ) {
             // 'i' for info popup
             event.preventDefault();
-            console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if ($popupOpen !== "track-info" && songsHighlighted.length) {
+            if (songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
@@ -1330,18 +1183,13 @@
                 $popupOpen = "track-info";
             }
         } else if (
-            event.keyCode === 84 &&
+            event.code === "KeyT" &&
             $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
+            !isInputFocused()
         ) {
             // 't' for tags/right-click menu
             event.preventDefault();
-            console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
             if (!trackMenu.isOpen && songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
@@ -1365,13 +1213,10 @@
                 );
             }
         } else if (
-            event.keyCode === 13 &&
+            event.key === "Enter" &&
             $popupOpen !== "track-info" &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
+            $singleKeyShortcutsEnabled &&
+            !isInputFocused()
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
@@ -1381,21 +1226,20 @@
             if (query?.length) {
                 $queueMirrorsSearch = true;
             }
+        } else {
+            // Let the song highlighter handle it
+            songHighlighter?.onKeyDown(event);
         }
     }
+
     function onKeyUp(event) {
-        if (event.keyCode === 16) {
-            isShiftPressed = false;
-            console.log("shift lifted");
-        }
+        songHighlighter?.onKeyUp(event);
     }
 
     addEventListener("keydown", onKeyDown);
     addEventListener("keyup", onKeyUp);
 
     onDestroy(() => {
-        hotkeys.unbind("ctrl");
-        hotkeys.unbind("cmd");
         hotkeys.unbind("esc");
         removeEventListener("keydown", onKeyDown);
         removeEventListener("keyup", onKeyUp);
@@ -1752,6 +1596,12 @@
     onResetOrder={resetColumnOrder}
     {isOrderChanged}
 />
+<SongHighlighter
+    bind:this={songHighlighter}
+    bind:songs
+    bind:songsHighlighted
+    bind:onSongsHighlighted
+/>
 
 <div
     class="library-container"
@@ -1858,9 +1708,11 @@
                                             on:click={(e) => {
                                                 // console.log("e", e);
                                                 if (e.detail.evt.button === 0) {
-                                                    toggleHighlight(
+                                                    songHighlighter?.toggleHighlight(
                                                         song,
                                                         song.viewModel.index,
+                                                        false,
+                                                        false,
                                                     );
                                                 } else if (
                                                     e.detail.evt.button === 2
@@ -1935,7 +1787,7 @@
                                                                 song?.id
                                                               ? PLAYING_BG_COLOR
                                                               : songsHighlighted &&
-                                                                  isSongIdxHighlighted(
+                                                                  songHighlighter?.isSongIdxHighlighted(
                                                                       idx,
                                                                   )
                                                                 ? HIGHLIGHT_BG_COLOR
@@ -2498,9 +2350,11 @@
                                             on:click={(e) => {
                                                 // console.log("e", e);
                                                 if (e.detail.evt.button === 0) {
-                                                    toggleHighlight(
+                                                    songHighlighter?.toggleHighlight(
                                                         song,
                                                         song.viewModel.index,
+                                                        false,
+                                                        false,
                                                     );
                                                 } else if (
                                                     e.detail.evt.button === 2
@@ -2537,7 +2391,7 @@
                                                         song.path
                                                             ? PLAYING_BG_COLOR
                                                             : songsHighlighted &&
-                                                                isSongIdxHighlighted(
+                                                                songHighlighter?.isSongIdxHighlighted(
                                                                     idx,
                                                                 )
                                                               ? HIGHLIGHT_BG_COLOR

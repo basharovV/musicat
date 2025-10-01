@@ -25,6 +25,8 @@
                 // evt.preventDefault();
                 onEnterPressed(evt);
             }
+        } else if (evt.code === "Space") {
+            evt.stopImmediatePropagation();
         } else if (evt.keyCode === 9) {
             // Tab
             if (autoCompleteValue?.length && autoCompleteValue !== value) {

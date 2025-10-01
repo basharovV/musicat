@@ -49,6 +49,8 @@
         updateQueues,
     } from "../../data/storeHelper";
     import QueueMenu from "../queue/QueueMenu.svelte";
+    import SongHighlighter from "../library/SongHighlighter.svelte";
+    import { isInputFocused } from "../../utils/ActiveElementUtils";
 
     export let autoWidth = false;
     export let dim = false;
@@ -495,20 +497,19 @@
 
     // LIBRARY FUNCTIONALITY
 
+    let songHighlighter: SongHighlighter;
+    let songsHighlighted: Song[] = [];
+    let onSongsHighlighted = null;
+
     let isMetaPressed = false;
     let isShiftPressed = false;
-    let rangeStartSongIdx = null;
-    let rangeEndSongIdx = null;
     let highlightedSongIdx = 0;
     let queueMenu: QueueMenu;
     let trackMenu: TrackMenu;
     let shouldProcessDrag = false;
 
-    let songsHighlighted: Song[] = [];
-    let onSongsHighlighted = null;
-
     $: if (songs?.length && $query?.length && $popupOpen !== "track-info") {
-        highlightSong(songs[0], 0, false, true);
+        songHighlighter?.toggleHighlight(songs[0], 0, false, true);
     }
 
     isShuffleEnabled.subscribe(() => {
@@ -521,7 +522,7 @@
 
     function onRightClick(e, song, idx) {
         if (!songsHighlighted.find((s) => s.viewModel.index === idx)) {
-            highlightSong(song, idx, false);
+            songHighlighter?.toggleHighlight(song, idx, false);
         }
 
         trackMenu.open(songsHighlighted, { x: e.clientX, y: e.clientY });
@@ -535,98 +536,28 @@
         return songsHighlighted.find((s) => s?.viewModel?.index === songIdx);
     }
 
-    function onMouseDownSong(song, idx, isKeyboardArrows = false) {
+    function onMouseDownSong(song, idx) {
         // Set arrow focus to the queue (library will ignore events)
         $arrowFocus = "queue";
-
         if (!song) song = songs[0];
         console.log("dragstart", idx);
 
         highlightedSongIdx = idx;
-        if (isSongIdxHighlighted(idx)) {
-            if (isMetaPressed) {
-                unhighlightSong(song);
-            } else if (isShiftPressed) {
-                shouldProcessDrag = true;
-            } else {
-                songsHighlighted = [];
-                highlightSong(song, idx, isKeyboardArrows);
-            }
-        } else {
-            highlightSong(song, idx, isKeyboardArrows);
-        }
 
-        if (!isKeyboardArrows && shouldProcessDrag) {
-            // console.log("songshighlighted", songsHighlighted);
+        songHighlighter?.toggleHighlight(song, idx, false);
+
+        // console.log("songshighlighted", songsHighlighted);
+        if (
+            songsHighlighted.length === 1 ||
+            (songsHighlighted.length > 1 &&
+                songHighlighter.isSongIdxHighlighted(idx))
+        ) {
             $draggedSongs =
                 songsHighlighted.length > 1 ? songsHighlighted : [song];
             $draggedSource = "Queue";
-        }
-    }
-
-    function highlightSong(
-        song: Song,
-        idx,
-        isKeyboardArrows: boolean,
-        isDefault = false,
-    ) {
-        console.log("highlighted", song, idx);
-        if (!isKeyboardArrows && isShiftPressed) {
-            if (rangeStartSongIdx === null) {
-                rangeStartSongIdx = idx;
-            } else {
-                rangeEndSongIdx = idx;
-                // Highlight all the songs in between
-
-                if (rangeEndSongIdx < rangeStartSongIdx) {
-                    let startIdx = rangeStartSongIdx;
-                    rangeStartSongIdx = rangeEndSongIdx;
-                    rangeEndSongIdx = startIdx;
-                }
-                songsHighlighted = songs.slice(
-                    rangeStartSongIdx,
-                    rangeEndSongIdx + 1,
-                );
-                rangeStartSongIdx = null;
-                rangeEndSongIdx = null;
-                $rightClickedTrack = null;
-                shouldProcessDrag = false;
-                // console.log("highlighted2", songsHighlighted);
-            }
-        } else if (
-            (isKeyboardArrows && isShiftPressed) ||
-            hotkeys.isPressed(91)
-        ) {
-            songsHighlighted.push(song);
-            rangeStartSongIdx = idx;
-            $rightClickedTrack = null;
-            shouldProcessDrag = false;
         } else {
-            // Highlight single song, via a good old click
-            if (!isDefault) {
-                $shouldFocusFind = { target: "search", action: "unfocus" };
-            }
-            songsHighlighted = [song];
-            highlightedSongIdx = idx;
-            $rightClickedTracks = [];
-            $rightClickedTracks = $rightClickedTracks;
-            rangeStartSongIdx = idx;
-            shouldProcessDrag = true;
-
-            // Extra - if the Info overlay is shown, use the arrows to replace the track shown in the overlay
-            if ($popupOpen === "track-info" && isKeyboardArrows) {
-                $rightClickedTrack = song;
-            }
+            $draggedSongs = [];
         }
-        // console.log("start", rangeStartSongIdx);
-
-        console.log("highlighted2", songsHighlighted);
-        onSongsHighlighted && onSongsHighlighted(songsHighlighted);
-    }
-
-    function unhighlightSong(song: Song) {
-        songsHighlighted.splice(songsHighlighted.indexOf(song), 1);
-        onSongsHighlighted && onSongsHighlighted(songsHighlighted);
     }
 
     // Something got released over the queue
@@ -656,7 +587,7 @@
 
     // Something got released over a song in the queue
     async function onMouseUpSong(song: Song, idx: number) {
-        if (!$draggedSongs?.length) {
+        if (!$draggedSongs?.length || idx === highlightedSongIdx) {
             return;
         }
 
@@ -759,66 +690,38 @@
     });
 
     function onKeyDown(event) {
+        if (event.key === "Shift") {
+            isShiftPressed = true;
+        } else if ($os !== "macos" && event.key === "Control") {
+            isMetaPressed = true;
+        } else if ($os === "macos" && event.key === "Meta") {
+            isMetaPressed = true;
+        }
+
+        // Allow ctrl/cmd+a to select all songs
+        if (
+            isOver &&
+            event.code === "KeyA" &&
+            (($os === "macos" && event.metaKey) || event.ctrlKey)
+        ) {
+            event.preventDefault();
+            songHighlighter?.highlightAll();
+        }
+
         if ($arrowFocus !== "queue") return;
 
-        if (event.keyCode === 16) {
-            isShiftPressed = true;
-            console.log("shift pressed");
-        } else if ($os !== "macos" && event.keyCode === 17) {
-            isMetaPressed = true;
-            console.log("ctrl pressed");
-        } else if ($os === "macos" && event.keyCode === 91) {
-            isMetaPressed = true;
-            console.log("cmd pressed");
-        } else if (
-            event.keyCode === 38 &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
-        ) {
-            event.preventDefault();
-            // up
-            if (highlightedSongIdx > 0) {
-                onMouseDownSong(
-                    queue[highlightedSongIdx - 1],
-                    highlightedSongIdx - 1,
-                    true,
-                );
-            }
-        } else if (
-            event.keyCode === 40 &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
-        ) {
-            // down
-            event.preventDefault();
-            if (highlightedSongIdx < songs.length) {
-                onMouseDownSong(
-                    songs[highlightedSongIdx + 1],
-                    highlightedSongIdx + 1,
-                    true,
-                );
-            }
-        } else if (
-            event.keyCode === 73 &&
+        console.log("Queue event!", event);
+        // Single key shortcuts
+        if (
+            event.code === "KeyI" &&
             $popupOpen !== "track-info" &&
             $singleKeyShortcutsEnabled &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
+            !isInputFocused()
         ) {
             // 'i' for info popup
             event.preventDefault();
-            console.log("active element", document.activeElement.tagName);
             // Check if there an input in focus currently
-            if ($popupOpen !== "track-info" && songsHighlighted.length) {
+            if (songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
                 if (songsHighlighted.length > 1) {
                     $rightClickedTracks = songsHighlighted;
@@ -831,31 +734,60 @@
                 $popupOpen = "track-info";
             }
         } else if (
-            event.keyCode === 13 &&
+            event.code === "KeyT" &&
             $popupOpen !== "track-info" &&
-            (document.activeElement.id === "search" ||
-                (document.activeElement.id !== "search" &&
-                    document.activeElement.tagName.toLowerCase() !==
-                        "input")) &&
-            document.activeElement.tagName.toLowerCase() !== "textarea"
+            $singleKeyShortcutsEnabled &&
+            !isInputFocused()
+        ) {
+            // 't' for tags/right-click menu
+            event.preventDefault();
+            // Check if there an input in focus currently
+            if (!trackMenu.isOpen && songsHighlighted.length) {
+                console.log("opening info", songsHighlighted);
+
+                const topTrack = songsHighlighted[0];
+                // Get the y position of the top track by calculating the offset using the index in the slice
+                const topTrackY =
+                    stage
+                        .findOne(
+                            `#${topTrack.viewModel?.viewId ?? topTrack.id}`,
+                        )
+                        .getAbsolutePosition().y +
+                    ROW_HEIGHT +
+                    HEADER_HEIGHT +
+                    10;
+                console.log("top track y", topTrackY);
+
+                trackMenu.open(
+                    songsHighlighted.length > 1 ? songsHighlighted : [topTrack],
+                    { x: 250, y: topTrackY },
+                );
+            }
+        } else if (
+            event.key === "Enter" &&
+            $popupOpen !== "track-info" &&
+            $singleKeyShortcutsEnabled &&
+            !isInputFocused()
         ) {
             // 'Enter' to play highlighted track
             event.preventDefault();
-            if ($popupOpen !== "track-info") {
-                setQueue($queriedSongs, highlightedSongIdx);
-            }
+            audioPlayer.shouldPlay = true;
+            setQueue($queriedSongs, highlightedSongIdx);
+        } else {
+            // Let the song highlighter handle it
+            songHighlighter?.onKeyDown(event);
         }
     }
+
     function onKeyUp(event) {
-        if (event.keyCode === 16) {
+        songHighlighter?.onKeyUp(event);
+
+        if (event.key === "Shift") {
             isShiftPressed = false;
-            console.log("shift lifted");
-        } else if (event.keyCode === 17) {
+        } else if ($os !== "macos" && event.key === "Control") {
             isMetaPressed = false;
-            console.log("ctrl lifted");
-        } else if (event.keyCode === 91) {
+        } else if ($os === "macos" && event.key === "Meta") {
             isMetaPressed = false;
-            console.log("cmd lifted");
         }
     }
 
@@ -863,9 +795,6 @@
     addEventListener("keyup", onKeyUp);
 
     onDestroy(() => {
-        hotkeys.unbind("ctrl");
-        hotkeys.unbind("cmd");
-        hotkeys.unbind("esc");
         removeEventListener("keydown", onKeyDown);
         removeEventListener("keyup", onKeyUp);
     });
@@ -927,6 +856,12 @@
     onUnselect={() => (songsHighlighted.length = 0)}
 />
 
+<SongHighlighter
+    bind:this={songHighlighter}
+    bind:songs
+    bind:songsHighlighted
+    bind:onSongsHighlighted
+/>
 <div
     class="library-container"
     class:dragover={isDraggingOver}

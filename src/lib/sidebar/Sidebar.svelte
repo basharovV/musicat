@@ -750,7 +750,7 @@
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
 
-    onMount(async () => {
+    onMount(() => {
         shouldFocusFind.subscribe((event) => {
             console.log("event", event);
             if (event?.target === "search") {
@@ -768,10 +768,12 @@
         });
 
         searchInput.onfocus = (evt) => {
+            console.log("focus");
             $singleKeyShortcutsEnabled = false;
             $isFindFocused = true;
         };
         searchInput.onblur = (evt) => {
+            console.log("blur");
             $singleKeyShortcutsEnabled = true;
             $isFindFocused = false;
         };
