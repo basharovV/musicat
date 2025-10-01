@@ -248,6 +248,7 @@ impl<'a> AudioPlayer<'a> {
         registry = register_default_interceptors(registry, &mut m)?;
 
         let mut s = SettingEngine::default();
+        s.set_ice_multicast_dns_mode(webrtc::ice::mdns::MulticastDnsMode::Disabled);
         s.set_include_loopback_candidate(true);
 
         // Create the API object with the MediaEngine
@@ -1134,6 +1135,10 @@ fn decode_loop(
                                     time: Time::from(seek.unwrap()),
                                     track_id: Some(track_id),
                                 };
+                                info!(
+                                    "Loop end point reached: {}, seeking to: {:?}",
+                                    packet.ts, seek
+                                );
                                 match reader
                                     .seek(symphonia::core::formats::SeekMode::Accurate, seek_to)
                                 {
