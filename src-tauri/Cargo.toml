@@ -24,7 +24,7 @@ base64 = "0.22.1"
 filetime = "0.2.25"
 chksum-md5 = "0.0.0"
 rayon = "1.10.0"
-reqwest = { version = "0.12", features = ["stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
 tokio = { version = "1", features = ["full"] }
 scraper = "0.20"
 http = "1.1.0"
@@ -32,7 +32,7 @@ http-range = "0.1.5"
 tauri-utils = "2.6.0"
 percent-encoding = "2.3.1"
 symphonia = { version = "0.5.4", features = ["aac", "flac", "isomp4", "mp3", "opt-simd"] }
-webrtc = "0.13.0"
+webrtc = "0.14.0"
 crc = { version = "3.2.1" }
 log = "0.4.22"
 bytes = "1.7.2"
