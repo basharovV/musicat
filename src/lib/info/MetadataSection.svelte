@@ -143,7 +143,10 @@
         }, {}) ?? {};
 
     $: hasChanges = !isEqual(data?.mappedMetadata, metadataFromFile);
-
+    // $: {
+    //     console.log("mappedMetadata", data.mappedMetadata);
+    //     console.log("fromFile", metadataFromFile);
+    // }
     const defaultTags = [
         "TrackTitle",
         "TrackArtist",
@@ -222,15 +225,6 @@
         metadata: MetadataEntry[],
         format: TagType,
     ): MetadataEntry[] {
-        // if (
-        //     ($rightClickedTrack || $rightClickedTracks[0]).fileInfo.codec ===
-        //     "WAV"
-        // ) {
-        //     isUnsupportedFormat = true;
-        //     return []; // UNSUPPORTED FORMAT, for now...
-        // }
-
-        console.log("adding defaults", metadata, format);
         if (!format) return [];
 
         isUnsupportedFormat = false;
@@ -338,8 +332,13 @@
     }
 
     async function onFieldUpdated(field: MetadataEntry, value: string) {
+        console.log("onFieldUpdated", field, value);
         // First update the value
-        field.value = value;
+        const existing = data.mappedMetadata.find((m) => m.id === field.id);
+        if (existing) {
+            existing.value = value || null;
+            data = data;
+        }
 
         let autoCompleteConfigForField = autoCompleteConfig[field.id];
         // Handle autocomplete
@@ -415,8 +414,11 @@
         }
     }
 
+    let differentTagTypes = false;
+
     export async function resetMetadata() {
         containsError = null;
+        differentTagTypes = false;
 
         // The fields to display
         let displayMetadata: MetadataEntry[] = [];
@@ -430,6 +432,7 @@
             // Check if every track has the same tag type.
             const tagTypes = mappedMetadata.map((s) => s.tagType);
             if (tagTypes.every((t) => t === tagTypes[0])) {
+                differentTagTypes = false;
                 tagType = tagTypes[0];
 
                 displayMetadata = mergeDefault(
@@ -438,6 +441,8 @@
                     ),
                     tagType,
                 );
+            } else {
+                differentTagTypes = true;
             }
         } else {
             const { mappedMetadata, tagType: tag } =
@@ -559,7 +564,11 @@
     <h5 class="section-title">
         <Icon icon="fe:music" size={30} />{$LL.trackInfo.metadata()}
     </h5>
-    {#if $rightClickedTrack || $rightClickedTracks[0]}
+    {#if differentTagTypes}
+        <p>
+            {$LL.trackInfo.differentTagTypes()}
+        </p>
+    {:else if $rightClickedTrack || $rightClickedTracks[0]}
         {#if isUnsupportedFormat}
             <p>
                 {$LL.trackInfo.unsupportedFormat()}
@@ -732,7 +741,7 @@
     form {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        column-gap: 3em;
+        column-gap: 2em;
 
         @media only screen and (max-width: 700px) {
             grid-template-columns: 1fr;
@@ -770,6 +779,9 @@
             margin: 1px 0;
             > .label {
                 width: fit-content;
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
                 margin: 0;
                 font-size: 13px;
                 font-weight: 500;

@@ -259,7 +259,8 @@
             metadata?.writeMetadata();
         }
     });
-    hotkeys("esc", "track-info", () => {
+    hotkeys("esc", "track-info", (event) => {
+        event.stopImmediatePropagation();
         onClose();
     });
 

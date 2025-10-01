@@ -174,6 +174,8 @@ const es = {
         },
         setTitleFromFileNameHint:
             "Haz clic para establecer título desde el nombre del archivo",
+        differentTagTypes:
+            "No se pueden editar metadatos de canciones con etiquetas de diferentes tipos",
     },
     settings: {
         title: "Configuración",

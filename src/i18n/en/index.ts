@@ -174,6 +174,8 @@ const en = {
             hint: "Select encoding...",
         },
         setTitleFromFileNameHint: "Click to set title from filename",
+        differentTagTypes:
+            "Metadata not supported when selecting songs with different tag types",
     },
     settings: {
         title: "Settings",

@@ -541,6 +541,10 @@ type RootTranslation = {
 		 * C​l​i​c​k​ ​t​o​ ​s​e​t​ ​t​i​t​l​e​ ​f​r​o​m​ ​f​i​l​e​n​a​m​e
 		 */
 		setTitleFromFileNameHint: string
+		/**
+		 * M​e​t​a​d​a​t​a​ ​n​o​t​ ​s​u​p​p​o​r​t​e​d​ ​w​h​e​n​ ​s​e​l​e​c​t​i​n​g​ ​s​o​n​g​s​ ​w​i​t​h​ ​d​i​f​f​e​r​e​n​t​ ​t​a​g​ ​t​y​p​e​s
+		 */
+		differentTagTypes: string
 	}
 	settings: {
 		/**
@@ -1403,6 +1407,10 @@ export type TranslationFunctions = {
 		 * Click to set title from filename
 		 */
 		setTitleFromFileNameHint: () => LocalizedString
+		/**
+		 * Metadata not supported when selecting songs with different tag types
+		 */
+		differentTagTypes: () => LocalizedString
 	}
 	settings: {
 		/**
