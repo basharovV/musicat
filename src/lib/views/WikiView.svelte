@@ -1,31 +1,30 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import type { Album, GetHTMLResponse, Song } from "../../App";
-    import wtf, { type Document } from "wtf_wikipedia";
+    import { onDestroy, onMount } from "svelte";
+    import { fade, fly } from "svelte/transition";
     import wtfHtml from "wtf-plugin-html";
-    import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import wtf from "wtf_wikipedia";
+    import type { Album, GetHTMLResponse, Song } from "../../App";
     import { getWikipediaUrlForArtist } from "../../data/WikipediaAPI";
+    import { db } from "../../data/db";
     import {
         current,
         isPlaying,
         isWikiOpen,
         wikiArtist,
     } from "../../data/store";
-    import { fade, fly } from "svelte/transition";
-    import Icon from "../ui/Icon.svelte";
-    import { onDestroy, onMount } from "svelte";
-    import { db } from "../../data/db";
+    import { setQueue } from "../../data/storeHelper";
+    import LL from "../../i18n/i18n-svelte";
     import audioPlayer from "../player/AudioPlayer";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import LL from "../../i18n/i18n-svelte";
-    import { setQueue } from "../../data/storeHelper";
+    import Icon from "../ui/Icon.svelte";
     import ScrollTo from "../ui/ScrollTo.svelte";
-    import { open } from "@tauri-apps/plugin-shell";
+    import ShadowGradient from "../ui/ShadowGradient.svelte";
 
     wtf.extend(wtfHtml);
 
     let wikiResult: GetHTMLResponse;
-    let wtfResult: Document;
+    let wtfResult: wtf.Document;
     let error;
     let previousArtist = null;
     let isLoading = false;
@@ -45,6 +44,7 @@
             console.log("result", wikiResult);
             error = null;
         } catch (err) {
+            console.error("Error fetching wikipedia", err);
             wikiResult = null;
             error = err;
         } finally {
