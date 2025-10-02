@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { open } from "@tauri-apps/plugin-shell";
+    import { openPath } from "@tauri-apps/plugin-opener";
     import type { PlaylistFile, SongOrder } from "../../App";
     import { parsePlaylist, writePlaylist } from "../../data/M3UUtils";
     import {
@@ -50,7 +50,7 @@
     }
 
     async function openPlaylistDir() {
-        await open(playlist.path.replace(playlist.title + ".m3u", ""));
+        await openPath(playlist.path.replace(playlist.title + ".m3u", ""));
     }
 </script>
 

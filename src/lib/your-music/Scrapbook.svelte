@@ -1,18 +1,21 @@
 <script lang="ts">
-    import md5 from "md5";
-    import { open } from "@tauri-apps/plugin-dialog";
-    import { open as openShell } from "@tauri-apps/plugin-shell";
     import { audioDir } from "@tauri-apps/api/path";
+    import { open } from "@tauri-apps/plugin-dialog";
     import { liveQuery } from "dexie";
-    import type {
-        ArtistContentItem,
-        ArtistFileItem,
-        ArtistLinkItem,
-        ContentItem,
-    } from "src/App";
+    import type { ArtistContentItem } from "src/App";
     import { db } from "../../data/db";
-    import { getContentFileType } from "../../utils/FileUtils";
 
+    import { copyFile } from "@tauri-apps/plugin-fs";
+    import { openPath } from "@tauri-apps/plugin-opener";
+    import hotkeys from "hotkeys-js";
+    import { onMount } from "svelte";
+    import { flip } from "svelte/animate";
+    import { quadInOut } from "svelte/easing";
+    import tippy from "tippy.js";
+    import {
+        addScrapbookFile,
+        scanScrapbook,
+    } from "../../data/ArtistsToolkitData";
     import {
         droppedFiles,
         fileDropHandler,
@@ -20,26 +23,16 @@
         popupOpen,
         userSettings,
     } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
+    import { getLinkItemWithData } from "../../utils/URLMetadata";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import Icon from "../ui/Icon.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuInput from "../ui/menu/MenuInput.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
     import FileBlock from "./FileBlock.svelte";
     import LinkBlock from "./LinkBlock.svelte";
-    import { onMount } from "svelte";
-    import Menu from "../ui/menu/Menu.svelte";
-    import MenuOption from "../ui/menu/MenuOption.svelte";
-    import { flip } from "svelte/animate";
-    import { quadInOut } from "svelte/easing";
-    import { getLinkItemWithData } from "../../utils/URLMetadata";
     import TagCloud from "./TagCloud.svelte";
-    import MenuInput from "../ui/menu/MenuInput.svelte";
-    import hotkeys from "hotkeys-js";
-    import Icon from "../ui/Icon.svelte";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { copyFile, readDir } from "@tauri-apps/plugin-fs";
-    import {
-        addScrapbookFile,
-        scanScrapbook,
-    } from "../../data/ArtistsToolkitData";
-    import LL from "../../i18n/i18n-svelte";
-    import tippy from "tippy.js";
 
     let contentTypes = [
         {
@@ -353,7 +346,7 @@
             <Icon
                 icon="material-symbols:folder"
                 onClick={() => {
-                    openShell($userSettings.scrapbookLocation);
+                    openPath($userSettings.scrapbookLocation);
                 }}
             ></Icon>
         </div>

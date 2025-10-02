@@ -1,20 +1,12 @@
 <script lang="ts">
+    import { openUrl } from "@tauri-apps/plugin-opener";
     import { onMount } from "svelte";
-    import type { IACollection, IAFile, IAItem } from "../../App";
+    import type { IACollection, IAItem } from "../../App";
     import {
         getIACollection,
         getIACollections,
         getIAItem,
     } from "../../data/InternetArchiveAPI";
-    import IaItemPlayer from "../internet-archive/IAItemPlayer.svelte";
-    import webAudioPlayer, {
-        currentItem,
-        currentSrc,
-        isIAPlaying,
-    } from "../player/WebAudioPlayer";
-    import Icon from "../ui/Icon.svelte";
-    import LoadingSpinner from "../ui/LoadingSpinner.svelte";
-    import IaFileBlock from "../internet-archive/IAFileBlock.svelte";
     import {
         currentIAFile,
         iaCollections,
@@ -23,9 +15,13 @@
         iaSelectedItem,
         webPlayerVolume,
     } from "../../data/store";
+    import IaFileBlock from "../internet-archive/IAFileBlock.svelte";
+    import IaItemPlayer from "../internet-archive/IAItemPlayer.svelte";
+    import webAudioPlayer, { isIAPlaying } from "../player/WebAudioPlayer";
+    import Icon from "../ui/Icon.svelte";
+    import LoadingSpinner from "../ui/LoadingSpinner.svelte";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
-    import { open } from "@tauri-apps/plugin-shell";
 
     let audios;
     let minWidth = 300;
@@ -110,7 +106,7 @@
     }
 
     async function openOnArchiveOrg() {
-        await open(`https://archive.org/details/${rightClickedItem.id}`);
+        await openUrl(`https://archive.org/details/${rightClickedItem.id}`);
         showMenu = false;
     }
 </script>

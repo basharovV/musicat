@@ -1,6 +1,6 @@
 <script lang="ts">
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-    import { open } from "@tauri-apps/plugin-shell";
+    import { openPath } from "@tauri-apps/plugin-opener";
     import type { ArtistFileItem, Song } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
@@ -21,13 +21,13 @@
                 },
             });
             if (!song) {
-                open(item.path);
+                openPath(item.path);
                 return;
             }
             setQueue([song], 0);
         } else {
             // Play in default system app
-            open(item.path);
+            openPath(item.path);
         }
     }
     function onDragStart(ev: DragEvent) {

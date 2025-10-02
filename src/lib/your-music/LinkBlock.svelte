@@ -1,14 +1,14 @@
 <script lang="ts">
+    import { openUrl } from "@tauri-apps/plugin-opener";
     import type { ArtistLinkItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
-    import { open } from "@tauri-apps/plugin-shell";
     import Icon from "../ui/Icon.svelte";
 
     export let item: ArtistLinkItem;
 
     export let style: "dashed" | "outline" = "dashed";
-    async function openUrl() {
-        open(item.url);
+    async function openExternalUrl() {
+        openUrl(item.url);
     }
 
     function onDragStart(ev: DragEvent) {
@@ -24,7 +24,7 @@
     class="item {style}"
     draggable="true"
     on:dragstart={onDragStart}
-    on:click={openUrl}
+    on:click={openExternalUrl}
 >
     <div class="container">
         {#if item.imageUrl}

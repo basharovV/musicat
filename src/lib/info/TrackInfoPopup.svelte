@@ -1,9 +1,6 @@
 <script lang="ts">
-    import { dirname, join, pictureDir } from "@tauri-apps/api/path";
+    import { basename, dirname } from "@tauri-apps/api/path";
     import { open } from "@tauri-apps/plugin-dialog";
-    import { open as fileOpen } from "@tauri-apps/plugin-shell";
-    import { basename } from "@tauri-apps/api/path";
-    import { remove as removeFile } from "@tauri-apps/plugin-fs";
 
     import hotkeys from "hotkeys-js";
     import type { Song } from "src/App";
@@ -31,13 +28,13 @@
     import Icon from "../ui/Icon.svelte";
 
     import { Image } from "@tauri-apps/api/image";
+    import { openPath } from "@tauri-apps/plugin-opener";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
-    import MetadataSection from "./MetadataSection.svelte";
-    import CountrySection from "./CountrySection.svelte";
-    import { searchArtworkOnBrave } from "../menu/search";
     import { clickOutside } from "../../utils/ClickOutside";
-    import { openPath } from "@tauri-apps/plugin-opener";
+    import { searchArtworkOnBrave } from "../menu/search";
+    import CountrySection from "./CountrySection.svelte";
+    import MetadataSection from "./MetadataSection.svelte";
 
     // The artwork for this track(s)
     let artworkBuffer: Buffer;

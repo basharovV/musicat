@@ -1,9 +1,8 @@
 <script lang="ts">
     import { pictureDir } from "@tauri-apps/api/path";
     import { open } from "@tauri-apps/plugin-dialog";
-    import { open as openShell } from "@tauri-apps/plugin-shell";
     import tippy from "tippy.js";
-    import type { ArtistProject, LookForArtResult } from "../../App";
+    import type { LookForArtResult } from "../../App";
     import {
         isScrapbookShown,
         popupOpen,
@@ -12,27 +11,26 @@
         userSettings,
     } from "../../data/store";
 
-    import { convertFileSrc } from "@tauri-apps/api/core";
+    import {
+        copyFile,
+        mkdir,
+        readDir,
+        remove,
+        rename,
+    } from "@tauri-apps/plugin-fs";
+    import { openPath } from "@tauri-apps/plugin-opener";
     import { onMount } from "svelte";
     import { loadArtistsFromSongbook } from "../../data/ArtistsToolkitData";
+    import { getArtistProfileImage } from "../../data/LibraryUtils";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
-    import Menu from "../ui/menu/Menu.svelte";
-    import MenuOption from "../ui/menu/MenuOption.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
-    import {
-        copyFile,
-        readDir,
-        remove,
-        rename,
-        mkdir,
-    } from "@tauri-apps/plugin-fs";
-    import { getArtistProfileImage } from "../../data/LibraryUtils";
-    import { createTippy, optionalTippy } from "../ui/TippyAction";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
 
     let currentArtistProfilePic: LookForArtResult;
 
@@ -380,7 +378,7 @@
                 icon="material-symbols:folder"
                 onClick={() => {
                     if ($userSettings.songbookLocation) {
-                        openShell($userSettings.songbookLocation);
+                        openPath($userSettings.songbookLocation);
                     } else {
                         $popupOpen = "settings";
                     }
