@@ -137,7 +137,6 @@ pub struct PlayFileRequest {
     seek: Option<f64>,
     file_info: Option<FileInfo>,
     volume: Option<f64>, // 0 to 1
-    output_device: Option<String>,
     boot: Option<bool>,
 }
 

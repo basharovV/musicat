@@ -501,7 +501,6 @@ fn decode_loop(
                         prev_seek = seek.unwrap_or(0.0);
                         seek.replace(request.seek.unwrap());
                         volume.replace(request.volume.unwrap());
-                        audio_device_name = request.output_device;
                     }
                     PlayerControlEvent::LoopRegion(request) => {
                         info!("audio: loop region! {:?}", request);

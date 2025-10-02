@@ -4,7 +4,6 @@ import { get } from "svelte/store";
 
 import { path } from "@tauri-apps/api";
 import { appConfigDir, appDataDir } from "@tauri-apps/api/path";
-import { open } from "@tauri-apps/plugin-shell";
 import { CACHE_DIR, deleteCacheDirectory } from "../data/Cacher";
 import { deleteDatabase, exportDatabase, importDatabase } from "../data/db";
 import { openTauriImportDialog } from "../data/LibraryUtils";
@@ -20,6 +19,7 @@ import {
 } from "../data/store";
 
 import toast from "svelte-french-toast";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 const appWindow = getCurrentWebviewWindow();
 
@@ -82,7 +82,7 @@ export function startMenuListener() {
                 try {
                     const dir = await appDataDir();
                     console.log("dir", dir);
-                    open(await path.join(dir, CACHE_DIR));
+                    openPath(await path.join(dir, CACHE_DIR));
                 } catch (err) {
                     console.error(err);
                 }
@@ -90,7 +90,7 @@ export function startMenuListener() {
             case "open-config":
                 try {
                     const dir = await appConfigDir();
-                    open(dir);
+                    openPath(dir);
                 } catch (err) {
                     console.error(err);
                 }
