@@ -353,6 +353,20 @@
         const tags = tracks.map((t) => t.tags).flat();
         return dedupe(tags).filter(Boolean);
     }
+    async function separateStems() {
+        try {
+            await invoke("separate_stems", {
+                event: {
+                    path: song.path,
+                },
+            });
+            $songToSeparate = song;
+        } catch (error) {
+            toast.error(error);
+            $songToSeparate = null;
+        }
+        close();
+    }
 </script>
 
 {#if showMenu}
@@ -372,18 +386,7 @@
             <MenuDivider />
             <MenuOption isDisabled={true} text="Stems (click to play)" />
             {#if stems.length === 0}
-                <MenuOption
-                    onClick={async () => {
-                        await invoke("separate_stems", {
-                            event: {
-                                path: song.path,
-                            },
-                        });
-                        $songToSeparate = song;
-                        close();
-                    }}
-                    text="Separate stems"
-                />
+                <MenuOption onClick={separateStems} text="Separate stems" />
             {:else}
                 {#each stems as stem}
                     <MenuOption

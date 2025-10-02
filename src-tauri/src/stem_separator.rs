@@ -111,6 +111,11 @@ pub async fn separate_stems(
     let model = models_dir.join(&model_name);
     if !model.exists() {
         log::error!("Model does not exist: {}", model.display());
+        return Err(format!(
+            "Model UVR-MDX-NET-Voc_FT.onnx does not exist in {:?}",
+            models_dir
+        )
+        .to_string());
     }
 
     let onnxruntime_path = lib.join("libonnxruntime.dylib");
@@ -119,6 +124,7 @@ pub async fn separate_stems(
             "libonnxruntime path does not exist: {}",
             onnxruntime_path.display()
         );
+        return Err(format!("libonnxruntime does not exist at {:?}", onnxruntime_path).to_string());
     }
     let sidecar_command = app_handle.shell().sidecar("pvr").unwrap().args([
         "--input-path",

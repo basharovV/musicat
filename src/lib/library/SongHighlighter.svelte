@@ -10,6 +10,7 @@
         shouldFocusFind,
     } from "../../data/store";
     import { isInputFocused } from "../../utils/ActiveElementUtils";
+    import { window as tauriWindow } from "@tauri-apps/api";
 
     /**
      * This class is used to highlight songs in the library
@@ -43,6 +44,12 @@
 
     let isShiftPressed = false;
     let isMetaPressed = false;
+    let currentWindow = tauriWindow.getCurrentWindow();
+
+    currentWindow.listen("tauri://blur", (evt) => {
+        isMetaPressed = false;
+        isShiftPressed = false;
+    });
 
     let previousKeyboardDirection: "up" | "down" | null = null;
 
