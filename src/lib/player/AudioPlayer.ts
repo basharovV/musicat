@@ -545,6 +545,9 @@ class AudioPlayer {
     }
 
     setNextUpSong() {
+        if (!this.currentSong) {
+            return;
+        }
         let repeat = get(repeatMode);
 
         switch (repeat) {
