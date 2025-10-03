@@ -1,3 +1,34 @@
+### 📦 0.14.0
+
+#### New
+
+- **Repeat button**. You can press the repeat button to toggle between no repeat / queue repeat / track repeat.
+- **Local stem separation (macOS)**. Track right-click -> Separate stems. Extract the vocal and instrumental track from any song using the same model used in [Ultimate Vocal Remover](https://github.com/Anjok07/ultimatevocalremovergui). Once completed, you can expand the track to view stems.
+
+    **Note**: this feature requires you to place the UVR model and ONNX runtime in your app config directory:
+
+    ```
+    models/
+        - UVR-MDX-NET-Voc_FT.onnx <-- UVR model
+    libonnxruntime.dylib <-- ONNX framework for running AI model
+    ```
+
+    You can find these files in the latest release. Place these in /Users/you/Library/Application Support/Musicat, and stem separation should work. I'll make this more user-friendly in the next release, but please try it out and give feedback. This feature is only available on macOS for now.
+
+#### Enhancements
+
+- **Bulk overwrite any tag**. When using the tagger in multi-select mode, tags with different values between tracks are now marked with "Multiple values". Click to edit this value and override for all selected tracks.
+- **Better song highlight**. Song highlight now works more predictably and consistently across library and queue. Shift + Keyboard arrows works for selection as well as deselection. Escape removes the selection. Navigating the library via keyboard and tagging now feels much better.
+- In the tagger, you can now use the Shift + Up/Down arrows to multi-select without closing the popup
+
+#### Fixes
+
+- Fix for Wiki panel not loading
+- Fixed audio device disconnected error eg. when unplugging headphones, app will switch to default system device.
+- Fixed right-click menu sometimes appearing slightly off screen
+- Fixed flickering on the song title marquee animation.
+- Fixed country dropdown selection closing the info popup.
+
 ### 📦 0.13.1
 
 #### Fixes
