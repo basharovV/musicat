@@ -120,6 +120,7 @@
                     let timeSinceAdded = s.dateAdded
                         ? timeSince(s.dateAdded)
                         : "";
+
                     if (s.viewModel) {
                         s.viewModel.index = idx;
                         s.viewModel.timeSinceAdded = timeSinceAdded;
@@ -1039,7 +1040,7 @@
     function updateHighlights(songs: Song[], idx: number) {
         // Highlighted songs indexes might need to be updated
         if (songsHighlighted.length > 0) {
-            songsHighlighted = songsHighlighted.map((s) => {
+            songsHighlighted = songsHighlighted.filter(Boolean).map((s) => {
                 s.viewModel.index = songs?.find(
                     (song) => song.id === s.id,
                 )?.viewModel?.index;

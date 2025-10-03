@@ -43,14 +43,6 @@
             .map((t) => t.trim());
     }
 
-    $: commaSeparatedFolders = $userSettings.foldersToWatch.join(",");
-
-    function onUpdateFolders() {
-        $userSettings.foldersToWatch = commaSeparatedFolders
-            .split(",")
-            .map((t) => t.trim());
-    }
-
     function onClose() {
         $popupOpen = null;
     }
@@ -82,7 +74,11 @@
             console.log("selected", selected);
 
             // Update the user settings
-            $userSettings[settingsKey] = selected;
+            if (Array.isArray($userSettings[settingsKey])) {
+                $userSettings[settingsKey].push(selected);
+            } else {
+                $userSettings[settingsKey] = [selected];
+            }
             $userSettings = $userSettings;
 
             // Optional additional action
@@ -96,8 +92,6 @@
             "foldersToWatch",
             audioDir,
             async (selected) => {
-                $userSettings.foldersToWatch.push(selected);
-                $userSettings = $userSettings;
                 await importPaths([selected], false);
             },
         );
@@ -124,8 +118,7 @@
     }
 
     function removeFolder(folder) {
-        $userSettings.foldersToWatch = commaSeparatedFolders
-            .split(",")
+        $userSettings.foldersToWatch = $userSettings.foldersToWatch
             .map((t) => t.trim())
             .filter((f) => f !== folder);
     }

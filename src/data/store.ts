@@ -467,10 +467,15 @@ async function init() {
     }
 
     // Get user settings
-    userSettings.set({
+    let updatedSettings = {
         ...defaultSettings,
         ...fileSettings,
-    });
+    };
+
+    if (typeof updatedSettings.foldersToWatch === "string") {
+        updatedSettings.foldersToWatch = [updatedSettings.foldersToWatch];
+    }
+    userSettings.set(updatedSettings);
 
     // Auto-persist settings
     userSettings.subscribe(async (val) => {
