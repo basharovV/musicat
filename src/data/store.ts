@@ -34,6 +34,7 @@ import type {
     UserSettings,
     WaveformPlayerState,
     RepeatMode,
+    LibraryColumn,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale, setLocale } from "../i18n/i18n-svelte";
@@ -506,27 +507,32 @@ export const streamInfo: Writable<StreamInfo> = writable({
     sampleIdx: 0,
 });
 
-let defaultColumnOrder = [
-    "title",
-    "artist",
-    "composer",
-    "album",
-    "trackNumber",
-    "year",
-    "genre",
-    "originCountry",
-    "duration",
-    "tags",
+let defaultColumnOrder: LibraryColumn[] = [
+    { fieldName: "title" },
+    { fieldName: "artist" },
+    { fieldName: "album" },
+    { fieldName: "trackNumber" },
+    { fieldName: "year" },
+    { fieldName: "genre" },
+    { fieldName: "duration" },
 ];
 
-export const columnOrder = persistentWritable(
+export const libraryColumns = persistentWritable(
     defaultColumnOrder,
     "columnOrder",
+    {
+        matchKey: "fieldName",
+        version: 1,
+    },
 );
 
-export const albumColumnOrder = persistentWritable(
+export const albumColumns = persistentWritable(
     defaultColumnOrder,
     "albumColumnOrder",
+    {
+        matchKey: "fieldName",
+        version: 1,
+    },
 );
 
 // Internet Archive

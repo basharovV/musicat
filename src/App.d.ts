@@ -1,3 +1,4 @@
+import { LocalizedString } from "typesafe-i18n";
 import type { UserQueryPart } from "./lib/smart-query/UserQueryPart";
 
 interface MetadataEntry {
@@ -460,3 +461,18 @@ interface Stem {
 }
 
 type RepeatMode = "none" | "queue" | "track";
+
+interface LibraryColumn {
+    fieldName: string;
+    width?: number; // autosize when null
+}
+
+interface ColumnViewModel {
+    name: LocalizedString;
+    value: string;
+    viewProps: {
+        x?: number;
+        width: number;
+        autoWidth: boolean;
+    };
+}

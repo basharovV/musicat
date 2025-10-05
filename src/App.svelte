@@ -85,21 +85,26 @@
 
     const appWindow = getCurrentWebviewWindow();
 
-    const savedLocale = (localStorage.getItem("locale") ||
-        navigator.languages.find((l) => !l.includes("-")) ||
-        "en") as Locales;
-    console.log("locale", savedLocale);
+    let localeLoaded = false;
 
-    register("en", () => import("./i18n/en"));
-    register("es", () => import("./i18n/es"));
+    function initLocale() {
+        const savedLocale = (localStorage.getItem("locale") ||
+            navigator.languages.find((l) => !l.includes("-")) ||
+            "en") as Locales;
+        console.log("locale", savedLocale);
 
-    init({
-        fallbackLocale: "en",
-        initialLocale: savedLocale,
-    });
+        register("en", () => import("./i18n/en"));
+        register("es", () => import("./i18n/es"));
 
-    loadLocale(savedLocale);
-    setLocale(savedLocale);
+        init({
+            fallbackLocale: "en",
+            initialLocale: savedLocale,
+        });
+
+        loadLocale(savedLocale);
+        setLocale(savedLocale);
+        localeLoaded = true;
+    }
 
     startMenuListener();
     startImportListener();
@@ -137,6 +142,7 @@
      * - Artist's toolkit view: Add to scrapbook or song project
      */
     onMount(async () => {
+        initLocale();
         appWindow.emit("opened");
         // File associations: check for opened urls on the window
         // @ts-expect-error
@@ -344,140 +350,129 @@
 </script>
 
 <svelte:window on:resize={debounce(onResize, 5)} />
-<ThemeWrapper>
-    <!-- <svelte:body on:click={onPageClick} /> -->
-    <Toaster />
+{#if localeLoaded}
+    <ThemeWrapper>
+        <!-- <svelte:body on:click={onPageClick} /> -->
+        <Toaster />
 
-    <CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
+        <CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
 
-    {#if $popupOpen === "settings"}
-        <div class="info">
-            <SettingsPopup />
-        </div>
-    {:else if $popupOpen === "info"}
-        <div class="info">
-            <InfoPopup onClickOutside={onCloseAppInfo} />
-        </div>
-    {:else if $popupOpen === "track-info"}
-        <div class="info">
-            <TrackInfoPopup />
-        </div>
-    {/if}
-
-    {#if showDropzone}
-        <Dropzone />
-    {/if}
-
-    <main
-        class:mini-player={$isMiniPlayer}
-        class:queue-view={!showMainPanel && showQueue}
-        class:split-view={isSplitView}
-        class:floating-sidebar={!showSidebar}
-        class:transparent={$os === "macos"}
-        class:compact={$isCompactView}
-        bind:this={container}
-    >
-        <div
-            class="sidebar"
-            class:visible={showSidebar || $isSidebarFloating}
-            class:floating={!showSidebar}
-        >
-            {#if showSidebar || $isSidebarFloating}
-                <Sidebar floating={$isSidebarFloating} />
-            {/if}
-        </div>
-
-        {#if $isSidebarFloating}
-            <div class="sidebar-collapse">
-                <Icon
-                    icon="tabler:layout-sidebar-left-collapse"
-                    size={22}
-                    onClick={() => {
-                        $isSidebarFloating = false;
-                    }}
-                />
+        {#if $popupOpen === "settings"}
+            <div class="info">
+                <SettingsPopup />
             </div>
-        {:else if !showSidebar}
-            <div class="sidebar-expand">
-                <Icon
-                    icon="tabler:layout-sidebar-left-expand"
-                    size={22}
-                    onClick={() => {
-                        if (
-                            !showMiniPlayer &&
-                            (innerWidth < 660 || innerHeight < 650)
-                        ) {
-                            $isSidebarFloating = true;
-                        } else {
-                            $isSidebarOpen = true;
-                        }
-                    }}
-                />
+        {:else if $popupOpen === "info"}
+            <div class="info">
+                <InfoPopup onClickOutside={onCloseAppInfo} />
+            </div>
+        {:else if $popupOpen === "track-info"}
+            <div class="info">
+                <TrackInfoPopup />
             </div>
         {/if}
 
-        <div class="queue" class:visible={showQueue}>
-            {#if showQueue}
-                <div
-                    class="queue-container"
-                    transition:fly={{
-                        duration: 200,
-                        x: -150,
-                        easing: cubicOut,
-                    }}
-                >
-                    <QueueView autoWidth={isQueueAutoWidth} />
+        {#if showDropzone}
+            <Dropzone />
+        {/if}
+
+        <main
+            class:mini-player={$isMiniPlayer}
+            class:queue-view={!showMainPanel && showQueue}
+            class:split-view={isSplitView}
+            class:floating-sidebar={!showSidebar}
+            class:transparent={$os === "macos"}
+            class:compact={$isCompactView}
+            bind:this={container}
+        >
+            <div
+                class="sidebar"
+                class:visible={showSidebar || $isSidebarFloating}
+                class:floating={!showSidebar}
+            >
+                {#if showSidebar || $isSidebarFloating}
+                    <Sidebar floating={$isSidebarFloating} />
+                {/if}
+            </div>
+
+            {#if $isSidebarFloating}
+                <div class="sidebar-collapse">
+                    <Icon
+                        icon="tabler:layout-sidebar-left-collapse"
+                        size={22}
+                        onClick={() => {
+                            $isSidebarFloating = false;
+                        }}
+                    />
+                </div>
+            {:else if !showSidebar}
+                <div class="sidebar-expand">
+                    <Icon
+                        icon="tabler:layout-sidebar-left-expand"
+                        size={22}
+                        onClick={() => {
+                            if (
+                                !showMiniPlayer &&
+                                (innerWidth < 660 || innerHeight < 650)
+                            ) {
+                                $isSidebarFloating = true;
+                            } else {
+                                $isSidebarOpen = true;
+                            }
+                        }}
+                    />
                 </div>
             {/if}
-        </div>
 
-        <div class="window-padding" data-tauri-drag-region>
-            {#if $isCompactView}
-                <TopNav />
-            {/if}
-        </div>
+            <div class="queue" class:visible={showQueue}>
+                {#if showQueue}
+                    <div
+                        class="queue-container"
+                        transition:fly={{
+                            duration: 200,
+                            x: -150,
+                            easing: cubicOut,
+                        }}
+                    >
+                        <QueueView autoWidth={isQueueAutoWidth} />
+                    </div>
+                {/if}
+            </div>
 
-        <div class="header">
-            {#if $uiView === "playlists"}
-                <div class="content" data-tauri-drag-region>
-                    {#if $selectedPlaylistFile}
-                        <PlaylistHeader
-                            playlist={$selectedPlaylistFile}
-                            bind:songOrder={$genericSongOrder}
-                        />
-                    {/if}
-                </div>
-            {:else if $uiView === "to-delete"}
-                <div class="content" data-tauri-drag-region>
-                    <ToDeleteHeader />
-                </div>
-            {:else if $uiView === "smart-query" || $uiView === "favourites"}
-                <div class="content" data-tauri-drag-region>
-                    {#await selectedQuery then query}
-                        <SmartPlaylistHeader selectedQuery={query} />
-                    {/await}
-                </div>
-            {:else if $uiView === "albums"}
-                <div class="content" data-tauri-drag-region>
-                    <AlbumsHeader />
-                </div>
-            {/if}
-        </div>
+            <div class="window-padding" data-tauri-drag-region>
+                {#if $isCompactView}
+                    <TopNav />
+                {/if}
+            </div>
 
-        <div class="subheader">
-            {#if $isTagCloudOpen}
-                <div
-                    class="content"
-                    transition:fly={{
-                        y: -10,
-                        duration: 200,
-                        easing: cubicInOut,
-                    }}
-                >
-                    <TagCloud />
-                </div>
-            {:else if $uiView.match(/^(smart-query)/)}
-                {#if $isSmartQueryBuilderOpen}
+            <div class="header">
+                {#if $uiView === "playlists"}
+                    <div class="content" data-tauri-drag-region>
+                        {#if $selectedPlaylistFile}
+                            <PlaylistHeader
+                                playlist={$selectedPlaylistFile}
+                                bind:songOrder={$genericSongOrder}
+                            />
+                        {/if}
+                    </div>
+                {:else if $uiView === "to-delete"}
+                    <div class="content" data-tauri-drag-region>
+                        <ToDeleteHeader />
+                    </div>
+                {:else if $uiView === "smart-query" || $uiView === "favourites"}
+                    <div class="content" data-tauri-drag-region>
+                        {#await selectedQuery then query}
+                            <SmartPlaylistHeader selectedQuery={query} />
+                        {/await}
+                    </div>
+                {:else if $uiView === "albums"}
+                    <div class="content" data-tauri-drag-region>
+                        <AlbumsHeader />
+                    </div>
+                {/if}
+            </div>
+
+            <div class="subheader">
+                {#if $isTagCloudOpen}
                     <div
                         class="content"
                         transition:fly={{
@@ -486,35 +481,81 @@
                             easing: cubicInOut,
                         }}
                     >
-                        <SmartQueryBuilder />
+                        <TagCloud />
                     </div>
+                {:else if $uiView.match(/^(smart-query)/)}
+                    {#if $isSmartQueryBuilderOpen}
+                        <div
+                            class="content"
+                            transition:fly={{
+                                y: -10,
+                                duration: 200,
+                                easing: cubicInOut,
+                            }}
+                        >
+                            <SmartQueryBuilder />
+                        </div>
+                    {/if}
                 {/if}
-            {/if}
-        </div>
+            </div>
 
-        {#if showMainPanel}
-            <div class="panel {$uiView}" class:compact={$isCompactView}>
-                {#if $uiView === "library" || $uiView === "favourites"}
-                    <CanvasLibraryView bind:songOrder={$librarySongOrder} />
-                {:else if $uiView === "playlists" || $uiView === "to-delete" || $uiView.startsWith("smart-query")}
-                    <CanvasLibraryView bind:songOrder={$genericSongOrder} />
-                {:else if $uiView === "albums"}
-                    <AlbumView />
-                {:else if $uiView === "your-music"}
-                    <ArtistsToolkitView />
-                {:else if $uiView === "map"}
-                    <MapView bind:songOrder={$librarySongOrder} />
-                {:else if $uiView === "analytics"}
-                    <AnalyticsView bind:songOrder={$librarySongOrder} />
-                {:else if $uiView === "internet-archive"}
-                    <InternetArchiveView />
-                {:else if $uiView === "prune"}
-                    <PrunePopup />
-                {:else if $uiView === "queue"}<QueueView autoWidth={true} />
-                {:else if $uiView === "wiki"}
+            {#if showMainPanel}
+                <div class="panel {$uiView}" class:compact={$isCompactView}>
+                    {#if $uiView === "library" || $uiView === "favourites"}
+                        <CanvasLibraryView bind:songOrder={$librarySongOrder} />
+                    {:else if $uiView === "playlists" || $uiView === "to-delete" || $uiView.startsWith("smart-query")}
+                        <CanvasLibraryView bind:songOrder={$genericSongOrder} />
+                    {:else if $uiView === "albums"}
+                        <AlbumView />
+                    {:else if $uiView === "your-music"}
+                        <ArtistsToolkitView />
+                    {:else if $uiView === "map"}
+                        <MapView bind:songOrder={$librarySongOrder} />
+                    {:else if $uiView === "analytics"}
+                        <AnalyticsView bind:songOrder={$librarySongOrder} />
+                    {:else if $uiView === "internet-archive"}
+                        <InternetArchiveView />
+                    {:else if $uiView === "prune"}
+                        <PrunePopup />
+                    {:else if $uiView === "queue"}<QueueView autoWidth={true} />
+                    {:else if $uiView === "wiki"}
+                        <div
+                            class="wiki-container"
+                            style={`width: 100%;overflow:hidden;`}
+                            transition:fly={{ duration: 200, x: -200 }}
+                        >
+                            {#if showCloseWikiPrompt}
+                                <div
+                                    class="close-wiki-prompt"
+                                    transition:blur={{ duration: 100 }}
+                                >
+                                    <h2>Close wiki</h2>
+                                </div>
+                            {/if}
+                            <WikiView />
+                        </div>
+                    {/if}
+                </div>
+            {/if}
+
+            {#if $isLyricsOpen}
+                <div class="lyrics" transition:fade={{ duration: 150 }}>
+                    <LyricsView right={$isWikiOpen ? wikiPanelSize + 15 : 0} />
+                </div>
+            {/if}
+            <div class="waveform">
+                <div transition:fly={{ duration: 200, y: 50 }}>
+                    {#if $isWaveformOpen}
+                        <NotesView />
+                    {/if}
+                </div>
+            </div>
+
+            <div class="wiki">
+                {#if showWiki}
                     <div
                         class="wiki-container"
-                        style={`width: 100%;overflow:hidden;`}
+                        style={`width: ${wikiPanelSize}px;`}
                         transition:fly={{ duration: 200, x: -200 }}
                     >
                         {#if showCloseWikiPrompt}
@@ -529,70 +570,37 @@
                     </div>
                 {/if}
             </div>
-        {/if}
 
-        {#if $isLyricsOpen}
-            <div class="lyrics" transition:fade={{ duration: 150 }}>
-                <LyricsView right={$isWikiOpen ? wikiPanelSize + 15 : 0} />
-            </div>
-        {/if}
-        <div class="waveform">
-            <div transition:fly={{ duration: 200, y: 50 }}>
-                {#if $isWaveformOpen}
-                    <NotesView />
+            <div class="bottom-bar" class:full-width={!showSidebar}>
+                {#if !showSidebar}
+                    <div class="top" in:fly={{ duration: 200, y: 30 }}>
+                        <TopBar />
+                    </div>
                 {/if}
+                <div class="bottom" in:fly={{ duration: 200, y: -30 }}>
+                    <BottomBar />
+                </div>
             </div>
-        </div>
 
-        <div class="wiki">
+            {#if $fileToDownload}
+                <DownloadPopup />
+            {/if}
+
+            {#if $songToSeparate}
+                <StemSeparatePopup />
+            {/if}
+
             {#if showWiki}
-                <div
-                    class="wiki-container"
-                    style={`width: ${wikiPanelSize}px;`}
-                    transition:fly={{ duration: 200, x: -200 }}
-                >
-                    {#if showCloseWikiPrompt}
-                        <div
-                            class="close-wiki-prompt"
-                            transition:blur={{ duration: 100 }}
-                        >
-                            <h2>Close wiki</h2>
-                        </div>
-                    {/if}
-                    <WikiView />
-                </div>
+                <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+                <resize-handle
+                    role="separator"
+                    on:mousedown={startResizeListener}
+                    class:resizing={isResizing}
+                />
             {/if}
-        </div>
-
-        <div class="bottom-bar" class:full-width={!showSidebar}>
-            {#if !showSidebar}
-                <div class="top" in:fly={{ duration: 200, y: 30 }}>
-                    <TopBar />
-                </div>
-            {/if}
-            <div class="bottom" in:fly={{ duration: 200, y: -30 }}>
-                <BottomBar />
-            </div>
-        </div>
-
-        {#if $fileToDownload}
-            <DownloadPopup />
-        {/if}
-
-        {#if $songToSeparate}
-            <StemSeparatePopup />
-        {/if}
-
-        {#if showWiki}
-            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-            <resize-handle
-                role="separator"
-                on:mousedown={startResizeListener}
-                class:resizing={isResizing}
-            />
-        {/if}
-    </main>
-</ThemeWrapper>
+        </main>
+    </ThemeWrapper>
+{/if}
 
 <style lang="scss">
     :global(html) {

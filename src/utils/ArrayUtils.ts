@@ -11,7 +11,7 @@ export const groupBy = function (xs, key) {
     return xs.reduce(function (rv, x) {
         if (rv[x[key]] === undefined) {
             rv[x[key]] = {
-                data: []
+                data: [],
             };
         }
         (rv[x[key]].data = rv[x[key]].data || []).push(x);
@@ -38,4 +38,51 @@ export function moveArrayElement(array, fromIndex, toIndex) {
 
 export function dedupe(array: string[]) {
     return [...new Set(array)];
+}
+
+/**
+ * Deeply merges two arrays of objects by a shared key.
+ * Nested fields from `base` are preserved unless overridden in `updates`.
+ *
+ * @param base - The original array of objects
+ * @param updates - The array with updated or new objects
+ * @param key - The property key to match on (e.g. 'id')
+ * @returns A new merged array
+ */
+export function mergeByKeyDeep<T extends Array<any>>(
+    base: T,
+    updates: T,
+    key: string,
+): T {
+    const updateMap = new Map(updates.map((item) => [item[key], item]));
+
+    const deepMerge = (target: any, source: any): any => {
+        if (Array.isArray(target) && Array.isArray(source)) {
+            return source; // replace arrays — could also merge if you prefer
+        } else if (isObject(target) && isObject(source)) {
+            const result: Record<string, any> = { ...target };
+            for (const [k, v] of Object.entries(source)) {
+                result[k] = k in target ? deepMerge(target[k], v) : v;
+            }
+            return result;
+        }
+        return source;
+    };
+
+    const isObject = (obj: any): obj is Record<string, any> =>
+        obj && typeof obj === "object" && !Array.isArray(obj);
+
+    const merged = base.map((item) => {
+        const updated = updateMap.get(item[key]);
+        return updated ? deepMerge(item, updated) : item;
+    });
+
+    // Include new items not present in base
+    for (const [k, v] of updateMap.entries()) {
+        if (!base.some((item) => item[key] === k)) {
+            merged.push(v);
+        }
+    }
+
+    return merged;
 }

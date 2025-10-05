@@ -6,8 +6,14 @@
     import { Layer as Lyr } from "konva/lib/Layer";
     import { Stage as Stg } from "konva/lib/Stage";
     import { Rect as Rct } from "konva/lib/shapes/Rect";
-    import { debounce } from "lodash-es";
-    import type { Query, Song, SongOrder } from "src/App";
+    import { cloneDeep, debounce } from "lodash-es";
+    import type {
+        ColumnViewModel,
+        LibraryColumn,
+        Query,
+        Song,
+        SongOrder,
+    } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import {
         Group,
@@ -20,6 +26,7 @@
         Tag,
         Text,
         type KonvaDragTransformEvent,
+        type KonvaMouseEvent,
     } from "svelte-konva";
     import { db } from "../../data/db";
 
@@ -92,9 +99,10 @@
     import audioPlayer from "../player/AudioPlayer";
     import SongHighlighter from "./SongHighlighter.svelte";
     import { isInputFocused } from "../../utils/ActiveElementUtils";
+    import type { PersistentWritable } from "../../data/storeUtils";
 
     export let allSongs: Observable<Song[]> = null;
-    export let columnOrder: String[];
+    export let columnOrder: PersistentWritable<LibraryColumn[]>;
     export let dim = false;
     export let isInit = true;
     export let isLoading = false;
@@ -180,64 +188,52 @@
                 },
             )?.songs ?? [];
 
-    const DEFAULT_FIELDS = [
+    const ALL_FIELDS: ColumnViewModel[] = [
         {
             name: $LL.library.fields.title(),
             value: "title",
-            show: true,
             viewProps: {
-                width: 0,
-                x: 0,
+                width: 100,
                 autoWidth: true,
             },
         },
         {
             name: $LL.library.fields.artist(),
             value: "artist",
-            show: true,
             viewProps: {
-                width: 0,
-                x: 0,
+                width: 100,
                 autoWidth: true,
             },
         },
         {
             name: $LL.library.fields.composer(),
             value: "composer",
-            show: false,
             viewProps: {
-                width: 0,
-                x: 0,
+                width: 100,
                 autoWidth: true,
             },
         },
         {
             name: $LL.library.fields.album(),
             value: "album",
-            show: true,
             viewProps: {
-                width: 0,
-                x: 0,
+                width: 100,
                 autoWidth: true,
             },
         },
         {
             name: $LL.library.fields.albumArtist(),
             value: "albumArtist",
-            show: true,
             viewProps: {
-                width: 0,
-                x: 0,
+                width: 100,
                 autoWidth: true,
             },
         },
         {
             name: $LL.library.fields.track(),
             value: "trackNumber",
-            show: true,
             viewProps: {
                 width: 63,
-                x: 0,
                 autoWidth: false,
             },
         },
@@ -245,76 +241,60 @@
             name: $LL.library.fields.dateAdded(),
             value: "dateAdded",
             displayValue: "viewModel.timeSinceAdded",
-            show: true,
             viewProps: {
                 width: 100,
-                x: 0,
                 autoWidth: false,
             },
         },
         {
             name: $LL.library.fields.compilation(),
             value: "compilation",
-            show: true,
             viewProps: {
                 width: 63,
-                x: 0,
                 autoWidth: false,
             },
         },
         {
             name: $LL.library.fields.year(),
             value: "year",
-            show: true,
             viewProps: {
                 width: 63,
-                x: 0,
                 autoWidth: false,
             },
         },
         {
             name: $LL.library.fields.genre(),
             value: "genre",
-            show: true,
             viewProps: {
                 width: 100,
-                x: 0,
                 autoWidth: false,
             },
         },
         {
             name: $LL.library.fields.origin(),
             value: "originCountry",
-            show: false,
             viewProps: {
-                width: 0,
-                x: 0,
-                autoWidth: true,
+                width: 100,
+                autoWidth: false,
             },
         },
         {
             name: $LL.library.fields.duration(),
             value: "duration",
-            show: true,
             viewProps: {
                 width: 63,
-                x: 0,
                 autoWidth: false,
             },
         },
         {
             name: $LL.library.fields.tags(),
             value: "tags",
-            show: false,
             viewProps: {
-                width: 0,
-                x: 0,
-                autoWidth: true,
+                width: 100,
+                autoWidth: false,
             },
         },
     ];
-
-    export let fields = DEFAULT_FIELDS;
 
     let hoveredColumnIdx = null;
     let hoveredSongIdx = null; // Index is slice-specific
@@ -323,15 +303,14 @@
     let hoveredField = null;
     let hoveredTag = null;
     $: isOrderChanged =
-        JSON.stringify(columnOrder) !==
-        JSON.stringify(DEFAULT_FIELDS.map((f) => f.value));
+        JSON.stringify($columnOrder.map((c) => c.fieldName)) !==
+        JSON.stringify(displayFields.map((f) => f.value));
 
     let showColumnPicker = false;
     let columnPickerIndex;
     let columnPickerPos;
 
-    $: displayFields = fields.filter((f) => f.show);
-    $: numColumns = fields.filter((f) => f.show).length;
+    let displayFields = [];
 
     let songsSlice: Song[];
     let songsIdxSlice: number[];
@@ -391,6 +370,7 @@
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
     const TAG_PADDING = 10;
     const TAG_MARGIN = 5;
+    const RESIZE_HANDLE_WIDTH = 5; // half on each column edge
 
     // PLATFORM SPECIFIC
     const WINDOW_CONTROLS_WIDTH = 70;
@@ -416,6 +396,7 @@
     let CLICKABLE_CELL_BG_COLOR_HOVERED: string;
     let DRAGGING_SOURCE_COLOR: string;
     let COLUMN_DIVIDER_COLOR: string;
+    let COLUMN_RESIZE_DIVIDER_COLOR: string;
 
     const SCROLLING_PIXEL_RATIO = 1.3;
     const IDLE_PIXEL_RATIO = 1.8;
@@ -461,19 +442,6 @@
 
     let prevSongCount = 0;
 
-    $: counts = liveQuery(() => {
-        return db.transaction("r", db.songs, async () => {
-            const artists = await (
-                await db.songs.orderBy("artist").uniqueKeys()
-            ).length;
-            const albums = await (
-                await db.songs.orderBy("album").uniqueKeys()
-            ).length;
-            const songs = await $allSongs.length;
-            return { songs, artists, albums };
-        });
-    });
-
     $: noSongs =
         !songs ||
         songs.length === 0 ||
@@ -513,6 +481,7 @@
             $currentThemeObject["library-clickable-cell-hover-bg"];
         DRAGGING_SOURCE_COLOR = "#8a69683e";
         COLUMN_DIVIDER_COLOR = $currentThemeObject["library-column-divider"];
+        COLUMN_RESIZE_DIVIDER_COLOR = $currentThemeObject["accent-secondary"];
     }
 
     let isRestoringScrollPos = false;
@@ -545,12 +514,15 @@
     } else if ($uiView.match(/^(playlists|to-delete)/)) {
         onScroll(null, 0, null, false, true);
         ready = true;
+        isInit = false;
     } else if ($uiView.match(/^(smart-query|favourites)/)) {
         onScroll(null, 0, null, false, true);
         ready = true;
+        isInit = false;
     } else if ($uiView.match(/^(albums)/)) {
         onScroll(null, 0, null, false, true);
         ready = true;
+        isInit = false;
     }
 
     function drawSongDataGrid(isResize: boolean = false) {
@@ -605,13 +577,36 @@
         }
     }
 
-    function calculateColumns() {
+    function calculateColumns(saveWidths: boolean = false) {
+        if (width === 0) return;
+
         let runningX = 0;
         let previousWidth = 0;
 
-        const sortedFields = columnOrder.map((c) =>
-            fields.find((f) => f.value === c),
-        );
+        if (displayFields?.length === 0) {
+            console.log("Resetting display fields");
+            displayFields = cloneDeep(getAllColumns());
+        }
+
+        const sortedFields = $columnOrder.map((c) => {
+            const field = displayFields.find((f) => f.value === c.fieldName);
+            const cloned = { ...field };
+            // Restore user saved width
+            if (isInit && cloned && c.width) {
+                cloned.viewProps.autoWidth = false;
+                cloned.viewProps.width = c.width;
+            }
+            return cloned;
+        });
+
+        // By default, the library fits the columns automatically
+        // Until you manually resize, in which case we ignore the default sizes going forward
+        // and save the new widths to the column config
+        let shouldUseAutoWidth = $columnOrder.every((c) => !c.width);
+
+        // console.log("shouldUseAutoWidth", shouldUseAutoWidth);
+        // console.log("displayFields", displayFields);
+        // console.log("sortedFields", sortedFields);
 
         /* Playlists show an additional file order column */
         if ($uiView === "playlists") {
@@ -620,7 +615,6 @@
                 value: "none",
                 displayValue: "viewModel.index",
                 operation: "+1",
-                show: true,
                 viewProps: {
                     width: 50,
                     x: 0,
@@ -629,64 +623,60 @@
             });
         }
 
-        // Fields visible depending on window width
-        const visibleFields = sortedFields.filter((f) => {
-            switch (f.value) {
-                case "duration":
-                    return width > 800;
-                case "genre":
-                    return width > 700;
-                case "year":
-                    return width > 650;
-                case "trackNumber":
-                    return width > 500;
-                case "artist":
-                    return width > 300;
-                case "album":
-                    return width > 450;
-                case "albumArtist":
-                    return width > 450;
-                case "composer":
-                    return width > 650;
-                case "originCountry":
-                    return width > 650;
-                case "dateAdded":
-                    return width > 650;
-                case "tags":
-                    return width > 650;
-                default:
-                    return true;
+        let autoWidth = null;
+        if (shouldUseAutoWidth) {
+            // Calculate total width of fixed-width rectangles
+            const fixedWidths = sortedFields
+                .filter((f) => !f.viewProps.autoWidth)
+                .map((f) => f.viewProps.width);
+
+            const totalFixedWidth = fixedWidths.reduce(
+                (total, width) => total + width,
+                0,
+            );
+            // console.log("size: width", width);
+            // console.log("size: fixedWidths", fixedWidths);
+            // console.log("size: totalFixedWidth", totalFixedWidth);
+            // Calculate total available width for 'auto' size rectangles
+            let availableWidth = width - totalFixedWidth;
+            if (availableWidth < 0) {
+                availableWidth = 0;
+                shouldUseAutoWidth = false;
             }
-        });
+            // console.log("size: totalAvailableWidth", availableWidth);
+            // console.log(
+            //     "size: columns to auto",
+            //     sortedFields.length - fixedWidths.length,
+            // );
+            // Calculate the width for each 'auto' size rectangle
+            console.log(sortedFields.length);
+            autoWidth =
+                availableWidth / (sortedFields.length - fixedWidths.length);
+        }
 
-        // Calculate total width of fixed-width rectangles
-        const fixedWidths = visibleFields
-            .filter((f) => !f.viewProps.autoWidth)
-            .map((f) => f.viewProps.width);
-        const totalFixedWidth = fixedWidths.reduce(
-            (total, width) => total + width,
-            0,
-        );
-        // console.log("width", width, "totalFixedWidth", totalFixedWidth);
-        // Calculate available width for 'auto' size rectangles
-        const availableWidth = width - totalFixedWidth;
-        // console.log("availableWidth", availableWidth);
-        // Calculate the width for each 'auto' size rectangle
-        const autoWidth =
-            availableWidth / (visibleFields.length - fixedWidths.length);
-
+        // console.log("autowidth: ", autoWidth);
         // Final display fields
         displayFields = [
-            ...visibleFields.map((f) => {
-                const rectWidth = f.viewProps.autoWidth
-                    ? autoWidth
-                    : f.viewProps.width;
+            ...sortedFields.map((f) => {
+                const rectWidth =
+                    shouldUseAutoWidth && f.viewProps.autoWidth
+                        ? autoWidth
+                        : f.viewProps.width;
                 f.viewProps.x = runningX += previousWidth;
                 f.viewProps.width = rectWidth;
                 previousWidth = f.viewProps.width;
                 return f;
             }),
         ];
+
+        // Optionally, save the widths
+        if (saveWidths) {
+            $columnOrder = displayFields.map((f) => ({
+                fieldName: f.value,
+                width: f.viewProps.width,
+            }));
+        }
+
         printInfo();
     }
 
@@ -1240,13 +1230,6 @@
     addEventListener("keydown", onKeyDown);
     addEventListener("keyup", onKeyUp);
 
-    onDestroy(() => {
-        hotkeys.unbind("esc");
-        removeEventListener("keydown", onKeyDown);
-        removeEventListener("keyup", onKeyUp);
-        $expandedSongWithStems = null;
-    });
-
     // COLUMNS
 
     function updateOrderBy(newOrderBy) {
@@ -1263,7 +1246,7 @@
     // Re-order columns
 
     $: {
-        displayFields && columnOrder && calculateColumns();
+        displayFields && $columnOrder && calculateColumns();
     }
 
     let dropColumnIdx = null;
@@ -1335,7 +1318,7 @@
     }
 
     function onGroupClick(ev, field) {
-        if (ev.detail.evt.button === 0) {
+        if (ev.detail.evt.button === 0 && resizingColumnIdx === null) {
             updateOrderBy(field.value);
         } else if (ev.detail.evt.button === 2) {
             if ($uiView === "albums") {
@@ -1346,7 +1329,7 @@
 
                 columnPickerPos = {
                     x: ev.detail.evt.clientX - rect.left,
-                    y: ev.detail.evt.clientY - rect.top + 300,
+                    y: ev.detail.evt.clientY - rect.top,
                 };
             } else {
                 columnPickerPos = {
@@ -1378,14 +1361,14 @@
 
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const columnOrderOldIdx = columnOrder.findIndex(
-            (c) => c === oldIdxField.value,
+        const columnOrderOldIdx = $columnOrder.findIndex(
+            (c) => c.fieldName === oldIdxField.value,
         );
-        const columnOrderNewIdx = columnOrder.findIndex(
-            (c) => c === newIdxField.value,
+        const columnOrderNewIdx = $columnOrder.findIndex(
+            (c) => c.fieldName === newIdxField.value,
         );
-        columnOrder = moveArrayElement(
-            columnOrder,
+        $columnOrder = moveArrayElement(
+            $columnOrder,
             columnOrderOldIdx,
             columnOrderNewIdx,
         );
@@ -1397,15 +1380,15 @@
     function swapColumns(oldIndex, newIndex) {
         const oldIdxField = displayFields[oldIndex];
         const newIdxField = displayFields[newIndex];
-        const columnOrderOldIdx = columnOrder.findIndex(
-            (c) => c === oldIdxField.value,
+        const columnOrderOldIdx = $columnOrder.findIndex(
+            (c) => c.fieldName === oldIdxField.value,
         );
-        const columnOrderNewIdx = columnOrder.findIndex(
-            (c) => c === newIdxField.value,
+        const columnOrderNewIdx = $columnOrder.findIndex(
+            (c) => c.fieldName === newIdxField.value,
         );
         console.log("swap column", columnOrderOldIdx, columnOrderNewIdx);
-        columnOrder = swapArrayElements(
-            columnOrder,
+        $columnOrder = swapArrayElements(
+            $columnOrder,
             columnOrderOldIdx,
             columnOrderNewIdx,
         );
@@ -1416,8 +1399,64 @@
 
     // Sets back to default
     function resetColumnOrder() {
-        fields = DEFAULT_FIELDS;
-        columnOrder = DEFAULT_FIELDS.map((f) => f.value);
+        displayFields = [];
+        columnOrder.reset();
+    }
+
+    // Resize columns
+    let resizingColumnIdx = null;
+    let resizeStartX = 0;
+    let resizeStartWidth = 0;
+
+    function onColumnResize(e) {
+        if (resizingColumnIdx !== null) {
+            const deltaX = e.clientX - resizeStartX;
+            const newWidth = Math.max(50, resizeStartWidth + deltaX); // Min width 50px
+
+            const field = displayFields[resizingColumnIdx];
+            field.viewProps.width = newWidth;
+            field.viewProps.autoWidth = false; // Lock the width
+            calculateColumns(true);
+        }
+    }
+
+    function onColumnResizeStop() {
+        if (resizingColumnIdx !== null) {
+            resizingColumnIdx = null;
+            if (stage) {
+                stage.container().style.cursor = "default";
+            }
+        }
+        removeEventListener("mousemove", onColumnResize);
+        removeEventListener("mouseup", onColumnResizeStop);
+    }
+
+    function onColumnMouseDown(
+        ev: KonvaMouseEvent,
+        f: ColumnViewModel,
+        idx: number,
+    ) {
+        const mouseX = ev.detail.evt.offsetX - f.viewProps.x;
+        const isInResizeZoneRightEdge =
+            mouseX > f.viewProps.width - RESIZE_HANDLE_WIDTH / 2;
+        const isInResizeZoneLeftEdge = mouseX < RESIZE_HANDLE_WIDTH / 2;
+        if (
+            idx > 0 &&
+            (isInResizeZoneRightEdge || isInResizeZoneLeftEdge) &&
+            ev.detail.evt.button === 0
+        ) {
+            ev.detail.evt.cancelBubble = true;
+            resizingColumnIdx = isInResizeZoneRightEdge ? idx : idx - 1;
+            resizeStartX = ev.detail.evt.clientX;
+            resizeStartWidth = isInResizeZoneRightEdge
+                ? f.viewProps.width
+                : displayFields[idx - 1].viewProps.width;
+
+            addEventListener("mousemove", onColumnResize);
+            addEventListener("mouseup", onColumnResizeStop);
+        } else {
+            resizingColumnIdx = null;
+        }
     }
 
     // SMART QUERY
@@ -1579,6 +1618,13 @@
     }
 
     let expandChevronHoverSongId = null;
+
+    onDestroy(() => {
+        hotkeys.unbind("esc");
+        removeEventListener("keydown", onKeyDown);
+        removeEventListener("keyup", onKeyUp);
+        $expandedSongWithStems = null;
+    });
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1591,9 +1637,9 @@
 <ColumnPicker
     bind:showMenu={showColumnPicker}
     bind:pos={columnPickerPos}
-    bind:fields
+    allColumns={ALL_FIELDS}
     bind:columnIndex={columnPickerIndex}
-    bind:columnOrder
+    bind:displayedColumns={columnOrder}
     onResetOrder={resetColumnOrder}
     {isOrderChanged}
 />
@@ -2446,7 +2492,7 @@
                                         x: f.viewProps.x,
                                         y: sandwichTopHeight,
                                         width: f.viewProps.width,
-                                        draggable: true,
+                                        draggable: resizingColumnIdx === null, // Disable drag while resizing
                                         dragBoundFunc(pos) {
                                             return handleColumnDrag(pos, idx);
                                         },
@@ -2457,14 +2503,49 @@
                                     on:mouseenter={() => {
                                         hoveredColumnIdx = idx;
                                     }}
-                                    on:mouseleave={() => {
+                                    on:mouseleave={(ev) => {
                                         hoveredColumnIdx = null;
+                                        ev.detail.target
+                                            .getStage()
+                                            .container().style.cursor =
+                                            "default";
+                                    }}
+                                    on:mousemove={(ev) => {
+                                        const mouseX =
+                                            ev.detail.evt.offsetX -
+                                            f.viewProps.x;
+                                        const isInResizeZoneRightEdge =
+                                            mouseX >
+                                            f.viewProps.width -
+                                                RESIZE_HANDLE_WIDTH / 2;
+                                        const isInResizeZoneLeftEdge =
+                                            mouseX < RESIZE_HANDLE_WIDTH / 2;
+                                        if (
+                                            idx > 0 &&
+                                            (isInResizeZoneRightEdge ||
+                                                isInResizeZoneLeftEdge)
+                                        ) {
+                                            ev.detail.target
+                                                .getStage()
+                                                .container().style.cursor =
+                                                "col-resize";
+                                        } else {
+                                            ev.detail.target
+                                                .getStage()
+                                                .container().style.cursor =
+                                                "default";
+                                        }
+                                    }}
+                                    on:mousedown={(ev) => {
+                                        onColumnMouseDown(ev, f, idx);
                                     }}
                                     on:dragmove={(ev) => {
                                         onDragMove(ev);
                                     }}
                                     on:dragstart={(ev) => {
-                                        onDragStart(ev, idx);
+                                        if (resizingColumnIdx === null) {
+                                            onDragStart(ev, idx);
+                                        }
                                     }}
                                     on:dragend={(ev) => {
                                         onDragEnd(ev, idx);
@@ -2640,6 +2721,23 @@
                                     />
                                 {/if}
                             {/each}
+                            {#if resizingColumnIdx !== null}
+                                <Rect
+                                    config={{
+                                        x:
+                                            displayFields[resizingColumnIdx]
+                                                .viewProps.x +
+                                            displayFields[resizingColumnIdx]
+                                                .viewProps.width -
+                                            RESIZE_HANDLE_WIDTH / 2,
+                                        y: sandwichTopHeight + HEADER_HEIGHT,
+                                        height: viewportHeight,
+                                        width: RESIZE_HANDLE_WIDTH,
+                                        fill: COLUMN_RESIZE_DIVIDER_COLOR,
+                                        listening: false,
+                                    }}
+                                />
+                            {/if}
                         </Layer>
                     </Stage>
                     {#if isScrollable}

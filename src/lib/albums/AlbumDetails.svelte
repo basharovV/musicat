@@ -5,7 +5,7 @@
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import { liveQuery } from "dexie";
     import audioPlayer from "../player/AudioPlayer";
-    import { albumColumnOrder, current, isPlaying } from "../../data/store";
+    import { albumColumns, current, isPlaying } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import { HEADER_HEIGHT, ROW_HEIGHT } from "./util";
     import type { Album, Song } from "../../App";
@@ -136,7 +136,7 @@
         </div>
         <div class="songs" style="height: {canvasHeight}px">
             <CanvasLibrary
-                bind:columnOrder={$albumColumnOrder}
+                columnOrder={albumColumns}
                 allSongs={liveQuery(() => tracks)}
             />
         </div>

@@ -7,7 +7,7 @@
     import BuiltInQueries from "../../data/SmartQueries";
     import { db } from "../../data/db";
     import {
-        columnOrder,
+        libraryColumns,
         isInit,
         isLyricsHovered,
         isLyricsOpen,
@@ -233,7 +233,7 @@
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
     <CanvasLibrary
-        bind:columnOrder={$columnOrder}
+        columnOrder={libraryColumns}
         bind:query={$query}
         bind:songOrder
         allSongs={songs}
