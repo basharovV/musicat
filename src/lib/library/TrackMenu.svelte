@@ -46,8 +46,9 @@
     let loadingType: ActionType = null;
     let position = { x: 0, y: 0 };
     let showMenu = false;
+
+    export let songs: Song[] = [];
     let song: Song;
-    let songs: Song[];
 
     onMount(async () => {
         const os = await type();
@@ -62,6 +63,14 @@
                 explorerName = "File manager";
                 break;
         }
+
+        if (songs.length === 1) {
+            song = songs[0];
+            getStems(song);
+        } else {
+            song = null;
+            stems = [];
+        }
     });
 
     export function close() {
@@ -70,27 +79,6 @@
 
     export function isOpen() {
         return showMenu;
-    }
-
-    export function open(
-        _songs: Song | Song[],
-        _position: { x: number; y: number },
-    ) {
-        position = _position;
-
-        if (Array.isArray(_songs)) {
-            song = null;
-            songs = _songs;
-            stems = [];
-        } else {
-            song = _songs;
-            songs = [];
-            getStems(song);
-        }
-
-        confirmingType = null;
-
-        showMenu = true;
     }
 
     let stems: Stem[] = [];
@@ -369,41 +357,103 @@
     }
 </script>
 
-{#if showMenu}
-    <Menu {...position} onClickOutside={close} fixed>
-        <MenuOption
-            isDisabled={true}
-            text={song ? song.title : songs.length + " tracks"}
-        />
-        <MenuOption
-            onClick={reImportTracks}
-            description="Will also re-import albums"
-            text={song ? "Re-import track" : `Re-import ${songs.length} tracks`}
-            isLoading={isReimporting}
-            isDisabled={isDisabled()}
-        />
-        {#if song}
-            <MenuDivider />
-            <MenuOption isDisabled={true} text="Stems (click to play)" />
-            {#if stems.length === 0}
-                <MenuOption onClick={separateStems} text="Separate stems" />
-            {:else}
-                {#each stems as stem}
-                    <MenuOption
-                        isDisabled={false}
-                        text={stem.name}
-                        onClick={() => {
-                            playStem(stem);
-                        }}
-                    />
-                {/each}
-            {/if}
+<Menu onClickOutside={close}>
+    <MenuOption
+        isDisabled={true}
+        text={song ? song.title : songs.length + " tracks"}
+    />
+    <MenuOption
+        onClick={reImportTracks}
+        description="Will also re-import albums"
+        text={song ? "Re-import track" : `Re-import ${songs.length} tracks`}
+        isLoading={isReimporting}
+        isDisabled={isDisabled()}
+    />
+    {#if song}
+        <MenuDivider />
+        <MenuOption isDisabled={true} text="Stems (click to play)" />
+        {#if stems.length === 0}
+            <MenuOption onClick={separateStems} text="Separate stems" />
+        {:else}
+            {#each stems as stem}
+                <MenuOption
+                    isDisabled={false}
+                    text={stem.name}
+                    onClick={() => {
+                        playStem(stem);
+                    }}
+                />
+            {/each}
+        {/if}
 
+        <MenuDivider />
+        <MenuOption isDisabled={true} text="Edit tags" />
+        {#if song.tags}
+            <div class="tags">
+                {#each song.tags as tag}
+                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                    <div
+                        class="tag"
+                        on:click={() => {
+                            $isTagCloudOpen = true;
+                            $isSmartQueryBuilderOpen = false;
+                            $uiView = "library";
+                            $selectedTags.add(tag);
+                            $selectedTags = $selectedTags;
+                            close();
+                        }}
+                    >
+                        <p>{tag}</p>
+                        <Icon
+                            icon="mingcute:close-circle-fill"
+                            size={13}
+                            onClick={() => deleteTag(tag)}
+                        />
+                    </div>
+                {/each}
+            </div>
+        {/if}
+        <MenuInput
+            bind:value={tagUserInput}
+            autoCompleteValue={tagAutoCompleteValue}
+            onEnterPressed={addTagToContextItem}
+            placeholder="Add a tag"
+            onEscPressed={close}
+            isDisabled={isDisabled()}
+            small
+        />
+        {#if song.artist}
             <MenuDivider />
-            <MenuOption isDisabled={true} text="Edit tags" />
-            {#if song.tags}
+            <MenuOption text="⚡️ Enrich" isDisabled />
+            <MenuOption
+                isDisabled={isDisabled()}
+                isLoading={isLoading("country")}
+                onClick={fetchingOriginCountry}
+                text={!song.originCountry
+                    ? isLoading("country")
+                        ? "Looking online..."
+                        : "Origin country"
+                    : "Origin country ✅"}
+                description="from Wikipedia"
+            />
+            <MenuDivider />
+            <MenuOption
+                isDisabled={isDisabled()}
+                onClick={compose(searchArtistOnWikiPanel, song)}
+                text="Wiki panel: <i>{song.artist}</i>"
+            />
+        {/if}
+        <!-- <MenuDivider />
+            <MenuOption onClick={lookUpChords} text="Look up chords" />
+            <MenuOption onClick={lookUpLyrics} text="Look up lyrics" /> -->
+    {:else if songs.length}
+        <MenuDivider />
+
+        <MenuOption isDisabled={true} text="Edit tags" />
+        {#await commonTagsBetweenTracks(songs) then tags}
+            {#if tags}
                 <div class="tags">
-                    {#each song.tags as tag}
+                    {#each tags as tag}
                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                         <div
                             class="tag"
@@ -426,143 +476,73 @@
                     {/each}
                 </div>
             {/if}
-            <MenuInput
-                bind:value={tagUserInput}
-                autoCompleteValue={tagAutoCompleteValue}
-                onEnterPressed={addTagToContextItem}
-                placeholder="Add a tag"
-                onEscPressed={close}
-                isDisabled={isDisabled()}
-                small
-            />
-            {#if song.artist}
-                <MenuDivider />
-                <MenuOption text="⚡️ Enrich" isDisabled />
-                <MenuOption
-                    isDisabled={isDisabled()}
-                    isLoading={isLoading("country")}
-                    onClick={fetchingOriginCountry}
-                    text={!song.originCountry
-                        ? isLoading("country")
-                            ? "Looking online..."
-                            : "Origin country"
-                        : "Origin country ✅"}
-                    description="from Wikipedia"
-                />
-                <MenuDivider />
-                <MenuOption
-                    isDisabled={isDisabled()}
-                    onClick={compose(searchArtistOnWikiPanel, song)}
-                    text="Wiki panel: <i>{song.artist}</i>"
-                />
-            {/if}
-            <!-- <MenuDivider />
-            <MenuOption onClick={lookUpChords} text="Look up chords" />
-            <MenuOption onClick={lookUpLyrics} text="Look up lyrics" /> -->
-        {:else if songs.length}
-            <MenuDivider />
+        {/await}
+        <MenuInput
+            bind:value={tagUserInput}
+            autoCompleteValue={tagAutoCompleteValue}
+            onEnterPressed={addTagToContextItem}
+            placeholder="Add a tag"
+            onEscPressed={close}
+            isDisabled={isDisabled()}
+            small
+        />
+    {/if}
+    <MenuDivider />
 
-            <MenuOption isDisabled={true} text="Edit tags" />
-            {#await commonTagsBetweenTracks(songs) then tags}
-                {#if tags}
-                    <div class="tags">
-                        {#each tags as tag}
-                            <!-- svelte-ignore a11y-no-static-element-interactions -->
-                            <div
-                                class="tag"
-                                on:click={() => {
-                                    $isTagCloudOpen = true;
-                                    $isSmartQueryBuilderOpen = false;
-                                    $uiView = "library";
-                                    $selectedTags.add(tag);
-                                    $selectedTags = $selectedTags;
-                                    close();
-                                }}
-                            >
-                                <p>{tag}</p>
-                                <Icon
-                                    icon="mingcute:close-circle-fill"
-                                    size={13}
-                                    onClick={() => deleteTag(tag)}
-                                />
-                            </div>
-                        {/each}
-                    </div>
-                {/if}
-            {/await}
-            <MenuInput
-                bind:value={tagUserInput}
-                autoCompleteValue={tagAutoCompleteValue}
-                onEnterPressed={addTagToContextItem}
-                autoFocus
-                placeholder="Add a tag"
-                onEscPressed={close}
-                isDisabled={isDisabled()}
-                small
-            />
-        {/if}
-        <MenuDivider />
-
-        {#if $selectedPlaylistFile || $uiView === "to-delete"}
-            <MenuOption
-                isDestructive={true}
-                isConfirming={isConfirming("remove_from_playlist")}
-                isDisabled={isDisabled("remove_from_playlist")}
-                isLoading={isLoading("remove_from_playlist")}
-                onClick={removeSongs(
-                    "remove_from_playlist",
-                    removeFromPlaylist,
-                )}
-                text={song
-                    ? "Remove from playlist"
-                    : `Remove  ${songs.length} tracks from playlist`}
-                confirmText="Click again to confirm"
-                description={isLoading("remove_from_playlist")
-                    ? "Removing from playlist..."
-                    : ""}
-            />
-        {/if}
+    {#if $selectedPlaylistFile || $uiView === "to-delete"}
         <MenuOption
             isDestructive={true}
-            isConfirming={isConfirming("remove")}
-            isDisabled={isDisabled("remove")}
-            isLoading={isLoading("remove")}
-            onClick={removeSongs("remove", removeFromLibrary)}
-            text={$LL.trackMenu.removeFromLibrary(
-                songs.length ? songs.length : 1,
-            )}
+            isConfirming={isConfirming("remove_from_playlist")}
+            isDisabled={isDisabled("remove_from_playlist")}
+            isLoading={isLoading("remove_from_playlist")}
+            onClick={removeSongs("remove_from_playlist", removeFromPlaylist)}
+            text={song
+                ? "Remove from playlist"
+                : `Remove  ${songs.length} tracks from playlist`}
             confirmText="Click again to confirm"
-            description={isLoading("remove") ? "Removing from library..." : ""}
+            description={isLoading("remove_from_playlist")
+                ? "Removing from playlist..."
+                : ""}
         />
+    {/if}
+    <MenuOption
+        isDestructive={true}
+        isConfirming={isConfirming("remove")}
+        isDisabled={isDisabled("remove")}
+        isLoading={isLoading("remove")}
+        onClick={removeSongs("remove", removeFromLibrary)}
+        text={$LL.trackMenu.removeFromLibrary(songs.length ? songs.length : 1)}
+        confirmText="Click again to confirm"
+        description={isLoading("remove") ? "Removing from library..." : ""}
+    />
+    <MenuOption
+        isDestructive={true}
+        isConfirming={isConfirming("delete")}
+        isDisabled={isDisabled("delete")}
+        isLoading={isLoading("delete")}
+        onClick={removeSongs("delete", removeFromSystem)}
+        text={$LL.trackMenu.deleteFile(songs.length ? songs.length : 1)}
+        confirmText="Click again to confirm"
+        description={isLoading("delete")
+            ? "Moving to Trash / Recycle bin..."
+            : $LL.trackMenu.deleteFileHint()}
+    />
+    <MenuDivider />
+    {#if song}
         <MenuOption
-            isDestructive={true}
-            isConfirming={isConfirming("delete")}
-            isDisabled={isDisabled("delete")}
-            isLoading={isLoading("delete")}
-            onClick={removeSongs("delete", removeFromSystem)}
-            text={$LL.trackMenu.deleteFile(songs.length ? songs.length : 1)}
-            confirmText="Click again to confirm"
-            description={isLoading("delete")
-                ? "Moving to Trash / Recycle bin..."
-                : $LL.trackMenu.deleteFileHint()}
+            isDisabled={isDisabled()}
+            onClick={compose(openInFinder, song)}
+            text="Open in {explorerName}"
         />
-        <MenuDivider />
-        {#if song}
-            <MenuOption
-                isDisabled={isDisabled()}
-                onClick={compose(openInFinder, song)}
-                text="Open in {explorerName}"
-            />
-        {/if}
-        {#if get(canShowInfoPopup)}
-            <MenuOption
-                isDisabled={isDisabled()}
-                onClick={openInfo}
-                text="Info & metadata"
-            />
-        {/if}
-    </Menu>
-{/if}
+    {/if}
+    {#if get(canShowInfoPopup)}
+        <MenuOption
+            isDisabled={isDisabled()}
+            onClick={openInfo}
+            text="Info & metadata"
+        />
+    {/if}
+</Menu>
 
 <style lang="scss">
     .tags {

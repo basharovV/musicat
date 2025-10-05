@@ -20,10 +20,6 @@
     import { createEventDispatcher } from "svelte";
     import Input from "../Input.svelte";
     const dispatch = createEventDispatcher();
-
-    $: {
-        console.log("highlighted", isHighlighted);
-    }
 </script>
 
 <container

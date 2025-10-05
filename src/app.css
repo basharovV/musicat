@@ -39,6 +39,12 @@ h1 {
     height: 100%;
 }
 
+ul,
+menu {
+    margin-block-start: 0;
+    padding-inline-start: 0;
+}
+
 * {
     box-sizing: border-box;
 }

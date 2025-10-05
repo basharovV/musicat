@@ -1,18 +1,15 @@
 <script lang="ts">
     import type { ColumnViewModel, LibraryColumn } from "../../App";
     import type { PersistentWritable } from "../../data/storeUtils";
-    import { isTextFile } from "../../utils/FileUtils";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
+    import { getAllColumns } from "./LibraryColumns";
 
     export let columnIndex = 0;
     export let displayedColumns: PersistentWritable<LibraryColumn[]>;
-    export let allColumns: ColumnViewModel[];
-    export let isOrderChanged = false;
+    let allColumns = getAllColumns();
     export let onResetOrder;
-    export let pos = { x: 0, y: 0 };
-    export let showMenu = false;
 
     interface ColumnOption extends ColumnViewModel {
         show: boolean;
@@ -28,9 +25,7 @@
         return option;
     });
 
-    function closeMenu() {
-        showMenu = false;
-    }
+    function closeMenu() {}
 
     function toggleField(field: ColumnOption) {
         allColumns = [...allColumns];
@@ -68,22 +63,20 @@
     // Enrichers
 </script>
 
-{#if showMenu}
-    <Menu {...pos} onClickOutside={closeMenu} fixed>
-        <MenuOption text="Columns" isDisabled />
-        {#each columns as field}
-            <MenuOption
-                text={field.name}
-                checked={field.show}
-                onClick={() => toggleField(field)}
-                borderHighlight
-            />
-        {/each}
-        <MenuDivider />
+<Menu onClickOutside={closeMenu}>
+    <MenuOption text="Columns" isDisabled />
+    {#each columns as field}
         <MenuOption
-            text="Reset to default"
-            description="and auto-size columns"
-            onClick={onResetOrder}
+            text={field.name}
+            checked={field.show}
+            onClick={() => toggleField(field)}
+            borderHighlight
         />
-    </Menu>
-{/if}
+    {/each}
+    <MenuDivider />
+    <MenuOption
+        text="Reset to default"
+        description="and auto-size columns"
+        onClick={onResetOrder}
+    />
+</Menu>

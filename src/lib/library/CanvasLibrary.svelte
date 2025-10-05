@@ -14,7 +14,7 @@
         Song,
         SongOrder,
     } from "src/App";
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     import {
         Group,
         type KonvaWheelEvent,
@@ -100,6 +100,8 @@
     import SongHighlighter from "./SongHighlighter.svelte";
     import { isInputFocused } from "../../utils/ActiveElementUtils";
     import type { PersistentWritable } from "../../data/storeUtils";
+    import { getAllColumns } from "./LibraryColumns";
+    import { contextMenu, openContextMenu } from "../ui/ContextMenu";
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder: PersistentWritable<LibraryColumn[]>;
@@ -187,114 +189,6 @@
                     songs: [],
                 },
             )?.songs ?? [];
-
-    const ALL_FIELDS: ColumnViewModel[] = [
-        {
-            name: $LL.library.fields.title(),
-            value: "title",
-            viewProps: {
-                width: 100,
-                autoWidth: true,
-            },
-        },
-        {
-            name: $LL.library.fields.artist(),
-            value: "artist",
-            viewProps: {
-                width: 100,
-                autoWidth: true,
-            },
-        },
-        {
-            name: $LL.library.fields.composer(),
-            value: "composer",
-            viewProps: {
-                width: 100,
-                autoWidth: true,
-            },
-        },
-        {
-            name: $LL.library.fields.album(),
-            value: "album",
-            viewProps: {
-                width: 100,
-                autoWidth: true,
-            },
-        },
-        {
-            name: $LL.library.fields.albumArtist(),
-            value: "albumArtist",
-            viewProps: {
-                width: 100,
-                autoWidth: true,
-            },
-        },
-        {
-            name: $LL.library.fields.track(),
-            value: "trackNumber",
-            viewProps: {
-                width: 63,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.dateAdded(),
-            value: "dateAdded",
-            displayValue: "viewModel.timeSinceAdded",
-            viewProps: {
-                width: 100,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.compilation(),
-            value: "compilation",
-            viewProps: {
-                width: 63,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.year(),
-            value: "year",
-            viewProps: {
-                width: 63,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.genre(),
-            value: "genre",
-            viewProps: {
-                width: 100,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.origin(),
-            value: "originCountry",
-            viewProps: {
-                width: 100,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.duration(),
-            value: "duration",
-            viewProps: {
-                width: 63,
-                autoWidth: false,
-            },
-        },
-        {
-            name: $LL.library.fields.tags(),
-            value: "tags",
-            viewProps: {
-                width: 100,
-                autoWidth: false,
-            },
-        },
-    ];
 
     let hoveredColumnIdx = null;
     let hoveredSongIdx = null; // Index is slice-specific
@@ -978,7 +872,7 @@
         }
     }
 
-    function onRightClick(e, song, idx) {
+    async function onRightClick(e, song, idx) {
         if (!songsHighlighted.includes(song)) {
             songHighlighter?.toggleHighlight(song, idx, false, false);
         }
@@ -991,21 +885,20 @@
             $rightClickedTrack = song;
         }
 
-        // reposition menu if in a virtual-list
-        const list = e.target.closest(".virtual-list-inner");
-        if (list) {
-            const rect = list.getBoundingClientRect();
+        await tick();
+        openTrackMenu(e, songsHighlighted);
+    }
 
-            trackMenu.open(
-                songsHighlighted.length > 1 ? songsHighlighted : song,
-                { x: e.clientX - rect.left, y: e.clientY - rect.top },
-            );
-        } else {
-            trackMenu.open(
-                songsHighlighted.length > 1 ? songsHighlighted : song,
-                { x: e.clientX, y: e.clientY },
-            );
-        }
+    function openTrackMenu(evt: MouseEvent, songs: Song[]) {
+        openContextMenu(evt, {
+            component: TrackMenu,
+            props: {
+                songs: songs,
+                onUnselect: () => {
+                    songsHighlighted.length = 0;
+                },
+            },
+        });
     }
 
     /**
@@ -1317,16 +1210,14 @@
         console.log("dropidx", dropColumnIdx);
     }
 
-    function onGroupClick(ev, field) {
+    function onGroupClick(ev: KonvaMouseEvent, field) {
         if (ev.detail.evt.button === 0 && resizingColumnIdx === null) {
             updateOrderBy(field.value);
         } else if (ev.detail.evt.button === 2) {
             if ($uiView === "albums") {
-                const list = ev.detail.evt.target.closest(
-                    ".virtual-list-inner",
-                );
+                const list = ev.detail.evt.target.closest(".konvajs-content");
                 const rect = list.getBoundingClientRect();
-
+                console.log("rect", rect, "clientY", ev.detail.evt.clientY);
                 columnPickerPos = {
                     x: ev.detail.evt.clientX - rect.left,
                     y: ev.detail.evt.clientY - rect.top,
@@ -1337,6 +1228,7 @@
                     y: 15,
                 };
             }
+
             const list = ev.detail.evt.target.closest(".konvajs-content");
             const rect = list.getBoundingClientRect();
             const x = ev.detail.evt.clientX - rect.left;
@@ -1344,8 +1236,22 @@
                 ({ viewProps }) =>
                     viewProps.x <= x && x <= viewProps.x + viewProps.width,
             );
-            showColumnPicker = !showColumnPicker;
+
+            openColumnPicker(ev.detail.evt);
         }
+    }
+
+    function openColumnPicker(event: MouseEvent) {
+        openContextMenu(event, {
+            component: ColumnPicker,
+            props: {
+                columnIndex: columnPickerIndex,
+                displayedColumns: columnOrder,
+                onResetOrder: () => {
+                    resetColumnOrder();
+                },
+            },
+        });
     }
 
     function resetColumnOrderUi() {
@@ -1630,19 +1536,6 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<TrackMenu
-    bind:this={trackMenu}
-    onUnselect={() => (songsHighlighted.length = 0)}
-/>
-<ColumnPicker
-    bind:showMenu={showColumnPicker}
-    bind:pos={columnPickerPos}
-    allColumns={ALL_FIELDS}
-    bind:columnIndex={columnPickerIndex}
-    bind:displayedColumns={columnOrder}
-    onResetOrder={resetColumnOrder}
-    {isOrderChanged}
-/>
 <SongHighlighter
     bind:this={songHighlighter}
     bind:songs

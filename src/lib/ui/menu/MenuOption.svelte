@@ -17,10 +17,6 @@
     export let checked = null;
     export let isLoading = false;
     export let singleSelection = false;
-
-    $: {
-        console.log("highlighted", isHighlighted);
-    }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
