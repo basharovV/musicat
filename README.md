@@ -97,6 +97,34 @@ As a musician, I also wanted to organize my own music that I've made over the ye
 
 `This app is built using Svelte + Tauri.`
 
+## Running on macOS
+
+### Why do I get the "Musicat.app is damaged" popup?
+
+The app isn't signed or notarized yet, so you will likely get this warning when opening the app. To get around this, you will need to add an exception to macOS's gatekeeper. You can do this via a terminal command:
+
+```
+xattr -d com.apple.quarantine /Applications/Musicat.app
+```
+
 ## Running on Linux 🐧
 
 Musicat uses ALSA on Linux, install it if you don't already have it on your system:
+
+```
+sudo apt-get install libasound2-dev
+```
+
+## Build locally
+
+1. Set up the [Tauri](https://tauri.app/) framework and it's [prerequisites](https://tauri.app/start/prerequisites/) depending on your platform
+2. Run `npm install` (using Node version 22+)
+3. You can then create a development build using `npm run tauri dev`.
+
+## Contributing
+
+Pull requests are very welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+[GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
