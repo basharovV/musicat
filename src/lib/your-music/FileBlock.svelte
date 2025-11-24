@@ -1,12 +1,13 @@
 <script lang="ts">
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { openPath } from "@tauri-apps/plugin-opener";
-    import type { ArtistFileItem, Song } from "src/App";
+    import type { ArtistFileItem, ContentItem, Song } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import Icon from "../ui/Icon.svelte";
 
-    export let item: ArtistFileItem;
+    export let contentItem: ContentItem;
+    let item = contentItem as ArtistFileItem;
     export let style: "dashed" | "outline" = "outline";
 
     async function openFile() {
@@ -20,6 +21,7 @@
                     includeRawTags: false,
                 },
             });
+
             if (!song) {
                 openPath(item.path);
                 return;

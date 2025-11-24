@@ -1,10 +1,11 @@
 <script lang="ts">
     import { openUrl } from "@tauri-apps/plugin-opener";
-    import type { ArtistLinkItem } from "src/App";
+    import type { ArtistLinkItem, ContentItem } from "src/App";
     import { draggedScrapbookItems } from "../../data/store";
     import Icon from "../ui/Icon.svelte";
 
-    export let item: ArtistLinkItem;
+    export let contentItem: ContentItem;
+    let item: ArtistLinkItem = contentItem as ArtistLinkItem;
 
     export let style: "dashed" | "outline" = "dashed";
     async function openExternalUrl() {

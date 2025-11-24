@@ -403,9 +403,9 @@
                             }}
                         >
                             {#if item.type === "file"}
-                                <FileBlock {item} />
+                                <FileBlock contentItem={item} />
                             {:else if item.type === "link"}
-                                <LinkBlock {item} />
+                                <LinkBlock contentItem={item} />
                             {/if}
 
                             <div class="tags">
