@@ -7,20 +7,77 @@
     import audioPlayer from "../player/AudioPlayer";
     import { albumColumns, current, isPlaying } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
-    import { HEADER_HEIGHT, ROW_HEIGHT } from "./util";
     import type { Album, Song } from "../../App";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import { clickOutside } from "../../utils/ClickOutside";
 
     export let album: Album;
     export let onUnselect: () => void;
     export let tracks: Song[];
+    export let anchorTopLeft = { x: 0, y: 0, height: 0, width: 0 };
+    export let containerWidth = 0;
+
+    let x = anchorTopLeft.x;
+    let y = anchorTopLeft.y;
+    let width = 0;
+    let height = 0;
+
+    let position: "above" | "below" = "below";
+
+    let container: HTMLDivElement;
+    let isLoaded = false;
+
+    const HEADER_HEIGHT = 30 + 20;
+    const ROW_HEIGHT = 26;
+    const MARGIN = 10;
+
+    $: if (isLoaded && anchorTopLeft) {
+        position = "below";
+        // Calculate width and height as percentage of parent element
+        const dynamicWidth = containerWidth > 1200 ? 0.6 : 0.8;
+        width = Math.min(containerWidth * dynamicWidth, 800);
+        height = HEADER_HEIGHT + 30 + album.tracksIds.length * ROW_HEIGHT;
+
+        // Calculate x y positions
+        const parentBounds = container.parentElement.getBoundingClientRect();
+        const detailsWidth = container.clientWidth;
+        const detailsHeight = container.clientHeight;
+        const adjustedX = anchorTopLeft.x - width / 2 + anchorTopLeft.width / 2;
+        const adjustedY = anchorTopLeft.y + anchorTopLeft.height;
+
+        if (adjustedX + width > parentBounds.x + parentBounds.width) {
+            x = parentBounds.x + parentBounds.width - width - MARGIN;
+            console.log("x out of bounds, right");
+        } else if (adjustedX < parentBounds.x) {
+            x = parentBounds.x + MARGIN;
+            console.log("x out of bounds, left");
+        } else {
+            x = adjustedX;
+            console.log("x not out of bounds");
+        }
+
+        if (adjustedY + height > parentBounds.y + parentBounds.height) {
+            position = "above";
+            y = anchorTopLeft.y - height - MARGIN;
+            if (y < parentBounds.y) {
+                y = parentBounds.y;
+                height =
+                    HEADER_HEIGHT + 80 + album.tracksIds.length * ROW_HEIGHT;
+            }
+            console.log("y out of bounds, bottom");
+        } else if (adjustedY < parentBounds.y) {
+            console.log("y out of bounds, top");
+            y = parentBounds.y + MARGIN;
+        } else {
+            y = adjustedY;
+            console.log("y not out of bounds");
+        }
+    }
 
     let isHovered = false;
 
     $: isPlayingCurrentAlbum =
         $current.song?.album.toLowerCase() === album?.title.toLowerCase();
-
-    $: canvasHeight = HEADER_HEIGHT + tracks?.length * ROW_HEIGHT + 8;
 
     async function playPauseToggle() {
         if ($current.song?.album.toLowerCase() === album.title.toLowerCase()) {
@@ -40,104 +97,62 @@
 </script>
 
 {#if album}
+    <svg
+        class="arrow"
+        class:position
+        style={`left: ${anchorTopLeft.x + anchorTopLeft.width / 2}px;
+            top: ${position === "below" ? y - 12 : y + height};
+            transform: rotate(${position === "above" ? 180 : 0}deg);`}
+        width="28"
+        height="12"
+        viewBox="0 0 28 12"
+    >
+        <!-- Smooth Gaussian-like bump -->
+        <path
+            d="
+            M 2 12
+            C 8 12, 10 0, 14 0
+            C 18 0, 20 12, 26 12
+        "
+            fill="var(--popup-body-bg)"
+            stroke="var(--panel-primary-border-accent1)"
+            stroke-width="1.2"
+        />
+    </svg>
+
     <div
         in:fade={{ duration: 150 }}
         class="container"
         class:hovered={isHovered && album.artwork}
+        style={`left: ${x}px ;top: ${y}px;width: ${width}px;height: ${height}px`}
+        use:clickOutside={unselect}
+        bind:this={container}
     >
         <div class="info-container">
-            <div
-                class="artwork-container"
-                on:mouseenter={() => {
-                    isHovered = true;
-                }}
-                on:mouseleave={() => {
-                    isHovered = false;
-                }}
-            >
-                <!-- svelte-ignore a11y-missing-attribute -->
-                <img
-                    class="texture"
-                    src="images/textures/soft-wallpaper.png"
-                    loading="lazy"
-                    on:contextmenu|preventDefault={() => {}}
-                    async
-                />
-                <div class="artwork-frame">
-                    {#if album.artwork}
-                        <img
-                            alt="Artwork"
-                            type={album.artwork.format}
-                            class="artwork"
-                            src={album.artwork.src}
-                            loading="lazy"
-                            async
-                        />
-                    {:else}
-                        <!-- svelte-ignore a11y-missing-attribute -->
-                        <div class="artwork-placeholder">
-                            <Icon icon="mdi:music-clef-treble" />
-                            <!-- svelte-ignore a11y-missing-attribute -->
-                            <img
-                                class="cd-placeholder"
-                                src="images/cd-hq.png"
-                                loading="lazy"
-                                async
-                            />
-                            <!-- <small>No art</small> -->
-                        </div>
-                    {/if}
-                    {#if isHovered}
-                        <div
-                            class={$isPlaying && isPlayingCurrentAlbum
-                                ? "play-button-container pause-button"
-                                : "play-button-container play-button"}
-                        >
-                            <div
-                                class="button"
-                                on:click|stopPropagation={playPauseToggle}
-                            >
-                                <Icon
-                                    icon={$isPlaying && isPlayingCurrentAlbum
-                                        ? "fe:pause"
-                                        : "fe:play"}
-                                    size={25}
-                                />
-                            </div>
-                        </div>
-                    {/if}
-                </div>
-            </div>
             <div class="info-frame">
-                <p class="title">{album.displayTitle ?? album.title}</p>
+                <small class="title">{album.displayTitle ?? album.title}</small>
+                <small>•</small>
                 {#if album.artist}
-                    <p class="artist">{album.artist}</p>
+                    <small class="artist">{album.artist}</small>
                 {/if}
-                <div class="info">
-                    {#if album.year > 0}
-                        <small>{album.year}</small>
-                        <small>•</small>
-                    {/if}
-                    <small
-                        >{album.tracksIds.length}
-                        {$LL.albums.item.tracksLabel()}</small
-                    >
-                </div>
-            </div>
-            <div class="close">
-                <ButtonWithIcon
-                    onClick={unselect}
-                    icon="material-symbols:close"
-                    iconSize={30}
-                    theme="transparent"
-                    noOutline={true}
-                />
+                <small>•</small>
+                {#if album.year > 0}
+                    <small>{album.year}</small>
+                {/if}
+                <!-- <small
+                    >{album.tracksIds.length}
+                    {$LL.albums.item.tracksLabel()}</small
+                > -->
             </div>
         </div>
-        <div class="songs" style="height: {canvasHeight}px">
+        <div
+            class="songs"
+            style={`height: ${30 + album.tracksIds.length * 26}px`}
+        >
             <CanvasLibrary
                 columnOrder={albumColumns}
                 allSongs={liveQuery(() => tracks)}
+                bind:shouldRender={isLoaded}
             />
         </div>
     </div>
@@ -145,61 +160,56 @@
 
 <style lang="scss">
     .container {
-        width: 100%;
-        padding: 1em 0 1em 8px;
-
+        position: fixed;
+        height: auto;
+        width: min(35%, 800px);
+        display: grid;
+        grid-template-rows: auto auto;
+        padding: 0.5em;
+        background-color: var(--popup-body-bg);
+        backdrop-filter: blur(8px);
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
+        border-radius: 5px;
+        border: 1px solid var(--panel-primary-border-accent1);
         .info-container {
             display: flex;
+            overflow: hidden;
+            height: 30px;
 
             .info-frame {
-                margin-left: 2em;
+                margin-left: 5px;
                 display: flex;
-                flex-direction: column;
-                justify-content: flex-end;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
                 text-align: left;
                 flex-grow: 1;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                gap: 5px;
 
                 .title {
-                    border-radius: 20px;
-                    font-size: 32px;
+                    opacity: 1;
                 }
                 .artist {
-                    opacity: 0.7;
-                    margin-top: 20px;
-                    font-size: 20px;
+                    opacity: 0.5;
                 }
-
-                .info {
-                    display: flex;
-                    flex-direction: row;
-                    width: 100%;
-                    gap: 4px;
-                    justify-content: left;
-                    align-items: left;
-                    margin-top: 10px;
-                }
-
-                p {
-                    margin: 0;
-                    line-height: 1em;
-                    color: var(--text);
-                    max-lines: 2;
-                }
-
                 small {
+                    white-space: nowrap;
                     opacity: 0.3;
                     font-weight: bold;
-                    font-size: 16px;
                     letter-spacing: 0.2px;
-                    line-height: initial;
+                    line-height: 18px;
+                    font-size: 14px;
+                    text-overflow: ellipsis;
                 }
             }
 
             .artwork-container {
-                max-width: 300px;
                 padding: 0em;
-                width: 100%;
-                height: fit-content;
+                width: auto;
+                height: 100%;
                 aspect-ratio: 1;
                 opacity: 1;
                 box-sizing: content-box;
@@ -332,17 +342,21 @@
 
         .songs {
             position: relative;
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: 1fr;
-            margin: 3.5px 5px 0 0;
+            margin: 5px 0 0 0;
             border-radius: 5px;
-            box-sizing: content-box;
             overflow: hidden;
             border-top: 0.7px solid
                 color-mix(in srgb, var(--inverse) 40%, transparent);
             border-bottom: 0.7px solid
                 color-mix(in srgb, var(--inverse) 30%, transparent);
         }
+    }
+
+    .arrow {
+        position: fixed;
+        height: 15px;
+        width: 20px;
+        box-shadow: 0px 5px 40px var(--overlay-shadow);
+        z-index: -1;
     }
 </style>

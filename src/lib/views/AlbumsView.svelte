@@ -23,6 +23,17 @@
     import { debounce } from "lodash-es";
     import { getAlbumDetailsHeight } from "../albums/util";
     import ScrollTo from "../ui/ScrollTo.svelte";
+    import { fade, fly, scale } from "svelte/transition";
+    import {
+        cubicIn,
+        cubicInOut,
+        cubicOut,
+        quadInOut,
+        quartIn,
+        quartInOut,
+        quintIn,
+        sineInOut,
+    } from "svelte/easing";
 
     const PADDING = 14;
 
@@ -30,9 +41,12 @@
     let albumMenu: AlbumMenu;
     let columnWidth = 0;
     let container: HTMLDivElement;
+    let gridContainer: HTMLDivElement;
     let currentAlbum: Album;
     let currentAlbumOffset = 0;
     let detailsAlbum: Album = null;
+    let detailsPosition = { x: 0, y: 0, width: 0, height: 0 };
+    let maskPosition = { x: 0, y: 0, width: 0, height: 0 };
     let detailsAlbumHeight = 0;
     let detailsAlbumIndex = -1;
     let detailsAlbumRow = -1;
@@ -92,6 +106,7 @@
     });
 
     $: if (isInit && $queue && $current?.song) {
+        console.log("Scrolling to current album");
         showCurrentlyPlayingAlbum();
     } else {
         isInit = false;
@@ -179,13 +194,14 @@
     function onAfterScroll(e) {
         if (currentAlbum && container) {
             const { offset } = e.detail;
-
+            console.log("after scroll");
             updateInView(offset);
         }
     }
 
     let height = 0;
     let width = 0;
+    let detailsContainer;
 
     function onResize() {
         if (!container) {
@@ -194,19 +210,6 @@
 
         if (columnCount) {
             rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
-
-            if (detailsAlbum) {
-                const index = activeAlbums.findIndex(
-                    (album) => album === detailsAlbum,
-                );
-
-                if (index === -1) {
-                    unselectAlbum();
-                } else {
-                    rowCount += 1;
-                    detailsAlbumIndex = index;
-                }
-            }
         }
 
         height = container?.clientHeight;
@@ -244,16 +247,43 @@
         itemSizes[0] = PADDING;
         itemSizes[itemSizes.length - 1] = PADDING;
 
-        if (detailsAlbum) {
-            const row = Math.floor(detailsAlbumIndex / count) + 2;
-
-            itemSizes[row] = detailsAlbumHeight;
-            detailsAlbumRow = row;
-        }
-
         if (currentAlbum) {
             updatePlayingAlbumOffset();
             updateInView();
+        }
+
+        if (detailsAlbum) {
+            // Update position
+            const albumElement: HTMLDivElement = document.querySelector(
+                `[data-album="${detailsAlbum.id}"]`,
+            );
+            const isInView = (element) => {
+                const bounding = element.getBoundingClientRect();
+
+                return (
+                    bounding.top >= 0 &&
+                    bounding.left >= 0 &&
+                    bounding.bottom <=
+                        (window.innerHeight ||
+                            document.documentElement.clientHeight) &&
+                    bounding.right <=
+                        (window.innerWidth ||
+                            document.documentElement.clientWidth)
+                );
+            };
+
+            if (!albumElement || !isInView(albumElement)) {
+                // Can't find album element or it's not in view - gone out of view
+                unselectAlbum();
+            } else {
+                detailsPosition = albumElement.getBoundingClientRect();
+                maskPosition = {
+                    x: albumElement.offsetLeft,
+                    y: detailsPosition.y - 35,
+                    width: detailsPosition.width,
+                    height: detailsPosition.height,
+                };
+            }
         }
 
         if (virtualList?.scrollToIndex) virtualList.scrollToIndex = null;
@@ -268,46 +298,39 @@
             // sort by track number
             .sort((a, b) => a.trackNumber - b.trackNumber);
 
-        albumMenu.open(album, songs, { x: e.clientX, y: e.clientY });
+        albumMenu?.open(album, songs, { x: e.clientX, y: e.clientY });
     }
 
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
             unselectAlbum(index);
         } else {
-            const oldRow = detailsAlbumRow;
-
             detailsAlbum = album;
+            const rect = e.currentTarget.getBoundingClientRect();
+            console.log("RECT", rect);
+            const x = rect.left;
+            const y = rect.top;
+            detailsPosition = { x, y, width: rect.width, height: rect.height };
+            maskPosition = {
+                x: e.currentTarget.offsetLeft,
+                y: y - 35,
+                width: rect.width,
+                height: rect.height,
+            };
+            console.log(
+                "maskPosition",
+                e.currentTarget.clientTop,
+                e.currentTarget.offsetTop,
+                e.currentTarget.scrollTop,
+            );
             detailsAlbumTracks = await db.songs.bulkGet(album.tracksIds);
             detailsAlbumIndex = index;
-            detailsAlbumHeight = await getAlbumDetailsHeight(
-                detailsAlbumTracks.length,
-            );
-            detailsAlbumRow = Math.floor(index / columnCount) + 2;
-
-            if (oldRow >= 0) {
-                var sizes = [...itemSizes];
-                sizes.splice(oldRow, 1);
-                sizes.splice(detailsAlbumRow, 0, detailsAlbumHeight);
-                itemSizes = sizes;
-            } else {
-                itemSizes.splice(detailsAlbumRow, 0, detailsAlbumHeight);
-                rowCount += 1;
-            }
         }
     }
 
     function unselectAlbum(index?: number) {
         detailsAlbum = null;
         detailsAlbumTracks = null;
-        detailsAlbumHeight = 0;
-        detailsAlbumIndex = -1;
-        detailsAlbumRow = -1;
-
-        if (typeof index === "number") {
-            itemSizes.splice(Math.floor(index / columnCount) + 2, 1);
-            rowCount -= 1;
-        }
     }
 
     function scrollToCurrentAlbum() {
@@ -330,6 +353,7 @@
             currentAlbumOffset < offset + clientHeight;
     }
 
+    const resizeObserver = new ResizeObserver(debounce(onResize, 5));
     onMount(() => {
         isInit = false;
 
@@ -337,12 +361,12 @@
             onResize();
         });
 
-        const resizeObserver = new ResizeObserver(debounce(onResize, 5));
-
         resizeObserver.observe(container);
 
         // This callback cleans up the observer
-        return () => resizeObserver.unobserve(container);
+        return () => {
+            resizeObserver.unobserve(container);
+        };
     });
 </script>
 
@@ -362,59 +386,92 @@
             <p>💿 one sec...</p>
         </div> -->
     {:else}
-        <div class="grid-container">
-            <VirtualList
-                bind:this={virtualList}
-                width={width || "100%"}
-                height={height || "100%"}
-                itemCount={rowCount}
-                itemSize={itemSizes}
-                scrollToAlignment="start"
-                scrollToBehaviour="smooth"
-                on:afterScroll={debounce(onAfterScroll, 20)}
-            >
-                <div slot="item" let:index let:style {style} class="grid-row">
-                    {#if index === 0 || index + 1 === rowCount}
-                        <div></div>
-                    {:else if detailsAlbumRow === index}
-                        <AlbumDetails
-                            album={detailsAlbum}
-                            tracks={detailsAlbumTracks}
-                            onUnselect={() => unselectAlbum(detailsAlbumIndex)}
-                        />
-                    {:else}
-                        {#each Array(columnCount) as _, col (col)}
-                            {@const albumIdx =
-                                detailsAlbumRow === -1 ||
-                                index < detailsAlbumRow
-                                    ? (index - 1) * columnCount + col
-                                    : (index - 2) * columnCount + col}
-                            {@const album =
-                                albumIdx < activeAlbums.length &&
-                                activeAlbums[albumIdx]}
-                            {#if album}
-                                <div
-                                    on:contextmenu|preventDefault={(e) =>
-                                        onRightClick(e, album)}
-                                    on:click|preventDefault={(e) =>
-                                        onLeftClick(e, album, albumIdx)}
-                                    data-album={album.id}
-                                    style="width: {columnWidth}px"
-                                >
-                                    <AlbumItem
-                                        {album}
-                                        highlighted={highlightedAlbum ===
-                                            album.id}
-                                        {showInfo}
-                                    />
-                                </div>
-                            {:else}
-                                <div style="width: {columnWidth}px" />
-                            {/if}
-                        {/each}
-                    {/if}
+        <div class="grid-container" class:details-open={detailsAlbum}>
+            {#if detailsAlbum}
+                <div
+                    class="details-bg"
+                    transition:fade={{ duration: 200 }}
+                    style="
+                        --x: {maskPosition.x}px;
+                        --y: {maskPosition.y}px;
+                        --w: {maskPosition.width}px;
+                        --h: {maskPosition.height}px;
+                    "
+                />
+                <div
+                    class="details"
+                    in:fade={{
+                        duration: 150,
+                        easing: cubicOut,
+                    }}
+                    out:fade={{
+                        duration: 150,
+                        easing: cubicInOut,
+                    }}
+                >
+                    <AlbumDetails
+                        album={detailsAlbum}
+                        anchorTopLeft={detailsPosition}
+                        tracks={detailsAlbumTracks}
+                        onUnselect={() => unselectAlbum(detailsAlbumIndex)}
+                        containerWidth={width}
+                    />
                 </div>
-            </VirtualList>
+            {/if}
+            <div class="albums-list" bind:this={gridContainer}>
+                <VirtualList
+                    bind:this={virtualList}
+                    width={"100%"}
+                    height={height || "100%"}
+                    itemCount={rowCount}
+                    itemSize={itemSizes}
+                    scrollToAlignment="start"
+                    scrollToBehaviour="smooth"
+                    on:afterScroll={debounce(onAfterScroll, 20)}
+                >
+                    <div
+                        slot="item"
+                        let:index
+                        let:style
+                        {style}
+                        class="grid-row"
+                    >
+                        {#if index === 0 || index + 1 === rowCount}
+                            <div></div>
+                        {:else}
+                            {#each Array(columnCount) as _, col (col)}
+                                {@const albumIdx =
+                                    (index - 1) * columnCount + col}
+
+                                {@const album =
+                                    albumIdx < activeAlbums.length &&
+                                    activeAlbums[albumIdx]}
+                                {#if album}
+                                    <div
+                                        on:contextmenu|preventDefault={(e) =>
+                                            onRightClick(e, album)}
+                                        on:click|preventDefault={(e) =>
+                                            onLeftClick(e, album, albumIdx)}
+                                        data-album={album.id}
+                                        style="width: {columnWidth}px;"
+                                        class:details-album={detailsAlbum ===
+                                            album}
+                                    >
+                                        <AlbumItem
+                                            {album}
+                                            highlighted={highlightedAlbum ===
+                                                album.id}
+                                            {showInfo}
+                                        />
+                                    </div>
+                                {:else}
+                                    <div style="width: {columnWidth}px" />
+                                {/if}
+                            {/each}
+                        {/if}
+                    </div>
+                </VirtualList>
+            </div>
         </div>
     {/if}
     {#if $uiView === "albums" && $isPlaying && currentAlbum && !isCurrentAlbumInView}
@@ -448,31 +505,56 @@
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
         background-color: var(--panel-background);
-    }
 
-    .grid {
-        grid-column: 1;
-        grid-row: 2;
-        width: 100%;
-        display: none;
-        height: fit-content;
-        padding: 1em;
-        gap: 10px;
-        min-width: 0; // hack to make the grid respect wrap
-        visibility: hidden;
-        opacity: 0;
-        transition: opacity 0.15s cubic-bezier(0.455, 0.03, 0.515, 0.955);
-        > div {
-            position: relative;
-            width: 100%;
+        > .details-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            background-color: var(--popup-backdrop);
+            backdrop-filter: blur(1px);
+
+            /* Two layers:
+       1. full white (visible)
+       2. black (hole) */
+            mask-image: linear-gradient(white 0%, black 100%),
+                radial-gradient(
+                    white 0%,
+                    white 20%,
+                    white 35%,
+                    rgba(0, 0, 0, 0.2) 48%,
+                    transparent 65%
+                );
+
+            mask-size:
+                100% 100%,
+                calc(var(--w) * 2) calc(var(--h) * 2);
+            mask-position:
+                0 0,
+                calc(var(--x) - var(--w) / 2) calc(var(--y) - var(--h) / 1.7);
+            mask-composite: exclude;
+            mask-repeat: no-repeat;
+        }
+        > .details {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2;
+            grid-row: 1;
         }
 
-        &.show {
-            display: grid;
-        }
-        &.visible {
-            visibility: visible;
-            opacity: 1;
+        .albums-list {
+            grid-row: 2;
+            min-height: 0; /* THIS IS IMPORTANT in CSS grid */
+            height: 100%;
+
+            .details-album {
+                z-index: 10000;
+            }
         }
     }
 

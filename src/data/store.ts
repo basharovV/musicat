@@ -527,11 +527,18 @@ export const libraryColumns = persistentWritable(
 );
 
 export const albumColumns = persistentWritable(
-    defaultColumnOrder,
+    [
+        { fieldName: "title" },
+        { fieldName: "artist" },
+        { fieldName: "trackNumber" },
+        { fieldName: "year" },
+        { fieldName: "genre" },
+        { fieldName: "duration" },
+    ],
     "albumColumnOrder",
     {
         matchKey: "fieldName",
-        version: 1,
+        version: 2,
     },
 );
 

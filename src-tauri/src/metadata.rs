@@ -1240,6 +1240,8 @@ pub fn extract_metadata(
                             },
                         };
 
+                        duration = file_info.duration_display.clone().unwrap_or_default();
+
                         if tagged_file.tags().is_empty() {
                             title = file.to_string();
                         }

@@ -21,7 +21,7 @@ use std::sync::Mutex;
 use std::{env, fs};
 use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Emitter, Listener};
+use tauri::{Emitter, Listener, LogicalPosition};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
@@ -494,6 +494,7 @@ fn main() {
                     .visible(true)
                     .decorations(true)
                     .resizable(true)
+                    .traffic_light_position(LogicalPosition { x: 16, y: 18 })
                     .title("Musicat");
 
             #[cfg(target_os = "macos")]

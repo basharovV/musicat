@@ -73,6 +73,7 @@
         album = _album;
         song = _songs[0];
         songs = _songs;
+        console.log("position", position);
         position = _position;
 
         confirmingType = null;
@@ -82,7 +83,7 @@
         showMenu = true;
     }
 
-    function close() {
+    export function close() {
         showMenu = false;
 
         onClose && onClose();

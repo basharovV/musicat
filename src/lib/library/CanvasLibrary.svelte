@@ -212,7 +212,7 @@
     let songsEndSlice = 0;
     let canvas;
 
-    let shouldRender = false;
+    export let shouldRender = false;
     let ready = false; // When scroll position is restored (if available), to avoid jump
     let libraryContainer: HTMLDivElement;
     let scrollContainer: HTMLDivElement;
@@ -307,10 +307,7 @@
             Konva.pixelRatio = IDLE_PIXEL_RATIO;
         }
 
-        const resizeObserver = new ResizeObserver((entries) => {
-            // We're only watching one element
-            const entry = entries.at(0);
-
+        const resizeObserver = new ResizeObserver((_) => {
             //Get the block size
             drawSongDataGrid(true);
         });
@@ -419,8 +416,8 @@
         isInit = false;
     }
 
-    function drawSongDataGrid(isResize: boolean = false) {
-        calculateCanvasSize(isResize);
+    async function drawSongDataGrid(isResize: boolean = false) {
+        await calculateCanvasSize(isResize);
         calculateColumns();
         if (isResize) {
             onScroll(null, scrollNormalized, null, true);
@@ -441,10 +438,14 @@
         // );
     }
 
-    function calculateCanvasSize(isResize: boolean) {
-        contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
-        viewportHeight = libraryContainer.getBoundingClientRect().height;
-        // console.log("contentHeight", contentHeight, "viewportHeight", viewportHeight);
+    function calculateViewport() {
+        viewportHeight = libraryContainer.clientHeight;
+        console.log(
+            "contentHeight",
+            contentHeight,
+            "viewportHeight",
+            viewportHeight,
+        );
         let area = contentHeight - viewportHeight;
         // console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
@@ -457,17 +458,25 @@
 
         scrollableArea = area;
         isScrollable = contentHeight > viewportHeight;
-        // console.log("scrollableArea", scrollableArea);
+    }
 
+    async function calculateCanvasSize(isResize: boolean) {
+        contentHeight = HEADER_HEIGHT + songs?.length * ROW_HEIGHT;
+        calculateViewport();
         if (!isResize) {
-            setTimeout(() => {
-                width =
-                    scrollContainer?.clientWidth ??
-                    libraryContainer?.clientWidth ??
-                    0;
+            await new Promise((resolve) => {
+                setTimeout(async () => {
+                    width =
+                        scrollContainer?.clientWidth ??
+                        libraryContainer?.clientWidth ??
+                        0;
 
-                calculateColumns();
-            }, 50);
+                    calculateColumns();
+                    await tick();
+                    calculateViewport(); // One more time to fix height
+                    resolve(null);
+                }, 50);
+            });
         }
     }
 
@@ -1038,7 +1047,8 @@
             $singleKeyShortcutsEnabled &&
             !isInputFocused()
         ) {
-            if (trackMenu.isOpen()) {
+            console.log("hmmm");
+            if (trackMenu?.isOpen()) {
                 trackMenu.close();
             } else {
                 songHighlighter?.reset();
