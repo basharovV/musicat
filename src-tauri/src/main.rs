@@ -494,12 +494,12 @@ fn main() {
                     .visible(true)
                     .decorations(true)
                     .resizable(true)
-                    .traffic_light_position(LogicalPosition { x: 16, y: 18 })
                     .title("Musicat");
 
             #[cfg(target_os = "macos")]
             {
                 window_builder = window_builder
+                    .traffic_light_position(LogicalPosition { x: 16, y: 18 })
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .hidden_title(true)
                     .transparent(true);
