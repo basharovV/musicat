@@ -881,7 +881,7 @@ fn decode_loop(
             }
 
             let end_pos_frame_idx = if end_pos.is_some() {
-                (end_pos.unwrap() * previous_channels as f64) as u64
+                (end_pos.unwrap() * previous_sample_rate as f64) as u64
             } else {
                 0
             };
@@ -1203,7 +1203,9 @@ fn decode_loop(
                                             }
 
                                             if let Some(s) = &song {
-                                                let _ = app_handle.emit("song_change", Some(s));
+                                                if end_pos.is_none() {
+                                                    let _ = app_handle.emit("song_change", Some(s));
+                                                }
 
                                                 let _ = reset_control_sender.send(true);
                                                 let _ =

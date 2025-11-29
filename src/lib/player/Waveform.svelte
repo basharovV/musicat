@@ -6,20 +6,23 @@
 
     import {
         current,
+        onboardingSeen,
         playerTime,
         seekTime,
+        setOnboardingSeen,
         waveformPeaks,
     } from "../../data/store";
 
     import type { Event } from "@tauri-apps/api/event";
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-    import { fade } from "svelte/transition";
-    import type { Marker, Waveform } from "../../App";
-    import RegionsPlugin from "./RegionsPlugin";
-    import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
     import hotkeys from "hotkeys-js";
+    import { fade } from "svelte/transition";
+    import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
+    import type { Marker, Waveform } from "../../App";
     import { db } from "../../data/db";
     import { currentThemeObject } from "../../theming/store";
+    import { optionalTippy } from "../ui/TippyAction";
+    import RegionsPlugin from "./RegionsPlugin";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -315,7 +318,17 @@
     let showHoverhead = false;
 </script>
 
-<div class="container">
+<div
+    class="container"
+    use:optionalTippy={{
+        followCursor: true,
+        delay: [0, 5000],
+        show: !$onboardingSeen["waveform"],
+        onHide: () => setOnboardingSeen("waveform"),
+        content:
+            "Click to seek, drag to loop region, Cmd/Ctrl + Click to add marker",
+    }}
+>
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div bind:this={container} class:zoomed={isZoomed} class="waveform" />
     {#if showHoverhead}
@@ -335,10 +348,9 @@
         margin: auto 0;
         height: 100%;
         position: relative;
-        padding: 8px 0;
         .waveform {
             margin: auto;
-            max-height: 40px;
+            max-height: 50px;
 
             &.zoomed {
                 mask-image: linear-gradient(

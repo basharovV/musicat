@@ -560,4 +560,15 @@ export const canShowInfoPopup = writable(true);
 // Stem separation (vocal/instrumental)
 export const songToSeparate: Writable<Song> = writable(null);
 
+export const onboardingSeen = persistentWritable({}, "onboardingSeen", {
+    version: 1,
+});
+
+export function setOnboardingSeen(key: string) {
+    onboardingSeen.update((val) => {
+        val[key] = true;
+        return val;
+    });
+}
+
 init();
