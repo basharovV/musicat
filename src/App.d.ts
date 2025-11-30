@@ -458,6 +458,7 @@ type SongOrder = {
 interface Stem {
     name: string;
     path: string;
+    id?: string;
 }
 
 type RepeatMode = "none" | "queue" | "track";

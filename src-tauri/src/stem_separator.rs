@@ -25,6 +25,7 @@ pub struct SeparateStemsResponse {
 pub struct Stem {
     name: String,
     path: String,
+    id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -69,8 +70,56 @@ pub fn get_stems(event: GetStemsEvent, app_handle: tauri::AppHandle) -> Vec<Stem
         stems.push(Stem {
             name: stem_name,
             path: stem_path,
+            id: None,
         });
     }
+    stems
+}
+
+#[tauri::command]
+pub fn get_all_stems(app_handle: tauri::AppHandle) -> Vec<Stem> {
+    let settings = load_settings(&app_handle).expect("Failed to load settings");
+    let stems_directory = settings
+        .generated_stems_location
+        .expect("Stems directory not set");
+
+    let root = std::path::PathBuf::from(stems_directory);
+
+    if !root.exists() {
+        return vec![];
+    }
+
+    let mut stems: Vec<Stem> = vec![];
+
+    // Iterate through each subfolder (each representing a song)
+    for entry in std::fs::read_dir(&root).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if !path.is_dir() {
+            continue;
+        }
+
+        let song_id = entry.file_name().to_str().unwrap().to_string();
+
+        let mut song_stems: Vec<Stem> = vec![];
+
+        // Now walk the stems inside this song's directory
+        for stem_entry in std::fs::read_dir(&path).unwrap() {
+            let stem_entry = stem_entry.unwrap();
+            let stem_name = stem_entry.file_name().to_str().unwrap().to_string();
+            let stem_path = stem_entry.path().to_string_lossy().into_owned();
+
+            song_stems.push(Stem {
+                name: stem_name,
+                path: stem_path,
+                id: Some(song_id.clone()),
+            });
+        }
+
+        stems.append(&mut song_stems);
+    }
+
     stems
 }
 

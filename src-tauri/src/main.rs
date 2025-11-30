@@ -727,6 +727,7 @@ fn main() {
             get_waveform,
             stem_separator::separate_stems,
             stem_separator::get_stems,
+            stem_separator::get_all_stems,
             stem_separator::cancel_separation,
             player::loop_region,
             player::change_audio_device,

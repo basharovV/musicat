@@ -12,6 +12,7 @@ import type {
     LookForArtResult,
     MetadataEntry,
     Song,
+    Stem,
     TagType,
     ToImport,
     ToImportAlbums,
@@ -234,11 +235,13 @@ export async function startImportListener() {
                             backgroundImport: false,
                         }));
 
+                        scanExistingStems();
                         bottomBarNotification.set(null);
                     }
                     break;
                 case "bulkAlbumPutDone":
                     await onBulkAlbumPutDone(ev);
+                    scanExistingStems();
                     break;
             }
         };
@@ -472,4 +475,30 @@ async function reImportTracks(newSongs: Song[], oldSongs: Song[]) {
     }
 
     await db.songs.bulkPut(newSongs);
+}
+
+async function scanExistingStems() {
+    const stems: Stem[] = await invoke("get_all_stems");
+
+    console.log("Got stems", stems);
+
+    // For each stem, check if song exists that has 'stems',
+    // if it doesn,t add it
+
+    for (const stem of stems) {
+        const song = await db.songs.get(stem.id);
+        if (song) {
+            if (!song.stems) {
+                song.stems = [];
+            }
+            if (song.stems.find((s) => s.name === stem.name)) {
+                continue;
+            }
+            song.stems.push({
+                name: stem.name,
+                path: stem.path,
+            });
+            await db.songs.put(song);
+        }
+    }
 }
