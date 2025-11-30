@@ -1,3 +1,21 @@
+### 📦 0.15.0
+
+#### New
+
+- **New album details popup**. Clicking on an album now shows the new details popup with the tracklist, highlighting the selected album and blurring the rest of the content.
+- **macOS build is now signed and notarized**. You should no longer get the Gatekeeper security warnings from macOS when installing/running the app for the first time, and no more terminal workarounds required.
+- **Resizable columns**: Columns can now be resized, and the sizes will be remembered unless you manually reset them in the right-click menu in the library header.
+
+#### Improvements
+
+- Existing stems are now scanned when importing/scanning.
+
+#### Fixes
+
+- Fixed bug with waveform sometimes being not clickable to seek
+- Fixed bug with playhead briefly flashing previous position when seeking
+- Fixed "drag to create loop" in waveform not working
+
 ### 📦 0.14.0
 
 #### New
