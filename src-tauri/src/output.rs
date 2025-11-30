@@ -8,6 +8,7 @@
 //! Platform-dependant Audio Outputs
 
 use std::result;
+use std::sync::mpsc::{Receiver, Sender};
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
 use ::cpal::{default_host, Device, SupportedStreamConfigRange};
@@ -15,7 +16,26 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
 use symphonia::core::audio::{AudioBufferRef, SignalSpec};
+use tokio::sync::Mutex;
 use webrtc::data_channel::RTCDataChannel;
+
+/// Small aliases to avoid repeating that long Arc<Mutex<...>> shape everywhere.
+type LockedReceiver<T> = Arc<Mutex<Receiver<T>>>;
+type LockedSender<T> = Arc<Mutex<Sender<T>>>;
+
+/// Bundle all control channels into one argument.
+#[derive(Clone)]
+pub struct AudioControlHandles {
+    pub volume_rx: LockedReceiver<crate::player::VolumeControlEvent>,
+    pub sample_offset_rx: LockedReceiver<crate::SampleOffsetEvent>,
+    pub playback_state_rx: LockedReceiver<PlaybackState>,
+    pub timestamp_state_rx: LockedReceiver<TimestampState>,
+    pub reset_control_rx: LockedReceiver<bool>,
+    pub device_change_rx: LockedReceiver<String>,
+    pub device_disconnected_tx: LockedSender<bool>,
+    pub timestamp_tx: LockedSender<f64>,
+    pub data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+}
 
 pub trait AudioOutput {
     fn write(&mut self, decoded: AudioBufferRef<'_>, ramp_up_samples: u64, ramp_down_samples: u64);
@@ -43,6 +63,10 @@ pub struct PlaybackState {
     pub playback_speed: f64,
 }
 
+pub struct TimestampState {
+    pub emit_to_client: usize, // 0 = not emit, 1 = emit
+}
+
 #[allow(dead_code)]
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
@@ -60,7 +84,7 @@ mod cpal {
     use std::time::Duration;
 
     use crate::constants::BUFFER_SIZE;
-    use crate::output::{fft, get_device_by_name, ifft};
+    use crate::output::{fft, get_device_by_name, ifft, AudioControlHandles, TimestampState};
     use crate::player::VolumeControlEvent;
     use crate::resampler::Resampler;
     use crate::SampleOffsetEvent;
@@ -103,14 +127,7 @@ mod cpal {
             device_name: &String,
             spec: SignalSpec,
             sample_buf_size: u64,
-            volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
-            sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
-            playback_state_receiver: Arc<Mutex<Receiver<PlaybackState>>>,
-            reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
-            device_change_receiver: Arc<Mutex<Receiver<String>>>,
-            device_disconnected_sender: Arc<Mutex<Sender<bool>>>,
-            timestamp_sender: Arc<Mutex<Sender<f64>>>,
-            data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+            controls: AudioControlHandles,
             vol: Option<f64>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
@@ -170,14 +187,7 @@ mod cpal {
                     device_spec,
                     duration,
                     &device,
-                    volume_control_receiver,
-                    sample_offset_receiver,
-                    playback_state_receiver,
-                    reset_control_receiver,
-                    device_change_receiver,
-                    device_disconnected_sender,
-                    timestamp_sender,
-                    data_channel,
+                    controls,
                     |packet, volume| ((packet as f64) * volume) as f32,
                     |data| {
                         let fft_result = fft(&data);
@@ -193,14 +203,7 @@ mod cpal {
                     device_spec,
                     duration,
                     &device,
-                    volume_control_receiver,
-                    sample_offset_receiver,
-                    playback_state_receiver,
-                    reset_control_receiver,
-                    device_change_receiver,
-                    device_disconnected_sender,
-                    timestamp_sender,
-                    data_channel,
+                    controls,
                     |packet: i16, volume: f64| {
                         ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
                             .clamp(i16::MIN as f64, i16::MAX as f64) as i16
@@ -220,14 +223,7 @@ mod cpal {
                     device_spec,
                     duration,
                     &device,
-                    volume_control_receiver,
-                    sample_offset_receiver,
-                    playback_state_receiver,
-                    reset_control_receiver,
-                    device_change_receiver,
-                    device_disconnected_sender,
-                    timestamp_sender,
-                    data_channel,
+                    controls,
                     |packet: u16, volume: f64| {
                         ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
                             .clamp(0.0, u16::MAX as f64) as u16
@@ -247,14 +243,7 @@ mod cpal {
                     device_spec,
                     duration,
                     &device,
-                    volume_control_receiver,
-                    sample_offset_receiver,
-                    playback_state_receiver,
-                    reset_control_receiver,
-                    device_change_receiver,
-                    device_disconnected_sender,
-                    timestamp_sender,
-                    data_channel,
+                    controls,
                     |packet, volume| ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0)) as f32,
                     |data| {
                         let fft_result = fft(&data);
@@ -289,14 +278,7 @@ mod cpal {
             spec: SignalSpec,
             duration: symphonia::core::units::Duration,
             device: &cpal::Device,
-            volume_control_receiver: Arc<Mutex<Receiver<VolumeControlEvent>>>,
-            sample_offset_receiver: Arc<Mutex<Receiver<SampleOffsetEvent>>>,
-            playback_state_receiver: Arc<Mutex<Receiver<PlaybackState>>>,
-            reset_control_receiver: Arc<Mutex<Receiver<bool>>>,
-            device_change_receiver: Arc<Mutex<Receiver<String>>>,
-            device_disconnected_sender: Arc<Mutex<Sender<bool>>>,
-            timestamp_sender: Arc<Mutex<Sender<f64>>>,
-            data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+            controls: AudioControlHandles,
             volume_change: fn(T, f64) -> T,
             get_viz_bytes: fn(Vec<T>) -> Bytes,
             vol: Option<f64>,
@@ -339,13 +321,16 @@ mod cpal {
                 is_playing: true,
                 playback_speed: 1.0f64,
             }));
+            let timestamp_state: Arc<RwLock<TimestampState>> =
+                Arc::new(RwLock::new(TimestampState { emit_to_client: 1 }));
+
             let device_state = Arc::new(RwLock::new(
                 device.name().unwrap_or(String::from("Unknown")),
             ));
             let device_name_state = Arc::new(RwLock::new(
                 device.name().unwrap_or(String::from("Unknown")),
             ));
-            let dc = Arc::new(data_channel);
+            let dc = Arc::new(controls.data_channel);
 
             let rt = tokio::runtime::Runtime::new().unwrap();
             let mut viz_data = Vec::with_capacity(1024);
@@ -354,7 +339,7 @@ mod cpal {
                 &config,
                 move |data: &mut [T], _cb: &cpal::OutputCallbackInfo| {
                     // If the device changed, ignore callback
-                    if let Ok(device_change) = device_change_receiver.try_lock() {
+                    if let Ok(device_change) = controls.device_change_rx.try_lock() {
                         if let Ok(result) = device_change.try_recv() {
                             info!("Got device change: {:?}", result);
                             let mut dvc_state = device_state.write().unwrap();
@@ -370,9 +355,18 @@ mod cpal {
                         }
                     }
 
+                    let timestamp_control = controls.timestamp_state_rx.try_lock();
+                    if let Ok(timestamp_state_lock) = timestamp_control {
+                        let mut state = timestamp_state.write().unwrap();
+                        if let Ok(control) = timestamp_state_lock.try_recv() {
+                            info!("Got timestamp control: {:?}", control.emit_to_client);
+                            *state = control;
+                        }
+                    }
+
                     // info!("playing back {:?}", data.len());
                     // If file changed, reset
-                    let reset = reset_control_receiver.try_lock();
+                    let reset = controls.reset_control_rx.try_lock();
                     if let Ok(reset_lock) = reset {
                         if let Ok(rst) = reset_lock.try_recv() {
                             if rst {
@@ -381,13 +375,17 @@ mod cpal {
                                 *frame_idx = 0.0;
                                 let mut elapsed_time = elapsed_time_state.write().unwrap();
                                 *elapsed_time = 0;
-                                let _ = app_handle.emit("timestamp", Some(0f64));
+
+                                let ts_state = timestamp_state.write().unwrap();
+                                if ts_state.emit_to_client == 1 {
+                                    let _ = app_handle.emit("timestamp", Some(0f64));
+                                }
                             }
                         }
                     }
 
                     // Get volume
-                    let volume = volume_control_receiver.try_lock();
+                    let volume = controls.volume_rx.try_lock();
                     if let Ok(volume_lock) = volume {
                         if let Ok(vol) = volume_lock.try_recv() {
                             info!("Got volume: {:?}", vol);
@@ -399,7 +397,7 @@ mod cpal {
                     let current_volume = { *volume_state.read().unwrap() };
                     // info!("Current volume: {:?}", current_volume);
 
-                    let playing = playback_state_receiver.try_lock();
+                    let playing = controls.playback_state_rx.try_lock();
                     if let Ok(play_lock) = playing {
                         if let Ok(pl) = play_lock.try_recv() {
                             let mut current_playing = playback_state.write().unwrap();
@@ -425,7 +423,7 @@ mod cpal {
                             // output.
                             let written = ring_buf_consumer.read(data).unwrap_or(0);
 
-                            let sample_offset = sample_offset_receiver.try_lock();
+                            let sample_offset = controls.sample_offset_rx.try_lock();
                             if let Ok(offset_lock) = sample_offset {
                                 if let Ok(offset) = offset_lock.try_recv() {
                                     info!("Got sample offset: {:?}", offset);
@@ -470,11 +468,15 @@ mod cpal {
                                 let new_duration =
                                     Duration::from_secs((next_duration as f64) as u64);
 
-                                let _ =
-                                    app_handle.emit("timestamp", Some(new_duration.as_secs_f64()));
+                                let ts_state = timestamp_state.write().unwrap();
+                                if ts_state.emit_to_client == 1 {
+                                    let _ = app_handle
+                                        .emit("timestamp", Some(new_duration.as_secs_f64()));
+                                }
 
                                 // Also emit back to the decoding thread
-                                let _ = timestamp_sender
+                                let _ = controls
+                                    .timestamp_tx
                                     .try_lock()
                                     .unwrap()
                                     .send(new_duration.as_secs_f64());
@@ -496,8 +498,11 @@ mod cpal {
                                         next_duration as f64 + current_frac,
                                     );
 
-                                    let _ = app_handle
-                                        .emit("timestamp", Some(new_duration.as_secs_f64()));
+                                    let ts_state = timestamp_state.write().unwrap();
+                                    if ts_state.emit_to_client == 1 {
+                                        let _ = app_handle
+                                            .emit("timestamp", Some(new_duration.as_secs_f64()));
+                                    }
 
                                     let mut duration = elapsed_frac_time_state.write().unwrap();
                                     *duration = current_frac;
@@ -528,7 +533,7 @@ mod cpal {
                     match err {
                         cpal::StreamError::DeviceNotAvailable => {
                             error!("audio output stream device not available: {}", err);
-                            if let Ok(guard) = device_disconnected_sender.try_lock() {
+                            if let Ok(guard) = controls.device_disconnected_tx.try_lock() {
                                 info!("Sending device disconnected");
                                 guard.send(true).unwrap();
                             }
@@ -807,18 +812,7 @@ pub fn try_open(
     device_name: &String,
     spec: SignalSpec,
     sample_buf_size: u64,
-    volume_control_receiver: Arc<
-        tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::player::VolumeControlEvent>>,
-    >,
-    sample_offset_receiver: Arc<
-        tokio::sync::Mutex<std::sync::mpsc::Receiver<crate::SampleOffsetEvent>>,
-    >,
-    playback_state_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<PlaybackState>>>,
-    reset_control_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<bool>>>,
-    device_change_receiver: Arc<tokio::sync::Mutex<std::sync::mpsc::Receiver<String>>>,
-    device_disconnected_sender: Arc<tokio::sync::Mutex<std::sync::mpsc::Sender<bool>>>,
-    timestamp_sender: Arc<tokio::sync::Mutex<std::sync::mpsc::Sender<f64>>>,
-    data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+    controls: AudioControlHandles,
     vol: Option<f64>,
     app_handle: tauri::AppHandle,
 ) -> Result<Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
@@ -826,14 +820,7 @@ pub fn try_open(
         device_name,
         spec,
         sample_buf_size,
-        volume_control_receiver,
-        sample_offset_receiver,
-        playback_state_receiver,
-        reset_control_receiver,
-        device_change_receiver,
-        device_disconnected_sender,
-        timestamp_sender,
-        data_channel,
+        controls,
         vol,
         app_handle,
     )

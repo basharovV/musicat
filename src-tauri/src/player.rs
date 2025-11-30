@@ -15,11 +15,11 @@ use std::io::Cursor;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::Arc;
-use symphonia::core::audio::{AudioBufferRef, Layout, SampleBuffer, SignalSpec};
+use symphonia::core::audio::{Layout, SampleBuffer, SignalSpec};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
 use symphonia::core::errors::Error::ResetRequired;
 use symphonia::core::formats::{FormatOptions, SeekTo, Track};
-use symphonia::core::io::{MediaSourceStream, ReadOnlySource};
+use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::core::units::Time;
@@ -47,7 +47,9 @@ use crate::dsp::calculate_peak_value;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::metadata::Song;
-use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState};
+use crate::output::{
+    self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState, TimestampState,
+};
 use crate::store::load_settings;
 use crate::{dsp, GetWaveformRequest, GetWaveformResponse, PlayFileRequest, SampleOffsetEvent};
 
@@ -454,6 +456,7 @@ fn decode_loop(
 
     /* Channels for message passing */
     let (playback_state_sender, playback_state_receiver) = std::sync::mpsc::channel();
+    let (timestamp_state_sender, timestamp_state_receiver) = std::sync::mpsc::channel();
     let (reset_control_sender, reset_control_receiver) = std::sync::mpsc::channel();
     let (device_change_sender, device_change_receiver) = std::sync::mpsc::channel();
     let (device_disconnected_sender, device_disconnected_receiver) = std::sync::mpsc::channel();
@@ -462,6 +465,7 @@ fn decode_loop(
     let (timestamp_sender, timestamp_receiver) = std::sync::mpsc::channel();
     let timestamp_send = Arc::new(Mutex::new(timestamp_sender));
     let playback_state = Arc::new(Mutex::new(playback_state_receiver));
+    let timestamp_state = Arc::new(Mutex::new(timestamp_state_receiver));
     let reset_control = Arc::new(Mutex::new(reset_control_receiver));
     let device_change = Arc::new(Mutex::new(device_change_receiver));
     let device_disconnect_sender = Arc::new(Mutex::new(device_disconnected_sender));
@@ -852,14 +856,17 @@ fn decode_loop(
                     &previous_audio_device_name,
                     spec,
                     current_max_frames,
-                    volume_control_receiver.clone(),
-                    sample_offset_receiver.clone(),
-                    playback_state.clone(),
-                    reset_control.clone(),
-                    device_change.clone(),
-                    device_disconnect_sender.clone(),
-                    timestamp_send.clone(),
-                    data_channel.clone(),
+                    output::AudioControlHandles {
+                        volume_rx: volume_control_receiver.clone(),
+                        sample_offset_rx: sample_offset_receiver.clone(),
+                        playback_state_rx: playback_state.clone(),
+                        timestamp_state_rx: timestamp_state.clone(),
+                        reset_control_rx: reset_control.clone(),
+                        device_change_rx: device_change.clone(),
+                        device_disconnected_tx: device_disconnect_sender.clone(),
+                        timestamp_tx: timestamp_send.clone(),
+                        data_channel: data_channel.clone(),
+                    },
                     volume.clone(),
                     app_handle.clone(),
                 ));
@@ -872,7 +879,9 @@ fn decode_loop(
             if !is_transition {
                 let clone_device_name = device_name.clone();
                 let clone_device_name2 = device_name.clone();
-                let _ = reset_control_sender.send(true);
+                if seek.is_none() {
+                    let _ = reset_control_sender.send(true);
+                }
                 let _ = device_change_sender.send(clone_device_name);
                 let _ = app_handle.emit("audio_device_changed", clone_device_name2);
                 let _ = sender_sample_offset.send(SampleOffsetEvent {
@@ -929,12 +938,24 @@ fn decode_loop(
                                             "audio: source changed during decoding! {:?}",
                                             request
                                         );
+
+                                        let is_same_file = path_str_clone
+                                            .clone()
+                                            .is_some_and(|s| s.eq(&request.path.clone().unwrap()));
+
+                                        // When seeking, temporarily pause
+                                        if request.seek.is_some() && is_same_file {
+                                            guard.pause();
+                                        }
+
                                         path_str.replace(request.path.unwrap());
                                         prev_seek = seek.unwrap();
                                         prev_song = song.clone();
                                         seek.replace(request.seek.unwrap());
+
                                         end_pos = None;
                                         volume.replace(request.volume.unwrap());
+
                                         guard.flush();
                                         is_reset = true;
                                         is_transition = false;
