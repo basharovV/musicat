@@ -9,8 +9,8 @@ appenders:
               level: warn
         policy:
             trigger:
-                kind: time
-                interval: 10 minute
+                kind: size
+                interval: 5 mb
             roller:
                 kind: fixed_window
                 pattern: "$ENV{MUSICAT_LOG_DIR}/file.log.{}"
