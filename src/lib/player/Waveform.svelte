@@ -67,7 +67,9 @@
             height: "auto",
             barRadius: 2,
             autoScroll: false,
+            interact: true,
             hideScrollbar: true,
+            peaks: [],
         });
         wavesurfer.registerPlugin(
             Hover.create({
@@ -86,6 +88,7 @@
                 maxZoom: 40,
             }),
         );
+
         wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
 
         // Patch this function
@@ -130,6 +133,7 @@
         });
 
         wsRegions.on("region-clicked", (region, ev) => {
+            console.log("region-clicked");
             ev.stopPropagation();
             console.log("region-clicked");
             region.remove();
@@ -179,7 +183,6 @@
         });
 
         wavesurfer.on("click", (pos) => {
-            console.log("interaction", pos);
             let posSeconds = $current.song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
                 if ($current.song) {
@@ -213,20 +216,16 @@
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
             const bytes = new Uint8Array(event.payload.data);
             const floats = new Float32Array(bytes.buffer);
-            await wavesurfer.load(
-                null,
-                floats,
-                $current.song.fileInfo.duration,
-            );
+            wavesurfer.load("", [floats], $current.song.fileInfo.duration);
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
                     songId: $current.song.id,
-                    data: floats,
+                    data: [floats],
                 };
             } else {
-                $waveformPeaks.data = floats;
+                $waveformPeaks.data = [floats];
             }
         });
     });
@@ -240,8 +239,8 @@
     });
 
     async function restoreState() {
-        await wavesurfer.load(
-            null,
+        wavesurfer.load(
+            "",
             $waveformPeaks.data,
             $current.song.fileInfo.duration,
         );
@@ -253,7 +252,6 @@
 
         // Restore loop point
         if ($waveformPeaks.loopEnabled) {
-            console.log("STATE", $waveformPeaks);
             wsRegions.addRegion({
                 start: $waveformPeaks.loopStartPos,
                 end: $waveformPeaks.loopEndPos,
@@ -304,13 +302,10 @@
             "$current.song.fileInfo.duration",
             $current.song.fileInfo.duration,
         );
-        wavesurfer.setOptions({ duration: $current.song.fileInfo.duration });
 
         if (wavesurfer.getDecodedData()) {
             wavesurfer.zoom(false);
         }
-
-        console.log("duration", wavesurfer.getDuration());
     }
 
     let hoverPos = 0;
@@ -351,7 +346,7 @@
         .waveform {
             margin: auto;
             max-height: 50px;
-
+            pointer-events: all;
             &.zoomed {
                 mask-image: linear-gradient(
                     to right,

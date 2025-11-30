@@ -5,7 +5,7 @@
  */
 
 import BasePlugin, {
-    type BasePluginEvents
+    type BasePluginEvents,
 } from "wavesurfer.js/dist/base-plugin.js";
 import { makeDraggable } from "wavesurfer.js/dist/draggable.js";
 import EventEmitter from "wavesurfer.js/dist/event-emitter.js";
@@ -85,7 +85,7 @@ class SingleRegion extends EventEmitter<RegionEvents> {
     constructor(
         params: RegionParams,
         private totalDuration: number,
-        private numberOfChannels = 0
+        private numberOfChannels = 0,
     ) {
         super();
 
@@ -116,7 +116,7 @@ class SingleRegion extends EventEmitter<RegionEvents> {
         const isMarker = this.start === this.end;
         this.element.setAttribute(
             "part",
-            `${isMarker ? "marker" : "region"} ${this.id}`
+            `${isMarker ? "marker" : "region"} ${this.id}`,
         );
     }
 
@@ -128,7 +128,7 @@ class SingleRegion extends EventEmitter<RegionEvents> {
             height: "100%",
             top: "0",
             cursor: "ew-resize",
-            wordBreak: "keep-all"
+            wordBreak: "keep-all",
         };
 
         const leftHandle = createElement(
@@ -139,10 +139,10 @@ class SingleRegion extends EventEmitter<RegionEvents> {
                     ...handleStyle,
                     left: "0",
                     borderLeft: "2px solid rgba(255, 255, 255, 0.5)",
-                    borderRadius: "2px 0 0 2px"
-                }
+                    borderRadius: "2px 0 0 2px",
+                },
             },
-            element
+            element,
         );
 
         const rightHandle = createElement(
@@ -153,10 +153,10 @@ class SingleRegion extends EventEmitter<RegionEvents> {
                     ...handleStyle,
                     right: "0",
                     borderRight: "2px solid rgba(255, 255, 255, 0.5)",
-                    borderRadius: "0 2px 2px 0"
-                }
+                    borderRadius: "0 2px 2px 0",
+                },
             },
-            element
+            element,
         );
 
         // Resize
@@ -167,24 +167,24 @@ class SingleRegion extends EventEmitter<RegionEvents> {
                 (dx) => this.onResize(dx, "start"),
                 () => null,
                 () => this.onEndResizing(),
-                resizeThreshold
+                resizeThreshold,
             ),
             makeDraggable(
                 rightHandle,
                 (dx) => this.onResize(dx, "end"),
                 () => null,
                 () => this.onEndResizing(),
-                resizeThreshold
-            )
+                resizeThreshold,
+            ),
         );
     }
 
     private removeResizeHandles(element: HTMLElement) {
         const leftHandle = element.querySelector(
-            '[part*="region-handle-left"]'
+            '[part*="region-handle-left"]',
         );
         const rightHandle = element.querySelector(
-            '[part*="region-handle-right"]'
+            '[part*="region-handle-right"]',
         );
         if (leftHandle) {
             element.removeChild(leftHandle);
@@ -216,8 +216,8 @@ class SingleRegion extends EventEmitter<RegionEvents> {
                 boxSizing: "border-box",
                 transition: "background-color 0.2s ease",
                 cursor: this.drag ? "grab" : "default",
-                pointerEvents: "all"
-            }
+                pointerEvents: "all",
+            },
         });
 
         // Add resize handles
@@ -260,13 +260,13 @@ class SingleRegion extends EventEmitter<RegionEvents> {
                 () => {
                     this.toggleCursor(false);
                     this.drag && this.emit("update-end");
-                }
-            )
+                },
+            ),
         );
 
         if (this.contentEditable && this.content) {
             this.content.addEventListener("click", (e) =>
-                this.onContentClick(e)
+                this.onContentClick(e),
             );
             this.content.addEventListener("blur", () => this.onContentBlur());
         }
@@ -345,9 +345,9 @@ class SingleRegion extends EventEmitter<RegionEvents> {
             this.content = createElement("div", {
                 style: {
                     padding: `0.2em ${isMarker ? 0.2 : 0.4}em`,
-                    display: "inline-block"
+                    display: "inline-block",
                 },
-                textContent: content
+                textContent: content,
             });
         } else {
             this.content = content;
@@ -375,7 +375,7 @@ class SingleRegion extends EventEmitter<RegionEvents> {
             const isMarker = this.start === this.end;
             this.start = this.clampPosition(options.start ?? this.start);
             this.end = this.clampPosition(
-                options.end ?? (isMarker ? this.start : this.end)
+                options.end ?? (isMarker ? this.start : this.end),
             );
             this.renderPosition();
             this.setPart();
@@ -446,7 +446,7 @@ class RegionsPlugin extends BasePlugin<
                         region.start <= currentTime &&
                         (region.end === region.start
                             ? region.start + 0.05
-                            : region.end) >= currentTime
+                            : region.end) >= currentTime,
                 );
 
                 // Trigger region-in when activeRegions doesn't include a played regions
@@ -465,7 +465,7 @@ class RegionsPlugin extends BasePlugin<
 
                 // Update activeRegions only played regions
                 activeRegions = playedRegions;
-            })
+            }),
         );
     }
 
@@ -478,8 +478,8 @@ class RegionsPlugin extends BasePlugin<
                 width: "100%",
                 height: "100%",
                 zIndex: "3",
-                pointerEvents: "none"
-            }
+                pointerEvents: "none",
+            },
         });
     }
 
@@ -566,7 +566,7 @@ class RegionsPlugin extends BasePlugin<
                 regionSubscriptions.forEach((unsubscribe) => unsubscribe());
                 this.regions = this.regions.filter((reg) => reg !== region);
                 this.emit("region-removed", region);
-            })
+            }),
         ];
 
         this.subscriptions.push(...regionSubscriptions);
@@ -581,16 +581,14 @@ class RegionsPlugin extends BasePlugin<
         }
 
         const duration = this.wavesurfer.getDuration();
-        const numberOfChannels =
-            this.wavesurfer?.getDecodedData()?.numberOfChannels;
-        const region = new SingleRegion(options, duration, numberOfChannels);
+        const region = new SingleRegion(options, duration);
 
         if (!duration) {
             this.subscriptions.push(
                 this.wavesurfer.once("ready", (duration) => {
                     region._setTotalDuration(duration);
                     this.saveRegion(region);
-                })
+                }),
             );
         } else {
             this.saveRegion(region);
@@ -605,7 +603,7 @@ class RegionsPlugin extends BasePlugin<
      */
     public enableDragSelection(
         options: Omit<RegionParams, "start" | "end">,
-        threshold = 3
+        threshold = 3,
     ): () => void {
         const wrapper = this.wavesurfer?.getWrapper();
         if (!wrapper || !(wrapper instanceof HTMLElement))
@@ -632,8 +630,6 @@ class RegionsPlugin extends BasePlugin<
                 startX = x;
                 if (!this.wavesurfer) return;
                 const duration = this.wavesurfer.getDuration();
-                const numberOfChannels =
-                    this.wavesurfer?.getDecodedData()?.numberOfChannels;
                 const { width } = this.wavesurfer
                     .getWrapper()
                     .getBoundingClientRect();
@@ -647,10 +643,9 @@ class RegionsPlugin extends BasePlugin<
                     {
                         ...options,
                         start,
-                        end
+                        end,
                     },
                     duration,
-                    numberOfChannels
                 );
                 // Just add it to the DOM for now
                 this.regionsContainer.appendChild(region.element);
@@ -664,7 +659,7 @@ class RegionsPlugin extends BasePlugin<
                 }
             },
 
-            threshold
+            threshold,
         );
     }
 

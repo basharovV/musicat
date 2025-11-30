@@ -71,7 +71,7 @@
         "vite-bundle-analyzer": "0.10.3",
         "vite-plugin-node-polyfills": "^0.24.0",
         "wavefile": "11.0.0",
-        "wavesurfer.js": "7.8.14",
+        "wavesurfer.js": "7.11.1",
         "wikibase-sdk": "9.2.4",
         "wtf_wikipedia": "10.4.0",
         "wtf-plugin-html": "1.0.0"
