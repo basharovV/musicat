@@ -210,11 +210,18 @@
     let songsIdxSlice: number[];
 
     // Compute it as a derived value
-    $: songsIdxSlice = songs?.length
-        ? Array(Math.min(songs.length, songsEndSlice) - songsStartSlice)
-              .fill(0)
-              .map((_, idx) => songsStartSlice + idx)
-        : [];
+    $: {
+        const start = Math.max(0, songsStartSlice);
+        const end = Math.min(songs?.length ?? 0, songsEndSlice);
+        const length = Math.max(0, end - start);
+
+        songsIdxSlice =
+            songs?.length && length > 0 && length <= songs.length
+                ? Array(length)
+                      .fill(0)
+                      .map((_, idx) => start + idx)
+                : [];
+    }
 
     let songsStartSlice = 0;
     let songsEndSlice = 0;
