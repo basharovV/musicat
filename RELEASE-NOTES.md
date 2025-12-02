@@ -1,3 +1,11 @@
+### 📦 0.15.1
+
+#### Fixes
+
+- Fixed bug where expanding tracks that have stems in the library would cause track selection to be offset.
+- Fixed crash with searching when there are less tracks in the results than fit in the viewport.
+- Fixed Wikipedia images not appearing in the Wiki panel.
+
 ### 📦 0.15.0
 
 #### New
