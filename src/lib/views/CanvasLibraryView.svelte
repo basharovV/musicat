@@ -25,6 +25,7 @@
         smartQueryUpdater,
         toDeletePlaylist,
         uiView,
+        expandedSongWithStems,
     } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
@@ -197,6 +198,26 @@
                 }
                 return result;
             });
+        }
+
+        if (get(expandedSongWithStems)) {
+            // Find the song
+            const idx = resultsArray.findIndex(
+                (s) => s.id === get(expandedSongWithStems).id,
+            );
+            if (idx !== -1) {
+                expandedSongWithStems.update((s) => {
+                    return {
+                        ...s,
+                        viewModel: {
+                            ...s.viewModel,
+                            index: idx,
+                        },
+                    };
+                });
+            } else {
+                expandedSongWithStems.set(null);
+            }
         }
 
         /**

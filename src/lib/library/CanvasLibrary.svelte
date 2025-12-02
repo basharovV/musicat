@@ -208,6 +208,14 @@
 
     let songsSlice: Song[];
     let songsIdxSlice: number[];
+
+    // Compute it as a derived value
+    $: songsIdxSlice = songs?.length
+        ? Array(Math.min(songs.length, songsEndSlice) - songsStartSlice)
+              .fill(0)
+              .map((_, idx) => songsStartSlice + idx)
+        : [];
+
     let songsStartSlice = 0;
     let songsEndSlice = 0;
     let canvas;
@@ -342,9 +350,7 @@
 
     // Trigger: on songs updated
     $: if (songs && libraryContainer && prevSongCount !== songs.length) {
-        console.log("Library::songs updated", songs.length);
         drawSongDataGrid();
-        prevSongCount = songs.length;
     }
 
     $: if ($currentThemeObject) {
@@ -427,6 +433,7 @@
         shouldRender = true;
         // drawHeaders();
         // drawRows();
+        prevSongCount = songs.length;
     }
 
     function printInfo() {
@@ -586,72 +593,30 @@
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
 
     async function calculateSongSlice() {
-        if (songs.length === 0) {
-            songsSlice = [];
+        if (!songs || songs.length === 0) {
             songsStartSlice = 0;
             songsEndSlice = 0;
-        } else if (songs?.length) {
-            // console.log(
-            //     "scrollPos",
-            //     scrollPos,
-            //     "contentHeight",
-            //     contentHeight,
-            //     "viewport",
-            //     viewportHeight
-            // );
-
-            // See how many rows fit in the current height
-            const songsCountScrollable = Math.ceil(scrollableArea / ROW_HEIGHT);
-            // console.log("pad", songsCountPadding);
-            const songsCountViewport = Math.ceil(viewportHeight / ROW_HEIGHT);
-            // Get px of current scroll position (content)
-            let contentY = scrollableArea * scrollNormalized;
-            sandwichTopHeight = contentY;
-            sandwichBottomY = contentY + viewportHeight;
-            sandwichBottomHeight =
-                contentHeight - sandwichTopHeight - viewportHeight;
-            // console.log(
-            //     "sandwichTop",
-            //     sandwichTopHeight,
-            //     "sandwichBottom",
-            //     sandwichBottomY,
-            //     sandwichBottomHeight
-            // );
-            // let remainder = contentY % ROW_HEIGHT;
-            // prevRemainder = remainder;
-            // console.log("remainder", remainder);
-            // scrollOffset = -contentY / 20;
-            // console.log("scrollNormalized", scrollNormalized, "scrollableArea", scrollableArea);
-            songsStartSlice = Math.floor(
-                Math.max(
-                    0,
-                    Math.floor(scrollNormalized * songsCountScrollable),
-                ),
-            );
-            songsEndSlice = Math.min(
-                songs.length,
-                Math.ceil(songsStartSlice + songsCountViewport),
-            );
-            // console.log("slice indexes", songsStartSlice, songsEndSlice);
-            // songsSlice = songs.slice(songsStartSlice, songsEndSlice);
-            // console.log("songSlice", songsSlice);
-            // Make sure the window is always filled with the right amount of rows
-            // console.log("songIdxSlice", songsEndSlice - songsStartSlice);
-            let newLength = songsEndSlice - songsStartSlice;
-            if (songsIdxSlice?.length !== newLength) {
-                songsIdxSlice = Array(newLength)
-                    .fill(0)
-                    .map((_, idx) => songsStartSlice + idx);
-            } else {
-                for (let i = 0; i < newLength; i++) {
-                    songsIdxSlice[i] = songsStartSlice + i;
-                }
-            }
-
-            // console.log("slice", songsIdxSlice);
-            // console.log(songsSlice.length);
-            prevScrollPos = scrollPos;
+            return;
         }
+
+        const songsCountScrollable = Math.ceil(scrollableArea / ROW_HEIGHT);
+        const songsCountViewport = Math.ceil(viewportHeight / ROW_HEIGHT);
+
+        let contentY = scrollableArea * scrollNormalized;
+        sandwichTopHeight = contentY;
+        sandwichBottomY = contentY + viewportHeight;
+        sandwichBottomHeight =
+            contentHeight - sandwichTopHeight - viewportHeight;
+
+        songsStartSlice = Math.floor(
+            Math.max(0, Math.floor(scrollNormalized * songsCountScrollable)),
+        );
+        songsEndSlice = Math.min(
+            songs.length,
+            Math.ceil(songsStartSlice + songsCountViewport),
+        );
+
+        prevScrollPos = scrollPos;
     }
 
     const rememberScrollPos = debounce(async () => {
@@ -855,6 +820,10 @@
             audioPlayer.playSong(song);
             return;
         }
+        const adjustedIndex =
+            $expandedSongWithStems?.viewModel?.index < song.viewModel.index
+                ? song.viewModel.index - $expandedSongWithStems?.stems.length
+                : song.viewModel.index;
         if ($uiView.match(/^(albums)/)) {
             const albums = await db.albums
                 .where("displayTitle")
@@ -869,11 +838,11 @@
             const album = albums[0];
             const tracks = await db.songs.bulkGet(album.tracksIds);
 
-            setQueue(tracks, song.viewModel.index);
+            setQueue(tracks, adjustedIndex);
         } else if ($uiView === "smart-query") {
-            setQueue($smartQueryResults, song.viewModel.index);
+            setQueue($smartQueryResults, adjustedIndex);
         } else {
-            setQueue($queriedSongs, song.viewModel.index);
+            setQueue($queriedSongs, adjustedIndex);
         }
 
         if (query?.length) {
@@ -929,7 +898,7 @@
     export let songsHighlighted: Song[] = [];
     export let onSongsHighlighted = null;
 
-    function updateHighlights(songs: Song[], idx: number) {
+    async function updateHighlights(songs: Song[], idx: number) {
         // Highlighted songs indexes might need to be updated
         if (songsHighlighted.length > 0) {
             songsHighlighted = songsHighlighted.filter(Boolean).map((s) => {
@@ -1653,7 +1622,7 @@
                                             on:dblclick={() =>
                                                 onDoubleClickSong(
                                                     song,
-                                                    songIdx,
+                                                    song.viewModel.index,
                                                 )}
                                             on:click={(e) => {
                                                 // console.log("e", e);
@@ -1679,7 +1648,8 @@
                                                 if (
                                                     draggingSongIdx !== null &&
                                                     songIdx >
-                                                        songsSlice.length - 15
+                                                        songsIdxSlice.length -
+                                                            15
                                                 ) {
                                                     scrollContainer?.scrollBy({
                                                         top: ROW_HEIGHT,
