@@ -49,6 +49,29 @@ fn edit_anchors(html: String, prefix: String) -> String {
         }
     }
 
+    // --- Update images: fix src attributes like "//upload.wikimedia.org/..." ---
+    for css_match in document.select("img").unwrap() {
+        let as_node = css_match.as_node();
+        if let Some(element) = as_node.as_element() {
+            let mut attrs = element.attributes.borrow_mut();
+
+            if let Some(src) = attrs.get("src") {
+                // Only rewrite protocol-relative URLs ("//...")
+                if src.starts_with("//") {
+                    let new_src = format!("https:{}", src);
+                    attrs.insert("src".to_string(), new_src);
+                }
+            }
+            if let Some(src) = attrs.get("srcset") {
+                // Only rewrite protocol-relative URLs ("//...")
+                if src.starts_with("//") {
+                    let new_src = format!("https:{}", src);
+                    attrs.insert("srcset".to_string(), new_src);
+                }
+            }
+        }
+    }
+
     let mut bytes = vec![];
     document.serialize(&mut bytes).unwrap();
 
