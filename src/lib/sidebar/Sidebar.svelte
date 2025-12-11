@@ -1529,7 +1529,7 @@
                                 color={$uiView === "internet-archive"
                                     ? $currentThemeObject["accent"]
                                     : "currentColor"}
-                            />Internet Archive</item
+                            />{$LL.sidebar.internetArchive()}</item
                         >
                         <item
                             class:selected={$uiView === "map"}

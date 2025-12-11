@@ -364,16 +364,26 @@
     />
     <MenuOption
         onClick={reImportTracks}
-        description="Will also re-import albums"
-        text={song ? "Re-import track" : `Re-import ${songs.length} tracks`}
+        description={$LL.trackMenu.reImportTrackHint() ||
+            "Will also re-import albums"}
+        text={song
+            ? $LL.trackMenu.reImportTrack() || "Re-Import Track"
+            : $LL.trackMenu.reImportTracks({ n: songs.length }) ||
+              `Re-import ${songs.length} tracks`}
         isLoading={isReimporting}
         isDisabled={isDisabled()}
     />
     {#if song}
         <MenuDivider />
-        <MenuOption isDisabled={true} text="Stems (click to play)" />
+        <MenuOption
+            isDisabled={true}
+            text={$LL.trackMenu.separateTitle() || "Stems (click to play)"}
+        />
         {#if stems.length === 0}
-            <MenuOption onClick={separateStems} text="Separate stems" />
+            <MenuOption
+                onClick={separateStems}
+                text={$LL.trackMenu.separateStems() || "Separate stems"}
+            />
         {:else}
             {#each stems as stem}
                 <MenuOption
@@ -387,7 +397,10 @@
         {/if}
 
         <MenuDivider />
-        <MenuOption isDisabled={true} text="Edit tags" />
+        <MenuOption
+            isDisabled={true}
+            text={$LL.trackMenu.editTag() || "Edit tags"}
+        />
         {#if song.tags}
             <div class="tags">
                 {#each song.tags as tag}
@@ -431,16 +444,18 @@
                 onClick={fetchingOriginCountry}
                 text={!song.originCountry
                     ? isLoading("country")
-                        ? "Looking online..."
-                        : "Origin country"
-                    : "Origin country ✅"}
-                description="from Wikipedia"
+                        ? $LL.trackMenu.lookingOnline() || "Looking online..."
+                        : $LL.trackMenu.originCountry() || "Origin country"
+                    : $LL.trackMenu.originCountryC() || "Origin country ✅"}
+                description={$LL.trackMenu.originCountryHint() ||
+                    "from Wikipedia"}
             />
             <MenuDivider />
             <MenuOption
                 isDisabled={isDisabled()}
                 onClick={compose(searchArtistOnWikiPanel, song)}
-                text="Wiki panel: <i>{song.artist}</i>"
+                text="{$LL.trackMenu.wikiPanel() || 'Wiki panel:'}
+                <i>{song.artist}</i>"
             />
         {/if}
         <!-- <MenuDivider />
@@ -532,14 +547,15 @@
         <MenuOption
             isDisabled={isDisabled()}
             onClick={compose(openInFinder, song)}
-            text="Open in {explorerName}"
+            text={$LL.trackMenu.openInFileManager({ explorerName }) ||
+                `Open in ${explorerName}`}
         />
     {/if}
     {#if get(canShowInfoPopup)}
         <MenuOption
             isDisabled={isDisabled()}
             onClick={openInfo}
-            text="Info & metadata"
+            text={$LL.trackMenu.infoMetadata() || "Info & metadata"}
         />
     {/if}
 </Menu>

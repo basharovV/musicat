@@ -9,6 +9,7 @@ export type Locales =
 	| 'en'
 	| 'es'
 	| 'tr'
+	| 'cn'
 
 export type Translation = RootTranslation
 
@@ -795,7 +796,17 @@ type RootTranslation = {
 			 * g​r​i​d​ ​s​i​z​e
 			 */
 			gridSize: string
-		}
+		},
+        menu: {
+            /**
+			 * reImportTrack
+			 */
+			reImportTrack: string
+            /**
+			 * reImportTrack
+			 */
+			reImportTracks: string
+        }
 		/**
 		 * S​c​r​o​l​l​ ​t​o​ ​N​o​w​ ​p​l​a​y​i​n​g
 		 */
@@ -809,6 +820,50 @@ type RootTranslation = {
 	}
 	trackMenu: {
 		/**
+		 * Re-Import Track
+		 */
+		reImportTrack: string
+		/**
+		 * Re-import {n} tracks
+		 */
+		reImportTracks: string
+		/**
+		 * Will also re-import albums
+		 */
+		reImportTrackHint: string
+		/**
+		 * Stems (click to play)
+		 */
+		separateTitle: string
+		/**
+		 * Separate stems
+		 */
+		separateStems: string
+		/**
+		 * Edit tags
+		 */
+		editTag: string
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: string
+		/**
+		 * Origin country
+		 */
+		originCountry: string
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: string
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: string
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: string
+		/**
 		 * R​e​m​o​v​e​ ​{​{​t​r​a​c​k​|​?​?​ ​t​r​a​c​k​s​}​}​ ​f​r​o​m​ ​l​i​b​r​a​r​y
 		 */
 		removeFromLibrary: string
@@ -820,6 +875,14 @@ type RootTranslation = {
 		 * M​o​v​e​ ​t​o​ ​s​y​s​t​e​m​ ​T​r​a​s​h​ ​/​ ​R​e​c​y​c​l​e​ ​b​i​n
 		 */
 		deleteFileHint: string
+		/**
+		 * Open in {explorerName}
+		 */
+		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		/**
+		 * Info & metadata
+		 */
+		infoMetadata: string
 	}
 	toDelete: {
 		/**
@@ -1436,7 +1499,19 @@ export type TranslationFunctions = {
 		/**
 		 * Interface
 		 */
-		'interface': () => LocalizedString
+		interface: () => LocalizedString
+        /**
+         * miniPlayerLocation
+         */
+        miniPlayerLocation: () => LocalizedString
+        /**
+         * Language
+         */
+        language: () => LocalizedString
+        /**
+         * Theme
+         */
+        theme: () => LocalizedString
 		/**
 		 * Features
 		 */
@@ -1477,6 +1552,14 @@ export type TranslationFunctions = {
 		 * Enable Artist's Toolkit
 		 */
 		enableArtistsToolkit: () => LocalizedString
+		/**
+		 * Import
+		 */
+		import: () => LocalizedString
+		/**
+		 * enableCoverArtCheck
+		 */
+		enableCoverArtCheck: () => LocalizedString
 		/**
 		 * Songbook location
 		 */
@@ -1674,6 +1757,50 @@ export type TranslationFunctions = {
 	}
 	trackMenu: {
 		/**
+		 * Re-Import Track
+		 */
+		reImportTrack: () => LocalizedString
+		/**
+		 * Re-import {n} tracks
+		 */
+		reImportTracks: (arg: { n: number }) => LocalizedString
+		/**
+		 * Will also re-import albums
+		 */
+		reImportTrackHint: () => LocalizedString
+		/**
+		 * Stems (click to play)
+		 */
+		separateTitle: () => LocalizedString
+		/**
+		 * Separate stems
+		 */
+		separateStems: () => LocalizedString
+		/**
+		 * Edit tags
+		 */
+		editTag: () => LocalizedString
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: () => LocalizedString
+		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: () => LocalizedString
+		/**
 		 * Remove {{track|?? tracks}} from library
 		 */
 		removeFromLibrary: (arg0: number | string | boolean) => LocalizedString
@@ -1685,6 +1812,14 @@ export type TranslationFunctions = {
 		 * Move to system Trash / Recycle bin
 		 */
 		deleteFileHint: () => LocalizedString
+		/**
+		 * Open in {explorerName}
+		 */
+		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		/**
+		 * Info & metadata
+		 */
+		infoMetadata: () => LocalizedString
 	}
 	toDelete: {
 		/**

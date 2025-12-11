@@ -95,6 +95,7 @@
 
         register("en", () => import("./i18n/en"));
         register("es", () => import("./i18n/es"));
+        register("cn", () => import("./i18n/cn"));
 
         init({
             fallbackLocale: "en",

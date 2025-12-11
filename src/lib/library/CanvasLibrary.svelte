@@ -2642,7 +2642,7 @@
     {/if}
     {#if $uiView === "library" && $isPlaying && $current.song && !currentSongInView}
         <ScrollTo equalizer={true} on:click={scrollToCurrentSong}>
-            Scroll to Now playing
+            {$LL.albums.scrollToNowPlaying()}
         </ScrollTo>
     {/if}
     <ShadowGradient type="bottom" />

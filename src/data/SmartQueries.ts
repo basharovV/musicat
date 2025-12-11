@@ -3,6 +3,7 @@ import type { Song } from "src/App";
 import { get } from "svelte/store";
 import { db } from "./db";
 import { query } from "./store";
+import { LL } from "../i18n/i18n-svelte";
 
 function allTracks(): Collection<Song, IndexableType> {
     // Not including title, because title is always populated with filename,
@@ -66,18 +67,24 @@ export async function findQuery(queryId: string) {
             found = (await db.smartQueries.get(id)) ?? null;
         }
     }
+    
+    // If it's a built-in query, resolve the name function to get the translated text
+    if (found && typeof found.name === 'function') {
+        found = { ...found, name: found.name() };
+    }
+    
     console.log("found", found);
     return found;
 }
 
 const BUILT_IN_QUERIES = {
     favourites: {
-        name: "Favourites",
+        name: () => get(LL).smartPlaylists.builtIn.favourites(),
         value: "favourites",
         run: favourites,
     },
     recentlyAdded: {
-        name: "Recently Added",
+        name: () => get(LL).smartPlaylists.builtIn.recentlyAdded(),
         value: "recentlyAdded",
         run: recentlyAdded,
     },

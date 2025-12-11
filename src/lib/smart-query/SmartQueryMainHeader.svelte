@@ -43,7 +43,9 @@
         <p class="query-header-title">Smart playlist:</p>
         <select bind:value={$selectedSmartQuery}>
             {#each Object.values(SmartQuery) as query}
-                <option value={query.value}>{query.name}</option>
+                <option value={query.value}>
+                    {typeof query.name === 'function' ? query.name() : query.name}
+                </option>
             {/each}
             <option value="----">----</option>
 

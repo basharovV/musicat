@@ -54,6 +54,7 @@ const tr = {
             lossless: "kayıpsız",
             both: "kayıplı + kayıpsız",
         },
+        waveform: "",
         nextUp: "Sıradaki",
         stats: {
             songs: "şarkı",
@@ -140,7 +141,8 @@ const tr = {
         bitRate: "Bit hızı",
         enrichmentCenter: "Zenginleştirme Merkezi",
         countryOfOrigin: "Köken Ülke",
-        countryOfOriginTooltip: "Harita görünümünü ve Akıllı Çalma Listelerinde ülkeye göre filtrelemeyi kullanmak için bunu ayarlayın",
+        countryOfOriginTooltip:
+            "Harita görünümünü ve Akıllı Çalma Listelerinde ülkeye göre filtrelemeyi kullanmak için bunu ayarlayın",
         fetchingOriginCountry: "Yükleniyor...",
         save: "Kaydet",
         fetchFromWikipedia: "Wikipedia'dan getir",
@@ -153,14 +155,17 @@ const tr = {
         tools: "Araçlar",
         aboutArtwork: "Kapak resmi hakkında",
         artworkTooltipTitle: "🎨 Kapak resmi önceliği",
-        artworkTooltipBody: "<h3 style='margin:0'>🎨 Kapak resmi önceliği</h3><br/>Öncelikle, Musicat dosya meta verilerinde kodlanmış kapak resmini arar, bu kareye tıklayarak üzerine yazabilirsiniz (png ve jpg desteklenir). <br/><br/>Eğer yoksa, albüm klasöründe <i>cover.jpg, folder.jpg</i> veya <i>artwork.jpg</i> adlı bir dosya arayacaktır (bu dosya adları listesini Ayarlar'dan değiştirebilirsiniz).<br/><br/>Aksi takdirde, albüm klasöründeki herhangi bir resmi arayıp kullanacaktır.",
+        artworkTooltipBody:
+            "<h3 style='margin:0'>🎨 Kapak resmi önceliği</h3><br/>Öncelikle, Musicat dosya meta verilerinde kodlanmış kapak resmini arar, bu kareye tıklayarak üzerine yazabilirsiniz (png ve jpg desteklenir). <br/><br/>Eğer yoksa, albüm klasöründe <i>cover.jpg, folder.jpg</i> veya <i>artwork.jpg</i> adlı bir dosya arayacaktır (bu dosya adları listesini Ayarlar'dan değiştirebilirsiniz).<br/><br/>Aksi takdirde, albüm klasöründeki herhangi bir resmi arayıp kullanacaktır.",
         encodedInFile: "Meta veride",
         bit: "bit",
         noMetadata: "Şarkının meta verisi yok",
-        unsupportedFormat: "Bu dosya türü henüz meta veri görüntüleme/düzenleme için desteklenmiyor",
+        unsupportedFormat:
+            "Bu dosya türü henüz meta veri görüntüleme/düzenleme için desteklenmiyor",
         fix: "Düzelt",
         errors: {
-            nullChars: "Bazı etiketlerde düzgün okunmasını engelleyen gizli karakterler var.",
+            nullChars:
+                "Bazı etiketlerde düzgün okunmasını engelleyen gizli karakterler var.",
         },
         artist: "sanatçı",
         fixLegacyEncodings: {
@@ -169,6 +174,7 @@ const tr = {
             hint: "Kodlama seçin...",
         },
         setTitleFromFileNameHint: "Başlığı dosya adından ayarlamak için tıklayın",
+        differentTagTypes:"",
     },
     settings: {
         title: "Ayarlar",
@@ -177,6 +183,9 @@ const tr = {
         outputDevice: "Çıkış cihazı",
         followSystem: "Sistem cihazı ile aynı",
         interface: "Arayüz",
+        miniPlayerLocation: "",
+        language: "",
+        theme: "",
         features: "Özellikler",
         subtitle: "Ayarları yapılandır",
         version: "Sürüm",
@@ -185,9 +194,15 @@ const tr = {
         foldersToWatch: "İzlenecek klasörler",
         folder: "{{1 klasör | ?? klasör}}",
         importing: "İçe aktarılıyor..",
+        coverArtFilenames: "",
         enableArtistsToolkit: "Sanatçı Araçlarını Etkinleştir",
+        import: "",
+        enableCoverArtCheck: "",
         songbookLocation: "Şarkı kitabı konumu",
         scrapbookLocation: "Not defteri konumu",
+        downloadLocation: "",
+        generatedStemsLocation: "",
+        playlistsLocation: "",
         enableAIFeatures: "AI özelliklerini etkinleştir",
         aiModel: "AI Modeli (LLM)",
         openApiKey: "OpenAI API Anahtarı",
@@ -256,9 +271,22 @@ const tr = {
         },
     },
     trackMenu: {
+        reImportTrack: "",
+        reImportTracks: "",
+        reImportTrackHint: "",
+        separateTitle: "",
+        separateStems: "",
+        editTag: "",
+        lookingOnline: "",
+        originCountry: "",
+        originCountryC: "",
+        originCountryHint: "",
+        wikiPanel: "",
         removeFromLibrary: "{{track | ?? parça}} kütüphaneden kaldır",
         deleteFile: "{{file | ?? dosya}} sil",
         deleteFileHint: "Sistem Çöp Kutusuna taşı",
+        openInFileManager: "{explorerName} ile aç",
+        infoMetadata: ""
     },
     toDelete: {
         title: "Silinecek",
@@ -272,6 +300,14 @@ const tr = {
     },
     lyrics: {
         autoScroll: "Otomatik kaydırma",
+    },
+    stemSeparation: {
+        loading: "",
+        complete: "",
+        error: "",
+        showStems: "",
+        cancel: "",
+        close: "",
     },
 } satisfies BaseTranslation;
 
