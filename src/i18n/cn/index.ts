@@ -15,28 +15,28 @@ const cn = {
         toDelete: "To Delete",
         playlists: "播放列表",
         smartPlaylists: "智能列表",
-        artistsToolkit: "Artist's Toolkit",
+        artistsToolkit: "艺术家工具箱",
         map: "音图",
         internetArchive: "互联网档案馆",
         stats: "统计",
-        openWikiTooltip: "Open Wiki panel for {artist}",
-        addMetadataHint: "Add metadata",
+        openWikiTooltip: "打开 {artist} 的维基页面",
+        addMetadataHint: "添加元数据",
         takeControl: "Take control of your library",
-        iaMode: "Main player off in Internet Archive mode<br /><br />Stop playback to re-enable",
+        iaMode: "主播放器在互联网档案馆模式下已关闭<br /><br />停止播放以重新启用",
     },
     library: {
         fields: {
             title: "标题",
             artist: "艺术家",
-            composer: "Composer",
+            composer: "作曲家",
             album: "专辑",
             albumArtist: "专辑艺术家",
             track: "音轨",
-            compilation: "Compil",
+            compilation: "汇编",
             year: "年份",
             dateAdded: "添加日期",
             genre: "风格",
-            origin: "Origin",
+            origin: "源",
             duration: "时长",
             tags: "标签",
         },
@@ -76,7 +76,7 @@ const cn = {
             invalid: "查询无效",
             parts: {
                 byAlbumArtist: {
-                    title: "by album artist",
+                    title: "by album  artist",
                     example: "eg. by Charlie Parker",
                 },
                 byArtist: {
@@ -157,7 +157,7 @@ const cn = {
         artworkTooltipTitle: "🎨 作品优先级",
         artworkTooltipBody:
             "<h3 style='margin:0'>🎨 封面图优先级</h3><br/>首先，Musicat 会查找文件元数据中编码的封面图，您可以通过点击此方框覆盖元数据（支持 png 和 jpg 格式）。<br/><br/>如果没有找到封面图，它会在专辑文件夹中查找名为 <i>cover.jpg, folder.jpg</i> 或 <i>artwork.jpg</i> (您可以在“设置”中更改此文件名列表）。<br/><br/>否则，它会在专辑文件夹中查找并使用该图像。",
-        encodedInFile: "In metadata",
+        encodedInFile: "写入元数据",
         bit: "比特",
         noMetadata: "歌曲没有元数据",
         unsupportedFormat:
