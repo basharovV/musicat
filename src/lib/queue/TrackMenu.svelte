@@ -18,6 +18,7 @@
     import Icon from "../ui/Icon.svelte";
     import ToolsMenu from "./ToolsMenu.svelte";
     import { get } from "svelte/store";
+    import { LL } from "../../i18n/i18n-svelte";
 
     type ActionType = "delete";
 
@@ -155,19 +156,27 @@
         {#if song && get(canShowInfoPopup)}
             <MenuDivider />
             <MenuOption onClick={onMoreToolsClick}>
-                More Tools <Icon icon="lucide:chevron-right" class="right" />
+                {$LL.trackMenu.moreTools() || "More Tools"}
+                <Icon icon="lucide:chevron-right" class="right" />
             </MenuOption>
             <MenuDivider />
         {/if}
         {#if songs.length > 1}
-            <MenuOption onClick={unselect} text="Unselect all" />
+            <MenuOption
+                onClick={unselect}
+                text={$LL.trackMenu.unselectAll() || "Unselect all"}
+            />
         {/if}
         <MenuOption
             isDestructive={true}
             isConfirming={isConfirming("delete")}
             onClick={removeFromQueue}
-            text={song ? "Remove track from queue" : "Remove tracks from queue"}
-            confirmText="Click again to confirm"
+            text={song
+                ? $LL.trackMenu.removeTrackFromQueue() ||
+                  "Remove track from queue"
+                : $LL.trackMenu.removeTracksFromQueue() ||
+                  "Remove tracks from queue"}
+            confirmText={$LL.button.areYouSure() || "Click again to confirm"}
         />
 
         <MenuDivider />
@@ -175,11 +184,15 @@
         {#if song}
             <MenuOption
                 onClick={compose(openInFinder, song)}
-                text="Open in {explorerName}"
+                text={$LL.trackMenu.openInFileManager({ explorerName }) ||
+                    `Open in ${explorerName}`}
             />
         {/if}
         {#if get(canShowInfoPopup)}
-            <MenuOption onClick={openInfo} text="Info & metadata" />
+            <MenuOption
+                onClick={openInfo}
+                text={$LL.trackMenu.infoMetadata() || "Info & metadata"}
+            />
         {/if}
     </Menu>
 {/if}

@@ -240,7 +240,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>{$LL.settings.coverArtFilenames()}</td>
+                    <td
+                        >{$LL.settings.coverArtFilenames() ||
+                            "Cover art filenames"}</td
+                    >
                     <td
                         ><Input
                             bind:value={commaSeparatedFilenames}
@@ -251,7 +254,10 @@
                     >
                 </tr>
                 <tr>
-                    <td>{$LL.settings.downloadLocation()}</td>
+                    <td
+                        >{$LL.settings.downloadLocation() ||
+                            "Download location"}</td
+                    >
                     <td>
                         <div class="download-location">
                             <p>{$userSettings.downloadLocation}</p>
@@ -265,7 +271,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>{$LL.settings.playlistsLocation()}</td>
+                    <td
+                        >{$LL.settings.playlistsLocation() ||
+                            "Playlists location"}</td
+                    >
                     <td>
                         <div class="download-location">
                             <p>{$userSettings.playlistsLocation}</p>
@@ -279,7 +288,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>{$LL.settings.generatedStemsLocation()}</td>
+                    <td
+                        >{$LL.settings.generatedStemsLocation() ||
+                            "Generated stems location"}</td
+                    >
                     <td>
                         <div class="download-location">
                             <p>{$userSettings.generatedStemsLocation}</p>
@@ -336,7 +348,10 @@
                     <th colspan="2">{$LL.settings.interface()}</th>
                 </tr>
                 <tr>
-                    <td>Mini-player location</td>
+                    <td
+                        >{$LL.settings.miniPlayerLocation() ||
+                            "Mini-player location"}</td
+                    >
                     <td>
                         <select bind:value={$userSettings.miniPlayerLocation}>
                             {#each miniPlayerLocations as location}
@@ -346,7 +361,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Language</td>
+                    <td>{$LL.settings.language() || "Language"}</td>
                     <td>
                         <select on:change={onLanguageChange} value={$locale}>
                             {#each locales as locale}
@@ -358,7 +373,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Theme</td>
+                    <td>{$LL.settings.theme() || "Theme"}</td>
                     <td>
                         <select bind:value={$userSettings.theme}>
                             <optgroup label="light themes">
@@ -379,7 +394,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Enable Artist's Toolkit</td>
+                    <td
+                        >{$LL.settings.enableArtistsToolkit() ||
+                            "Enable Artist's Toolkit"}</td
+                    >
                     <td>
                         <input
                             type="checkbox"
@@ -390,10 +408,13 @@
             </tbody>
             <tbody>
                 <tr>
-                    <th colspan="2">Import</th>
+                    <th colspan="2">{$LL.settings.import() || "Import"}</th>
                 </tr>
                 <tr>
-                    <td>Enable Cover Art check</td>
+                    <td
+                        >{$LL.settings.enableCoverArtCheck() ||
+                            "Enable Cover Art check"}</td
+                    >
                     <td>
                         <input
                             type="checkbox"
@@ -424,7 +445,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Scrapbook location</td>
+                    <td
+                        >{$LL.settings.scrapbookLocation() ||
+                            "Scrapbook location"}</td
+                    >
                     <td>
                         <div class="download-location">
                             <p>

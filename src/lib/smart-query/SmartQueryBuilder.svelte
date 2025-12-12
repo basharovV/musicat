@@ -164,7 +164,8 @@
                     use:autoWidth
                     autocomplete="off"
                     spellcheck="false"
-                    placeholder="add new block"
+                    placeholder={$LL.smartPlaylists.builder.addNewBlock() ||
+                        "add new block"}
                 /></span
             >
         </div>

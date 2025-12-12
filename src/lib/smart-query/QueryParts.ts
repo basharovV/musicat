@@ -29,7 +29,7 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
         comparison: "is-equal",
         description: "smartPlaylists.builder.parts.byArtist.title",
         example: "smartPlaylists.builder.parts.byArtist.example",
-        prompt: "by {artist}",
+        prompt: "by artist {artist}",
         name: QUERY_PARTS.BY_ARTIST,
         inputRequired: {
             artist: {

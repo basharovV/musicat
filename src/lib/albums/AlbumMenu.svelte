@@ -29,6 +29,7 @@
     import { removeQueuedSongs } from "../../data/storeHelper";
     import { reImport } from "../../data/LibraryUtils";
     import toast from "svelte-french-toast";
+    import LL from "../../i18n/i18n-svelte";
 
     type ActionType =
         | "artwork-local"
@@ -215,29 +216,32 @@
         <MenuOption
             isLoading={isLoading("re-import")}
             onClick={reImportAlbum}
-            text="Re-import album"
+            text={$LL.albumMenu.reImportAlbum() || "Re-import album"}
         />
         <MenuDivider />
-        <MenuOption text="⚡️ Enrich" isDisabled />
+        <MenuOption text={$LL.albumMenu.enrich() || "⚡️ Enrich"} isDisabled />
         {#if song?.artist}
             <MenuOption
                 isLoading={isLoading("country")}
                 onClick={fetchingOriginCountry}
                 text={!songs[0].originCountry
                     ? isLoading("country")
-                        ? "Looking online..."
-                        : "Origin country"
-                    : "Origin country ✅"}
-                description="from Wikipedia"
+                        ? $LL.albumMenu.lookingOnline() || "Looking online..."
+                        : $LL.albumMenu.originCountry() || "Origin country"
+                    : $LL.albumMenu.originCountryC() || "Origin country ✅"}
+                description={$LL.albumMenu.originCountryHint() ||
+                    "from Wikipedia"}
             />
         {/if}
         <MenuOption
             isLoading={isLoading("artwork-online")}
             onClick={fetchArtwork}
-            text="Fetch artwork"
+            text={$LL.albumMenu.fetchArtwork() || "Fetch artwork"}
             description={isLoading("artwork-online")
-                ? "Fetching from Wikipedia..."
-                : "Save to folder as cover.jpg"}
+                ? $LL.albumMenu.fetchFromWikipedia() ||
+                  "Fetching from Wikipedia..."
+                : $LL.albumMenu.fetchArtworkHint() ||
+                  "Save to folder as cover.jpg"}
         />
         {#if hasResult("artwork-online")}
             <MenuOption text={result.error || result.success} isDisabled />
@@ -245,17 +249,20 @@
         <MenuOption
             isLoading={isLoading("artwork-local")}
             onClick={rescanLocalArtwork}
-            text="Scan existing artwork"
+            text={$LL.albumMenu.scanExistingArtwork() ||
+                "Scan existing artwork"}
             description={isLoading("artwork-local")
-                ? "Rescanning..."
-                : "Check encoded art in tracks / folder image"}
+                ? $LL.albumMenu.scanningExistingArtwork() || "Rescanning..."
+                : $LL.albumMenu.scanExistingArtworkHint() ||
+                  "Check encoded art in tracks / folder image"}
         />
         {#if hasResult("artwork-local")}
             <MenuOption text={result.error || result.success} isDisabled />
         {/if}
         <MenuOption
             onClick={compose(searchArtworkOnBrave, album)}
-            text="Search for artwork on Brave"
+            text={$LL.albumMenu.searchFromBrave() ||
+                "Search for artwork on Brave"}
         />
         {#if song?.artist}
             <MenuDivider />
@@ -265,7 +272,8 @@
             />
             <MenuOption
                 onClick={compose(searchArtistOnWikiPanel, song)}
-                text="Wiki panel: <i>{song.artist}</i>"
+                text="{$LL.albumMenu.wikiPanel() || 'Wiki Panel:'}
+                <i>{song.artist}</i>"
             />
         {/if}
         <MenuDivider />
@@ -273,14 +281,19 @@
             isDestructive={true}
             isConfirming={isConfirming("delete")}
             onClick={deleteAlbum}
-            text="Remove album from library"
+            text={$LL.albumMenu.removeFromLibrary() ||
+                "Remove album from library"}
             confirmText="Click again to confirm"
         />
         <MenuDivider />
         <MenuOption
             onClick={compose(openInFinder, song)}
-            text="Open in {explorerName}"
+            text={$LL.albumMenu.openInFileManager({ explorerName }) ||
+                `Open in ${explorerName}`}
         />
-        <MenuOption onClick={openInfo} text="Info & metadata" />
+        <MenuOption
+            onClick={openInfo}
+            text={$LL.albumMenu.infoMetadata() || "Info & metadata"}
+        />
     </Menu>
 {/if}

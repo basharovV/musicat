@@ -1399,7 +1399,12 @@
                                             )}
                                         on:mouseup|preventDefault|stopPropagation={onMouseUpSmartPlaylist}
                                     >
-                                        <p>{smartQuery.name}</p>
+                                        <p>
+                                            {typeof smartQuery.name ===
+                                            "function"
+                                                ? smartQuery.name()
+                                                : smartQuery.name}
+                                        </p>
                                     </div>
                                 {/each}
                                 {#each $savedSmartQueries as query (query.id)}
@@ -1529,7 +1534,7 @@
                                 color={$uiView === "internet-archive"
                                     ? $currentThemeObject["accent"]
                                     : "currentColor"}
-                            />Internet Archive</item
+                            />{$LL.sidebar.internetArchive()}</item
                         >
                         <item
                             class:selected={$uiView === "map"}

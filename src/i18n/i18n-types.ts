@@ -6,6 +6,7 @@ export type BaseTranslation = BaseTranslationType
 export type BaseLocale = 'en'
 
 export type Locales =
+	| 'cn'
 	| 'en'
 	| 'es'
 	| 'tr'
@@ -572,6 +573,18 @@ type RootTranslation = {
 		 */
 		'interface': string
 		/**
+		 * M​i​n​i​ ​P​l​a​y​e​r​ ​L​o​c​a​t​i​o​n
+		 */
+		miniPlayerLocation: string
+		/**
+		 * L​a​n​g​u​a​g​e
+		 */
+		language: string
+		/**
+		 * T​h​e​m​e
+		 */
+		theme: string
+		/**
 		 * F​e​a​t​u​r​e​s
 		 */
 		features: string
@@ -611,6 +624,14 @@ type RootTranslation = {
 		 * E​n​a​b​l​e​ ​A​r​t​i​s​t​'​s​ ​T​o​o​l​k​i​t
 		 */
 		enableArtistsToolkit: string
+		/**
+		 * I​m​p​o​r​t
+		 */
+		'import': string
+		/**
+		 * E​n​a​b​l​e​ ​C​o​v​e​r​ ​A​r​t​ ​c​h​e​c​k
+		 */
+		enableCoverArtCheck: string
 		/**
 		 * S​o​n​g​b​o​o​k​ ​l​o​c​a​t​i​o​n
 		 */
@@ -807,7 +828,111 @@ type RootTranslation = {
 			tracksLabel: string
 		}
 	}
+	albumMenu: {
+		/**
+		 * R​e​-​i​m​p​o​r​t​ ​A​l​b​u​m
+		 */
+		reImportAlbum: string
+		/**
+		 * ⚡​️​ ​E​n​r​i​c​h
+		 */
+		enrich: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y
+		 */
+		originCountry: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y​ ​✅
+		 */
+		originCountryC: string
+		/**
+		 * f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+		 */
+		originCountryHint: string
+		/**
+		 * F​e​t​c​h​ ​a​r​t​w​o​r​k​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+		 */
+		fetchArtwork: string
+		/**
+		 * S​a​v​e​ ​t​o​ ​f​o​l​d​e​r​ ​a​s​ ​c​o​v​e​r​.​j​p​g
+		 */
+		fetchArtworkHint: string
+		/**
+		 * F​e​t​c​h​i​n​g​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a​.​.​.
+		 */
+		fetchFromWikipedia: string
+		/**
+		 * S​c​a​n​ ​e​x​i​s​t​i​n​g​ ​a​r​t​w​o​r​k
+		 */
+		scanExistingArtwork: string
+		/**
+		 * R​e​s​c​a​n​n​i​n​g​.​.​.
+		 */
+		scanningExistingArtwork: string
+		/**
+		 * C​h​e​c​k​ ​e​n​c​o​d​e​d​ ​a​r​t​ ​i​n​ ​t​r​a​c​k​s​ ​/​ ​f​o​l​d​e​r​ ​i​m​a​g​e
+		 */
+		scanExistingArtworkHint: string
+		/**
+		 * S​e​a​r​c​h​ ​f​o​r​ ​a​r​t​w​o​r​k​ ​o​n​ ​B​r​a​v​e
+		 */
+		searchFromBrave: string
+		/**
+		 * W​i​k​i​ ​p​a​g​e​:
+		 */
+		wikiPanel: string
+		/**
+		 * R​e​m​o​v​e​ ​a​l​b​u​m​ ​f​r​o​m​ ​l​i​b​r​a​r​y
+		 */
+		removeFromLibrary: string
+		/**
+		 * O​p​e​n​ ​i​n​ ​{​e​x​p​l​o​r​e​r​N​a​m​e​}
+		 * @param {unknown} explorerName
+		 */
+		openInFileManager: RequiredParams<'explorerName'>
+		/**
+		 * I​n​f​o​ ​&​ ​M​e​t​a​d​a​t​a
+		 */
+		infoMetadata: string
+	}
 	trackMenu: {
+		/**
+		 * R​e​-​I​m​p​o​r​t​ ​T​r​a​c​k
+		 */
+		reImportTrack: string
+		/**
+		 * R​e​-​i​m​p​o​r​t​ ​{​n​}​ ​t​r​a​c​k​s
+		 * @param {unknown} n
+		 */
+		reImportTracks: RequiredParams<'n'>
+		/**
+		 * W​i​l​l​ ​a​l​s​o​ ​r​e​-​i​m​p​o​r​t​ ​a​l​b​u​m​s
+		 */
+		reImportTrackHint: string
+		/**
+		 * S​t​e​m​s​ ​(​c​l​i​c​k​ ​t​o​ ​p​l​a​y​)
+		 */
+		separateTitle: string
+		/**
+		 * S​e​p​a​r​a​t​e​ ​s​t​e​m​s
+		 */
+		separateStems: string
+		/**
+		 * E​d​i​t​ ​t​a​g​s
+		 */
+		editTag: string
+		/**
+		 * ⚡​️​ ​E​n​r​i​c​h
+		 */
+		enrich: string
+		/**
+		 * L​o​o​k​i​n​g​ ​o​n​l​i​n​e​.​.​.
+		 */
+		lookingOnline: string
+		/**
+		 * W​i​k​i​ ​p​a​n​e​l​:
+		 */
+		wikiPanel: string
 		/**
 		 * R​e​m​o​v​e​ ​{​{​t​r​a​c​k​|​?​?​ ​t​r​a​c​k​s​}​}​ ​f​r​o​m​ ​l​i​b​r​a​r​y
 		 */
@@ -820,6 +945,77 @@ type RootTranslation = {
 		 * M​o​v​e​ ​t​o​ ​s​y​s​t​e​m​ ​T​r​a​s​h​ ​/​ ​R​e​c​y​c​l​e​ ​b​i​n
 		 */
 		deleteFileHint: string
+		/**
+		 * M​o​r​e​ ​t​o​o​l​s
+		 */
+		moreTools: string
+		/**
+		 * U​n​s​e​l​e​c​t​ ​a​l​l
+		 */
+		unselectAll: string
+		/**
+		 * R​e​m​o​v​e​ ​t​r​a​c​k​ ​f​r​o​m​ ​q​u​e​u​e
+		 */
+		removeTrackFromQueue: string
+		/**
+		 * R​e​m​o​v​e​ ​t​r​a​c​k​s​ ​f​r​o​m​ ​q​u​e​u​e
+		 */
+		removeTracksFromQueue: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y
+		 */
+		originCountry: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y​ ​✅
+		 */
+		originCountryC: string
+		/**
+		 * f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+		 */
+		originCountryHint: string
+		/**
+		 * O​p​e​n​ ​i​n​ ​{​e​x​p​l​o​r​e​r​N​a​m​e​}
+		 * @param {unknown} explorerName
+		 */
+		openInFileManager: RequiredParams<'explorerName'>
+		/**
+		 * I​n​f​o​ ​&​ ​M​e​t​a​d​a​t​a
+		 */
+		infoMetadata: string
+	}
+	toolsMenu: {
+		/**
+		 * ⚡​️​ ​E​n​r​i​c​h
+		 */
+		enrich: string
+		/**
+		 * L​o​o​k​i​n​g​ ​o​n​l​i​n​e​.​.​.
+		 */
+		lookingOnline: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y
+		 */
+		originCountry: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y​ ​✅
+		 */
+		originCountryC: string
+		/**
+		 * f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+		 */
+		originCountryHint: string
+		/**
+		 * C​h​o​r​d​s​:
+		 */
+		chords: string
+		/**
+		 * L​y​r​i​c​s​:
+		 */
+		lyrics: string
+		/**
+		 * W​i​k​i​ ​p​a​n​e​l​:
+		 */
+		wikiPanel: string
 	}
 	toDelete: {
 		/**
@@ -1438,6 +1634,18 @@ export type TranslationFunctions = {
 		 */
 		'interface': () => LocalizedString
 		/**
+		 * Mini Player Location
+		 */
+		miniPlayerLocation: () => LocalizedString
+		/**
+		 * Language
+		 */
+		language: () => LocalizedString
+		/**
+		 * Theme
+		 */
+		theme: () => LocalizedString
+		/**
 		 * Features
 		 */
 		features: () => LocalizedString
@@ -1477,6 +1685,14 @@ export type TranslationFunctions = {
 		 * Enable Artist's Toolkit
 		 */
 		enableArtistsToolkit: () => LocalizedString
+		/**
+		 * Import
+		 */
+		'import': () => LocalizedString
+		/**
+		 * Enable Cover Art check
+		 */
+		enableCoverArtCheck: () => LocalizedString
 		/**
 		 * Songbook location
 		 */
@@ -1672,7 +1888,109 @@ export type TranslationFunctions = {
 			tracksLabel: () => LocalizedString
 		}
 	}
+	albumMenu: {
+		/**
+		 * Re-import Album
+		 */
+		reImportAlbum: () => LocalizedString
+		/**
+		 * ⚡️ Enrich
+		 */
+		enrich: () => LocalizedString
+		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
+		 * Fetch artwork from Wikipedia
+		 */
+		fetchArtwork: () => LocalizedString
+		/**
+		 * Save to folder as cover.jpg
+		 */
+		fetchArtworkHint: () => LocalizedString
+		/**
+		 * Fetching from Wikipedia...
+		 */
+		fetchFromWikipedia: () => LocalizedString
+		/**
+		 * Scan existing artwork
+		 */
+		scanExistingArtwork: () => LocalizedString
+		/**
+		 * Rescanning...
+		 */
+		scanningExistingArtwork: () => LocalizedString
+		/**
+		 * Check encoded art in tracks / folder image
+		 */
+		scanExistingArtworkHint: () => LocalizedString
+		/**
+		 * Search for artwork on Brave
+		 */
+		searchFromBrave: () => LocalizedString
+		/**
+		 * Wiki page:
+		 */
+		wikiPanel: () => LocalizedString
+		/**
+		 * Remove album from library
+		 */
+		removeFromLibrary: () => LocalizedString
+		/**
+		 * Open in {explorerName}
+		 */
+		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		/**
+		 * Info & Metadata
+		 */
+		infoMetadata: () => LocalizedString
+	}
 	trackMenu: {
+		/**
+		 * Re-Import Track
+		 */
+		reImportTrack: () => LocalizedString
+		/**
+		 * Re-import {n} tracks
+		 */
+		reImportTracks: (arg: { n: unknown }) => LocalizedString
+		/**
+		 * Will also re-import albums
+		 */
+		reImportTrackHint: () => LocalizedString
+		/**
+		 * Stems (click to play)
+		 */
+		separateTitle: () => LocalizedString
+		/**
+		 * Separate stems
+		 */
+		separateStems: () => LocalizedString
+		/**
+		 * Edit tags
+		 */
+		editTag: () => LocalizedString
+		/**
+		 * ⚡️ Enrich
+		 */
+		enrich: () => LocalizedString
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: () => LocalizedString
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: () => LocalizedString
 		/**
 		 * Remove {{track|?? tracks}} from library
 		 */
@@ -1685,6 +2003,76 @@ export type TranslationFunctions = {
 		 * Move to system Trash / Recycle bin
 		 */
 		deleteFileHint: () => LocalizedString
+		/**
+		 * More tools
+		 */
+		moreTools: () => LocalizedString
+		/**
+		 * Unselect all
+		 */
+		unselectAll: () => LocalizedString
+		/**
+		 * Remove track from queue
+		 */
+		removeTrackFromQueue: () => LocalizedString
+		/**
+		 * Remove tracks from queue
+		 */
+		removeTracksFromQueue: () => LocalizedString
+		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
+		 * Open in {explorerName}
+		 */
+		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		/**
+		 * Info & Metadata
+		 */
+		infoMetadata: () => LocalizedString
+	}
+	toolsMenu: {
+		/**
+		 * ⚡️ Enrich
+		 */
+		enrich: () => LocalizedString
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: () => LocalizedString
+		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
+		 * Chords:
+		 */
+		chords: () => LocalizedString
+		/**
+		 * Lyrics:
+		 */
+		lyrics: () => LocalizedString
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: () => LocalizedString
 	}
 	toDelete: {
 		/**
