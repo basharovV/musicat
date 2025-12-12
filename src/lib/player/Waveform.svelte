@@ -182,7 +182,8 @@
         });
 
         wavesurfer.on("click", (pos) => {
-            let posSeconds = ($current.song?.fileInfo?.duration || 0) * pos;
+            if (!$current.song) return;
+            let posSeconds = $current.song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
                 if ($current.song) {
                     const marker: Marker = {
@@ -202,7 +203,7 @@
                     });
                 }
             } else {
-                seekTime.set(($current.song?.fileInfo?.duration || 0) * pos);
+                seekTime.set($current.song.fileInfo.duration * pos);
             }
         });
 
@@ -213,18 +214,15 @@
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
+            if (!$current.song) return;
             const bytes = new Uint8Array(event.payload.data);
             const floats = new Float32Array(bytes.buffer);
-            wavesurfer.load(
-                "",
-                [floats],
-                $current.song?.fileInfo?.duration || 0,
-            );
+            wavesurfer.load("", [floats], $current.song.fileInfo.duration);
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
-                    songId: $current.song?.id || null,
+                    songId: $current.song.id,
                     data: [floats],
                 };
             } else {
@@ -236,7 +234,7 @@
     playerTime.subscribe((playerTime) => {
         if (wavesurfer && $current.song) {
             wavesurfer.seekTo(
-                Math.min(playerTime / ($current.song.fileInfo?.duration || 1)),
+                Math.min(playerTime / $current.song.fileInfo.duration),
             );
         }
     });
@@ -245,32 +243,30 @@
         wavesurfer.load(
             "",
             $waveformPeaks.data,
-            $current.song?.fileInfo?.duration || 0,
+            $current.song.fileInfo.duration,
         );
         pxPerSec = wavesurfer.options.minPxPerSec;
 
         if ($current.song) {
-            wavesurfer.seekTo(
-                $playerTime / ($current.song.fileInfo?.duration || 1),
-            );
+            wavesurfer.seekTo($playerTime / $current.song.fileInfo.duration);
+        }
 
-            // Restore loop point
-            if ($waveformPeaks.loopEnabled) {
-                wsRegions.addRegion({
-                    start: $waveformPeaks.loopStartPos,
-                    end: $waveformPeaks.loopEndPos,
-                    color: $currentThemeObject["waveform-region-loop"],
-                });
-            }
-
-            $current.song.markers?.forEach((m) => {
-                wsRegions.addRegion({
-                    start: m.pos,
-                    content: m.title,
-                    color: $currentThemeObject["waveform-region-current"],
-                });
+        // Restore loop point
+        if ($waveformPeaks.loopEnabled) {
+            wsRegions.addRegion({
+                start: $waveformPeaks.loopStartPos,
+                end: $waveformPeaks.loopEndPos,
+                color: $currentThemeObject["waveform-region-loop"],
             });
         }
+
+        $current.song.markers?.forEach((m) => {
+            wsRegions.addRegion({
+                start: m.pos,
+                content: m.title,
+                color: $currentThemeObject["waveform-region-current"],
+            });
+        });
     }
 
     async function getWaveform() {
@@ -301,16 +297,28 @@
         // console.log("result", result);
     }
 
-    $: if (isMounted && $current.song?.path !== song?.path && wavesurfer) {
+    function clearWaveform() {
+        wsRegions?.clearRegions();
+        wavesurfer?.empty();
+    }
+
+    $: if (
+        isMounted &&
+        $current.song &&
+        $current.song?.path !== song?.path &&
+        wavesurfer
+    ) {
         getWaveform();
         console.log(
             "$current.song.fileInfo.duration",
-            $current.song?.fileInfo?.duration,
+            $current.song.fileInfo.duration,
         );
 
         if (wavesurfer.getDecodedData()) {
             wavesurfer.zoom(0);
         }
+    } else if (isMounted && wavesurfer && !$current.song) {
+        clearWaveform();
     }
 
     let hoverPos = 0;
