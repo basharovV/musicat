@@ -437,7 +437,10 @@
         />
         {#if song.artist}
             <MenuDivider />
-            <MenuOption text="⚡️ Enrich" isDisabled />
+            <MenuOption
+                text={$LL.trackMenu.enrich() || "⚡️ Enrich"}
+                isDisabled
+            />
             <MenuOption
                 isDisabled={isDisabled()}
                 isLoading={isLoading("country")}

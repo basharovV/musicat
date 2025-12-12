@@ -275,6 +275,7 @@ const en = {
     },
     albumMenu: {
         reImportAlbum: "Re-import Album",
+        enrich: "⚡️ Enrich",
         originCountry: "Origin country",
         originCountryC: "Origin country ✅",
         originCountryHint: "from Wikipedia",
@@ -298,6 +299,7 @@ const en = {
         separateTitle: "Stems (click to play)",
         separateStems: "Separate stems",
         editTag: "Edit tags",
+        enrich: "⚡️ Enrich",
         lookingOnline: "Looking online...",
         wikiPanel: "Wiki panel:",
         removeFromLibrary: "Remove {{track | ?? tracks}} from library",
@@ -309,11 +311,21 @@ const en = {
         removeTrackFromQueue: "Remove track from queue",
         removeTracksFromQueue: "Remove tracks from queue",
         // Both library & queue
-        originCountry: "Origin country", // also used in ToolsMenu
+        originCountry: "Origin country",
         originCountryC: "Origin country ✅",
         originCountryHint: "from Wikipedia",
         openInFileManager: "Open in {explorerName}",
         infoMetadata: "Info & Metadata"
+    },
+    toolsMenu: {
+        enrich: "⚡️ Enrich",
+        lookingOnline: "Looking online...",
+        originCountry: "Origin country",
+        originCountryC: "Origin country ✅",
+        originCountryHint: "from Wikipedia",
+        chords: "Chords:",
+        lyrics: "Lyrics:",
+        wikiPanel: "Wiki panel:",
     },
     toDelete: {
         title: "To Delete",

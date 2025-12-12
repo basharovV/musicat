@@ -64,16 +64,19 @@
 {#if showMenu}
     <Menu {...position} onClickOutside={close} fixed submenu>
         {#if song.artist}
-            <MenuOption text="⚡️ Enrich" isDisabled />
+            <MenuOption
+                text={$LL.toolsMenu.enrich() || "⚡️ Enrich"}
+                isDisabled
+            />
             <MenuOption
                 isLoading={isLoading("country")}
                 onClick={fetchingOriginCountry}
                 text={!song.originCountry
                     ? isLoading("country")
-                        ? $LL.trackMenu.lookingOnline() || "Looking online..."
-                        : $LL.trackMenu.originCountry() || "Origin country"
-                    : $LL.trackMenu.originCountryC() || "Origin country ✅"}
-                description={$LL.trackMenu.originCountryHint() ||
+                        ? $LL.toolsMenu.lookingOnline() || "Looking online..."
+                        : $LL.toolsMenu.originCountry() || "Origin country"
+                    : $LL.toolsMenu.originCountryC() || "Origin country ✅"}
+                description={$LL.toolsMenu.originCountryHint() ||
                     "from Wikipedia"}
             />
             <MenuDivider />
@@ -84,11 +87,13 @@
         />
         <MenuOption
             onClick={compose(searchChords, song)}
-            text="Chords: <i>{song.title}</i>"
+            text="{$LL.toolsMenu.chords() || 'Chords:'}
+            <i>{song.title}</i>"
         />
         <MenuOption
             onClick={compose(searchLyrics, song)}
-            text="Lyrics: <i>{song.title}</i>"
+            text="{$LL.toolsMenu.lyrics() || 'Lyrics:'}
+            <i>{song.title}</i>"
         />
         {#if song.artist}
             <MenuDivider />
@@ -98,7 +103,8 @@
             />
             <MenuOption
                 onClick={compose(searchArtistOnWikiPanel, song)}
-                text="Wiki panel: <i>{song.artist}</i>"
+                text="{$LL.toolsMenu.wikiPanel() || 'Wiki Panel:'}
+                <i>{song.artist}</i>"
             />
         {/if}
     </Menu>

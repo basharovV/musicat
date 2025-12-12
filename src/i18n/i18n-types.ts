@@ -1817,6 +1817,10 @@ export type TranslationFunctions = {
 		 */
 		reImportAlbum: () => LocalizedString
 		/**
+		 * ⚡️ Enrich
+		 */
+		enrich: () => LocalizedString
+		/**
 		 * Looking online...
 		 */
 		lookingOnline: () => LocalizedString
@@ -1903,6 +1907,10 @@ export type TranslationFunctions = {
 		 */
 		editTag: () => LocalizedString
 		/**
+		 * ⚡️ Enrich
+		 */
+		enrich: () => LocalizedString
+		/**
 		 * Looking online...
 		 */
 		lookingOnline: () => LocalizedString
@@ -1958,6 +1966,44 @@ export type TranslationFunctions = {
 		 * Info & metadata
 		 */
 		infoMetadata: () => LocalizedString
+	}
+	toolsMenu: {
+		/**
+		 * ⚡️ Enrich
+		 */
+		enrich: () => LocalizedString
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: () => LocalizedString
+		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
+		 * Chords:
+		 */
+		chords: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		Lyrics: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		lyrics: () => LocalizedString
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: () => LocalizedString
 	}
 	toDelete: {
 		/**

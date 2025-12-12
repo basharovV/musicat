@@ -219,7 +219,7 @@
             text={$LL.albumMenu.reImportAlbum() || "Re-import album"}
         />
         <MenuDivider />
-        <MenuOption text="⚡️ Enrich" isDisabled />
+        <MenuOption text={$LL.albumMenu.enrich() || "⚡️ Enrich"} isDisabled />
         {#if song?.artist}
             <MenuOption
                 isLoading={isLoading("country")}
@@ -272,7 +272,8 @@
             />
             <MenuOption
                 onClick={compose(searchArtistOnWikiPanel, song)}
-                text="Wiki panel: <i>{song.artist}</i>"
+                text="{$LL.albumMenu.wikiPanel() || 'Wiki Panel:'}
+                <i>{song.artist}</i>"
             />
         {/if}
         <MenuDivider />

@@ -275,6 +275,7 @@ const cn = {
     },
     albumMenu: {
         reImportAlbum: "重新导入专辑",
+        enrich: "⚡️ 补全",
         originCountry: "来源国家",
         originCountryC: "来源国家 ✅",
         originCountryHint: "通过维基百科搜索",
@@ -298,6 +299,7 @@ const cn = {
         separateTitle: "分轨（点击播放）",
         separateStems: "音轨分离",
         editTag: "编辑标签",
+        enrich: "⚡️ 补全",
         lookingOnline: "在线查找...",
         wikiPanel: "维基页面：",
         removeFromLibrary: "从音乐库移除 {{ | ?? }} 首歌曲",
@@ -314,6 +316,16 @@ const cn = {
         originCountryHint: "通过维基百科搜索",
         openInFileManager: "通过 {explorerName} 打开",
         infoMetadata: "信息 & 元数据"
+    },
+    toolsMenu: {
+        enrich: "⚡️ 补全",
+        lookingOnline: "在线查找...",
+        originCountry: "来源国家",
+        originCountryC: "来源国家 ✅",
+        originCountryHint: "通过维基百科搜索",
+        chords: "和弦：",
+        lyrics: "歌词：",
+        wikiPanel: "维基页面：",
     },
     toDelete: {
         title: "已删除",
