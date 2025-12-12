@@ -62,7 +62,6 @@
             cursorColor: $currentThemeObject["waveform-cursor"],
             // backend: 'MediaElement',
             barWidth: 1.5,
-            responsive: true,
             barHeight: 2,
             height: "auto",
             barRadius: 2,
@@ -183,7 +182,7 @@
         });
 
         wavesurfer.on("click", (pos) => {
-            let posSeconds = $current.song.fileInfo.duration * pos;
+            let posSeconds = ($current.song?.fileInfo?.duration || 0) * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
                 if ($current.song) {
                     const marker: Marker = {
@@ -203,7 +202,7 @@
                     });
                 }
             } else {
-                seekTime.set($current.song.fileInfo.duration * pos);
+                seekTime.set(($current.song?.fileInfo?.duration || 0) * pos);
             }
         });
 
@@ -216,12 +215,16 @@
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
             const bytes = new Uint8Array(event.payload.data);
             const floats = new Float32Array(bytes.buffer);
-            wavesurfer.load("", [floats], $current.song.fileInfo.duration);
+            wavesurfer.load(
+                "",
+                [floats],
+                $current.song?.fileInfo?.duration || 0,
+            );
             pxPerSec = wavesurfer.options.minPxPerSec;
             if (!$waveformPeaks) {
                 $waveformPeaks = {
                     ...$waveformPeaks,
-                    songId: $current.song.id,
+                    songId: $current.song?.id || null,
                     data: [floats],
                 };
             } else {
@@ -233,7 +236,7 @@
     playerTime.subscribe((playerTime) => {
         if (wavesurfer && $current.song) {
             wavesurfer.seekTo(
-                Math.min(playerTime / $current.song.fileInfo.duration),
+                Math.min(playerTime / ($current.song.fileInfo?.duration || 1)),
             );
         }
     });
@@ -242,30 +245,32 @@
         wavesurfer.load(
             "",
             $waveformPeaks.data,
-            $current.song.fileInfo.duration,
+            $current.song?.fileInfo?.duration || 0,
         );
         pxPerSec = wavesurfer.options.minPxPerSec;
 
         if ($current.song) {
-            wavesurfer.seekTo($playerTime / $current.song.fileInfo.duration);
-        }
+            wavesurfer.seekTo(
+                $playerTime / ($current.song.fileInfo?.duration || 1),
+            );
 
-        // Restore loop point
-        if ($waveformPeaks.loopEnabled) {
-            wsRegions.addRegion({
-                start: $waveformPeaks.loopStartPos,
-                end: $waveformPeaks.loopEndPos,
-                color: $currentThemeObject["waveform-region-loop"],
+            // Restore loop point
+            if ($waveformPeaks.loopEnabled) {
+                wsRegions.addRegion({
+                    start: $waveformPeaks.loopStartPos,
+                    end: $waveformPeaks.loopEndPos,
+                    color: $currentThemeObject["waveform-region-loop"],
+                });
+            }
+
+            $current.song.markers?.forEach((m) => {
+                wsRegions.addRegion({
+                    start: m.pos,
+                    content: m.title,
+                    color: $currentThemeObject["waveform-region-current"],
+                });
             });
         }
-
-        $current.song.markers?.forEach((m) => {
-            wsRegions.addRegion({
-                start: m.pos,
-                content: m.title,
-                color: $currentThemeObject["waveform-region-current"],
-            });
-        });
     }
 
     async function getWaveform() {
@@ -300,11 +305,11 @@
         getWaveform();
         console.log(
             "$current.song.fileInfo.duration",
-            $current.song.fileInfo.duration,
+            $current.song?.fileInfo?.duration,
         );
 
         if (wavesurfer.getDecodedData()) {
-            wavesurfer.zoom(false);
+            wavesurfer.zoom(0);
         }
     }
 
