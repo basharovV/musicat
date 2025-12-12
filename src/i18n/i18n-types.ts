@@ -6,10 +6,10 @@ export type BaseTranslation = BaseTranslationType
 export type BaseLocale = 'en'
 
 export type Locales =
+	| 'cn'
 	| 'en'
 	| 'es'
 	| 'tr'
-	| 'cn'
 
 export type Translation = RootTranslation
 
@@ -93,7 +93,7 @@ type RootTranslation = {
 		 */
 		takeControl: string
 		/**
-		 * M​a​i​n​ ​p​l​a​y​e​r​ ​o​f​ ​i​n​ ​I​n​t​e​r​n​e​t​ ​A​r​c​h​i​v​e​ ​m​o​d​e​<​b​r​ ​/​>​<​b​r​ ​/​>​S​t​o​p​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​r​e​-​e​n​a​b​l​e
+		 * M​a​i​n​ ​p​l​a​y​e​r​ ​o​f​f​ ​i​n​ ​I​n​t​e​r​n​e​t​ ​A​r​c​h​i​v​e​ ​m​o​d​e​<​b​r​ ​/​>​<​b​r​ ​/​>​S​t​o​p​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​r​e​-​e​n​a​b​l​e
 		 */
 		iaMode: string
 	}
@@ -573,6 +573,18 @@ type RootTranslation = {
 		 */
 		'interface': string
 		/**
+		 * M​i​n​i​ ​P​l​a​y​e​r​ ​L​o​c​a​t​i​o​n
+		 */
+		miniPlayerLocation: string
+		/**
+		 * L​a​n​g​u​a​g​e
+		 */
+		language: string
+		/**
+		 * T​h​e​m​e
+		 */
+		theme: string
+		/**
 		 * F​e​a​t​u​r​e​s
 		 */
 		features: string
@@ -597,7 +609,7 @@ type RootTranslation = {
 		 */
 		foldersToWatch: string
 		/**
-		 * {​{​1​ ​f​o​l​d​e​r​|​?​?​ ​f​o​l​d​e​r​s​}​}}
+		 * {​{​1​ ​f​o​l​d​e​r​|​?​?​ ​f​o​l​d​e​r​s​}​}
 		 */
 		folder: string
 		/**
@@ -612,6 +624,14 @@ type RootTranslation = {
 		 * E​n​a​b​l​e​ ​A​r​t​i​s​t​'​s​ ​T​o​o​l​k​i​t
 		 */
 		enableArtistsToolkit: string
+		/**
+		 * I​m​p​o​r​t
+		 */
+		'import': string
+		/**
+		 * E​n​a​b​l​e​ ​C​o​v​e​r​ ​A​r​t​ ​c​h​e​c​k
+		 */
+		enableCoverArtCheck: string
 		/**
 		 * S​o​n​g​b​o​o​k​ ​l​o​c​a​t​i​o​n
 		 */
@@ -810,113 +830,107 @@ type RootTranslation = {
 	}
 	albumMenu: {
 		/**
-		 * Re-import album
+		 * R​e​-​i​m​p​o​r​t​ ​A​l​b​u​m
 		 */
 		reImportAlbum: string
 		/**
-		 * Looking online...
+		 * ⚡​️​ ​E​n​r​i​c​h
 		 */
-		lookingOnline: string
+		enrich: string
 		/**
-		 * Origin country
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y
 		 */
 		originCountry: string
 		/**
-		 * Origin country ✅
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y​ ​✅
 		 */
 		originCountryC: string
 		/**
-		 * from Wikipedia
+		 * f​r​o​m​ ​W​i​k​i​p​e​d​i​a
 		 */
 		originCountryHint: string
 		/**
-		 * Fetch artwork
+		 * F​e​t​c​h​ ​a​r​t​w​o​r​k​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a
 		 */
 		fetchArtwork: string
 		/**
-		 * Save to folder as cover.jpg
+		 * S​a​v​e​ ​t​o​ ​f​o​l​d​e​r​ ​a​s​ ​c​o​v​e​r​.​j​p​g
 		 */
 		fetchArtworkHint: string
 		/**
-		 * Fetching from Wikipedia...
+		 * F​e​t​c​h​i​n​g​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a​.​.​.
 		 */
 		fetchFromWikipedia: string
 		/**
-		 * Scan existing artwork
+		 * S​c​a​n​ ​e​x​i​s​t​i​n​g​ ​a​r​t​w​o​r​k
 		 */
 		scanExistingArtwork: string
 		/**
-		 * Rescanning...
+		 * R​e​s​c​a​n​n​i​n​g​.​.​.
 		 */
 		scanningExistingArtwork: string
 		/**
-		 * Check encoded art in tracks / folder image
+		 * C​h​e​c​k​ ​e​n​c​o​d​e​d​ ​a​r​t​ ​i​n​ ​t​r​a​c​k​s​ ​/​ ​f​o​l​d​e​r​ ​i​m​a​g​e
 		 */
 		scanExistingArtworkHint: string
 		/**
-		 * Search for artwork on Brave
+		 * S​e​a​r​c​h​ ​f​o​r​ ​a​r​t​w​o​r​k​ ​o​n​ ​B​r​a​v​e
 		 */
 		searchFromBrave: string
 		/**
-		 * Wiki panel:
+		 * W​i​k​i​ ​p​a​g​e​:
 		 */
 		wikiPanel: string
 		/**
-		 * Remove album from library
+		 * R​e​m​o​v​e​ ​a​l​b​u​m​ ​f​r​o​m​ ​l​i​b​r​a​r​y
 		 */
 		removeFromLibrary: string
 		/**
-		 * Open in {explorerName}
+		 * O​p​e​n​ ​i​n​ ​{​e​x​p​l​o​r​e​r​N​a​m​e​}
+		 * @param {unknown} explorerName
 		 */
-		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		openInFileManager: RequiredParams<'explorerName'>
 		/**
-		 * Info & metadata
+		 * I​n​f​o​ ​&​ ​M​e​t​a​d​a​t​a
 		 */
 		infoMetadata: string
 	}
 	trackMenu: {
 		/**
-		 * Re-Import Track
+		 * R​e​-​I​m​p​o​r​t​ ​T​r​a​c​k
 		 */
 		reImportTrack: string
 		/**
-		 * Re-import {n} tracks
+		 * R​e​-​i​m​p​o​r​t​ ​{​n​}​ ​t​r​a​c​k​s
+		 * @param {unknown} n
 		 */
-		reImportTracks: string
+		reImportTracks: RequiredParams<'n'>
 		/**
-		 * Will also re-import albums
+		 * W​i​l​l​ ​a​l​s​o​ ​r​e​-​i​m​p​o​r​t​ ​a​l​b​u​m​s
 		 */
 		reImportTrackHint: string
 		/**
-		 * Stems (click to play)
+		 * S​t​e​m​s​ ​(​c​l​i​c​k​ ​t​o​ ​p​l​a​y​)
 		 */
 		separateTitle: string
 		/**
-		 * Separate stems
+		 * S​e​p​a​r​a​t​e​ ​s​t​e​m​s
 		 */
 		separateStems: string
 		/**
-		 * Edit tags
+		 * E​d​i​t​ ​t​a​g​s
 		 */
 		editTag: string
 		/**
-		 * Looking online...
+		 * ⚡​️​ ​E​n​r​i​c​h
+		 */
+		enrich: string
+		/**
+		 * L​o​o​k​i​n​g​ ​o​n​l​i​n​e​.​.​.
 		 */
 		lookingOnline: string
 		/**
-		 * Origin country
-		 */
-		originCountry: string
-		/**
-		 * Origin country ✅
-		 */
-		originCountryC: string
-		/**
-		 * from Wikipedia
-		 */
-		originCountryHint: string
-		/**
-		 * Wiki panel:
+		 * W​i​k​i​ ​p​a​n​e​l​:
 		 */
 		wikiPanel: string
 		/**
@@ -932,13 +946,76 @@ type RootTranslation = {
 		 */
 		deleteFileHint: string
 		/**
-		 * Open in {explorerName}
+		 * M​o​r​e​ ​t​o​o​l​s
 		 */
-		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		moreTools: string
 		/**
-		 * Info & metadata
+		 * U​n​s​e​l​e​c​t​ ​a​l​l
+		 */
+		unselectAll: string
+		/**
+		 * R​e​m​o​v​e​ ​t​r​a​c​k​ ​f​r​o​m​ ​q​u​e​u​e
+		 */
+		removeTrackFromQueue: string
+		/**
+		 * R​e​m​o​v​e​ ​t​r​a​c​k​s​ ​f​r​o​m​ ​q​u​e​u​e
+		 */
+		removeTracksFromQueue: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y
+		 */
+		originCountry: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y​ ​✅
+		 */
+		originCountryC: string
+		/**
+		 * f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+		 */
+		originCountryHint: string
+		/**
+		 * O​p​e​n​ ​i​n​ ​{​e​x​p​l​o​r​e​r​N​a​m​e​}
+		 * @param {unknown} explorerName
+		 */
+		openInFileManager: RequiredParams<'explorerName'>
+		/**
+		 * I​n​f​o​ ​&​ ​M​e​t​a​d​a​t​a
 		 */
 		infoMetadata: string
+	}
+	toolsMenu: {
+		/**
+		 * ⚡​️​ ​E​n​r​i​c​h
+		 */
+		enrich: string
+		/**
+		 * L​o​o​k​i​n​g​ ​o​n​l​i​n​e​.​.​.
+		 */
+		lookingOnline: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y
+		 */
+		originCountry: string
+		/**
+		 * O​r​i​g​i​n​ ​c​o​u​n​t​r​y​ ​✅
+		 */
+		originCountryC: string
+		/**
+		 * f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+		 */
+		originCountryHint: string
+		/**
+		 * C​h​o​r​d​s​:
+		 */
+		chords: string
+		/**
+		 * L​y​r​i​c​s​:
+		 */
+		lyrics: string
+		/**
+		 * W​i​k​i​ ​p​a​n​e​l​:
+		 */
+		wikiPanel: string
 	}
 	toDelete: {
 		/**
@@ -1555,19 +1632,19 @@ export type TranslationFunctions = {
 		/**
 		 * Interface
 		 */
-		interface: () => LocalizedString
-        /**
-         * miniPlayerLocation
-         */
-        miniPlayerLocation: () => LocalizedString
-        /**
-         * Language
-         */
-        language: () => LocalizedString
-        /**
-         * Theme
-         */
-        theme: () => LocalizedString
+		'interface': () => LocalizedString
+		/**
+		 * Mini Player Location
+		 */
+		miniPlayerLocation: () => LocalizedString
+		/**
+		 * Language
+		 */
+		language: () => LocalizedString
+		/**
+		 * Theme
+		 */
+		theme: () => LocalizedString
 		/**
 		 * Features
 		 */
@@ -1611,9 +1688,9 @@ export type TranslationFunctions = {
 		/**
 		 * Import
 		 */
-		import: () => LocalizedString
+		'import': () => LocalizedString
 		/**
-		 * enableCoverArtCheck
+		 * Enable Cover Art check
 		 */
 		enableCoverArtCheck: () => LocalizedString
 		/**
@@ -1813,17 +1890,13 @@ export type TranslationFunctions = {
 	}
 	albumMenu: {
 		/**
-		 * Re-import album
+		 * Re-import Album
 		 */
 		reImportAlbum: () => LocalizedString
 		/**
 		 * ⚡️ Enrich
 		 */
 		enrich: () => LocalizedString
-		/**
-		 * Looking online...
-		 */
-		lookingOnline: () => LocalizedString
 		/**
 		 * Origin country
 		 */
@@ -1837,7 +1910,7 @@ export type TranslationFunctions = {
 		 */
 		originCountryHint: () => LocalizedString
 		/**
-		 * Fetch artwork
+		 * Fetch artwork from Wikipedia
 		 */
 		fetchArtwork: () => LocalizedString
 		/**
@@ -1865,7 +1938,7 @@ export type TranslationFunctions = {
 		 */
 		searchFromBrave: () => LocalizedString
 		/**
-		 * Wiki panel:
+		 * Wiki page:
 		 */
 		wikiPanel: () => LocalizedString
 		/**
@@ -1877,7 +1950,7 @@ export type TranslationFunctions = {
 		 */
 		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
 		/**
-		 * Info & metadata
+		 * Info & Metadata
 		 */
 		infoMetadata: () => LocalizedString
 	}
@@ -1889,7 +1962,7 @@ export type TranslationFunctions = {
 		/**
 		 * Re-import {n} tracks
 		 */
-		reImportTracks: (arg: { n: number }) => LocalizedString
+		reImportTracks: (arg: { n: unknown }) => LocalizedString
 		/**
 		 * Will also re-import albums
 		 */
@@ -1915,18 +1988,6 @@ export type TranslationFunctions = {
 		 */
 		lookingOnline: () => LocalizedString
 		/**
-		 * Origin country
-		 */
-		originCountry: () => LocalizedString
-		/**
-		 * Origin country ✅
-		 */
-		originCountryC: () => LocalizedString
-		/**
-		 * from Wikipedia
-		 */
-		originCountryHint: () => LocalizedString
-		/**
 		 * Wiki panel:
 		 */
 		wikiPanel: () => LocalizedString
@@ -1943,11 +2004,11 @@ export type TranslationFunctions = {
 		 */
 		deleteFileHint: () => LocalizedString
 		/**
-		 * More Tools
+		 * More tools
 		 */
 		moreTools: () => LocalizedString
 		/**
-		 * Unselect All
+		 * Unselect all
 		 */
 		unselectAll: () => LocalizedString
 		/**
@@ -1959,11 +2020,23 @@ export type TranslationFunctions = {
 		 */
 		removeTracksFromQueue: () => LocalizedString
 		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
 		 * Open in {explorerName}
 		 */
 		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
 		/**
-		 * Info & metadata
+		 * Info & Metadata
 		 */
 		infoMetadata: () => LocalizedString
 	}
@@ -1993,11 +2066,7 @@ export type TranslationFunctions = {
 		 */
 		chords: () => LocalizedString
 		/**
-		 * from Wikipedia
-		 */
-		Lyrics: () => LocalizedString
-		/**
-		 * from Wikipedia
+		 * Lyrics:
 		 */
 		lyrics: () => LocalizedString
 		/**
