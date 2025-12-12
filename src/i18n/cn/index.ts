@@ -96,7 +96,7 @@ const cn = {
                     example: "eg. 发行于 1999 年",
                 },
                 titleContains: {
-                    title: "歌曲标题包含___",
+                    title: "歌曲标题包含...",
                     example: " eg. 标题包含 Love",
                 },
                 longerThan: {
@@ -193,7 +193,7 @@ const cn = {
         commaSeparatedFilenames: "文件名",
         llms: "gpt-3.5-turbo, gpt-4, ollama",
         foldersToWatch: "关注的文件夹",
-        folder: "{{1 folder | ?? folders}}",
+        folder: "{{1 文件夹 | ?? 文件夹}}",
         importing: "导入中..",
         coverArtFilenames: "封面图文件名",
         enableArtistsToolkit: "启用艺术家工具包",
@@ -311,7 +311,7 @@ const cn = {
         removeTrackFromQueue: "从队列中移除歌曲",
         removeTracksFromQueue: "从队列中移除多首歌曲",
         // Both library & queue
-        originCountry: "来源国家", // also used in ToolsMenu
+        originCountry: "来源国家",
         originCountryC: "来源国家 ✅",
         originCountryHint: "通过维基百科搜索",
         openInFileManager: "通过 {explorerName} 打开",
@@ -333,8 +333,8 @@ const cn = {
         keepAllBtn: "保留全部",
         deleteAllBtn: "全部移到垃圾桶",
         notification: {
-            deleting: "正在删除 {{track | ?? tracks}}",
-            deleted: "已删除 {{track | ?? tracks}}",
+            deleting: "正在删除 {{ | ?? 首}} 歌曲",
+            deleted: "已删除 {{ | ?? 首}} 歌曲",
         },
     },
     lyrics: {
