@@ -11,6 +11,7 @@
         searchLyrics,
         searchSongOnYouTube,
     } from "../menu/search";
+    import { LL } from "../../i18n/i18n-svelte";
 
     type ActionType = "country";
 
@@ -69,10 +70,11 @@
                 onClick={fetchingOriginCountry}
                 text={!song.originCountry
                     ? isLoading("country")
-                        ? "Looking online..."
-                        : "Origin country"
-                    : "Origin country ✅"}
-                description="from Wikipedia"
+                        ? $LL.trackMenu.lookingOnline() || "Looking online..."
+                        : $LL.trackMenu.originCountry() || "Origin country"
+                    : $LL.trackMenu.originCountryC() || "Origin country ✅"}
+                description={$LL.trackMenu.originCountryHint() ||
+                    "from Wikipedia"}
             />
             <MenuDivider />
         {/if}

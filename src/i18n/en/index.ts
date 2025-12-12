@@ -273,7 +273,25 @@ const en = {
             tracksLabel: "tracks",
         },
     },
+    albumMenu: {
+        reImportAlbum: "Re-import Album",
+        originCountry: "Origin country",
+        originCountryC: "Origin country ✅",
+        originCountryHint: "from Wikipedia",
+        fetchArtwork: "Fetch artwork from Wikipedia",
+        fetchArtworkHint: "Save to folder as cover.jpg",
+        fetchFromWikipedia: "Fetching from Wikipedia...",
+        scanExistingArtwork: "Scan existing artwork",
+        scanningExistingArtwork: "Rescanning...",
+        scanExistingArtworkHint: "Check encoded art in tracks / folder image",
+        searchFromBrave: "Search for artwork on Brave",
+        wikiPanel: "Wiki page:",
+        removeFromLibrary: "Remove album from library",
+        openInFileManager: "Open in {explorerName}",
+        infoMetadata: "Info & Metadata"
+    },
     trackMenu: {
+        // In library
         reImportTrack: "Re-Import Track",
         reImportTracks: "Re-import {n} tracks",
         reImportTrackHint: "Will also re-import albums",
@@ -281,13 +299,19 @@ const en = {
         separateStems: "Separate stems",
         editTag: "Edit tags",
         lookingOnline: "Looking online...",
-        originCountry: "Origin country",
-        originCountryC: "Origin country ✅",
-        originCountryHint: "from Wikipedia",
         wikiPanel: "Wiki panel:",
         removeFromLibrary: "Remove {{track | ?? tracks}} from library",
         deleteFile: "Delete {{file | ?? files}}",
         deleteFileHint: "Move to system Trash / Recycle bin",
+        // In queue
+        moreTools: "More tools",
+        unselectAll: "Unselect all",
+        removeTrackFromQueue: "Remove track from queue",
+        removeTracksFromQueue: "Remove tracks from queue",
+        // Both library & queue
+        originCountry: "Origin country", // also used in ToolsMenu
+        originCountryC: "Origin country ✅",
+        originCountryHint: "from Wikipedia",
         openInFileManager: "Open in {explorerName}",
         infoMetadata: "Info & Metadata"
     },

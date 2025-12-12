@@ -93,7 +93,7 @@ type RootTranslation = {
 		 */
 		takeControl: string
 		/**
-		 * M​a​i​n​ ​p​l​a​y​e​r​ ​o​f​f​ ​i​n​ ​I​n​t​e​r​n​e​t​ ​A​r​c​h​i​v​e​ ​m​o​d​e​<​b​r​ ​/​>​<​b​r​ ​/​>​S​t​o​p​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​r​e​-​e​n​a​b​l​e
+		 * M​a​i​n​ ​p​l​a​y​e​r​ ​o​f​ ​i​n​ ​I​n​t​e​r​n​e​t​ ​A​r​c​h​i​v​e​ ​m​o​d​e​<​b​r​ ​/​>​<​b​r​ ​/​>​S​t​o​p​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​r​e​-​e​n​a​b​l​e
 		 */
 		iaMode: string
 	}
@@ -597,7 +597,7 @@ type RootTranslation = {
 		 */
 		foldersToWatch: string
 		/**
-		 * {​{​1​ ​f​o​l​d​e​r​|​?​?​ ​f​o​l​d​e​r​s​}​}
+		 * {​{​1​ ​f​o​l​d​e​r​|​?​?​ ​f​o​l​d​e​r​s​}​}}
 		 */
 		folder: string
 		/**
@@ -796,17 +796,7 @@ type RootTranslation = {
 			 * g​r​i​d​ ​s​i​z​e
 			 */
 			gridSize: string
-		},
-        menu: {
-            /**
-			 * reImportTrack
-			 */
-			reImportTrack: string
-            /**
-			 * reImportTrack
-			 */
-			reImportTracks: string
-        }
+		}
 		/**
 		 * S​c​r​o​l​l​ ​t​o​ ​N​o​w​ ​p​l​a​y​i​n​g
 		 */
@@ -817,6 +807,72 @@ type RootTranslation = {
 			 */
 			tracksLabel: string
 		}
+	}
+	albumMenu: {
+		/**
+		 * Re-import album
+		 */
+		reImportAlbum: string
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: string
+		/**
+		 * Origin country
+		 */
+		originCountry: string
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: string
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: string
+		/**
+		 * Fetch artwork
+		 */
+		fetchArtwork: string
+		/**
+		 * Save to folder as cover.jpg
+		 */
+		fetchArtworkHint: string
+		/**
+		 * Fetching from Wikipedia...
+		 */
+		fetchFromWikipedia: string
+		/**
+		 * Scan existing artwork
+		 */
+		scanExistingArtwork: string
+		/**
+		 * Rescanning...
+		 */
+		scanningExistingArtwork: string
+		/**
+		 * Check encoded art in tracks / folder image
+		 */
+		scanExistingArtworkHint: string
+		/**
+		 * Search for artwork on Brave
+		 */
+		searchFromBrave: string
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: string
+		/**
+		 * Remove album from library
+		 */
+		removeFromLibrary: string
+		/**
+		 * Open in {explorerName}
+		 */
+		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		/**
+		 * Info & metadata
+		 */
+		infoMetadata: string
 	}
 	trackMenu: {
 		/**
@@ -1755,6 +1811,72 @@ export type TranslationFunctions = {
 			tracksLabel: () => LocalizedString
 		}
 	}
+	albumMenu: {
+		/**
+		 * Re-import album
+		 */
+		reImportAlbum: () => LocalizedString
+		/**
+		 * Looking online...
+		 */
+		lookingOnline: () => LocalizedString
+		/**
+		 * Origin country
+		 */
+		originCountry: () => LocalizedString
+		/**
+		 * Origin country ✅
+		 */
+		originCountryC: () => LocalizedString
+		/**
+		 * from Wikipedia
+		 */
+		originCountryHint: () => LocalizedString
+		/**
+		 * Fetch artwork
+		 */
+		fetchArtwork: () => LocalizedString
+		/**
+		 * Save to folder as cover.jpg
+		 */
+		fetchArtworkHint: () => LocalizedString
+		/**
+		 * Fetching from Wikipedia...
+		 */
+		fetchFromWikipedia: () => LocalizedString
+		/**
+		 * Scan existing artwork
+		 */
+		scanExistingArtwork: () => LocalizedString
+		/**
+		 * Rescanning...
+		 */
+		scanningExistingArtwork: () => LocalizedString
+		/**
+		 * Check encoded art in tracks / folder image
+		 */
+		scanExistingArtworkHint: () => LocalizedString
+		/**
+		 * Search for artwork on Brave
+		 */
+		searchFromBrave: () => LocalizedString
+		/**
+		 * Wiki panel:
+		 */
+		wikiPanel: () => LocalizedString
+		/**
+		 * Remove album from library
+		 */
+		removeFromLibrary: () => LocalizedString
+		/**
+		 * Open in {explorerName}
+		 */
+		openInFileManager: (arg: { explorerName: unknown }) => LocalizedString
+		/**
+		 * Info & metadata
+		 */
+		infoMetadata: () => LocalizedString
+	}
 	trackMenu: {
 		/**
 		 * Re-Import Track
@@ -1812,6 +1934,22 @@ export type TranslationFunctions = {
 		 * Move to system Trash / Recycle bin
 		 */
 		deleteFileHint: () => LocalizedString
+		/**
+		 * More Tools
+		 */
+		moreTools: () => LocalizedString
+		/**
+		 * Unselect All
+		 */
+		unselectAll: () => LocalizedString
+		/**
+		 * Remove track from queue
+		 */
+		removeTrackFromQueue: () => LocalizedString
+		/**
+		 * Remove tracks from queue
+		 */
+		removeTracksFromQueue: () => LocalizedString
 		/**
 		 * Open in {explorerName}
 		 */
