@@ -62,7 +62,6 @@
             cursorColor: $currentThemeObject["waveform-cursor"],
             // backend: 'MediaElement',
             barWidth: 1.5,
-            responsive: true,
             barHeight: 2,
             height: "auto",
             barRadius: 2,
@@ -183,6 +182,7 @@
         });
 
         wavesurfer.on("click", (pos) => {
+            if (!$current.song) return;
             let posSeconds = $current.song.fileInfo.duration * pos;
             if (hotkeys.isPressed("cmd") || hotkeys.isPressed("ctrl")) {
                 if ($current.song) {
@@ -214,6 +214,7 @@
         isMounted = true;
 
         appWindow.listen("waveform", async (event: Event<Waveform>) => {
+            if (!$current.song) return;
             const bytes = new Uint8Array(event.payload.data);
             const floats = new Float32Array(bytes.buffer);
             wavesurfer.load("", [floats], $current.song.fileInfo.duration);
@@ -296,7 +297,17 @@
         // console.log("result", result);
     }
 
-    $: if (isMounted && $current.song?.path !== song?.path && wavesurfer) {
+    function clearWaveform() {
+        wsRegions?.clearRegions();
+        wavesurfer?.empty();
+    }
+
+    $: if (
+        isMounted &&
+        $current.song &&
+        $current.song?.path !== song?.path &&
+        wavesurfer
+    ) {
         getWaveform();
         console.log(
             "$current.song.fileInfo.duration",
@@ -304,8 +315,10 @@
         );
 
         if (wavesurfer.getDecodedData()) {
-            wavesurfer.zoom(false);
+            wavesurfer.zoom(0);
         }
+    } else if (isMounted && wavesurfer && !$current.song) {
+        clearWaveform();
     }
 
     let hoverPos = 0;
