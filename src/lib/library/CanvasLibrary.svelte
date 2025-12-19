@@ -848,6 +848,11 @@
             setQueue(tracks, adjustedIndex);
         } else if ($uiView === "smart-query") {
             setQueue($smartQueryResults, adjustedIndex);
+        } else if ($uiView === "favourites") {
+            setQueue(
+                songs?.filter((s) => !s?.isStem),
+                adjustedIndex,
+            );
         } else {
             setQueue($queriedSongs, adjustedIndex);
         }
