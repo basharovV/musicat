@@ -130,11 +130,11 @@
         &.theme-translucent {
             background-color: color-mix(
                 in srgb,
-                var(--inverse) 40%,
+                var(--inverse) 30%,
                 transparent
             );
             border: 1px solid
-                color-mix(in srgb, var(--inverse) 80%, transparent);
+                color-mix(in srgb, var(--inverse) 50%, transparent);
             color: var(--button-text);
 
             &:hover:not(.disabled) {

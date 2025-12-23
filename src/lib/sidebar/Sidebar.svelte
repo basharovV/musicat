@@ -42,6 +42,8 @@
         isSidebarFloating,
         isSidebarOpen,
         isSmartQueryBuilderOpen,
+        isSmartQuerySaveUiOpen,
+        isSmartQueryValid,
         isTagCloudOpen,
         isWikiOpen,
         lastWrittenSongs,
@@ -59,6 +61,7 @@
         selectedSmartQuery,
         shouldFocusFind,
         singleKeyShortcutsEnabled,
+        smartQuery,
         smartQueryInitiator,
         toDeletePlaylist,
         uiView,
@@ -89,6 +92,7 @@
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
     import { timeSince } from "../../utils/DateUtils";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -1491,6 +1495,21 @@
                                         {/if}
                                     </div>
                                 {/each}
+                                <div class="new-playlist new-smart-playlist">
+                                    <ButtonWithIcon
+                                        size="small"
+                                        text="New Smart Playlist"
+                                        theme="translucent"
+                                        onClick={() => {
+                                            $smartQueryInitiator = `smart-query:${$selectedSmartQuery}`;
+                                            $selectedSmartQuery = null;
+                                            $smartQuery = new SmartQuery();
+                                            $isSmartQueryValid = false;
+                                            $isSmartQueryBuilderOpen = true;
+                                            $isSmartQuerySaveUiOpen = false;
+                                        }}
+                                    />
+                                </div>
 
                                 <!-- {#if $savedSmartQueries}
                                     {#each $savedSmartQueries as query}
@@ -2697,6 +2716,10 @@
                     border-radius: 4px;
                 }
             }
+        }
+        .new-playlist.new-smart-playlist {
+            margin-top: 0.2em;
+            margin-bottom: 0.5em;
         }
 
         .playlist-options {
