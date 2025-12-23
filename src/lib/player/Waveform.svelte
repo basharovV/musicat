@@ -223,6 +223,7 @@
                 $waveformPeaks = {
                     ...$waveformPeaks,
                     songId: $current.song.id,
+                    songPath: $current.song.path,
                     data: [floats],
                 };
             } else {
@@ -272,10 +273,14 @@
     async function getWaveform() {
         if (
             $waveformPeaks?.data &&
-            $current.song?.id === $waveformPeaks.songId
+            $current.song?.id === $waveformPeaks.songId &&
+            $current.song?.path === $waveformPeaks.songPath
         ) {
             restoreState();
-        } else if ($current.song?.id !== $waveformPeaks?.songId) {
+        } else if (
+            $current.song?.id !== $waveformPeaks?.songId ||
+            $current.song?.path !== $waveformPeaks?.songPath
+        ) {
             // Changing songs, reset and get new waveform
             wsRegions.clearRegions();
             const result = await invoke("get_waveform", {
@@ -284,6 +289,7 @@
                 },
             });
             $waveformPeaks.songId = $current.song.id;
+            $waveformPeaks.songPath = $current.song.path;
 
             $current.song.markers?.forEach((m) => {
                 wsRegions.addRegion({

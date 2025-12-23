@@ -102,6 +102,7 @@
     import type { PersistentWritable } from "../../data/storeUtils";
     import { getAllColumns } from "./LibraryColumns";
     import { contextMenu, openContextMenu } from "../ui/ContextMenu";
+    import StemsDropdown from "./StemsDropdown.svelte";
 
     export let allSongs: Observable<Song[]> = null;
     export let columnOrder: PersistentWritable<LibraryColumn[]>;
@@ -139,30 +140,6 @@
                             index: idx,
                             timeSinceAdded,
                         };
-                    }
-
-                    if (idx === 0 && $expandedSongWithStems) {
-                        console.log("expandedSong", $expandedSongWithStems);
-                        status.songs.splice(
-                            $expandedSongWithStems.viewModel?.index + 1,
-                            0,
-                            ...$expandedSongWithStems.stems?.map(
-                                (st, stemIdx) => ({
-                                    ...$expandedSongWithStems,
-                                    isStem: true,
-                                    isFirst: stemIdx === 0,
-                                    isLast:
-                                        stemIdx ===
-                                        $expandedSongWithStems.stems?.length -
-                                            1,
-                                    ...st,
-                                    viewModel: {
-                                        viewId: `${$expandedSongWithStems.id}-${stemIdx}`,
-                                        index: idx + 1 + stemIdx,
-                                    },
-                                }),
-                            ),
-                        );
                     }
 
                     // Putting this in a separate function to avoid the reactivity loop
@@ -398,11 +375,6 @@
         scrollContainer &&
         shouldRender
     ) {
-        // console.log(
-        //     "scrollpos",
-        //     $libraryScrollPos,
-        //     (songs?.length * ROW_HEIGHT - viewportHeight) * $libraryScrollPos
-        // );
         isRestoringScrollPos = true;
         setTimeout(() => {
             if ($scrollToSong) {
@@ -443,25 +415,9 @@
         prevSongCount = songs.length;
     }
 
-    function printInfo() {
-        // console.log("fields", fields);
-        // console.log("canvas size", width, virtualViewportHeight);
-        // console.log(
-        //     "widths add up to",
-        //     displayFields.reduce((total, f) => (total += f.viewProps.width), 0)
-        // );
-    }
-
     function calculateViewport() {
         viewportHeight = libraryContainer.clientHeight;
-        console.log(
-            "contentHeight",
-            contentHeight,
-            "viewportHeight",
-            viewportHeight,
-        );
         let area = contentHeight - viewportHeight;
-        // console.log('scrollContainer.clientWidth', scrollContainer?.offsetWidth);
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
         // Set canvas size to fill the parent
         virtualViewportHeight = viewportHeight;
@@ -500,30 +456,32 @@
         let runningX = 0;
         let previousWidth = 0;
 
+        const allFields = cloneDeep(getAllColumns());
+
         if (displayFields?.length === 0) {
-            console.log("Resetting display fields");
-            displayFields = cloneDeep(getAllColumns());
+            displayFields = allFields;
         }
 
-        const sortedFields = $columnOrder.map((c) => {
-            const field = displayFields.find((f) => f.value === c.fieldName);
-            const cloned = { ...field };
-            // Restore user saved width
-            if (isInit && cloned && c.width) {
-                cloned.viewProps.autoWidth = false;
-                cloned.viewProps.width = c.width;
-            }
-            return cloned;
-        });
+        console.log("calculate columns", $columnOrder, allFields);
+
+        const sortedFields = $columnOrder
+            .map((c) => {
+                const field = allFields.find((f) => f.value === c.fieldName);
+                if (field === undefined) return null;
+                const cloned = { ...field };
+                // Restore user saved width
+                if (isInit && cloned && c.width) {
+                    cloned.viewProps.autoWidth = false;
+                    cloned.viewProps.width = c.width;
+                }
+                return cloned;
+            })
+            .filter(Boolean);
 
         // By default, the library fits the columns automatically
         // Until you manually resize, in which case we ignore the default sizes going forward
         // and save the new widths to the column config
         let shouldUseAutoWidth = $columnOrder.every((c) => !c.width);
-
-        // console.log("shouldUseAutoWidth", shouldUseAutoWidth);
-        // console.log("displayFields", displayFields);
-        // console.log("sortedFields", sortedFields);
 
         /* Playlists show an additional file order column */
         if ($uiView === "playlists") {
@@ -543,35 +501,26 @@
         let autoWidth = null;
         if (shouldUseAutoWidth) {
             // Calculate total width of fixed-width rectangles
+            console.log("sortedFields: ", sortedFields);
+
             const fixedWidths = sortedFields
-                .filter((f) => !f.viewProps.autoWidth)
-                .map((f) => f.viewProps.width);
+                .filter((f) => !f.viewProps?.autoWidth)
+                .map((f) => f.viewProps?.width);
 
             const totalFixedWidth = fixedWidths.reduce(
                 (total, width) => total + width,
                 0,
             );
-            // console.log("size: width", width);
-            // console.log("size: fixedWidths", fixedWidths);
-            // console.log("size: totalFixedWidth", totalFixedWidth);
             // Calculate total available width for 'auto' size rectangles
             let availableWidth = width - totalFixedWidth;
             if (availableWidth < 0) {
                 availableWidth = 0;
                 shouldUseAutoWidth = false;
             }
-            // console.log("size: totalAvailableWidth", availableWidth);
-            // console.log(
-            //     "size: columns to auto",
-            //     sortedFields.length - fixedWidths.length,
-            // );
-            // Calculate the width for each 'auto' size rectangle
-            console.log(sortedFields.length);
             autoWidth =
                 availableWidth / (sortedFields.length - fixedWidths.length);
         }
 
-        // console.log("autowidth: ", autoWidth);
         // Final display fields
         displayFields = [
             ...sortedFields.map((f) => {
@@ -593,8 +542,6 @@
                 width: f.viewProps.width,
             }));
         }
-
-        printInfo();
     }
 
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
@@ -773,8 +720,6 @@
     }
 
     function scrollToCurrentSong() {
-        console.log("y", currentSongY);
-
         let adjustedPos = currentSongY;
         if (currentSongY > viewportHeight / 2.3) {
             adjustedPos -= viewportHeight / 2.3;
@@ -827,10 +772,6 @@
             audioPlayer.playSong(song);
             return;
         }
-        const adjustedIndex =
-            $expandedSongWithStems?.viewModel?.index < song.viewModel.index
-                ? song.viewModel.index - $expandedSongWithStems?.stems.length
-                : song.viewModel.index;
         if ($uiView.match(/^(albums)/)) {
             const albums = await db.albums
                 .where("displayTitle")
@@ -845,16 +786,13 @@
             const album = albums[0];
             const tracks = await db.songs.bulkGet(album.tracksIds);
 
-            setQueue(tracks, adjustedIndex);
+            setQueue(tracks, idx);
         } else if ($uiView === "smart-query") {
-            setQueue($smartQueryResults, adjustedIndex);
+            setQueue($smartQueryResults, idx);
         } else if ($uiView === "favourites") {
-            setQueue(
-                songs?.filter((s) => !s?.isStem),
-                adjustedIndex,
-            );
+            setQueue($smartQueryResults, idx);
         } else {
-            setQueue($queriedSongs, adjustedIndex);
+            setQueue($queriedSongs, idx);
         }
 
         if (query?.length) {
@@ -887,6 +825,15 @@
                 onUnselect: () => {
                     songsHighlighted.length = 0;
                 },
+            },
+        });
+    }
+
+    function openStemsDropdown(evt: MouseEvent, song: Song) {
+        openContextMenu(evt, {
+            component: StemsDropdown,
+            props: {
+                song: song,
             },
         });
     }
@@ -926,7 +873,6 @@
     let draggingSongIdx = null;
 
     function onSongDragStart(song: Song, idx: number) {
-        console.log("dragstart", idx);
         $arrowFocus = "library";
         // console.log("songshighlighted", songsHighlighted);
         if (
@@ -1139,12 +1085,6 @@
         pos: { x: number; y: number },
         index,
     ): { x: number; y: number } {
-        console.log("over", pos);
-        // const headerColumn = document.querySelector(`[data-index='${index}']`);
-        // const elementRect = headerColumn.getBoundingClientRect();
-        // const elementWidth = elementRect.width;
-        // const dragZoneWidth = 6; // 5% of the element's width
-
         return { x: pos.x, y: 0 };
     }
 
@@ -1154,7 +1094,6 @@
     }
 
     function onDragEnd(event: KonvaDragTransformEvent, index) {
-        console.log("event", event);
         if (columnToInsertIdx !== null) {
             insertColumn($draggedColumnIdx, columnToInsertIdx);
         } else {
@@ -1520,7 +1459,6 @@
         hotkeys.unbind("esc");
         removeEventListener("keydown", onKeyDown);
         removeEventListener("keyup", onKeyUp);
-        $expandedSongWithStems = null;
     });
 </script>
 
@@ -2196,12 +2134,15 @@
                                                         listening: true,
                                                         strokeWidth: 2,
                                                     }}
-                                                    on:click={() => {
+                                                    on:mousedown={(e) => {
+                                                        e.preventDefault();
+                                                    }}
+                                                    on:click={(e) => {
                                                         console.log("CLICKED");
-                                                        $expandedSongWithStems =
-                                                            $expandedSongWithStems
-                                                                ? null
-                                                                : song;
+                                                        openStemsDropdown(
+                                                            e.detail.evt,
+                                                            song,
+                                                        );
                                                     }}
                                                     on:mouseenter={() => {
                                                         expandChevronHoverSongId =
@@ -2552,13 +2493,6 @@
                                     {/if}
                                     <Text
                                         config={{
-                                            x:
-                                                !$isSidebarShowing &&
-                                                !$isQueueOpen &&
-                                                $os === "macos" &&
-                                                idx === 0
-                                                    ? WINDOW_CONTROLS_WIDTH
-                                                    : null,
                                             text:
                                                 f.name === "none" ? "" : f.name,
                                             align: "left",
@@ -2581,12 +2515,7 @@
                                                 "-apple-system, Avenir, Helvetica, Arial, sans-serif",
                                             fill: HEADER_TEXT_COLOR,
                                             listening: false,
-                                            visible: !(
-                                                !$isSidebarShowing &&
-                                                !$isQueueOpen &&
-                                                $os === "macos" &&
-                                                idx === 0
-                                            ),
+                                            visible: true,
                                         }}
                                     />
                                 </Group>

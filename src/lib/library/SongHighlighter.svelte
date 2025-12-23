@@ -2,6 +2,7 @@
     import type { Song } from "src/App";
 
     import {
+        expandedSongWithStems,
         isFindFocused,
         os,
         popupOpen,
@@ -72,6 +73,9 @@
         isKeyboardArrows: boolean,
         isDefault = false,
     ) {
+        // Compensate for expanded stems
+
+        console.log("song view model index", idx);
         // console.log("highlighted", song, idx, isKeyboardArrows, isDefault);
         if (isKeyboardArrows) {
             console.log("isShiftPressed", isShiftPressed);
