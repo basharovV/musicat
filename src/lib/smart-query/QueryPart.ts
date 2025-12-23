@@ -15,7 +15,8 @@ type FieldKey =
     | "duration"
     | "originCountry"
     | "composer"
-    | "tags";
+    | "tags"
+    | "stems";
 
 export type InputType = string | number | boolean;
 export type InputTypeStr = "string" | "number" | "boolean";

@@ -12,6 +12,7 @@ export enum QUERY_PARTS {
     RELEASED_BETWEEN = "released-between",
     RELEASED_IN = "released-in",
     TITLE_CONTAINS = "title-contains",
+    WITH_STEMS = "with-stems",
 }
 
 type QUERY_PART = keyof typeof QUERY_PARTS;
@@ -215,5 +216,15 @@ export const BUILT_IN_QUERY_PARTS: QueryPartStruct[] = [
                 type: "string",
             },
         },
+    },
+    {
+        dataType: "song",
+        fieldKey: "stems",
+        comparison: "not-empty",
+        description: "smartPlaylists.builder.parts.hasStems.title",
+        example: "",
+        prompt: "has stems",
+        name: QUERY_PARTS.WITH_STEMS,
+        inputRequired: {},
     },
 ];

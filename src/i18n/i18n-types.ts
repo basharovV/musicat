@@ -368,6 +368,12 @@ type RootTranslation = {
 					 */
 					example: string
 				}
+				hasStems: {
+					/**
+					 * h​a​s​ ​s​t​e​m​s
+					 */
+					title: string
+				}
 			}
 		}
 		/**
@@ -1428,6 +1434,12 @@ export type TranslationFunctions = {
 					 * eg. contains love
 					 */
 					example: () => LocalizedString
+				}
+				hasStems: {
+					/**
+					 * has stems
+					 */
+					title: () => LocalizedString
 				}
 			}
 		}

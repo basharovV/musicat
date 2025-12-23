@@ -119,6 +119,9 @@ const en = {
                     title: "contains tag",
                     example: "eg. contains love",
                 },
+                hasStems: {
+                    title: "has stems",
+                },
             },
         },
         editSmartPlaylist: "Edit smart playlist",
@@ -289,7 +292,7 @@ const en = {
         wikiPanel: "Wiki page:",
         removeFromLibrary: "Remove album from library",
         openInFileManager: "Open in {explorerName}",
-        infoMetadata: "Info & Metadata"
+        infoMetadata: "Info & Metadata",
     },
     trackMenu: {
         // In library
@@ -315,7 +318,7 @@ const en = {
         originCountryC: "Origin country ✅",
         originCountryHint: "from Wikipedia",
         openInFileManager: "Open in {explorerName}",
-        infoMetadata: "Info & Metadata"
+        infoMetadata: "Info & Metadata",
     },
     toolsMenu: {
         enrich: "⚡️ Enrich",

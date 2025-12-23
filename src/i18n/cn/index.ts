@@ -119,6 +119,9 @@ const cn = {
                     title: "包含标签",
                     example: "eg. 标签包含 love",
                 },
+                hasStems: {
+                    title: "包含分轨",
+                },
             },
         },
         editSmartPlaylist: "编辑智能列表",
@@ -160,12 +163,10 @@ const cn = {
         encodedInFile: "写入元数据",
         bit: "比特",
         noMetadata: "歌曲没有元数据",
-        unsupportedFormat:
-            "目前尚不支持查看/编辑此文件类型的元数据。",
+        unsupportedFormat: "目前尚不支持查看/编辑此文件类型的元数据。",
         fix: "修复",
         errors: {
-            nullChars:
-                "有些标签包含隐藏字符，导致无法正确读取。",
+            nullChars: "有些标签包含隐藏字符，导致无法正确读取。",
         },
         artist: "艺术家",
         fixLegacyEncodings: {
@@ -174,8 +175,7 @@ const cn = {
             hint: "选择编码方式...",
         },
         setTitleFromFileNameHint: "点击即可从文件名设置标题",
-        differentTagTypes:
-            "选择具有不同标签类型的歌曲时，不支持修改元数据",
+        differentTagTypes: "选择具有不同标签类型的歌曲时，不支持修改元数据",
     },
     settings: {
         title: "设置",
@@ -289,7 +289,7 @@ const cn = {
         wikiPanel: "维基页面：",
         removeFromLibrary: "从音乐库移除专辑",
         openInFileManager: "通过 {explorerName} 打开",
-        infoMetadata: "信息 & 元数据"
+        infoMetadata: "信息 & 元数据",
     },
     trackMenu: {
         // In library
@@ -315,7 +315,7 @@ const cn = {
         originCountryC: "来源国家 ✅",
         originCountryHint: "通过维基百科搜索",
         openInFileManager: "通过 {explorerName} 打开",
-        infoMetadata: "信息 & 元数据"
+        infoMetadata: "信息 & 元数据",
     },
     toolsMenu: {
         enrich: "⚡️ 补全",

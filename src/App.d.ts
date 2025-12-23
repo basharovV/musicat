@@ -207,7 +207,8 @@ type Comparison =
     | "is-greater-than"
     | "is-less-than"
     | "is-between"
-    | "contains";
+    | "contains"
+    | "not-empty";
 
 type UiView =
     | "library"
@@ -376,6 +377,7 @@ interface Waveform {
 interface WaveformPlayerState {
     data: Float32Array[];
     songId: string;
+    songPath: string;
     loopEnabled: boolean;
     loopStartPos: number;
     loopEndPos: number;

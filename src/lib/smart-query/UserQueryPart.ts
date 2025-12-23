@@ -64,6 +64,19 @@ export class UserQueryPart {
     }
 
     run(song: Song): boolean {
+        const comparison = this.queryPartWithValues
+            ? this.queryPartWithValues.comparison
+            : this.queryPart.comparison;
+
+        // Array handling eg. stems[]
+        const value = song[this.fieldKey];
+        if (Array.isArray(value) && comparison === "not-empty") {
+            return value.length > 0;
+        }
+
+        if (Object.values(this.userInputs).length === 0) return false;
+
+        // String value handling
         const lhs = String(song[this.fieldKey]).trim().toLowerCase();
         const rhs1 = String(
             this.queryPartWithValues
@@ -81,10 +94,6 @@ export class UserQueryPart {
                   ? Object.values(this.userInputs)[1].value
                   : null,
         ).toLowerCase();
-
-        const comparison = this.queryPartWithValues
-            ? this.queryPartWithValues.comparison
-            : this.queryPart.comparison;
 
         switch (comparison) {
             case "is-equal":

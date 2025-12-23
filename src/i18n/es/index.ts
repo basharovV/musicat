@@ -119,6 +119,9 @@ const es = {
                     title: "contiene etiqueta",
                     example: "ej. contiene amor",
                 },
+                hasStems: {
+                    title: "contiene pistas",
+                },
             },
         },
         editSmartPlaylist: "Editar lista inteligente",
@@ -291,7 +294,7 @@ const es = {
         deleteFile: "Eliminar {{file | ?? files}}",
         deleteFileHint: "Mover a la papelera del sistema",
         openInFileManager: "Abrir en {explorerName}",
-        infoMetadata: ""
+        infoMetadata: "",
     },
     toDelete: {
         title: "Para borrar",

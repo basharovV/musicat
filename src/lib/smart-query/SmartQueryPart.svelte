@@ -3,6 +3,7 @@
     import { smartQuery } from "../../data/store";
     import { autoWidth } from "../../utils/AutoWidth";
     import type { UserQueryPart } from "./UserQueryPart";
+    import Icon from "../ui/Icon.svelte";
 
     export let userQueryPart: UserQueryPart;
     let parts = userQueryPart.queryPart.prompt.split(" ");
@@ -126,7 +127,7 @@
     });
 </script>
 
-<div bind:this={container} class:focused={isFocused}>
+<div bind:this={container} class="container" class:focused={isFocused}>
     {#each parts as part, idx (part)}
         {#if part.startsWith("{") && part.endsWith("}")}
             <!-- svelte-ignore a11y-autofocus -->
@@ -137,9 +138,10 @@
                     ].type
                 }`}
                 use:autoWidth
-                bind:value={userQueryPart.userInputs[
-                    part.slice(1, part.length - 1)
-                ].value}
+                bind:value={
+                    userQueryPart.userInputs[part.slice(1, part.length - 1)]
+                        .value
+                }
                 on:input={onInput}
                 on:focus={() =>
                     onInputFocus(idx, part.slice(1, part.length - 1))}
@@ -149,10 +151,20 @@
             <p>{part}</p>
         {/if}
     {/each}
+    <div class="close" style="pointer-events: all">
+        <Icon
+            icon="mingcute:close-circle-fill"
+            size={14}
+            color="color-mix(in srgb, var(--inverse) 90%, transparent)"
+            onClick={() => {
+                onRemove && onRemove();
+            }}
+        />
+    </div>
 </div>
 
 <style lang="scss">
-    div {
+    .container {
         background-color: var(--smart-playlist-builder-block-bg);
         border-radius: 4px;
         display: flex;
@@ -167,6 +179,10 @@
             background-color: var(--smart-playlist-builder-block-focused-bg);
             border: 1px solid rgba(255, 255, 255, 0.089);
             transform: scale(1.04);
+        }
+
+        .close {
+            cursor: pointer;
         }
     }
     p {

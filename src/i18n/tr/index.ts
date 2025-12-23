@@ -43,7 +43,8 @@ const tr = {
         resetToFileOrder: "Dosya sırasına sıfırla",
         orderHint: "Dosya sırası gösteriliyor",
         orderHintTemp: "Geçici sıra gösteriliyor",
-        orderDisabledHint: "Parçaları yeniden sıralamak için dosya sırasına geçin",
+        orderDisabledHint:
+            "Parçaları yeniden sıralamak için dosya sırasına geçin",
         queryNoResultsPlaceholder: '"{query}" için sonuç bulunamadı',
     },
     bottomBar: {
@@ -119,6 +120,9 @@ const tr = {
                     title: "etiket içeriyor",
                     example: "örn. aşk içeriyor",
                 },
+                hasStems: {
+                    title: "stemler içeriyor",
+                },
             },
         },
         editSmartPlaylist: "Akıllı çalma listesini düzenle",
@@ -130,7 +134,8 @@ const tr = {
     },
     trackInfo: {
         title: "Parça Bilgisi",
-        subtitle: "Parçaları değiştirmek için YUKARI ve AŞAĞI tuşlarını kullanın",
+        subtitle:
+            "Parçaları değiştirmek için YUKARI ve AŞAĞI tuşlarını kullanın",
         overwriteFile: "Dosyanın üzerine yaz",
         fileInfo: "Dosya Bilgisi",
         file: "Dosya",
@@ -173,8 +178,9 @@ const tr = {
             body: "Eski kodlamalarla kodlanmış ID3 etiketleriniz varsa, düzgün görüntülenmeleri için evrensel UTF-8'e güncellemelisiniz. Bir kodlama seçin ve Düzelt'e tıklayın.",
             hint: "Kodlama seçin...",
         },
-        setTitleFromFileNameHint: "Başlığı dosya adından ayarlamak için tıklayın",
-        differentTagTypes:"",
+        setTitleFromFileNameHint:
+            "Başlığı dosya adından ayarlamak için tıklayın",
+        differentTagTypes: "",
     },
     settings: {
         title: "Ayarlar",
@@ -221,8 +227,10 @@ const tr = {
     },
     artistsToolkit: {
         header: {
-            songbookLocationHint: "Musicat tarafından yönetilen şarkı kitabı konumunuz. Şu anda {path} olarak ayarlı",
-            songbookLocationHintEmpty: "Lütfen Musicat tarafından yönetilecek şarkı kitabı konumunuzu ayarlayın.",
+            songbookLocationHint:
+                "Musicat tarafından yönetilen şarkı kitabı konumunuz. Şu anda {path} olarak ayarlı",
+            songbookLocationHintEmpty:
+                "Lütfen Musicat tarafından yönetilecek şarkı kitabı konumunuzu ayarlayın.",
             showScrapbook: "Not defterini göster",
             hideScrapbook: "Not defterini gizle",
         },
@@ -286,7 +294,7 @@ const tr = {
         deleteFile: "{{file | ?? dosya}} sil",
         deleteFileHint: "Sistem Çöp Kutusuna taşı",
         openInFileManager: "{explorerName} ile aç",
-        infoMetadata: ""
+        infoMetadata: "",
     },
     toDelete: {
         title: "Silinecek",
