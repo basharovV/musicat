@@ -22,7 +22,7 @@
         }}
         class="current"
     >
-        <p>{selected.label}</p>
+        <p>{selected?.label}</p>
         <Icon icon="heroicons-solid:selector" size={14} />
     </div>
     {#if showSelector}
@@ -37,7 +37,7 @@
                         }}
                         singleSelection
                         text={option.label}
-                        checked={option.value === selected.value}
+                        checked={option.value === selected?.value}
                     />
                 {/each}
             </Menu>

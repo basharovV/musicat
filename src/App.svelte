@@ -439,8 +439,8 @@
                 {/if}
             </div>
 
-            <div class="window-padding" data-tauri-drag-region>
-                {#if $isCompactView}
+            <div class="top-nav" data-tauri-drag-region>
+                {#if $isCompactView || !showSidebar}
                     <TopNav />
                 {/if}
             </div>
@@ -701,7 +701,7 @@
             }
         }
 
-        .window-padding {
+        .top-nav {
             grid-row: 1;
             grid-column: 2 / 6;
             div {
@@ -911,6 +911,19 @@
 
             .wiki {
                 grid-column: 4;
+            }
+
+            .waveform {
+                grid-column: 1 / 4;
+                margin-left: 5px;
+            }
+            .top-nav {
+                grid-column: 1 / 4;
+            }
+            .bottom-bar {
+                :global(.bottom) {
+                    margin-left: 5px;
+                }
             }
         }
 

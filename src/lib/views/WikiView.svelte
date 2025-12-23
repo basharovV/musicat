@@ -518,7 +518,7 @@
         border-left: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
         border-right: 1px solid
             color-mix(in srgb, var(--bg) 70%, var(--inverse));
-        margin: 5px 0 0 0;
+        margin: 0;
 
         header {
             position: sticky;

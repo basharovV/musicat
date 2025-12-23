@@ -1304,11 +1304,6 @@
                                     />
                                     <Text
                                         config={{
-                                            x:
-                                                !$isSidebarShowing &&
-                                                $os === "macos"
-                                                    ? WINDOW_CONTROLS_WIDTH
-                                                    : null,
                                             text: "Queue",
                                             align: "left",
                                             padding: 10,
