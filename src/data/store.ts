@@ -414,7 +414,7 @@ export const isSidebarFloating = writable(false);
 export const isSidebarShowing = writable(true);
 
 export const isWaveformOpen = persistentWritable(false, "isWaveformOpen");
-
+export const isArtworkCollapsed = writable(false);
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,
     data: [],

@@ -13,6 +13,7 @@
         isFolderWatchUpdate,
         isLyricsOpen,
         isQueueOpen,
+        isSidebarOpen,
         isWaveformOpen,
         nextUpSong,
         uiView,
@@ -69,7 +70,7 @@
 
 <svelte:window on:resize={debounce(onResize, 5)} />
 
-<bottom-bar data-tauri-drag-region>
+<bottom-bar data-tauri-drag-region class:sidebar-collapsed={!$isSidebarOpen}>
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="left" data-tauri-drag-region>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -201,6 +202,10 @@
         padding: 0 1em 0 0;
         width: 100%;
         height: 30px;
+
+        &.sidebar-collapsed {
+            padding-left: 10px;
+        }
 
         p {
             color: var(--text);

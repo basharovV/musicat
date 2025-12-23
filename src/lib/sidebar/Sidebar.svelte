@@ -34,6 +34,7 @@
         draggedSongs,
         draggedTitle,
         genericSongOrder,
+        isArtworkCollapsed,
         isFindFocused,
         isMiniPlayer,
         isPlaying,
@@ -137,7 +138,6 @@
     });
 
     let artworkCanvas: HTMLCanvasElement;
-
     let placeholderArtwork: HTMLImageElement;
 
     current.subscribe(async (current) => {
@@ -1082,6 +1082,7 @@
     class:hovered={isMiniPlayerHovered}
     class:visible={$isSidebarOpen}
     class:floating
+    class:artwork-collapsed={$isArtworkCollapsed && !$isMiniPlayer}
     transition:fly={{ duration: 200, x: -200 }}
     bind:this={sidebarElement}
     on:mouseenter|preventDefault|stopPropagation={onMiniPlayerMouseOver}
@@ -1136,7 +1137,8 @@
             class="menu-outer"
             class:top-border={showMenuTopScrollShadow}
             class:top-shadow={showMenuTopScrollShadow}
-            class:bottom-shadow={showMenuBottomScrollShadow}
+            class:bottom-shadow={showMenuBottomScrollShadow ||
+                $isArtworkCollapsed}
             bind:this={menuOuterContainer}
         >
             {#if showMenuTopScrollShadow}
@@ -1789,7 +1791,16 @@
             </div>
         </div>
         {#if song}
-            <div class="artwork-container">
+            <div
+                class="artwork-container"
+                class:collapsed={$isArtworkCollapsed && !$isMiniPlayer}
+                class:disabled={$isMiniPlayer}
+                on:click={() => {
+                    if (!$isMiniPlayer) {
+                        $isArtworkCollapsed = !$isArtworkCollapsed;
+                    }
+                }}
+            >
                 <div class="artwork-frame">
                     <canvas
                         class="artwork"
@@ -2007,6 +2018,27 @@
                 black 100%
             );
         }
+
+        .artwork-collapsed & {
+            &.bottom-shadow {
+                mask-image: linear-gradient(
+                    to bottom,
+                    black 0%,
+                    black 85%,
+                    transparent 100%
+                );
+            }
+            &.top-shadow.bottom-shadow {
+                mask-image: linear-gradient(
+                    to bottom,
+                    transparent 0%,
+                    black 15%,
+                    black 75%,
+                    transparent 97%
+                );
+            }
+        }
+
         &.bottom-shadow {
             mask-image: linear-gradient(
                 to bottom,
@@ -2028,67 +2060,6 @@
         &.top-border {
             border-top: 0.7px solid #ffffff12;
         }
-
-        .top-shadow {
-            display: none;
-            pointer-events: none;
-            background: linear-gradient(
-                to bottom,
-                hsl(320, 4.92%, 11.96%) 0%,
-                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-                hsla(320, 4.92%, 11.96%, 0.016) 90%,
-                hsla(320, 4.92%, 11.96%, 0) 100%
-            );
-            height: 40px;
-            width: 100%;
-            position: absolute;
-            top: 0;
-            right: 0;
-            left: 0;
-            z-index: 4;
-        }
-        .bottom-shadow {
-            display: none;
-            pointer-events: none;
-            background: linear-gradient(
-                to top,
-                hsl(320, 4.92%, 11.96%) 0%,
-                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-                hsla(320, 4.92%, 11.96%, 0.016) 90%,
-                hsla(320, 4.92%, 11.96%, 0) 100%
-            );
-            height: 40px;
-            width: 100%;
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            left: 0;
-            z-index: 4;
-        }
     }
 
     .menu-inner {
@@ -2103,6 +2074,9 @@
         &::-webkit-scrollbar {
             /* hide scrollbar */
             display: none;
+        }
+        .artwork-collapsed & {
+            padding-bottom: 4em;
         }
     }
 
@@ -2515,6 +2489,11 @@
         margin-left: 10px;
         align-self: center;
         z-index: 0;
+        pointer-events: none;
+
+        .artwork-collapsed & {
+            visibility: hidden;
+        }
     }
 
     .artwork-container {
@@ -2524,10 +2503,31 @@
         position: sticky;
         bottom: 140px;
         margin: auto;
-        pointer-events: none;
         opacity: 1;
         box-sizing: content-box;
         z-index: 1;
+        transition: all 0.2s cubic-bezier(0.2, 0.01, 0.02, 0.99);
+        cursor: zoom-out;
+        &.collapsed {
+            bottom: 250px;
+            height: 80px;
+            width: 80px;
+            margin: auto;
+            cursor: zoom-in;
+            z-index: 4;
+            .artwork-frame {
+                border-radius: 3px;
+                border: 2px solid var(--panel-separator);
+                padding: 2px;
+                overflow: hidden;
+                .artwork {
+                    object-fit: contain;
+                }
+            }
+        }
+        &.disabled {
+            pointer-events: none;
+        }
 
         .artwork-frame {
             width: 100%;
@@ -2764,6 +2764,12 @@
     }
 
     .has-current-song {
+        &.artwork-collapsed {
+            @media only screen and (min-height: 650px) {
+                grid-template-rows: 1fr auto 88px;
+            }
+        }
+
         @media only screen and (min-height: 821px) {
             grid-template-rows: 1fr auto 310px;
         }

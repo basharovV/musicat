@@ -205,22 +205,6 @@
     </div>
     <div class="right" data-tauri-drag-region>
         <VolumeSlider />
-
-        <div
-            class="visualizer-icon"
-            use:tippy={{
-                content: "waveform, loop region, marker editor",
-                placement: "top",
-            }}
-        >
-            <Icon
-                icon="ph:wave-sine-duotone"
-                onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
-                color={$isWaveformOpen
-                    ? $currentThemeObject["accent-secondary"]
-                    : $currentThemeObject["icon-secondary"]}
-            />
-        </div>
     </div>
 
     <div></div>
