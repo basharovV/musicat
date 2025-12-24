@@ -86,15 +86,15 @@ pub struct ScanPlaylistEvent {
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
     pub duration: Option<f64>, //s
-    duration_display: Option<String>,
-    overall_bitrate: Option<u32>,
-    audio_bitrate: Option<u32>,
-    sample_rate: Option<u32>,
-    bit_depth: Option<u8>,
+    pub duration_display: Option<String>,
+    pub overall_bitrate: Option<u32>,
+    pub audio_bitrate: Option<u32>,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u8>,
     pub channels: Option<u8>,
-    lossless: bool,
-    tag_type: Option<String>,
-    codec: Option<String>,
+    pub lossless: bool,
+    pub tag_type: Option<String>,
+    pub codec: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -105,7 +105,7 @@ pub struct Artwork {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-enum ArtworkOrigin {
+pub enum ArtworkOrigin {
     Broken,
     File,
     Metadata,
@@ -122,8 +122,8 @@ pub struct AlbumArtwork {
 #[serde(rename_all = "camelCase")]
 pub struct Song {
     pub id: String,
-    path: String,
-    file: String,
+    pub path: String,
+    pub file: String,
     pub file_info: FileInfo,
 
     /// The metadata from the file, only needed for the tagger
@@ -136,23 +136,23 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     pub album: String,
-    album_artist: Option<String>,
-    compilation: i32,
-    year: i32,
-    genre: Vec<String>,
-    composer: Vec<String>,
-    track_number: i32,
-    track_total: i32,
-    disc_number: i32,
-    disc_total: i32,
-    duration: String,
+    pub album_artist: Option<String>,
+    pub compilation: i32,
+    pub year: i32,
+    pub genre: Vec<String>,
+    pub composer: Vec<String>,
+    pub track_number: i32,
+    pub track_total: i32,
+    pub disc_number: i32,
+    pub disc_total: i32,
+    pub duration: String,
 
     /// Artwork on request
     pub artwork: Option<Artwork>,
 
-    artwork_origin: Option<ArtworkOrigin>,
-    origin_country: Option<String>,
-    date_added: Option<u128>,
+    pub artwork_origin: Option<ArtworkOrigin>,
+    pub origin_country: Option<String>,
+    pub date_added: Option<u128>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

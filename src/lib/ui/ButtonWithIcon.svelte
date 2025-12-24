@@ -89,6 +89,7 @@
             background-color: var(--button-active-bg);
             color: var(--button-text);
             white-space: nowrap;
+            border-color: transparent;
 
             &:hover:not(.disabled) {
                 background-color: color-mix(

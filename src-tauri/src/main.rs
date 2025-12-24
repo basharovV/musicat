@@ -30,6 +30,7 @@ use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 use crate::stem_separator::StemProcessState;
 
+mod beets;
 mod constants;
 mod dsp;
 mod files;
@@ -735,7 +736,8 @@ fn main() {
             scrape::get_wikipedia,
             files::delete_files,
             logger::max_log_level,
-            logger::write_log
+            logger::write_log,
+            beets::search_beets
         ])
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);

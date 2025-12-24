@@ -1,19 +1,25 @@
 <script lang="ts">
-    import { liveQuery } from "dexie";
     import type { Song, SongOrder } from "src/App";
+    import { onMount } from "svelte";
     import { get } from "svelte/store";
     import { songMatchesQuery } from "../../data/LibraryUtils";
     import { parsePlaylist } from "../../data/M3UUtils";
     import BuiltInQueries from "../../data/SmartQueries";
+    import {
+        beetsLoading,
+        beetsSearch,
+        beetsSongsOnly,
+    } from "../../data/beets";
     import { db } from "../../data/db";
     import {
-        libraryColumns,
+        expandedSongWithStems,
         isInit,
         isLyricsHovered,
         isLyricsOpen,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
         isTagOrCondition,
+        libraryColumns,
         queriedSongs,
         query,
         queueMirrorsSearch,
@@ -25,18 +31,16 @@
         smartQueryUpdater,
         toDeletePlaylist,
         uiView,
-        expandedSongWithStems,
     } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
-
     export let songOrder: SongOrder;
 
     let isLoading = true;
 
-    $: songs = liveQuery(async () => {
+    $: songs = async () => {
         let results;
         let isSmartQueryResults = false;
         let isIndexed = true;
@@ -121,13 +125,13 @@
                 )
                 .and((song) => songMatchesQuery(song, $query));
         } else {
-            results = db.songs.orderBy(
-                songOrder.orderBy === "artist"
-                    ? "[artist+year+album+trackNumber]"
-                    : songOrder.orderBy === "album"
-                      ? "[album+trackNumber]"
-                      : songOrder.orderBy,
-            );
+            // results = db.songs.orderBy(
+            //     songOrder.orderBy === "artist"
+            //         ? "[artist+year+album+trackNumber]"
+            //         : songOrder.orderBy === "album"
+            //           ? "[album+trackNumber]"
+            //           : songOrder.orderBy,
+            // );
         }
         let resultsArray: Song[] = [];
 
@@ -249,7 +253,30 @@
 
         isLoading = false;
         return resultsArray;
-    });
+    };
+
+    async function onQueryChanged(query: string, songOrder: SongOrder) {
+        if ($uiView === "library") {
+            queriedSongs.set(
+                await beetsSearch.updateSearch({
+                    query,
+                    sortBy: songOrder.orderBy,
+                    descending: songOrder.reverse,
+                }),
+            );
+        } else {
+            smartQueryResults.set(
+                await beetsSearch.updateSearch({
+                    query,
+                    sortBy: songOrder.orderBy,
+                    descending: songOrder.reverse,
+                }),
+            );
+        }
+    }
+    $: {
+        onQueryChanged($query || "", songOrder);
+    }
 </script>
 
 <div class="container" class:has-lyrics={$isLyricsOpen}>
@@ -257,9 +284,9 @@
         columnOrder={libraryColumns}
         bind:query={$query}
         bind:songOrder
-        allSongs={songs}
+        allSongs={beetsSongsOnly}
         dim={$isLyricsHovered}
-        {isLoading}
+        isLoading={false}
     />
 </div>
 

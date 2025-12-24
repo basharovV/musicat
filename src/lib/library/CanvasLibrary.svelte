@@ -103,8 +103,9 @@
     import { getAllColumns } from "./LibraryColumns";
     import { contextMenu, openContextMenu } from "../ui/ContextMenu";
     import StemsDropdown from "./StemsDropdown.svelte";
+    import type { Readable } from "svelte/store";
 
-    export let allSongs: Observable<Song[]> = null;
+    export let allSongs: Readable<Song[]> = null;
     export let columnOrder: PersistentWritable<LibraryColumn[]>;
     export let dim = false;
     export let isInit = true;
@@ -462,8 +463,6 @@
             displayFields = allFields;
         }
 
-        console.log("calculate columns", $columnOrder, allFields);
-
         const sortedFields = $columnOrder
             .map((c) => {
                 const field = allFields.find((f) => f.value === c.fieldName);
@@ -501,7 +500,6 @@
         let autoWidth = null;
         if (shouldUseAutoWidth) {
             // Calculate total width of fixed-width rectangles
-            console.log("sortedFields: ", sortedFields);
 
             const fixedWidths = sortedFields
                 .filter((f) => !f.viewProps?.autoWidth)

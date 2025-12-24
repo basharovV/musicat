@@ -183,6 +183,7 @@ interface UserSettings {
     followSystemOutput: boolean;
     geniusApiKey?: string;
     discogsApiKey?: string;
+    beetsDbLocation?: string;
 }
 
 interface UIPreferences {
@@ -478,4 +479,10 @@ interface ColumnViewModel {
         width: number;
         autoWidth: boolean;
     };
+}
+
+interface BeetsQuery {
+    query: string;
+    sortBy: string;
+    descending: boolean;
 }

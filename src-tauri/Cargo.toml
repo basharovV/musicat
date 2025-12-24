@@ -78,6 +78,7 @@ mimetype = "0.1.6"
 serde_bytes = "0.11.17"
 memmap2 = "0.9.7"
 strum = "0.27.2"
+rusqlite = { version = "0.38.0", features = ["bundled"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.5.2"
