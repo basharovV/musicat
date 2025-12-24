@@ -1,15 +1,9 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
-    import Icon from "../ui/Icon.svelte";
-    import LL from "../../i18n/i18n-svelte";
-    import CanvasLibrary from "../library/CanvasLibrary.svelte";
-    import { liveQuery } from "dexie";
-    import audioPlayer from "../player/AudioPlayer";
-    import { albumColumns, current, isPlaying } from "../../data/store";
-    import { setQueue } from "../../data/storeHelper";
     import type { Album, Song } from "../../App";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import { albumColumns } from "../../data/store";
     import { clickOutside } from "../../utils/ClickOutside";
+    import CanvasLibrary from "../library/CanvasLibrary.svelte";
 
     export let album: Album;
     export let onUnselect: () => void;
@@ -32,64 +26,55 @@
     const MARGIN = 10;
 
     $: if (isLoaded && anchorTopLeft) {
-        position = "below";
-        // Calculate width and height as percentage of parent element
+        const parentBounds = container.parentElement.getBoundingClientRect();
+
+        // Width
         const dynamicWidth = containerWidth > 1200 ? 0.6 : 0.8;
         width = Math.min(containerWidth * dynamicWidth, 800);
-        height = HEADER_HEIGHT + 30 + album.tracksIds.length * ROW_HEIGHT;
 
-        // Calculate x y positions
-        const parentBounds = container.parentElement.getBoundingClientRect();
-        const detailsWidth = container.clientWidth;
-        const detailsHeight = container.clientHeight;
+        // Desired content height
+        const desiredHeight =
+            HEADER_HEIGHT + 30 + album.tracksIds.length * ROW_HEIGHT;
+
+        // Available vertical space
+        const spaceBelow =
+            parentBounds.y +
+            parentBounds.height -
+            (anchorTopLeft.y + anchorTopLeft.height) -
+            MARGIN;
+
+        const spaceAbove = anchorTopLeft.y - parentBounds.y - MARGIN;
+
+        // Choose position with more space
+        position = spaceBelow >= spaceAbove ? "below" : "above";
+
+        const availableSpace = position === "below" ? spaceBelow : spaceAbove;
+
+        // Max height: 80% of parent AND available space
+        const maxHeight = Math.min(parentBounds.height * 0.8, availableSpace);
+
+        height = Math.min(desiredHeight, maxHeight);
+
+        // X positioning (unchanged logic)
         const adjustedX = anchorTopLeft.x - width / 2 + anchorTopLeft.width / 2;
-        const adjustedY = anchorTopLeft.y + anchorTopLeft.height;
 
         if (adjustedX + width > parentBounds.x + parentBounds.width) {
             x = parentBounds.x + parentBounds.width - width - MARGIN;
-            console.log("x out of bounds, right");
         } else if (adjustedX < parentBounds.x) {
             x = parentBounds.x + MARGIN;
-            console.log("x out of bounds, left");
         } else {
             x = adjustedX;
-            console.log("x not out of bounds");
         }
 
-        if (adjustedY + height > parentBounds.y + parentBounds.height) {
-            position = "above";
-            y = anchorTopLeft.y - height - MARGIN;
-            if (y < parentBounds.y) {
-                y = parentBounds.y;
-                height =
-                    HEADER_HEIGHT + 80 + album.tracksIds.length * ROW_HEIGHT;
-            }
-            console.log("y out of bounds, bottom");
-        } else if (adjustedY < parentBounds.y) {
-            console.log("y out of bounds, top");
-            y = parentBounds.y + MARGIN;
+        // Y positioning — never overlaps anchor
+        if (position === "below") {
+            y = anchorTopLeft.y + anchorTopLeft.height + MARGIN;
         } else {
-            y = adjustedY;
-            console.log("y not out of bounds");
+            y = anchorTopLeft.y - height - MARGIN;
         }
     }
 
     let isHovered = false;
-
-    $: isPlayingCurrentAlbum =
-        $current.song?.album.toLowerCase() === album?.title.toLowerCase();
-
-    async function playPauseToggle() {
-        if ($current.song?.album.toLowerCase() === album.title.toLowerCase()) {
-            if ($isPlaying) {
-                audioPlayer.pause();
-            } else {
-                audioPlayer.play(true);
-            }
-        } else {
-            setQueue(tracks, 0);
-        }
-    }
 
     function unselect() {
         onUnselect && onUnselect();
@@ -101,7 +86,7 @@
         class="arrow"
         class:position
         style={`left: ${anchorTopLeft.x + anchorTopLeft.width / 2}px;
-            top: ${position === "below" ? y - 12 : y + height};
+            top: ${position === "below" ? y - 12 : y + height - 3};
             transform: rotate(${position === "above" ? 180 : 0}deg);`}
         width="28"
         height="12"
@@ -145,13 +130,10 @@
                 > -->
             </div>
         </div>
-        <div
-            class="songs"
-            style={`height: ${30 + album.tracksIds.length * 26}px`}
-        >
+        <div class="songs" style={`height: ${height - HEADER_HEIGHT}px`}>
             <CanvasLibrary
                 columnOrder={albumColumns}
-                allSongs={liveQuery(() => tracks)}
+                songsArray={tracks}
                 bind:shouldRender={isLoaded}
             />
         </div>

@@ -2,7 +2,7 @@
     import { liveQuery } from "dexie";
     import md5 from "md5";
     import { onMount } from "svelte";
-    import type { Album, Song } from "../../App";
+    import type { Album, AlbumsSortBy, Song } from "../../App";
     import { db } from "../../data/db";
     import {
         compressionSelected,
@@ -12,6 +12,7 @@
         queue,
         uiPreferences,
         uiView,
+        userSettings,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import AlbumDetails from "../albums/AlbumDetails.svelte";
@@ -34,6 +35,13 @@
         quintIn,
         sineInOut,
     } from "svelte/easing";
+    import {
+        beetsAlbumSearch,
+        beetsAlbumsOnly,
+        beetsSearch,
+        createBeetsSearch,
+    } from "../../data/beets";
+    import { derived } from "svelte/store";
 
     const PADDING = 14;
 
@@ -61,49 +69,51 @@
     let rowHeight = 0;
     let virtualList;
 
-    $: albums = liveQuery(async () => {
-        let albums = await db.albums.toArray();
+    $: albums = $userSettings.beetsDbLocation
+        ? beetsAlbumsOnly
+        : liveQuery(async () => {
+              let albums = await db.albums.toArray();
 
-        if ($compressionSelected === "lossless") {
-            albums = albums.filter(
-                ({ title, lossless }) => title.length && lossless,
-            );
-        } else if ($compressionSelected === "lossy") {
-            albums = albums.filter(
-                ({ title, lossless }) => title.length && !lossless,
-            );
-        } else {
-            albums = albums.filter(({ title }) => title.length);
-        }
+              if ($compressionSelected === "lossless") {
+                  albums = albums.filter(
+                      ({ title, lossless }) => title.length && lossless,
+                  );
+              } else if ($compressionSelected === "lossy") {
+                  albums = albums.filter(
+                      ({ title, lossless }) => title.length && !lossless,
+                  );
+              } else {
+                  albums = albums.filter(({ title }) => title.length);
+              }
 
-        if ($uiPreferences.albumsViewSortBy === "title") {
-            albums.sort((a, b) => {
-                if (a.title < b.title) return -1;
-                if (a.title > b.title) return 1;
-                return 0;
-            });
-        } else if ($uiPreferences.albumsViewSortBy === "artist") {
-            albums.sort((a, b) => {
-                if (a.artist < b.artist) return -1;
-                if (a.artist > b.artist) return 1;
-                if (a.title < b.title) return -1;
-                if (a.title > b.title) return 1;
-                return 0;
-            });
-        } else {
-            albums.sort((a, b) => {
-                if (a.year < b.year) return -1;
-                if (a.year > b.year) return 1;
-                if (a.title < b.title) return -1;
-                if (a.title > b.title) return 1;
-                return 0;
-            });
-        }
+              if ($uiPreferences.albumsViewSortBy === "title") {
+                  albums.sort((a, b) => {
+                      if (a.title < b.title) return -1;
+                      if (a.title > b.title) return 1;
+                      return 0;
+                  });
+              } else if ($uiPreferences.albumsViewSortBy === "artist") {
+                  albums.sort((a, b) => {
+                      if (a.artist < b.artist) return -1;
+                      if (a.artist > b.artist) return 1;
+                      if (a.title < b.title) return -1;
+                      if (a.title > b.title) return 1;
+                      return 0;
+                  });
+              } else {
+                  albums.sort((a, b) => {
+                      if (a.year < b.year) return -1;
+                      if (a.year > b.year) return 1;
+                      if (a.title < b.title) return -1;
+                      if (a.title > b.title) return 1;
+                      return 0;
+                  });
+              }
 
-        isLoading = false;
+              isLoading = false;
 
-        return albums;
-    });
+              return albums;
+          });
 
     $: if (isInit && $queue && $current?.song) {
         console.log("Scrolling to current album");
@@ -128,23 +138,26 @@
     $: showSingles = $uiPreferences.albumsViewShowSingles;
 
     $: if ($albums && columnCount) {
-        if ($query.length) {
-            queriedAlbums = $albums.filter(
-                (a) =>
-                    a.artist.toLowerCase().includes($query.toLowerCase()) ||
-                    a.title.includes($query.toLowerCase()),
-            );
-
-            activeAlbums = queriedAlbums;
-        } else {
-            activeAlbums = $albums;
-        }
+        activeAlbums = $albums;
 
         if (!showSingles) {
             activeAlbums = activeAlbums.filter((a) => a.tracksIds.length > 1);
         }
 
         onResize();
+    }
+
+    async function onQueryChanged(query: string, sortBy: AlbumsSortBy) {
+        await beetsAlbumSearch.updateSearch({
+            query,
+            sortBy: sortBy,
+            descending: false,
+        });
+        isLoading = false;
+    }
+
+    $: {
+        onQueryChanged($query || "", $uiPreferences.albumsViewSortBy);
     }
 
     function getContentWidth(element) {
@@ -301,6 +314,12 @@
         albumMenu?.open(album, songs, { x: e.clientX, y: e.clientY });
     }
 
+    const albumTracksSearch = createBeetsSearch();
+    const albumTracksReadable = derived(
+        albumTracksSearch,
+        ($albumTracksSearch) => $albumTracksSearch.songs,
+    );
+
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
             unselectAlbum(index);
@@ -323,7 +342,9 @@
                 e.currentTarget.offsetTop,
                 e.currentTarget.scrollTop,
             );
-            detailsAlbumTracks = await db.songs.bulkGet(album.tracksIds);
+            detailsAlbumTracks = $userSettings.beetsDbLocation
+                ? await albumTracksSearch.updateSearch({}, album.id)
+                : await db.songs.bulkGet(album.tracksIds);
             detailsAlbumIndex = index;
         }
     }

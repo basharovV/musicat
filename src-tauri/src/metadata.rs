@@ -24,7 +24,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::store::{load_settings, UserSettings};
 
-mod artwork_cacher;
+pub mod artwork_cacher;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MetadataEntry {
@@ -114,8 +114,8 @@ pub enum ArtworkOrigin {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AlbumArtwork {
-    src: String,
-    format: String,
+    pub src: String,
+    pub format: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -158,17 +158,17 @@ pub struct Song {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Album {
-    id: String,            // Hash of artist + album name
-    title: String,         // We store the title in lower case for indexed case insensitive searches
-    display_title: String, // The display title with actual case
-    artist: String,
-    compilation: i32,
-    year: i32,
-    genre: Vec<String>,
-    tracks_ids: Vec<String>,
-    path: String,
-    artwork: Option<AlbumArtwork>,
-    lossless: bool,
+    pub id: String,            // Hash of artist + album name
+    pub title: String, // We store the title in lower case for indexed case insensitive searches
+    pub display_title: String, // The display title with actual case
+    pub artist: String,
+    pub compilation: i32,
+    pub year: i32,
+    pub genre: Vec<String>,
+    pub tracks_ids: Vec<String>,
+    pub path: String,
+    pub artwork: Option<AlbumArtwork>,
+    pub lossless: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

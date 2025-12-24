@@ -24,6 +24,7 @@
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
+    import PathSetting from "./PathSetting.svelte";
 
     let currentTab = "Library";
 
@@ -272,69 +273,54 @@
                             /></td
                         >
                     </tr>
-                    <tr>
-                        <td
-                            >{$LL.settings.downloadLocation() ||
-                                "Download location"}</td
-                        >
-                        <td>
-                            <div class="download-location">
-                                <p>{$userSettings.downloadLocation}</p>
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openDefaultDownloadDirSelector}
-                                />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td
-                            >{$LL.settings.playlistsLocation() ||
-                                "Playlists location"}</td
-                        >
-                        <td>
-                            <div class="download-location">
-                                <p>{$userSettings.playlistsLocation}</p>
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openDefaultPlaylistsDirSelector}
-                                />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td
-                            >{$LL.settings.generatedStemsLocation() ||
-                                "Generated stems location"}</td
-                        >
-                        <td>
-                            <div class="download-location">
-                                <p>{$userSettings.generatedStemsLocation}</p>
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openGeneratedStemsDirSelector}
-                                />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td
-                            >{$LL.settings.beetsDbLocation() ||
-                                "Beets database location"}</td
-                        >
-                        <td>
-                            <div class="beets-location">
-                                <p>
-                                    {$userSettings.beetsDbLocation ??
-                                        "Select a location"}
-                                </p>
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openBeetsDBSelector}
-                                />
-                            </div>
-                        </td>
-                    </tr>
+                    <PathSetting
+                        label={$LL.settings.downloadLocation() ||
+                            "Download location"}
+                        value={$userSettings.downloadLocation}
+                        onSelect={openDefaultDownloadDirSelector}
+                        onClear={() =>
+                            userSettings.update((v) => ({
+                                ...v,
+                                downloadLocation: null,
+                            }))}
+                    />
+
+                    <PathSetting
+                        label={$LL.settings.playlistsLocation() ||
+                            "Playlists location"}
+                        value={$userSettings.playlistsLocation}
+                        onSelect={openDefaultPlaylistsDirSelector}
+                        onClear={() =>
+                            userSettings.update((v) => ({
+                                ...v,
+                                playlistsLocation: null,
+                            }))}
+                    />
+
+                    <PathSetting
+                        label={$LL.settings.generatedStemsLocation() ||
+                            "Generated stems location"}
+                        value={$userSettings.generatedStemsLocation}
+                        onSelect={openGeneratedStemsDirSelector}
+                        onClear={() =>
+                            userSettings.update((v) => ({
+                                ...v,
+                                generatedStemsLocation: null,
+                            }))}
+                    />
+
+                    <PathSetting
+                        label={$LL.settings.beetsDbLocation() ||
+                            "Beets database location"}
+                        value={$userSettings.beetsDbLocation}
+                        placeholder="Select a location"
+                        onSelect={openBeetsDBSelector}
+                        onClear={() =>
+                            userSettings.update((v) => ({
+                                ...v,
+                                beetsDbLocation: null,
+                            }))}
+                    />
                 </tbody>
             {/if}
 
@@ -464,39 +450,26 @@
 
             {#if currentTab === "Data"}
                 <tbody>
-                    <tr>
-                        <td>{$LL.settings.songbookLocation()}</td>
-                        <td>
-                            <div class="songbook-location">
-                                <p>
-                                    {$userSettings.songbookLocation ??
-                                        "Select a location"}
-                                </p>
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openSongbookDirSelector}
-                                />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td
-                            >{$LL.settings.scrapbookLocation() ||
-                                "Scrapbook location"}</td
-                        >
-                        <td>
-                            <div class="download-location">
-                                <p>
-                                    {$userSettings.scrapbookLocation ??
-                                        "Select a location"}
-                                </p>
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openScrapbookDirSelector}
-                                />
-                            </div>
-                        </td>
-                    </tr>
+                    <PathSetting
+                        label={$LL.settings.songbookLocation()}
+                        value={$userSettings.songbookLocation}
+                        onSelect={openSongbookDirSelector}
+                        onClear={() =>
+                            userSettings.update((v) => ({
+                                ...v,
+                                songbookLocation: null,
+                            }))}
+                    />
+                    <PathSetting
+                        label={$LL.settings.scrapbookLocation()}
+                        value={$userSettings.scrapbookLocation}
+                        onSelect={openScrapbookDirSelector}
+                        onClear={() =>
+                            userSettings.update((v) => ({
+                                ...v,
+                                scrapbookLocation: null,
+                            }))}
+                    />
                     <tr>
                         <td>Genius API Key</td>
                         <td

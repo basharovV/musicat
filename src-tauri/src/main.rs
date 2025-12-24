@@ -737,7 +737,9 @@ fn main() {
             files::delete_files,
             logger::max_log_level,
             logger::write_log,
-            beets::search_beets
+            beets::search_beets,
+            beets::search_beets_albums,
+            beets::get_beets_album_tracks,
         ])
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);
