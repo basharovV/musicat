@@ -16,6 +16,7 @@ pub struct UserSettings {
     pub theme: String,
     pub output_device: Option<String>,
     pub follow_system_output: bool,
+    pub beets_db_location: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

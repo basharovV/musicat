@@ -678,6 +678,10 @@ type RootTranslation = {
 		 * D​i​s​c​o​g​s​ ​A​P​I​ ​K​e​y
 		 */
 		discogsApiKey: string
+		/**
+		 * B​e​e​t​s​ ​d​a​t​a​b​a​s​e​ ​l​o​c​a​t​i​o​n
+		 */
+		beetsDbLocation: string
 	}
 	wiki: {
 		/**
@@ -1745,6 +1749,10 @@ export type TranslationFunctions = {
 		 * Discogs API Key
 		 */
 		discogsApiKey: () => LocalizedString
+		/**
+		 * Beets database location
+		 */
+		beetsDbLocation: () => LocalizedString
 	}
 	wiki: {
 		/**

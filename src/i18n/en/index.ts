@@ -212,6 +212,7 @@ const en = {
         openApiKey: "OpenAI API Key",
         geniusApiKey: "Genius API Key",
         discogsApiKey: "Discogs API Key",
+        beetsDbLocation: "Beets database location",
     },
     wiki: {
         inArticle: "Found mentions from your library:",

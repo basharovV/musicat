@@ -215,6 +215,7 @@
                             path: song.path,
                             isImport: false,
                             includeFolderArtwork: true,
+                            includeRawTags: false,
                         },
                     },
                 );

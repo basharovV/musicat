@@ -103,8 +103,10 @@
     import { getAllColumns } from "./LibraryColumns";
     import { contextMenu, openContextMenu } from "../ui/ContextMenu";
     import StemsDropdown from "./StemsDropdown.svelte";
+    import type { Readable } from "svelte/store";
 
-    export let allSongs: Observable<Song[]> = null;
+    export let songsReadable: Readable<Song[]> | Observable<Song[]> = null;
+    export let songsArray: Song[] = [];
     export let columnOrder: PersistentWritable<LibraryColumn[]>;
     export let dim = false;
     export let isInit = true;
@@ -113,8 +115,10 @@
     export let songOrder: SongOrder = null;
     export let theme = "default";
 
+    $: allSongs = $songsReadable ?? songsArray;
+
     $: songs =
-        $allSongs
+        allSongs
             ?.filter((song: Song) => {
                 if ($compressionSelected === "lossless") {
                     return song?.fileInfo?.lossless;
@@ -462,8 +466,6 @@
             displayFields = allFields;
         }
 
-        console.log("calculate columns", $columnOrder, allFields);
-
         const sortedFields = $columnOrder
             .map((c) => {
                 const field = allFields.find((f) => f.value === c.fieldName);
@@ -501,7 +503,6 @@
         let autoWidth = null;
         if (shouldUseAutoWidth) {
             // Calculate total width of fixed-width rectangles
-            console.log("sortedFields: ", sortedFields);
 
             const fixedWidths = sortedFields
                 .filter((f) => !f.viewProps?.autoWidth)
@@ -710,7 +711,7 @@
 
     $: if (columnOrder && $current.song) {
         const { id } = $current.song;
-        const idx = $allSongs?.findIndex((s) => s.id === id);
+        const idx = allSongs?.findIndex((s) => s.id === id);
 
         if (idx !== undefined) {
             currentSongScrollIdx = idx;
@@ -735,7 +736,7 @@
      */
     function focusSong(song: Song) {
         let found;
-        let idx = $allSongs?.findIndex((s) => {
+        let idx = allSongs?.findIndex((s) => {
             if (s.id === song.id) {
                 found = s;
                 return true;
@@ -773,20 +774,7 @@
             return;
         }
         if ($uiView.match(/^(albums)/)) {
-            const albums = await db.albums
-                .where("displayTitle")
-                .equals(song.album)
-                .filter(({ tracksIds }) => tracksIds.includes(song.id))
-                .toArray();
-
-            if (albums.length !== 1) {
-                return;
-            }
-
-            const album = albums[0];
-            const tracks = await db.songs.bulkGet(album.tracksIds);
-
-            setQueue(tracks, idx);
+            setQueue(songsArray, idx);
         } else if ($uiView === "smart-query") {
             setQueue($smartQueryResults, idx);
         } else if ($uiView === "favourites") {

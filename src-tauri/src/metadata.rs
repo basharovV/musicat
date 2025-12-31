@@ -24,7 +24,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::store::{load_settings, UserSettings};
 
-mod artwork_cacher;
+pub mod artwork_cacher;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MetadataEntry {
@@ -86,15 +86,15 @@ pub struct ScanPlaylistEvent {
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
     pub duration: Option<f64>, //s
-    duration_display: Option<String>,
-    overall_bitrate: Option<u32>,
-    audio_bitrate: Option<u32>,
-    sample_rate: Option<u32>,
-    bit_depth: Option<u8>,
+    pub duration_display: Option<String>,
+    pub overall_bitrate: Option<u32>,
+    pub audio_bitrate: Option<u32>,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u8>,
     pub channels: Option<u8>,
-    lossless: bool,
-    tag_type: Option<String>,
-    codec: Option<String>,
+    pub lossless: bool,
+    pub tag_type: Option<String>,
+    pub codec: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -105,7 +105,7 @@ pub struct Artwork {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-enum ArtworkOrigin {
+pub enum ArtworkOrigin {
     Broken,
     File,
     Metadata,
@@ -114,16 +114,16 @@ enum ArtworkOrigin {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AlbumArtwork {
-    src: String,
-    format: String,
+    pub src: String,
+    pub format: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {
     pub id: String,
-    path: String,
-    file: String,
+    pub path: String,
+    pub file: String,
     pub file_info: FileInfo,
 
     /// The metadata from the file, only needed for the tagger
@@ -136,39 +136,41 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     pub album: String,
-    album_artist: Option<String>,
-    compilation: i32,
-    year: i32,
-    genre: Vec<String>,
-    composer: Vec<String>,
-    track_number: i32,
-    track_total: i32,
-    disc_number: i32,
-    disc_total: i32,
-    duration: String,
+    pub album_id: Option<String>, // Might be a singleton
+    pub album_artist: Option<String>,
+    pub compilation: i32,
+    pub year: i32,
+    pub genre: Vec<String>,
+    pub composer: Vec<String>,
+    pub track_number: i32,
+    pub track_total: i32,
+    pub disc_number: i32,
+    pub disc_total: i32,
+    pub duration: String,
 
     /// Artwork on request
     pub artwork: Option<Artwork>,
 
-    artwork_origin: Option<ArtworkOrigin>,
-    origin_country: Option<String>,
-    date_added: Option<u128>,
+    pub artwork_origin: Option<ArtworkOrigin>,
+    pub origin_country: Option<String>,
+    pub origin_country_name: Option<String>,
+    pub date_added: Option<u128>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Album {
-    id: String,            // Hash of artist + album name
-    title: String,         // We store the title in lower case for indexed case insensitive searches
-    display_title: String, // The display title with actual case
-    artist: String,
-    compilation: i32,
-    year: i32,
-    genre: Vec<String>,
-    tracks_ids: Vec<String>,
-    path: String,
-    artwork: Option<AlbumArtwork>,
-    lossless: bool,
+    pub id: String,            // Hash of artist + album name
+    pub title: String, // We store the title in lower case for indexed case insensitive searches
+    pub display_title: String, // The display title with actual case
+    pub artist: String,
+    pub compilation: i32,
+    pub year: i32,
+    pub genre: Vec<String>,
+    pub tracks_ids: Vec<String>,
+    pub path: String,
+    pub artwork: Option<AlbumArtwork>,
+    pub lossless: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -824,14 +826,16 @@ fn process_directory(
                                     &settings,
                                     app,
                                 ) {
+                                    let album_id = album.id.clone(); // clone once, on purpose
+
                                     // info!("Album: {:?}", album);
                                     let existing_album =
-                                        albums.lock().unwrap().get_mut(&album.id).cloned();
+                                        albums.lock().unwrap().get_mut(&album_id).cloned();
                                     let existing_album_subalbums =
-                                        subalbums.lock().unwrap().get_mut(&album.id).cloned();
+                                        subalbums.lock().unwrap().get_mut(&album_id).cloned();
                                     if let Some(_existing_album) = existing_album {
                                         // Merge with existing album
-                                        albums.lock().unwrap().entry(album.id.clone()).and_modify(
+                                        albums.lock().unwrap().entry(album_id.clone()).and_modify(
                                             |a| {
                                                 a.tracks_ids.push(song.id.clone());
                                             },
@@ -843,13 +847,14 @@ fn process_directory(
                                         subalbums
                                             .lock()
                                             .unwrap()
-                                            .entry(album.id.clone())
+                                            .entry(album_id.clone())
                                             .and_modify(|a| {
                                                 a.tracks_ids.push(song.id.clone());
                                             });
                                     } else {
-                                        subalbums.lock().unwrap().insert(album.id.clone(), album);
+                                        subalbums.lock().unwrap().insert(album_id.clone(), album);
                                     }
+                                    song.album_id = Some(album_id);
                                 }
                             }
                             song.artwork = None;
@@ -1407,6 +1412,7 @@ pub fn extract_metadata(
                             file,
                             title,
                             artist,
+                            album_id: None,
                             album,
                             album_artist,
                             compilation,
@@ -1425,6 +1431,7 @@ pub fn extract_metadata(
                             // We default the origin country to "" to allow Dexie to return results when using orderBy,
                             // even if there are zero songs with a non-empty country
                             origin_country: Some(String::from("")),
+                            origin_country_name: Some(String::from("")),
                             date_added: if is_import {
                                 Some(since_the_epoch)
                             } else {
@@ -1600,5 +1607,257 @@ fn seconds_to_hms(seconds: u64) -> String {
         format!("{:02}:{:02}", minutes, seconds)
     } else {
         format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+    }
+}
+
+pub fn country_name(code: &str) -> Option<&'static str> {
+    match code {
+        "AF" => Some("Afghanistan"),
+        "AX" => Some("Aland Islands"),
+        "AL" => Some("Albania"),
+        "DZ" => Some("Algeria"),
+        "AS" => Some("American Samoa"),
+        "AD" => Some("Andorra"),
+        "AO" => Some("Angola"),
+        "AI" => Some("Anguilla"),
+        "AQ" => Some("Antarctica"),
+        "AG" => Some("Antigua And Barbuda"),
+        "AR" => Some("Argentina"),
+        "AM" => Some("Armenia"),
+        "AW" => Some("Aruba"),
+        "AU" => Some("Australia"),
+        "AT" => Some("Austria"),
+        "AZ" => Some("Azerbaijan"),
+        "BS" => Some("Bahamas"),
+        "BH" => Some("Bahrain"),
+        "BD" => Some("Bangladesh"),
+        "BB" => Some("Barbados"),
+        "BY" => Some("Belarus"),
+        "BE" => Some("Belgium"),
+        "BZ" => Some("Belize"),
+        "BJ" => Some("Benin"),
+        "BM" => Some("Bermuda"),
+        "BT" => Some("Bhutan"),
+        "BO" => Some("Bolivia"),
+        "BA" => Some("Bosnia And Herzegovina"),
+        "BW" => Some("Botswana"),
+        "BV" => Some("Bouvet Island"),
+        "BR" => Some("Brazil"),
+        "IO" => Some("British Indian Ocean Territory"),
+        "BN" => Some("Brunei Darussalam"),
+        "BG" => Some("Bulgaria"),
+        "BF" => Some("Burkina Faso"),
+        "BI" => Some("Burundi"),
+        "KH" => Some("Cambodia"),
+        "CM" => Some("Cameroon"),
+        "CA" => Some("Canada"),
+        "CV" => Some("Cape Verde"),
+        "KY" => Some("Cayman Islands"),
+        "CF" => Some("Central African Republic"),
+        "TD" => Some("Chad"),
+        "CL" => Some("Chile"),
+        "CN" => Some("China"),
+        "CX" => Some("Christmas Island"),
+        "CC" => Some("Cocos (Keeling) Islands"),
+        "CO" => Some("Colombia"),
+        "KM" => Some("Comoros"),
+        "CG" => Some("Congo"),
+        "CD" => Some("Congo, Democratic Republic"),
+        "CK" => Some("Cook Islands"),
+        "CR" => Some("Costa Rica"),
+        "CI" => Some("Cote D'Ivoire"),
+        "HR" => Some("Croatia"),
+        "CU" => Some("Cuba"),
+        "CY" => Some("Cyprus"),
+        "CZ" => Some("Czech Republic"),
+        "DK" => Some("Denmark"),
+        "DJ" => Some("Djibouti"),
+        "DM" => Some("Dominica"),
+        "DO" => Some("Dominican Republic"),
+        "EC" => Some("Ecuador"),
+        "EG" => Some("Egypt"),
+        "SV" => Some("El Salvador"),
+        "GQ" => Some("Equatorial Guinea"),
+        "ER" => Some("Eritrea"),
+        "EE" => Some("Estonia"),
+        "ET" => Some("Ethiopia"),
+        "FK" => Some("Falkland Islands (Malvinas)"),
+        "FO" => Some("Faroe Islands"),
+        "FJ" => Some("Fiji"),
+        "FI" => Some("Finland"),
+        "FR" => Some("France"),
+        "GF" => Some("French Guiana"),
+        "PF" => Some("French Polynesia"),
+        "TF" => Some("French Southern Territories"),
+        "GA" => Some("Gabon"),
+        "GM" => Some("Gambia"),
+        "GE" => Some("Georgia"),
+        "DE" => Some("Germany"),
+        "GH" => Some("Ghana"),
+        "GI" => Some("Gibraltar"),
+        "GR" => Some("Greece"),
+        "GL" => Some("Greenland"),
+        "GD" => Some("Grenada"),
+        "GP" => Some("Guadeloupe"),
+        "GU" => Some("Guam"),
+        "GT" => Some("Guatemala"),
+        "GG" => Some("Guernsey"),
+        "GN" => Some("Guinea"),
+        "GW" => Some("Guinea-Bissau"),
+        "GY" => Some("Guyana"),
+        "HT" => Some("Haiti"),
+        "HM" => Some("Heard Island & Mcdonald Islands"),
+        "VA" => Some("Holy See (Vatican City State)"),
+        "HN" => Some("Honduras"),
+        "HK" => Some("Hong Kong"),
+        "HU" => Some("Hungary"),
+        "IS" => Some("Iceland"),
+        "IN" => Some("India"),
+        "ID" => Some("Indonesia"),
+        "IR" => Some("Iran, Islamic Republic Of"),
+        "IQ" => Some("Iraq"),
+        "IE" => Some("Ireland"),
+        "IM" => Some("Isle Of Man"),
+        "IL" => Some("Israel"),
+        "IT" => Some("Italy"),
+        "JM" => Some("Jamaica"),
+        "JP" => Some("Japan"),
+        "JE" => Some("Jersey"),
+        "JO" => Some("Jordan"),
+        "KZ" => Some("Kazakhstan"),
+        "KE" => Some("Kenya"),
+        "KI" => Some("Kiribati"),
+        "KR" => Some("Korea"),
+        "KP" => Some("North Korea"),
+        "KW" => Some("Kuwait"),
+        "KG" => Some("Kyrgyzstan"),
+        "LA" => Some("Lao People's Democratic Republic"),
+        "LV" => Some("Latvia"),
+        "LB" => Some("Lebanon"),
+        "LS" => Some("Lesotho"),
+        "LR" => Some("Liberia"),
+        "LY" => Some("Libyan Arab Jamahiriya"),
+        "LI" => Some("Liechtenstein"),
+        "LT" => Some("Lithuania"),
+        "LU" => Some("Luxembourg"),
+        "MO" => Some("Macao"),
+        "MK" => Some("Macedonia"),
+        "MG" => Some("Madagascar"),
+        "MW" => Some("Malawi"),
+        "MY" => Some("Malaysia"),
+        "MV" => Some("Maldives"),
+        "ML" => Some("Mali"),
+        "MT" => Some("Malta"),
+        "MH" => Some("Marshall Islands"),
+        "MQ" => Some("Martinique"),
+        "MR" => Some("Mauritania"),
+        "MU" => Some("Mauritius"),
+        "YT" => Some("Mayotte"),
+        "MX" => Some("Mexico"),
+        "FM" => Some("Micronesia, Federated States Of"),
+        "MD" => Some("Moldova"),
+        "MC" => Some("Monaco"),
+        "MN" => Some("Mongolia"),
+        "ME" => Some("Montenegro"),
+        "MS" => Some("Montserrat"),
+        "MA" => Some("Morocco"),
+        "MZ" => Some("Mozambique"),
+        "MM" => Some("Myanmar"),
+        "NA" => Some("Namibia"),
+        "NR" => Some("Nauru"),
+        "NP" => Some("Nepal"),
+        "NL" => Some("Netherlands"),
+        "AN" => Some("Netherlands Antilles"),
+        "NC" => Some("New Caledonia"),
+        "NZ" => Some("New Zealand"),
+        "NI" => Some("Nicaragua"),
+        "NE" => Some("Niger"),
+        "NG" => Some("Nigeria"),
+        "NU" => Some("Niue"),
+        "NF" => Some("Norfolk Island"),
+        "MP" => Some("Northern Mariana Islands"),
+        "NO" => Some("Norway"),
+        "OM" => Some("Oman"),
+        "PK" => Some("Pakistan"),
+        "PW" => Some("Palau"),
+        "PS" => Some("Palestinian Territory, Occupied"),
+        "PA" => Some("Panama"),
+        "PG" => Some("Papua New Guinea"),
+        "PY" => Some("Paraguay"),
+        "PE" => Some("Peru"),
+        "PH" => Some("Philippines"),
+        "PN" => Some("Pitcairn"),
+        "PL" => Some("Poland"),
+        "PT" => Some("Portugal"),
+        "PR" => Some("Puerto Rico"),
+        "QA" => Some("Qatar"),
+        "RE" => Some("Reunion"),
+        "RO" => Some("Romania"),
+        "RU" => Some("Russia"),
+        "RW" => Some("Rwanda"),
+        "BL" => Some("Saint Barthelemy"),
+        "SH" => Some("Saint Helena"),
+        "KN" => Some("Saint Kitts And Nevis"),
+        "LC" => Some("Saint Lucia"),
+        "MF" => Some("Saint Martin"),
+        "PM" => Some("Saint Pierre And Miquelon"),
+        "VC" => Some("Saint Vincent And Grenadines"),
+        "WS" => Some("Samoa"),
+        "SM" => Some("San Marino"),
+        "ST" => Some("Sao Tome And Principe"),
+        "SA" => Some("Saudi Arabia"),
+        "SN" => Some("Senegal"),
+        "RS" => Some("Serbia"),
+        "SC" => Some("Seychelles"),
+        "SL" => Some("Sierra Leone"),
+        "SG" => Some("Singapore"),
+        "SK" => Some("Slovakia"),
+        "SI" => Some("Slovenia"),
+        "SB" => Some("Solomon Islands"),
+        "SO" => Some("Somalia"),
+        "ZA" => Some("South Africa"),
+        "GS" => Some("South Georgia And Sandwich Isl."),
+        "ES" => Some("Spain"),
+        "LK" => Some("Sri Lanka"),
+        "SD" => Some("Sudan"),
+        "SR" => Some("Suriname"),
+        "SJ" => Some("Svalbard And Jan Mayen"),
+        "SZ" => Some("Swaziland"),
+        "SE" => Some("Sweden"),
+        "CH" => Some("Switzerland"),
+        "SY" => Some("Syrian Arab Republic"),
+        "TW" => Some("Taiwan"),
+        "TJ" => Some("Tajikistan"),
+        "TZ" => Some("Tanzania"),
+        "TH" => Some("Thailand"),
+        "TL" => Some("Timor-Leste"),
+        "TG" => Some("Togo"),
+        "TK" => Some("Tokelau"),
+        "TO" => Some("Tonga"),
+        "TT" => Some("Trinidad And Tobago"),
+        "TN" => Some("Tunisia"),
+        "TR" => Some("Turkey"),
+        "TM" => Some("Turkmenistan"),
+        "TC" => Some("Turks And Caicos Islands"),
+        "TV" => Some("Tuvalu"),
+        "UG" => Some("Uganda"),
+        "UA" => Some("Ukraine"),
+        "AE" => Some("United Arab Emirates"),
+        "GB" => Some("United Kingdom"),
+        "US" => Some("United States of America"),
+        "UM" => Some("United States Outlying Islands"),
+        "UY" => Some("Uruguay"),
+        "UZ" => Some("Uzbekistan"),
+        "VU" => Some("Vanuatu"),
+        "VE" => Some("Venezuela"),
+        "VN" => Some("Vietnam"),
+        "VG" => Some("Virgin Islands, British"),
+        "VI" => Some("Virgin Islands, U.S."),
+        "WF" => Some("Wallis And Futuna"),
+        "EH" => Some("Western Sahara"),
+        "YE" => Some("Yemen"),
+        "ZM" => Some("Zambia"),
+        "ZW" => Some("Zimbabwe"),
+        _ => None,
     }
 }

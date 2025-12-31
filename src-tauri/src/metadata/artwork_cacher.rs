@@ -181,7 +181,7 @@ fn is_image_file(filename: &str) -> bool {
     false
 }
 
-fn get_image_format(extension: &str) -> Option<&'static str> {
+pub fn get_image_format(extension: &str) -> Option<&'static str> {
     match extension {
         "jpg" | "jpeg" => Some("image/jpeg"),
         "png" => Some("image/png"),

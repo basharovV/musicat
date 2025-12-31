@@ -50,6 +50,7 @@ interface Song {
     title: string;
     artist: string;
     album: string;
+    albumId: string;
     albumArtist?: string;
     year: number;
     genre: string[];
@@ -79,6 +80,7 @@ interface Song {
     // User-specific
     playCount: number;
     originCountry?: string;
+    originCountryName?: string;
     songProjectId?: number; // Link to project id
     isFavourite: boolean;
     markers: Marker[];
@@ -183,6 +185,7 @@ interface UserSettings {
     followSystemOutput: boolean;
     geniusApiKey?: string;
     discogsApiKey?: string;
+    beetsDbLocation?: string;
 }
 
 interface UIPreferences {
@@ -276,7 +279,7 @@ interface MapTooltipData {
     emoji: string;
     numberOfArtists: number;
     artists: string[]; // first few,
-    albums: { path: string; album: string; artist: string }[]; // first few as well
+    albums: { id: string; path: string; album: string; artist: string }[]; // first few as well
 }
 
 interface ToImport {
@@ -478,4 +481,10 @@ interface ColumnViewModel {
         width: number;
         autoWidth: boolean;
     };
+}
+
+interface BeetsQuery {
+    query: string;
+    sortBy: string;
+    descending: boolean;
 }
