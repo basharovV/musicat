@@ -117,6 +117,8 @@ export interface Theme {
     "mapview-tooltip-bg": string;
     "mapview-tooltip-border": string;
     "mapview-tooltip-text": string;
+    "mapview-globe-outline": string;
+    "mapview-globe-glow": string;
     /** Menus */
     "menu-bg": string;
     "menu-border": string;

@@ -488,3 +488,9 @@ interface BeetsQuery {
     sortBy: string;
     descending: boolean;
 }
+
+type SongsByCountry = {
+    [countryCode: string]: {
+        data: Song[];
+    };
+};

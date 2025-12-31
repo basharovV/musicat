@@ -2,18 +2,26 @@
     import type { Album, MapTooltipData } from "../../App";
     import { db } from "../../data/db";
     import md5 from "md5";
+    import { userSettings } from "../../data/store";
+    import { invoke } from "@tauri-apps/api/core";
 
     export let data: MapTooltipData = null;
     let albums: Album[] = null;
 
     async function getAlbums() {
         console.log("albums to get", data);
-        albums = await db.albums.bulkGet(
-            data?.albums.map((a) =>
-                md5(`${a.artist} - ${a.album}`.toLowerCase()),
-            ),
-        );
-        albums = albums.filter((a) => a?.artwork).slice(0, 5);
+        if ($userSettings.beetsDbLocation) {
+            albums = await invoke("get_albums_by_id", {
+                albumIds: data?.albums.map((a) => a.id),
+            });
+        } else {
+            albums = await db.albums.bulkGet(
+                data?.albums.map((a) =>
+                    md5(`${a.artist} - ${a.album}`.toLowerCase()),
+                ),
+            );
+            albums = albums.filter((a) => a?.artwork).slice(0, 5);
+        }
     }
     $: {
         if (data) {

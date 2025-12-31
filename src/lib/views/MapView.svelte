@@ -1,5 +1,34 @@
 <script lang="ts">
     import { liveQuery } from "dexie";
+    import { onMount, tick } from "svelte";
+    import { get } from "svelte/store";
+    import { songMatchesQuery } from "../../data/LibraryUtils";
+    import { parsePlaylist } from "../../data/M3UUtils";
+    import BuiltInQueries from "../../data/SmartQueries";
+    import { beetsSearch, beetsSongsOnly } from "../../data/beets";
+    import { db } from "../../data/db";
+    import {
+        expandedSongWithStems,
+        isInit,
+        isSmartQueryBuilderOpen,
+        isTagCloudOpen,
+        isTagOrCondition,
+        queriedSongs,
+        query,
+        queueMirrorsSearch,
+        selectedPlaylistFile,
+        selectedSmartQuery,
+        selectedTags,
+        smartQuery,
+        smartQueryResults,
+        smartQueryUpdater,
+        toDeletePlaylist,
+        uiView,
+        userSettings,
+    } from "../../data/store";
+    import { setQueue } from "../../data/storeHelper";
+    import audioPlayer from "../player/AudioPlayer";
+    import SmartQuery from "../smart-query/Query";
 
     import JsVectorMap from "../../deps/jsvectormap/js";
     import DataVisualization from "../../deps/jsvectormap/js/dataVisualization";
@@ -7,35 +36,28 @@
     import "../../deps/jsvectormap/scss/jsvectormap.scss";
     JsVectorMap.addMap("world", world);
 
-    import { onMount } from "svelte";
-
-    import type { MapTooltipData, Song, SongOrder } from "src/App";
-    import BuiltInQueries from "../../data/SmartQueries";
-    import { db } from "../../data/db";
+    import type {
+        MapTooltipData,
+        Song,
+        SongOrder,
+        SongsByCountry,
+    } from "src/App";
     import {
         addOriginCountryStatus,
-        isSmartQueryBuilderOpen,
-        queriedSongs,
-        query,
         queue,
         queueCountry,
-        selectedPlaylistFile,
-        selectedSmartQuery,
-        smartQuery,
-        smartQueryResults,
-        smartQueryUpdater,
-        uiView,
     } from "../../data/store";
-    import { setQueue } from "../../data/storeHelper";
     import { currentThemeObject } from "../../theming/store";
     import { groupBy } from "../../utils/ArrayUtils";
     import { getFlagEmoji } from "../../utils/EmojiUtils";
     import { codes, countries } from "../data/CountryCodes";
     import { addCountryDataAllSongs } from "../data/LibraryEnrichers";
     import MapTooltip from "../map/MapTooltip.svelte";
-    import SmartQuery from "../smart-query/Query";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import ProgressBar from "../ui/ProgressBar.svelte";
+    import Icon from "../ui/Icon.svelte";
+    import Globe from "../map/Globe.svelte";
+    import { fade } from "svelte/transition";
 
     export let songOrder: SongOrder;
 
@@ -47,140 +69,234 @@
     let height = 0;
     let mapPadding = 0; //px
 
-    $: songs = liveQuery(async () => {
-        let results;
-        let isSmartQueryResults = false;
-        let isIndexed = true;
+    let view: "2d" | "3d" = "2d";
 
-        if ($selectedPlaylistFile !== null) {
-            const playlist = await db.playlists.get($selectedPlaylistFile);
-            console.log("playlist to get", playlist);
-            results = await db.songs.bulkGet(playlist.tracks);
-            isIndexed = false;
-            // Filter within playlist
-            if ($query.length) {
-                results = results.filter(
-                    (song) =>
-                        song.title
-                            .toLowerCase()
-                            .includes($query.toLowerCase()) ||
-                        song.artist
-                            .toLowerCase()
-                            .includes($query.toLowerCase()) ||
-                        song.album.toLowerCase().includes($query.toLowerCase()),
-                );
-            }
-        } else if ($uiView === "smart-query") {
-            /**
-             * User-built smart queries don't support indexing
-             */
-            if ($isSmartQueryBuilderOpen) {
-                if ($smartQuery.isEmpty) {
-                    results = [];
-                } else if ($smartQueryUpdater) {
-                    results = await $smartQuery.run();
-                }
+    $: songs = $userSettings.beetsDbLocation
+        ? beetsSongsOnly
+        : liveQuery(async () => {
+              let results;
+              let isSmartQueryResults = false;
+              let isIndexed = true;
 
-                isSmartQueryResults = true;
-                isIndexed = false;
-            } else {
-                /**
-                 * Built-in smart queries support indexing, so they return a
-                 * Collection instead of an array.
-                 */
-                console.log("selected query: ", $selectedSmartQuery);
-                if ($selectedSmartQuery.startsWith("~usq:")) {
-                    // Run the query from the user-built blocks
-                    const query =
-                        await SmartQuery.loadWithUQI($selectedSmartQuery);
-                    results = await query.run();
-                    console.log("results query: ", results);
-                    isIndexed = false;
-                } else {
-                    // Run the query from built-in functions
-                    results = await BuiltInQueries[$selectedSmartQuery].run();
+              if ($uiView === "to-delete") {
+                  if (
+                      $toDeletePlaylist === null ||
+                      $toDeletePlaylist.tracks.length === 0
+                  ) {
+                      results = [];
+                  } else {
+                      results = await db.songs.bulkGet(
+                          $toDeletePlaylist.tracks,
+                      );
+                  }
+                  // Add display ID
+                  results = results.map((s, idx) => ({
+                      ...s,
+                      viewModel: {
+                          viewId: idx.toString(),
+                      },
+                  }));
+                  console.log("to delete songs", results);
+                  isIndexed = false;
+              } else if ($selectedPlaylistFile !== null) {
+                  results = await parsePlaylist($selectedPlaylistFile);
+                  console.log("m3uresults", results);
 
-                    isIndexed = true;
-                }
-                isSmartQueryResults = true;
-            }
-        } else if ($query.length) {
-            results = db.songs
-                .orderBy(
-                    songOrder.orderBy === "artist"
-                        ? "[artist+year+album+trackNumber]"
-                        : songOrder.orderBy === "album"
-                          ? "[album+trackNumber]"
-                          : songOrder.orderBy,
-                )
-                .and(
-                    (song) =>
-                        song.title
-                            .toLowerCase()
-                            .startsWith($query.toLowerCase()) ||
-                        song.artist
-                            .toLowerCase()
-                            .startsWith($query.toLowerCase()) ||
-                        song.album
-                            .toLowerCase()
-                            .startsWith($query.toLowerCase()),
-                );
-        } else {
-            results = db.songs.orderBy(
-                songOrder.orderBy === "artist"
-                    ? "[artist+year+album+trackNumber]"
-                    : songOrder.orderBy === "album"
-                      ? "[album+trackNumber]"
-                      : songOrder.orderBy,
-            );
-        }
-        let resultsArray: Song[] = [];
+                  // Add display ID
+                  results = results.map((s, idx) => ({
+                      ...s,
+                      viewModel: {
+                          viewId: idx.toString(),
+                      },
+                  }));
+                  isIndexed = false;
+                  // Filter within playlist
+                  if ($query.length) {
+                      results = results.filter((song) =>
+                          songMatchesQuery(song, $query),
+                      );
+                  }
+              } else if (
+                  $uiView === "smart-query" ||
+                  $uiView === "favourites"
+              ) {
+                  /**
+                   * User-built smart queries don't support indexing
+                   */
+                  if ($isSmartQueryBuilderOpen) {
+                      if ($smartQuery.isEmpty) {
+                          results = [];
+                      } else if ($smartQueryUpdater) {
+                          results = await $smartQuery.run();
+                      }
 
-        // Depending whether this is a smart query or not
-        if (isIndexed) {
-            if (songOrder.reverse) {
-                results = results.reverse();
-            }
-            resultsArray = await results.toArray();
-        } else {
-            resultsArray = results;
-        }
+                      isSmartQueryResults = true;
+                      isIndexed = false;
+                  } else {
+                      /**
+                       * Built-in smart queries support indexing, so they return a
+                       * Collection instead of an array.
+                       */
+                      console.log("selected query: ", $selectedSmartQuery);
+                      if ($selectedSmartQuery.startsWith("~usq:")) {
+                          // Run the query from the user-built blocks
+                          const query =
+                              await SmartQuery.loadWithUQI($selectedSmartQuery);
+                          results = await query.run();
+                          console.log("results query: ", results);
+                          isIndexed = false;
+                      } else {
+                          // Run the query from built-in functions
+                          results =
+                              await BuiltInQueries[$selectedSmartQuery].run();
+                          isIndexed = true;
+                      }
+                      isSmartQueryResults = true;
+                  }
+              } else if ($query.length) {
+                  results = db.songs
+                      .orderBy(
+                          songOrder.orderBy === "artist"
+                              ? "[artist+year+album+trackNumber]"
+                              : songOrder.orderBy === "album"
+                                ? "[album+trackNumber]"
+                                : songOrder.orderBy,
+                      )
+                      .and((song) => songMatchesQuery(song, $query));
+              } else {
+                  results = db.songs.orderBy(
+                      songOrder.orderBy === "artist"
+                          ? "[artist+year+album+trackNumber]"
+                          : songOrder.orderBy === "album"
+                            ? "[album+trackNumber]"
+                            : songOrder.orderBy,
+                  );
+              }
+              let resultsArray: Song[] = [];
 
-        // Do sorting for non-indexed results
-        if (!isIndexed) {
-            resultsArray = resultsArray.sort((a, b) => {
-                switch (songOrder.orderBy) {
-                    case "title":
-                    case "album":
-                    case "track":
-                    case "year":
-                    case "duration":
-                    case "genre":
-                        return a[songOrder.orderBy].localeCompare(
-                            b[songOrder.orderBy],
-                        );
-                    case "artist":
-                        // TODO this one needs to match the multiple indexes sorting from Dexie
-                        // i.e Artist -> Album -> Track N.
-                        return a.artist.localeCompare(b.artist);
-                }
-            });
-        }
+              // Depending whether this is a smart query or not
+              if (isIndexed) {
+                  if (songOrder.reverse) {
+                      results = results.reverse();
+                  }
+                  if (
+                      $uiView === "smart-query" &&
+                      songOrder.orderBy !== "none"
+                  ) {
+                      resultsArray = await results.sortBy(songOrder.orderBy);
+                  } else {
+                      resultsArray = await results.toArray();
+                      // console.log("results", resultsArray);
+                  }
+              } else {
+                  resultsArray = results;
+              }
 
-        /**
-         * Set in store
-         */
-        if (isSmartQueryResults) {
-            smartQueryResults.set(resultsArray);
-        } else {
-            queriedSongs.set(resultsArray);
-        }
+              // Filter by tags
+              if ($isTagCloudOpen && $selectedTags.size) {
+                  resultsArray = resultsArray.filter((song) => {
+                      let matches = [];
+                      if ($selectedTags.size === 0) {
+                          return true;
+                      } else if (song.tags?.length === 0) {
+                          return false;
+                      }
+                      $selectedTags.forEach((t) => {
+                          song.tags?.forEach((tag) => {
+                              if (tag === t) {
+                                  matches.push(t);
+                              }
+                          });
+                      });
+                      // console.log("matches", matches);
 
-        isLoading = false;
-        return resultsArray;
-    });
+                      return $isTagOrCondition
+                          ? matches.length > 0 &&
+                                matches.every((m) => $selectedTags.has(m))
+                          : matches.length === $selectedTags?.size &&
+                                matches.every((m) => $selectedTags.has(m));
+                  });
+              }
 
-    let data = null;
+              // Do sorting for non-indexed results
+              if (!isIndexed) {
+                  resultsArray = resultsArray.sort((a, b) => {
+                      let result = 0;
+                      switch (songOrder.orderBy) {
+                          case "title":
+                          case "album":
+                          case "track":
+                          case "year":
+                          case "duration":
+                          case "genre":
+                              result = String(
+                                  a[songOrder.orderBy],
+                              ).localeCompare(String(b[songOrder.orderBy]));
+                              break;
+                          case "artist":
+                              // TODO this one needs to match the multiple indexes sorting from Dexie
+                              // i.e Artist -> Album -> Track N.
+                              result = a.artist.localeCompare(b.artist);
+                              break;
+                      }
+                      if (songOrder.reverse) {
+                          result *= -1;
+                      }
+                      return result;
+                  });
+              }
+
+              if (get(expandedSongWithStems)) {
+                  // Find the song
+                  const idx = resultsArray.findIndex(
+                      (s) => s.id === get(expandedSongWithStems).id,
+                  );
+                  if (idx !== -1) {
+                      expandedSongWithStems.update((s) => {
+                          return {
+                              ...s,
+                              viewModel: {
+                                  ...s.viewModel,
+                                  index: idx,
+                              },
+                          };
+                      });
+                  } else {
+                      expandedSongWithStems.set(null);
+                  }
+              }
+
+              /**
+               * Set in store
+               */
+              if (isSmartQueryResults) {
+                  smartQueryResults.set(resultsArray);
+              } else {
+                  queriedSongs.set(resultsArray);
+              }
+              if ($uiView === "library" && get(isInit)) {
+                  // TESTING ONLY: Uncomment when needed
+                  // window["openedUrls"] = "file:///Users/slav/Downloads/Intrusive Thoughts 14-12-2023.mp3";
+
+                  if (window["openedUrls"]?.length) {
+                      await audioPlayer.handleOpenedUrls(window["openedUrls"]);
+                  }
+
+                  isInit.set(false);
+              }
+
+              if ($queueMirrorsSearch) {
+                  setQueue(resultsArray, false);
+                  if ($query.length === 0) {
+                      $queueMirrorsSearch = false;
+                  }
+              }
+
+              isLoading = false;
+              return resultsArray;
+          });
+
+    let data: SongsByCountry = null;
     let dataCountMap = null;
 
     let selectedCountry = null;
@@ -201,8 +317,13 @@
             dataCountMap = data
                 ? Object.entries(data).reduce(
                       (dataSetObj, currentCountry: object) => {
-                          dataSetObj[codes[currentCountry[0]]] =
-                              currentCountry[1].data.length;
+                          if ($userSettings.beetsDbLocation) {
+                              dataSetObj[currentCountry[0]] =
+                                  currentCountry[1].data.length;
+                          } else {
+                              dataSetObj[codes[currentCountry[0]]] =
+                                  currentCountry[1].data.length;
+                          }
                           return dataSetObj;
                       },
                       {},
@@ -212,7 +333,10 @@
             if (window && map) {
                 map.dataVisualization = new DataVisualization(
                     {
-                        scale: ["#9070BB", "#984EFF"],
+                        scale: [
+                            $currentThemeObject["mapview-scale-1"],
+                            $currentThemeObject["mapview-scale-2"],
+                        ],
                         values: dataCountMap ? dataCountMap : [],
                     },
                     map,
@@ -226,10 +350,10 @@
                 $queueCountry && setSelectedCountry($queueCountry);
             }
         }
-        console.log("countMap", dataCountMap);
     }
 
     function setSelectedCountry(countryCode) {
+        if (!map) return;
         // Get path
         // map._clearSelected('regions');
         map.setSelectedRegions([countryCode]);
@@ -245,8 +369,6 @@
         let x = path.getBBox().x + width / 2;
         let y = path.getBBox().y + height / 2;
 
-        console.log("xy", x, y);
-        console.log("x", x, "y", y);
         // path.style.animation =
         //     "playing-outer 2s ease-in-out infinite alternate-reverse";
         path.classList.add("country-playing");
@@ -267,15 +389,18 @@
     function resetMap() {
         map = new JsVectorMap({
             onLoaded(map) {
-                map.updateSize();
+                window.addEventListener("resize", () => {
+                    map.updateSize();
+                });
             },
             draggable: true,
             zoomButtons: false,
             zoomOnScroll: true,
-            zoomOnScrollSpeed: 0.3,
+            zoomOnScrollSpeed: 0.1,
+
             zoomMax: 5,
-            zoomMin: 1,
-            zoomAnimate: true,
+            zoomMin: 1.5,
+            zoomAnimate: false,
             zoomStep: 1.5,
             selector: "#map",
             showTooltip: true,
@@ -289,27 +414,25 @@
             // Play country
             onRegionClick(event, code) {
                 if (!data) return;
-                console.log("clicked", code);
-                if (data[countries[code]]) {
+                if (data[code]) {
                     selectedCountry = code;
                     selectedCountryPos = {
                         x: event.pageX - 11 - mapPadding * 2,
                         y: event.pageY,
                     };
-                    dataSetCountryValue = data[countries[code]] || null;
+                    dataSetCountryValue = data[code] || null;
                     onCountryClicked();
                 }
             },
             onRegionTooltipShow(event, tooltip, code) {
                 if (!data) return;
-                if (data[countries[code]]) {
-                    const countryValue = data[countries[code]] || null;
+                if (data[code]) {
+                    const countryValue = data[code] || null;
                     // countryValue.data.length  = number artists
-                    console.log("tooltip", tooltip);
 
                     // Hovered country
-
                     let hoveredCountryPlaylist: Song[] = countryValue.data;
+
                     let hoveredCountryArtists: string[] = [
                         ...new Set(
                             hoveredCountryPlaylist.map((item) => item.artist),
@@ -319,14 +442,16 @@
                     let hoveredCountryFirstFewArtists =
                         hoveredCountryArtists.slice(
                             0,
-                            Math.min(3, artists.length),
+                            Math.min(3, hoveredCountryArtists.length),
                         );
 
                     let hoveredCountryFirstFewAlbums: {
+                        id: string;
                         path: string;
                         artist: string;
                         album: string;
                     }[] = hoveredCountryPlaylist.map((item) => ({
+                        id: item.albumId,
                         path: item.path.replace(`/${item.file}`, ""),
                         artist: item.artist,
                         album: item.album,
@@ -395,22 +520,26 @@
         });
     }
 
-    onMount(async () => {
+    onMount(() => {
         onResize();
         resetMap();
+
+        const resizeObserver = new ResizeObserver(() => {
+            onResize();
+        });
+
+        resizeObserver.observe(container);
+
+        return () => resizeObserver.unobserve(container);
     });
 
-    function onResize() {
-        height = container.offsetHeight;
-        width = container.clientWidth - 10;
+    async function onResize() {
         if (map) {
-            map.height = height;
-            map.width = width;
             map.reset();
             map.updateSize();
         }
+        $queueCountry && setSelectedCountry($queueCountry);
     }
-
     function onCountryClicked() {
         // Should play immediately after setting playlist (and shuffling if necessary)
         console.log(dataSetCountryValue.data[0]);
@@ -424,14 +553,35 @@
     $: numberOfArtists = artists.length;
     $: firstFewArtists = artists.slice(0, Math.min(3, artists.length));
 
+    $: counts = dataCountMap ? (Object.values(dataCountMap) as number[]) : [];
+    $: minCount = counts.length ? Math.min(...counts) : 0;
+    $: maxCount = counts.length ? Math.max(...counts) : 0;
+    $: legendGradient = `linear-gradient(to right, ${$currentThemeObject["mapview-scale-1"]}, ${$currentThemeObject["mapview-scale-2"]})`;
+
     async function addCountryData() {
         await addCountryDataAllSongs();
     }
+
+    async function onQueryChanged(query: string, songOrder: SongOrder) {
+        if ($uiView === "map") {
+            queriedSongs.set(
+                await beetsSearch.updateSearch({
+                    query,
+                    sortBy: songOrder.orderBy,
+                    descending: songOrder.reverse,
+                }),
+            );
+        }
+    }
+
+    $: {
+        $userSettings.beetsDbLocation &&
+            onQueryChanged($query || "", songOrder);
+    }
+    let globeRef: Globe;
 </script>
 
-<svelte:window on:resize={onResize} />
-
-<container bind:this={container}>
+<container>
     <div class="bg" />
     <!--
     <Particles
@@ -488,8 +638,14 @@
         </div>
     </content>
     {#if songs}
-        <div class="map-container">
-            <div id="map" style="width: {width}px; height: {height}px" />
+        <div class="map-container" bind:this={container}>
+            {#if view === "2d"}
+                <div id="map" transition:fade />
+            {:else}
+                <div id="globe" transition:fade>
+                    <Globe bind:this={globeRef} songData={data} />
+                </div>
+            {/if}
             <!-- {#if selectedCountryPos}
                 <svg
                     class="now-playing"
@@ -521,6 +677,74 @@
         <div id="map-tooltip">
             <MapTooltip data={tooltipData} />
         </div>
+        <div class="map-options">
+            <!-- <div class="tagging-hint">
+                <ButtonWithIcon
+                    theme="transparent"
+                    icon="mdi:information"
+                    text="How to add country data?"
+                    onClick={() => {}}
+                />
+            </div> -->
+
+            <div
+                class="control"
+                on:click={async () => {
+                    view = view === "2d" ? "3d" : "2d";
+                    await tick();
+                    if (view === "2d") {
+                        onResize();
+                        resetMap();
+                        globeRef = null;
+                    } else {
+                        map = null;
+                    }
+                }}
+            >
+                <Icon icon="mdi:map" />
+            </div>
+
+            <div
+                class="control"
+                on:click={() => {
+                    map?._setScale(
+                        map.scale * map.params.zoomStep,
+                        map._width / 2,
+                        map._height / 2,
+                        false,
+                        map.params.zoomAnimate,
+                    );
+                    globeRef?.zoomIn();
+                }}
+            >
+                <Icon icon="iconamoon:zoom-in" />
+            </div>
+            <div
+                class="control"
+                on:click={() => {
+                    map?._setScale(
+                        map.scale / map.params.zoomStep,
+                        map._width / 2,
+                        map._height / 2,
+                        false,
+                        map.params.zoomAnimate,
+                    );
+                    globeRef?.zoomOut();
+                }}
+            >
+                <Icon icon="iconamoon:zoom-out" />
+            </div>
+            {#if nOfCountries > 0}
+                <div class="map-legend">
+                    <span class="label">{minCount}</span>
+                    <div
+                        class="gradient-bar"
+                        style="background: {legendGradient}"
+                    ></div>
+                    <span class="label">{maxCount} tracks</span>
+                </div>
+            {/if}
+        </div>
     {/if}
 </container>
 
@@ -536,6 +760,63 @@
         border-radius: 5px;
         overflow: hidden;
         background-color: var(--panel-background);
+
+        .map-options {
+            position: absolute;
+            bottom: 15px;
+            padding: 0 15px;
+            z-index: 1;
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+            width: 100%;
+
+            .tagging-hint {
+                z-index: 10;
+                flex-grow: 1;
+                opacity: 0.5;
+            }
+            .control {
+                background: var(--overlay-bg);
+                padding: 8px 12px;
+                border-radius: 6px;
+                border: 1px solid
+                    color-mix(in srgb, var(--inverse) 50%, transparent);
+                backdrop-filter: blur(4px);
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                cursor: pointer;
+
+                &:hover {
+                    background: var(--overlay-bg-hover);
+                }
+            }
+
+            .map-legend {
+                background: var(--overlay-bg);
+                padding: 8px 12px;
+                border-radius: 6px;
+                border: 1px solid
+                    color-mix(in srgb, var(--inverse) 10%, transparent);
+                backdrop-filter: blur(4px);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+                .label {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    white-space: nowrap;
+                }
+
+                .gradient-bar {
+                    width: 100px;
+                    height: 8px;
+                    border-radius: 4px;
+                }
+            }
+        }
     }
 
     .bg {
@@ -655,15 +936,23 @@
         margin-top: 2em;
     }
 
+    .map-container {
+        width: 100%;
+        height: 100%;
+    }
+
     #map {
         overflow: hidden;
         margin: auto;
         display: flex;
-        height: fit-content;
-
         &:active {
             cursor: grab;
         }
+    }
+
+    #globe {
+        width: 100%;
+        height: 100%;
     }
 
     #info {
