@@ -2,7 +2,7 @@
     import { fade } from "svelte/transition";
     import type { Album } from "../../App";
     import { db } from "../../data/db";
-    import { current, isPlaying } from "../../data/store";
+    import { current, isPlaying, userSettings } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
     import LL from "../../i18n/i18n-svelte";
@@ -11,6 +11,7 @@
         setDraggedAlbum,
         setQueue,
     } from "../../data/storeHelper";
+    import { createBeetsSearch } from "../../data/beets";
 
     export let album: Album; // to display album data
     export let highlighted = false;
@@ -19,21 +20,25 @@
     let cancel = false;
     let isHovered = false;
 
+    const albumTracksSearch = createBeetsSearch();
+
     async function playPauseToggle() {
         cancel = true;
 
         if (isPlayingCurrentAlbum) {
             audioPlayer.togglePlay();
         } else {
-            const track = await db.songs.get(album.tracksIds[0]);
+            if ($userSettings.beetsDbLocation) {
+                const albumTracks = await albumTracksSearch.updateSearch(
+                    {},
+                    album.id,
+                );
 
-            audioPlayer.playSong(track);
-
-            const tracks = await db.songs.bulkGet(album.tracksIds.slice(1));
-
-            tracks.unshift(track);
-
-            setQueue(tracks, false);
+                setQueue(albumTracks, 0);
+            } else {
+                const tracks = await db.songs.bulkGet(album.tracksIds);
+                setQueue(tracks, 0);
+            }
         }
     }
 

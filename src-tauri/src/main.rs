@@ -740,6 +740,7 @@ fn main() {
             beets::search_beets,
             beets::search_beets_albums,
             beets::get_beets_album_tracks,
+            beets::get_albums_by_id
         ])
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);

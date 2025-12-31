@@ -87,7 +87,7 @@ export function getAllColumns(): ColumnViewModel[] {
         },
         {
             name: get(LL).library.fields.origin(),
-            value: "originCountry",
+            value: "originCountryName",
             viewProps: {
                 width: 100,
                 autoWidth: false,

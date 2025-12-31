@@ -9,7 +9,8 @@ use tauri::{Emitter, Manager};
 
 use crate::{
     metadata::{
-        artwork_cacher::get_image_format, convert_file_src, Album, AlbumArtwork, FileInfo, Song,
+        artwork_cacher::get_image_format, convert_file_src, country_name, Album, AlbumArtwork,
+        FileInfo, Song,
     },
     store::load_settings,
 };
@@ -66,6 +67,27 @@ pub async fn search_beets_albums(
 }
 
 #[tauri::command]
+pub async fn get_albums_by_id(
+    album_ids: Vec<String>,
+    sort_by: Option<String>,
+    descending: Option<bool>,
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<Album>, String> {
+    info!("[Beets] Searching albums by ids {:?}", album_ids);
+    let sort = sort_by.unwrap_or_else(|| "album".to_string());
+
+    let db_path =
+        get_beets_db_path(&app_handle).ok_or_else(|| "Beets database not found".to_string())?;
+
+    query_beets_albums_by_ids(&db_path, album_ids, &sort, descending.unwrap_or(false)).map_err(
+        |e| {
+            app_handle.emit("error", e.to_string());
+            e.to_string()
+        },
+    )
+}
+
+#[tauri::command]
 pub async fn get_beets_album_tracks(
     album_id: String,
     app_handle: tauri::AppHandle,
@@ -119,6 +141,10 @@ fn map_sort_column_album(field: &str) -> &'static str {
     }
 }
 
+const SONG_FIELDS: &str = "id, path, title, artist, album, albumartist, comp, 
+            year, genre, composer, track, tracktotal, disc, disctotal, 
+            length, bitrate, samplerate, bitdepth, channels, format, added, country, album_id";
+
 pub fn query_beets_to_songs(
     db_path: &PathBuf,
     search_term: &str,
@@ -136,14 +162,11 @@ pub fn query_beets_to_songs(
 
     // We use format! for the ORDER BY clause because it's not a parameterizable part of SQL
     let query_sql = format!(
-        "SELECT 
-            id, path, title, artist, album, albumartist, comp, 
-            year, genre, composer, track, tracktotal, disc, disctotal, 
-            length, bitrate, samplerate, bitdepth, channels, format, added
+        "SELECT {}
          FROM items 
          WHERE title LIKE ?1 OR artist LIKE ?1 OR album LIKE ?1
          ORDER BY {} {}",
-        order_col, order_dir
+        SONG_FIELDS, order_col, order_dir
     );
 
     let mut stmt = conn.prepare(&query_sql)?;
@@ -274,23 +297,144 @@ pub fn query_beets_albums(
     albums_iter.collect()
 }
 
+pub fn query_beets_albums_by_ids(
+    db_path: &PathBuf,
+    album_ids: Vec<String>,
+    sort_by: &str,
+    descending: bool,
+) -> Result<Vec<Album>> {
+    if album_ids.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let conn = Connection::open_with_flags(
+        db_path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+
+    let order_dir = if descending { "DESC" } else { "ASC" };
+    let order_col = map_sort_column_album(sort_by);
+
+    // Build placeholders: (?, ?, ?, ...)
+    let placeholders = std::iter::repeat("?")
+        .take(album_ids.len())
+        .collect::<Vec<_>>()
+        .join(",");
+
+    let album_sql = format!(
+        "
+        SELECT
+            a.id,
+            a.album,
+            a.albumartist,
+            a.comp,
+            a.year,
+            a.genre,
+            a.artpath
+        FROM albums a
+        WHERE a.id IN ({})
+        ORDER BY {} {}
+        ",
+        placeholders, order_col, order_dir
+    );
+
+    let mut stmt = conn.prepare(&album_sql)?;
+
+    let albums_iter = stmt.query_map(rusqlite::params_from_iter(album_ids.iter()), |row| {
+        let album_db_id: i64 = row.get(0)?;
+        let title: String = row.get::<_, Option<String>>(1)?.unwrap_or_default();
+        let artist: String = row
+            .get::<_, Option<String>>(2)?
+            .unwrap_or_else(|| "Unknown".into());
+        let compilation: i32 = row.get::<_, i64>(3).unwrap_or(0) as i32;
+        let year: i32 = row.get::<_, i64>(4).unwrap_or(0) as i32;
+        let genre_str: String = row.get::<_, Option<String>>(5)?.unwrap_or_default();
+        let art_path: String = row
+            .get::<_, Option<Vec<u8>>>(6)?
+            .and_then(|bytes| {
+                let s = String::from_utf8_lossy(&bytes).into_owned();
+                (!s.is_empty()).then_some(s)
+            })
+            .unwrap_or_default();
+
+        // Tracks
+        let mut track_stmt = conn.prepare(
+            "
+                SELECT id, format
+                FROM items
+                WHERE album_id = ?1
+                ORDER BY disc, track
+                ",
+        )?;
+
+        let mut tracks_ids = Vec::new();
+        let mut lossless = true;
+
+        let track_iter = track_stmt.query_map([album_db_id], |r| {
+            let id: i64 = r.get(0)?;
+            let format: String = r.get::<_, Option<String>>(1)?.unwrap_or_default();
+            Ok((id, format))
+        })?;
+
+        for track in track_iter {
+            let (id, format) = track?;
+            tracks_ids.push(id.to_string());
+            if !is_lossless(&format) {
+                lossless = false;
+            }
+        }
+
+        // Artwork
+        let artwork = Path::new(&art_path)
+            .exists()
+            .then(|| Path::new(&art_path))
+            .and_then(|p| p.extension())
+            .and_then(|ext| ext.to_str())
+            .and_then(get_image_format)
+            .map(|format| AlbumArtwork {
+                src: convert_file_src(art_path),
+                format: format.to_string(),
+            });
+
+        Ok(Album {
+            id: album_db_id.to_string(),
+            title: title.to_lowercase(),
+            display_title: title,
+            artist,
+            compilation,
+            year,
+            genre: if genre_str.is_empty() {
+                vec![]
+            } else {
+                vec![genre_str]
+            },
+            tracks_ids,
+            path: "".to_string(),
+            artwork,
+            lossless,
+        })
+    })?;
+
+    albums_iter.collect()
+}
+
 pub fn query_beets_album_tracks(db_path: &PathBuf, album_id: String) -> Result<Vec<Song>> {
     let conn = Connection::open_with_flags(
         db_path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
 
-    let query_sql = "
-        SELECT 
-            id, path, title, artist, album, albumartist, comp,
-            year, genre, composer, track, tracktotal, disc, disctotal,
-            length, bitrate, samplerate, bitdepth, channels, format, added
+    let query_sql = format!(
+        "
+        SELECT {}
         FROM items
         WHERE album_id = ?1
         ORDER BY disc, track
-    ";
+    ",
+        SONG_FIELDS
+    );
 
-    let mut stmt = conn.prepare(query_sql)?;
+    let mut stmt = conn.prepare(query_sql.as_str())?;
     let song_iter = stmt.query_map([album_id], row_to_song)?;
 
     song_iter.collect()
@@ -356,6 +500,11 @@ fn row_to_song(row: &rusqlite::Row) -> rusqlite::Result<Song> {
         album: row
             .get::<_, Option<String>>(4)?
             .unwrap_or_else(|| "Unknown".to_string()),
+        album_id: row
+            .get::<_, Option<i64>>(22)
+            .ok()
+            .flatten()
+            .map(|f| f.to_string()),
         album_artist: row.get::<_, Option<String>>(5).ok().flatten(),
         compilation: row.get::<_, i64>(6).unwrap_or(0) as i32,
         year: row.get::<_, i64>(7).unwrap_or(0) as i32,
@@ -368,7 +517,11 @@ fn row_to_song(row: &rusqlite::Row) -> rusqlite::Result<Song> {
         duration: format_duration(duration_secs),
         artwork: None,
         artwork_origin: None,
-        origin_country: None,
+        origin_country: Some(row.get::<_, Option<String>>(21)?.unwrap_or_default()),
+        origin_country_name: row
+            .get::<_, Option<String>>(21)?
+            .and_then(|c| country_name(c.as_str()))
+            .map(|c| c.to_string()),
         date_added: Some((row.get::<_, f64>(20).unwrap_or(0.0) * 1000.0) as u128),
     })
 }
