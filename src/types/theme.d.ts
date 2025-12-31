@@ -16,8 +16,9 @@ export interface Theme {
     /**  Overlays, popups */
     "overlay-bg": string;
     "overlay-shadow": string;
-    /**  Primary accent color used for active items that need to stand out */
+    /**  Primary accent color, used for highlighting important items */
     accent: string;
+    /**  Secondary accent color, used for small things like seekbar color */
     "accent-secondary": string;
     /** Buttons */
     "button-active-bg": string;

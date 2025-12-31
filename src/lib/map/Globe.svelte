@@ -32,7 +32,7 @@
 
     // Country selection state
     let countriesGroup = new THREE.Group();
-    let hoveredCountry: THREE.Mesh | null = null;
+    let hoveredCountryCode: string = "";
     export let selectedCountryName: string = "";
 
     let globe: THREE.Mesh;
@@ -45,7 +45,7 @@
     const markers: THREE.Sprite[] = [];
     const lines: THREE.Line[] = [];
 
-    export let focusedPlace: any;
+    export let onCountryHovered: (code: string) => void;
     export let songData: SongsByCountry = {};
 
     async function initCountries() {
@@ -141,7 +141,7 @@
         geojson.features.forEach((feature: any) => {
             const name = feature.properties[`NAME_${$locale.toUpperCase()}`];
             const { type, coordinates } = feature.geometry;
-            const countryCode = feature.properties["ISO_A2"];
+            const countryCode = feature.properties["ISO_A2_EH"];
             const polygons = type === "Polygon" ? [coordinates] : coordinates;
 
             polygons.forEach((poly: number[][][]) => {
@@ -165,10 +165,11 @@
                     mesh.material.opacity = 1;
                     mesh.userData.nOfSongs =
                         songData[countryCode]?.data?.length;
-                    mesh.userData.countryCode = countryCode;
                 } else {
                     mesh.material.visible = false;
                 }
+
+                mesh.userData.countryCode = countryCode;
                 mesh.userData.name = name;
                 mesh.renderOrder = 1; // Add this - render countries after globe
                 mesh.layers.set(0);
@@ -202,6 +203,7 @@
     let isDragging = false;
     let downX = 0;
     let downY = 0;
+    let isMouseDown = false;
 
     const DRAG_THRESHOLD = 5; // pixels
 
@@ -209,21 +211,33 @@
         downX = event.clientX;
         downY = event.clientY;
         isDragging = false;
+        isMouseDown = true;
     }
 
     function onMouseMove(event: MouseEvent) {
         const dx = event.clientX - downX;
         const dy = event.clientY - downY;
 
-        if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
+        if (
+            isMouseDown &&
+            dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD
+        ) {
             isDragging = true;
+            tooltip?.classList.remove("active");
+        }
+        if (!isMouseDown) {
+            handleInteractions(event); // hover
         }
     }
 
     function onMouseUp(event: MouseEvent) {
         if (!isDragging) {
-            handleInteractions(event); // ← this is your "real click"
+            handleInteractions(event); // click
         }
+        isDragging = false;
+        isMouseDown = false;
+        downX = 0;
+        downY = 0;
     }
 
     export function zoomIn(amount = 1) {
@@ -255,7 +269,6 @@
 
         // First, intersect with the globe itself
         const globeIntersects = raycaster.intersectObject(globe);
-        console.log("globeIntersects", globeIntersects);
         if (globeIntersects.length > 0) {
             // Get the intersection point on the globe surface
             const intersectionPoint = globeIntersects[0].point;
@@ -265,17 +278,7 @@
 
             // Now find which country contains this lat/lng
             const country = findCountryAtCoordinates(lat, lng);
-            console.log("country found", country);
-
             if (country) {
-                const mat = country.material as THREE.MeshBasicMaterial;
-
-                // Hover Effect
-                if (country.userData.name !== selectedCountryName) {
-                    // mat.opacity = 0.3;
-                    // mat.color.set(new THREE.Color("#ece5e5"));
-                }
-
                 if (event.type === "mouseup") {
                     selectedCountryName = country.userData.name;
                     try {
@@ -283,8 +286,66 @@
                     } catch (err) {
                         console.error("error playing country", err);
                     }
+                } else if (event.type === "mousemove") {
+                    if (tooltip) {
+                        // Update tooltip position
+                        const container =
+                            globeContainer.getBoundingClientRect();
+                        const space = 5; // Space between the cursor and tooltip element
+
+                        // Tooltip
+                        const { height, width } =
+                            tooltip.getBoundingClientRect();
+                        const topIsPassed =
+                            event.clientY <= container.top + height + space;
+                        let top = event.pageY - space;
+                        let left = event.pageX - space;
+
+                        // Ensure the tooltip will never cross outside the canvas area(map)
+                        if (topIsPassed) {
+                            // Top:
+                            top += height + space;
+
+                            // The cursor is a bit larger from left side
+                            left -= space * 2;
+                        }
+
+                        if (event.clientX < container.left + width) {
+                            // Left:
+                            left = event.pageX + space + 2;
+
+                            if (topIsPassed) {
+                                left += space * 2;
+                            }
+                        }
+
+                        tooltip.style.top = `${top}px`;
+                        tooltip.style.left = `${left}px`;
+                    }
+                    if (!country.userData.countryCode) {
+                        tooltip?.classList.remove("active");
+                        hoveredCountryCode = null;
+                        return;
+                    }
+
+                    if (hoveredCountryCode !== country.userData.countryCode) {
+                        onCountryHovered &&
+                            onCountryHovered(country.userData.countryCode);
+                        hoveredCountryCode = country.userData.countryCode;
+
+                        if (!tooltip) return;
+
+                        tooltip.classList.add("active");
+                    }
                 }
+            } else {
+                tooltip?.classList.remove("active");
+                hoveredCountryCode = null;
             }
+        } else {
+            tooltip?.classList.remove("active");
+            hoveredCountryCode = null;
+            return;
         }
     }
 
@@ -353,7 +414,7 @@
                 console.log("Setting selected country", countryCode);
                 mat.visible = true;
                 mat.uniforms.color.value = new THREE.Color(
-                    $currentThemeObject["mapview-region-selected-hover-bg"],
+                    $currentThemeObject["mapview-region-selected-bg"],
                 );
             } else if (child.userData.nOfSongs === undefined) {
                 mat.visible = false;
@@ -371,16 +432,6 @@
     }
 
     let isMounted = false;
-
-    $: if (focusedPlace && globe) {
-        // Rotate (focus) to a place
-        let marker = markers.find(
-            (m) => focusedPlace?.name === m.userData.name,
-        );
-        if (marker) {
-            moveCameraToMarker(marker.position);
-        }
-    }
 
     // Smoothly move the camera to focus on a specific marker
     function moveCameraToMarker(target: THREE.Vector3) {
@@ -425,9 +476,11 @@
         animate();
     }
 
+    let tooltip: HTMLDivElement;
+
     onMount(() => {
         setupGlobe();
-
+        tooltip = document.querySelector("#map-tooltip");
         return () => {
             if (renderer && renderer.domElement) {
                 renderer.domElement.removeEventListener(

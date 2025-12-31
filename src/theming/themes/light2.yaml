@@ -1,6 +1,7 @@
 display-name: Light2
 variant: light
 # Basics
+accent: "#5123dd"
 background: "#e9e5efd9"
 icon-boxed-hover-bg: "#rgba(0, 0, 0, 0.187)"
 icon-disabled: "#474747"
@@ -39,10 +40,20 @@ library-playing-icon: "#efe2e6"
 library-playing-title: "#ffffff"
 library-title: "#282230"
 # Map View
-mapview-tooltip-artist: "#ffffff95"
-mapview-tooltip-bg: "#232325cc"
-mapview-tooltip-border: "#ffffff2d"
-mapview-tooltip-text: "#808080"
+mapview-region-bg: "#c1bbc9"
+mapview-region-border: "#dfd8d8"
+mapview-region-hover-bg: "#645479"
+mapview-region-hover-border: "#C1B1F3"
+mapview-region-selected-bg: "#5123dd"
+mapview-region-selected-border: "#5123dd"
+mapview-region-selected-hover-bg: "#5123dd"
+mapview-region-selected-hover-border: "#5123dd"
+mapview-scale-1: "#c1bbc9"
+mapview-scale-2: "#201f1f"
+mapview-tooltip-artist: "#555555"
+mapview-tooltip-bg: "#eeeeee66"
+mapview-tooltip-border: "#eeeeee"
+mapview-tooltip-text: "var(--text)"
 # Menus
 menu-bg: "#20202296"
 menu-checkbox-on: "#ffffff"

@@ -399,7 +399,7 @@
             zoomOnScrollSpeed: 0.1,
 
             zoomMax: 5,
-            zoomMin: 1.5,
+            zoomMin: 1.2,
             zoomAnimate: false,
             zoomStep: 1.5,
             selector: "#map",
@@ -425,63 +425,7 @@
                 }
             },
             onRegionTooltipShow(event, tooltip, code) {
-                if (!data) return;
-                if (data[code]) {
-                    const countryValue = data[code] || null;
-                    // countryValue.data.length  = number artists
-
-                    // Hovered country
-                    let hoveredCountryPlaylist: Song[] = countryValue.data;
-
-                    let hoveredCountryArtists: string[] = [
-                        ...new Set(
-                            hoveredCountryPlaylist.map((item) => item.artist),
-                        ),
-                    ];
-                    let hoveredCountryNumArtists = hoveredCountryArtists.length;
-                    let hoveredCountryFirstFewArtists =
-                        hoveredCountryArtists.slice(
-                            0,
-                            Math.min(3, hoveredCountryArtists.length),
-                        );
-
-                    let hoveredCountryFirstFewAlbums: {
-                        id: string;
-                        path: string;
-                        artist: string;
-                        album: string;
-                    }[] = hoveredCountryPlaylist.map((item) => ({
-                        id: item.albumId,
-                        path: item.path.replace(`/${item.file}`, ""),
-                        artist: item.artist,
-                        album: item.album,
-                    }));
-
-                    // distinct albums
-                    hoveredCountryFirstFewAlbums =
-                        hoveredCountryFirstFewAlbums.filter(
-                            (e, i) =>
-                                hoveredCountryFirstFewAlbums.findIndex(
-                                    (a) => a["album"] === e["album"],
-                                ) === i,
-                        );
-
-                    tooltipData = {
-                        countryName: countries[code],
-                        emoji: getFlagEmoji(code),
-                        numberOfArtists: hoveredCountryNumArtists,
-                        artists: hoveredCountryFirstFewArtists,
-                        albums: hoveredCountryFirstFewAlbums,
-                    };
-                } else {
-                    tooltipData = {
-                        countryName: countries[code],
-                        emoji: getFlagEmoji(code),
-                        numberOfArtists: 0,
-                        artists: [],
-                        albums: [],
-                    };
-                }
+                onCountryHovered(code);
             },
             map: "world",
             regionsSelectable: false,
@@ -579,6 +523,67 @@
             onQueryChanged($query || "", songOrder);
     }
     let globeRef: Globe;
+
+    /**
+     * Show the tooltip.
+     * Called from both the map view and the globe.
+     * @param code
+     */
+    function onCountryHovered(code: string) {
+        if (!data) return;
+        if (data[code]) {
+            const countryValue = data[code] || null;
+            // countryValue.data.length  = number artists
+
+            // Hovered country
+            let hoveredCountryPlaylist: Song[] = countryValue.data;
+
+            let hoveredCountryArtists: string[] = [
+                ...new Set(hoveredCountryPlaylist.map((item) => item.artist)),
+            ];
+            let hoveredCountryNumArtists = hoveredCountryArtists.length;
+            let hoveredCountryFirstFewArtists = hoveredCountryArtists.slice(
+                0,
+                Math.min(3, hoveredCountryArtists.length),
+            );
+
+            let hoveredCountryFirstFewAlbums: {
+                id: string;
+                path: string;
+                artist: string;
+                album: string;
+            }[] = hoveredCountryPlaylist.map((item) => ({
+                id: item.albumId,
+                path: item.path.replace(`/${item.file}`, ""),
+                artist: item.artist,
+                album: item.album,
+            }));
+
+            // distinct albums
+            hoveredCountryFirstFewAlbums = hoveredCountryFirstFewAlbums.filter(
+                (e, i) =>
+                    hoveredCountryFirstFewAlbums.findIndex(
+                        (a) => a["album"] === e["album"],
+                    ) === i,
+            );
+
+            tooltipData = {
+                countryName: countries[code],
+                emoji: getFlagEmoji(code),
+                numberOfArtists: hoveredCountryNumArtists,
+                artists: hoveredCountryFirstFewArtists,
+                albums: hoveredCountryFirstFewAlbums,
+            };
+        } else {
+            tooltipData = {
+                countryName: countries[code],
+                emoji: getFlagEmoji(code),
+                numberOfArtists: 0,
+                artists: [],
+                albums: [],
+            };
+        }
+    }
 </script>
 
 <container>
@@ -643,7 +648,11 @@
                 <div id="map" transition:fade />
             {:else}
                 <div id="globe" transition:fade>
-                    <Globe bind:this={globeRef} songData={data} />
+                    <Globe
+                        bind:this={globeRef}
+                        songData={data}
+                        {onCountryHovered}
+                    />
                 </div>
             {/if}
             <!-- {#if selectedCountryPos}
@@ -912,6 +921,7 @@
         pointer-events: none;
         margin-top: 1em;
         display: none;
+        z-index: 100;
 
         &:global(.active) {
             display: flex;

@@ -9,7 +9,6 @@
     let albums: Album[] = null;
 
     async function getAlbums() {
-        console.log("albums to get", data);
         if ($userSettings.beetsDbLocation) {
             albums = await invoke("get_albums_by_id", {
                 albumIds: data?.albums.map((a) => a.id),

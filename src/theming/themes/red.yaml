@@ -17,6 +17,18 @@ library-playing-bg: "#be3153"
 library-playing-icon: "#ffffff"
 library-playing-text: "#ffffff"
 # Map View
+
+mapview-region-bg: "#645479"
+mapview-region-border: "#4F4464"
+mapview-region-hover-bg: "#645479"
+mapview-region-hover-border: "#C1B1F3"
+mapview-region-selected-bg: "#59CD70"
+mapview-region-selected-border: "#4F4464"
+mapview-region-selected-hover-bg: "#59CD70"
+mapview-region-selected-hover-border: "#4F4464"
+
+mapview-scale-1: "#a47898"
+mapview-scale-2: "#be3153"
 # Menus
 # Oscilloscope
 # Panels
