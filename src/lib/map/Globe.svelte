@@ -60,10 +60,7 @@
             },
             transparent: true,
             opacity: 0,
-            side:
-                selectedView.value === "mesh"
-                    ? THREE.DoubleSide
-                    : THREE.FrontSide,
+            side: selectedView === "mesh" ? THREE.DoubleSide : THREE.FrontSide,
             depthTest: true,
             depthWrite: false,
             polygonOffset: true,
@@ -510,7 +507,7 @@
         addMarkers();
     }
 
-    $: if (isMounted && selectedView.value === "satellite") {
+    $: if (isMounted && selectedView === "satellite") {
         scene.remove(glowSphere);
         scene.add(globe);
         countriesGroup.children
@@ -523,7 +520,7 @@
                 mat.depthTest = false;
                 mat.depthWrite = true;
             });
-    } else if (isMounted && selectedView.value === "mesh") {
+    } else if (isMounted && selectedView === "mesh") {
         scene.remove(globe);
         scene.add(glowSphere);
         countriesGroup.children
@@ -600,7 +597,7 @@
         globe.receiveShadow = false; // Enable globe to receive shadows
         globe.renderOrder = 5; // Add this - render globe first
         globe.layers.set(0);
-        if (selectedView.value === "satellite") {
+        if (selectedView === "satellite") {
             scene.add(globe);
         }
 
@@ -636,7 +633,7 @@
         glowSphere.scale.multiplyScalar(1); // Scale up the glow sphere for effect
         glowSphere.layers.set(2);
         glowSphere.renderOrder = 2;
-        if (selectedView.value === "mesh") {
+        if (selectedView === "mesh") {
             scene.add(glowSphere);
         }
         // scene.add(glowSphere);
@@ -884,7 +881,7 @@
         },
     ];
 
-    let selectedView = views[0];
+    export let selectedView = views[0].value;
 </script>
 
 <div
@@ -903,17 +900,6 @@
         }
     }}
 ></div>
-<div class="view-selector">
-    {#each views as view}
-        <ButtonWithIcon
-            onClick={() => (selectedView = view)}
-            text={view.label}
-            theme={selectedView === view ? "active" : "translucent"}
-        >
-            {view.label}
-        </ButtonWithIcon>
-    {/each}
-</div>
 
 <style lang="scss">
     #globeContainer {

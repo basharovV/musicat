@@ -4,6 +4,7 @@ variant: dark
 accent-secondary: "#32ceb5f3"
 background: "#01796fda"
 button-solid-bg: "#282b2c"
+button-active-bg: "#32ceb5f3"
 button-text: "#ede8f0"
 icon-primary: white
 icon-secondary: white
@@ -42,6 +43,7 @@ mapview-region-selected-bg: "#59CD70"
 mapview-region-selected-border: "#46a058"
 mapview-region-selected-hover-bg: "#59CD70"
 mapview-region-selected-hover-border: "#357742"
+mapview-globe-outline: "#b3e3d4"
 mapview-scale-1: "#729688"
 mapview-scale-2: "#f3d2ba"
 mapview-tooltip-artist: "#ffffff95"

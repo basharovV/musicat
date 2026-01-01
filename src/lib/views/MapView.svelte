@@ -69,7 +69,31 @@
     let height = 0;
     let mapPadding = 0; //px
 
-    let view: "2d" | "3d" = "2d";
+    let viewOptions = [
+        {
+            value: "2d",
+            icon: "mdi:map",
+        },
+        {
+            value: "3d",
+            icon: "stash:globe",
+        },
+    ];
+
+    let view = viewOptions[0].value;
+
+    let globeViewOptions = [
+        {
+            value: "mesh",
+            icon: "lucide:globe-2",
+        },
+        {
+            value: "satellite",
+            icon: "flat-color-icons:globe",
+        },
+    ];
+
+    let globeView = globeViewOptions[0].value;
 
     $: songs = $userSettings.beetsDbLocation
         ? beetsSongsOnly
@@ -650,6 +674,7 @@
                 <div id="globe" transition:fade>
                     <Globe
                         bind:this={globeRef}
+                        bind:selectedView={globeView}
                         songData={data}
                         {onCountryHovered}
                     />
@@ -696,10 +721,13 @@
                 />
             </div> -->
 
-            <div
-                class="control"
-                on:click={async () => {
-                    view = view === "2d" ? "3d" : "2d";
+            <ButtonWithIcon
+                options={viewOptions}
+                value={view}
+                theme="translucent"
+                onClick={async (value) => {
+                    if (value === view) return;
+                    view = value;
                     await tick();
                     if (view === "2d") {
                         onResize();
@@ -709,13 +737,24 @@
                         map = null;
                     }
                 }}
-            >
-                <Icon icon="mdi:map" />
-            </div>
+            ></ButtonWithIcon>
 
-            <div
-                class="control"
-                on:click={() => {
+            {#if view === "3d"}
+                <ButtonWithIcon
+                    options={globeViewOptions}
+                    value={globeView}
+                    theme="translucent"
+                    onClick={async (value) => {
+                        if (value === globeView) return;
+                        globeView = value;
+                    }}
+                ></ButtonWithIcon>
+            {/if}
+
+            <ButtonWithIcon
+                icon="iconamoon:zoom-in"
+                theme="translucent"
+                onClick={() => {
                     map?._setScale(
                         map.scale * map.params.zoomStep,
                         map._width / 2,
@@ -725,12 +764,11 @@
                     );
                     globeRef?.zoomIn();
                 }}
-            >
-                <Icon icon="iconamoon:zoom-in" />
-            </div>
-            <div
-                class="control"
-                on:click={() => {
+            />
+            <ButtonWithIcon
+                icon="iconamoon:zoom-out"
+                theme="translucent"
+                onClick={() => {
                     map?._setScale(
                         map.scale / map.params.zoomStep,
                         map._width / 2,
@@ -740,9 +778,8 @@
                     );
                     globeRef?.zoomOut();
                 }}
-            >
-                <Icon icon="iconamoon:zoom-out" />
-            </div>
+            />
+            <div class="spacer"></div>
             {#if nOfCountries > 0}
                 <div class="map-legend">
                     <span class="label">{minCount}</span>
@@ -790,7 +827,7 @@
                 padding: 8px 12px;
                 border-radius: 6px;
                 border: 1px solid
-                    color-mix(in srgb, var(--inverse) 50%, transparent);
+                    color-mix(in srgb, var(--inverse) 30%, transparent);
                 backdrop-filter: blur(4px);
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
                 cursor: pointer;
@@ -799,18 +836,16 @@
                     background: var(--overlay-bg-hover);
                 }
             }
+            .spacer {
+                flex-grow: 1;
+            }
 
             .map-legend {
-                background: var(--overlay-bg);
                 padding: 8px 12px;
                 border-radius: 6px;
-                border: 1px solid
-                    color-mix(in srgb, var(--inverse) 10%, transparent);
-                backdrop-filter: blur(4px);
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 
                 .label {
                     font-size: 0.9rem;
