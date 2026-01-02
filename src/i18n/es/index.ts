@@ -45,6 +45,8 @@ const es = {
         orderHintTemp: "Mostrando orden temporal",
         orderDisabledHint: "Cambia al orden de archivos para reordenar pistas",
         queryNoResultsPlaceholder: 'No hay resultados para "{query}"',
+        resetColumns: "Restablecer orden y dimensiones",
+        resetSizesOnly: "Restablecer solo tamaños",
     },
     bottomBar: {
         queue: "Cola",

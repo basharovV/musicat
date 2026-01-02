@@ -45,6 +45,8 @@ const en = {
         orderHintTemp: "Showing temporary order",
         orderDisabledHint: "Switch to file order to re-order tracks",
         queryNoResultsPlaceholder: 'No results for "{query}"',
+        resetColumns: "Reset order and sizes",
+        resetSizesOnly: "Reset sizes only",
     },
     bottomBar: {
         queue: "Queue",

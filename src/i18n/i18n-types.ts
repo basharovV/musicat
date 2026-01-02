@@ -173,6 +173,14 @@ type RootTranslation = {
 		 * @param {unknown} query
 		 */
 		queryNoResultsPlaceholder: RequiredParams<'query'>
+		/**
+		 * R​e​s​e​t​ ​o​r​d​e​r​ ​a​n​d​ ​s​i​z​e​s
+		 */
+		resetColumns: string
+		/**
+		 * R​e​s​e​t​ ​s​i​z​e​s​ ​o​n​l​y
+		 */
+		resetSizesOnly: string
 	}
 	bottomBar: {
 		/**
@@ -1245,6 +1253,14 @@ export type TranslationFunctions = {
 		 * No results for "{query}"
 		 */
 		queryNoResultsPlaceholder: (arg: { query: unknown }) => LocalizedString
+		/**
+		 * Reset order and sizes
+		 */
+		resetColumns: () => LocalizedString
+		/**
+		 * Reset sizes only
+		 */
+		resetSizesOnly: () => LocalizedString
 	}
 	bottomBar: {
 		/**

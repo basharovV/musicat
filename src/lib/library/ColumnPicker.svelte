@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ColumnViewModel, LibraryColumn } from "../../App";
     import type { PersistentWritable } from "../../data/storeUtils";
+    import LL from "../../i18n/i18n-svelte";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
@@ -10,6 +11,7 @@
     export let displayedColumns: PersistentWritable<LibraryColumn[]>;
     let allColumns = getAllColumns();
     export let onResetOrder;
+    export let onResetSizes;
 
     interface ColumnOption extends ColumnViewModel {
         show: boolean;
@@ -74,9 +76,6 @@
         />
     {/each}
     <MenuDivider />
-    <MenuOption
-        text="Reset to default"
-        description="and auto-size columns"
-        onClick={onResetOrder}
-    />
+    <MenuOption text={$LL.library.resetColumns()} onClick={onResetOrder} />
+    <MenuOption text={$LL.library.resetSizesOnly()} onClick={onResetSizes} />
 </Menu>

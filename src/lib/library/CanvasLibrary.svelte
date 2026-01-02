@@ -454,7 +454,7 @@
         }
     }
 
-    function calculateColumns(saveWidths: boolean = false) {
+    function calculateColumns(isResize: boolean = false) {
         if (width === 0) return;
 
         let runningX = 0;
@@ -466,9 +466,13 @@
             displayFields = allFields;
         }
 
+        // If we're resizing, use the current display fields
+        // Otherwise use all fields to filter again, this might have been triggered by a column order/visibility change
+        const fields = isResize ? displayFields : allFields;
+
         const sortedFields = $columnOrder
             .map((c) => {
-                const field = allFields.find((f) => f.value === c.fieldName);
+                const field = fields.find((f) => f.value === c.fieldName);
                 if (field === undefined) return null;
                 const cloned = { ...field };
                 // Restore user saved width
@@ -535,14 +539,6 @@
                 return f;
             }),
         ];
-
-        // Optionally, save the widths
-        if (saveWidths) {
-            $columnOrder = displayFields.map((f) => ({
-                fieldName: f.value,
-                width: f.viewProps.width,
-            }));
-        }
     }
 
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
@@ -1062,9 +1058,21 @@
     }
 
     // Re-order columns
-
+    let prevColumnOrder = $columnOrder;
     $: {
-        displayFields && $columnOrder && calculateColumns();
+        console.log(
+            "column order changed",
+            $columnOrder.map((c) => c.fieldName),
+            prevColumnOrder.map((c) => c.fieldName),
+        );
+        // Check if order changed
+        if (
+            JSON.stringify(prevColumnOrder.map((c) => c.fieldName)) !==
+            JSON.stringify($columnOrder.map((c) => c.fieldName))
+        ) {
+            calculateColumns();
+        }
+        prevColumnOrder = [...$columnOrder];
     }
 
     let dropColumnIdx = null;
@@ -1168,6 +1176,9 @@
                 onResetOrder: () => {
                     resetColumnOrder();
                 },
+                onResetSizes: () => {
+                    resetColumnSizes();
+                },
             },
         });
     }
@@ -1227,6 +1238,17 @@
         columnOrder.reset();
     }
 
+    // Auto-size columns
+    function resetColumnSizes() {
+        displayFields = [];
+        columnOrder.update((c) => {
+            return c.map((f) => {
+                return { ...f, width: null };
+            });
+        });
+        calculateColumns(true);
+    }
+
     // Resize columns
     let resizingColumnIdx = null;
     let resizeStartX = 0;
@@ -1236,11 +1258,16 @@
         if (resizingColumnIdx !== null) {
             const deltaX = e.clientX - resizeStartX;
             const newWidth = Math.max(50, resizeStartWidth + deltaX); // Min width 50px
-
             const field = displayFields[resizingColumnIdx];
             field.viewProps.width = newWidth;
             field.viewProps.autoWidth = false; // Lock the width
             calculateColumns(true);
+
+            // Save widths
+            $columnOrder = displayFields.map((f) => ({
+                fieldName: f.value,
+                width: f.viewProps.width,
+            }));
         }
     }
 

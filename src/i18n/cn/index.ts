@@ -45,6 +45,8 @@ const cn = {
         orderHintTemp: "显示临时顺序",
         orderDisabledHint: "切换到文件顺序以重新排序曲目",
         queryNoResultsPlaceholder: '没有找到与 "{query}" 相关的结果',
+        resetColumns: "重置顺序和尺寸",
+        resetSizesOnly: "重置尺寸",
     },
     bottomBar: {
         queue: "队列",

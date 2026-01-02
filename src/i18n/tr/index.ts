@@ -46,6 +46,8 @@ const tr = {
         orderDisabledHint:
             "Parçaları yeniden sıralamak için dosya sırasına geçin",
         queryNoResultsPlaceholder: '"{query}" için sonuç bulunamadı',
+        resetColumns: "Sıra ve boyutlarını sıfırla",
+        resetSizesOnly: "Sadece boyutlarını sıfırla",
     },
     bottomBar: {
         queue: "Sıra",
