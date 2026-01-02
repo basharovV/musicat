@@ -1236,6 +1236,7 @@
     function resetColumnOrder() {
         displayFields = [];
         columnOrder.reset();
+        calculateColumns();
     }
 
     // Auto-size columns
