@@ -42,6 +42,7 @@
         createBeetsSearch,
     } from "../../data/beets";
     import { derived } from "svelte/store";
+    import { invoke } from "@tauri-apps/api/core";
 
     const PADDING = 14;
 
@@ -182,12 +183,22 @@
     }
 
     async function updatePlayingAlbum() {
-        // Strip the song from album path
-        const albumPath = await path.dirname($current?.song?.path);
-        // Find the album currently playing
-        currentAlbum = await db.albums.get(
-            md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
-        );
+        if ($userSettings.beetsDbLocation) {
+            const result: Album[] = await invoke("get_albums_by_id", {
+                albumIds: [$current?.song?.albumId],
+            });
+            console.log("result", $current?.song?.albumId, result);
+            if (result.length === 0) return false;
+            currentAlbum = result[0];
+        } else {
+            // Strip the song from album path
+            const albumPath = await path.dirname($current?.song?.path);
+            // Find the album currently playing
+            currentAlbum = await db.albums.get(
+                md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
+            );
+        }
+
         if (!currentAlbum) return false;
 
         updatePlayingAlbumOffset();
