@@ -72,6 +72,7 @@
         idx,
         isKeyboardArrows: boolean,
         isDefault = false,
+        isQueryChanged = false,
     ) {
         // Compensate for expanded stems
 
@@ -129,6 +130,13 @@
 
             $rightClickedTrack = null;
             $rightClickedTracks = songsHighlighted;
+        } else if (isQueryChanged) {
+            songIdxsHighlighted.clear();
+            songIdxsHighlighted.add(idx);
+            songIdxsHighlighted = songIdxsHighlighted;
+
+            rangeStartSongIdx = idx;
+            rangeEndSongIdx = null;
         } else if (
             isDefault &&
             $popupOpen !== "track-info" &&
@@ -195,16 +203,10 @@
         lastIdx = idx;
     }
 
-    export function highlightFirst() {
-        // Only highlight first if previous highlight no longer exists after query update
-        if (
-            songsHighlighted.length === 0 ||
-            (songsHighlighted.length === 1 &&
-                !songs?.find((s) => s?.id === songsHighlighted[0]?.id)) ||
-            songsHighlighted.length > 1
-        ) {
-            toggleHighlight(songs[0], 0, false, true);
-        }
+    export function onQueryChanged(newSongs: Song[]) {
+        songs = newSongs;
+        console.log("toggling highlight on first song", songs[0]);
+        toggleHighlight(songs[0], 0, false, false, true);
     }
 
     export function highlightAll() {

@@ -72,6 +72,7 @@
         uiView,
         rightClickedAlbum,
         expandedSongWithStems,
+        isFindFocused,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -144,12 +145,6 @@
                             index: idx,
                             timeSinceAdded,
                         };
-                    }
-
-                    // Putting this in a separate function to avoid the reactivity loop
-                    if (idx === status.songs.length - 1) {
-                        // Run once on last song
-                        updateHighlights(status.songs, idx);
                     }
 
                     return {
@@ -824,7 +819,7 @@
 
     /**
      * Highlight behaviour on query input:
-     * - if a single song is highlighted, it will stay highlighted as you type (if still in results)
+     * - if a single song is highlighted, the first result will be highlighted instead
      * - if multiple songs are highlighted, they will be unhighlighted and the first song will be highlighted as you type
      */
     $: {
@@ -832,7 +827,7 @@
             if (songs?.length === 0) {
                 songHighlighter?.reset();
             } else {
-                songHighlighter?.highlightFirst();
+                songHighlighter?.onQueryChanged(songs);
             }
         }
     }
@@ -840,19 +835,6 @@
     let songHighlighter: SongHighlighter;
     export let songsHighlighted: Song[] = [];
     export let onSongsHighlighted = null;
-
-    async function updateHighlights(songs: Song[], idx: number) {
-        // Highlighted songs indexes might need to be updated
-        if (songsHighlighted.length > 0) {
-            songsHighlighted = songsHighlighted.filter(Boolean).map((s) => {
-                s.viewModel.index = songs?.find(
-                    (song) => song.id === s.id,
-                )?.viewModel?.index;
-                highlightedSongIdx = s.viewModel.index;
-                return s;
-            });
-        }
-    }
 
     let draggingSongIdx = null;
 
@@ -944,6 +926,7 @@
         if (
             isOver &&
             event.code === "KeyA" &&
+            !$isFindFocused &&
             (($os === "macos" && event.metaKey) || event.ctrlKey)
         ) {
             event.preventDefault();
@@ -1017,16 +1000,11 @@
                     { x: 250, y: topTrackY },
                 );
             }
-        } else if (
-            event.key === "Enter" &&
-            $popupOpen !== "track-info" &&
-            $singleKeyShortcutsEnabled &&
-            !isInputFocused()
-        ) {
+        } else if (event.key === "Enter" && $popupOpen !== "track-info") {
             // 'Enter' to play highlighted track
             event.preventDefault();
             AudioPlayer.shouldPlay = true;
-            setQueue($queriedSongs, highlightedSongIdx);
+            setQueue($queriedSongs, songsHighlighted[0].viewModel.index);
 
             if (query?.length) {
                 $queueMirrorsSearch = true;
