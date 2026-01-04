@@ -187,7 +187,6 @@
             const result: Album[] = await invoke("get_albums_by_id", {
                 albumIds: [$current?.song?.albumId],
             });
-            console.log("result", $current?.song?.albumId, result);
             if (result.length === 0) return false;
             currentAlbum = result[0];
         } else {

@@ -205,7 +205,6 @@
 
     export function onQueryChanged(newSongs: Song[]) {
         songs = newSongs;
-        console.log("toggling highlight on first song", songs[0]);
         toggleHighlight(songs[0], 0, false, false, true);
     }
 

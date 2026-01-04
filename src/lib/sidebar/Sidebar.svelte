@@ -1720,10 +1720,11 @@
                     class:hovered={isMiniToggleHovered}
                     on:mouseover={onMiniToggleMouseOver}
                     on:mouseout={onMiniToggleMouseOut}
-                    use:tippy={{
+                    use:optionalTippy={{
                         theme: $isMiniPlayer ? "hidden" : "",
                         content: "Toggle the mini player.",
                         placement: "right",
+                        show: !$isMiniPlayer,
                     }}
                 >
                     <Icon
@@ -1899,11 +1900,14 @@
                     <div class="track-info-icon">
                         <Icon
                             icon="mdi:information"
+                            disabled={!song}
                             onClick={() => {
-                                $rightClickedTrack = song;
-                                $rightClickedTracks = [];
-                                $rightClickedAlbum = null;
-                                $popupOpen = "track-info";
+                                if (song) {
+                                    $rightClickedTrack = song;
+                                    $rightClickedTracks = [];
+                                    $rightClickedAlbum = null;
+                                    $popupOpen = "track-info";
+                                }
                             }}
                         />
                     </div>

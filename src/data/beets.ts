@@ -79,7 +79,6 @@ function createBeetsAlbumSearch() {
                 sortBy: q.sortBy,
                 descending: q.descending,
             });
-            console.log("Albums", results);
 
             update((s) => ({
                 ...s,
