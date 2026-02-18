@@ -6,7 +6,7 @@
     import wtf from "wtf_wikipedia";
     import type { Album, GetHTMLResponse, Song } from "../../App";
     import { getWikipediaUrlForArtist } from "../../data/WikipediaAPI";
-    import { db } from "../../data/db";
+    import { db, getAlbum, getAlbumTracks } from "../../data/db";
     import {
         current,
         isPlaying,
@@ -256,7 +256,7 @@
     }
 
     async function playAlbum(albumId: string) {
-        const album = await db.albums.get(albumId);
+        const album = await getAlbum(albumId);
         if (
             $current.song?.album.toLowerCase() ===
             album.displayTitle.toLowerCase()
@@ -267,8 +267,7 @@
                 audioPlayer.play(true);
             }
         } else if (album) {
-            let tracks = await db.songs.bulkGet(album.tracksIds);
-
+            let tracks = await getAlbumTracks(album);
             setQueue(tracks, 0);
         }
     }

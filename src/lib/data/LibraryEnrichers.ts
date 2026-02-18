@@ -64,10 +64,16 @@ export async function fetchAlbumArt(
     song: Song = null,
 ): Promise<EnricherResult> {
     if (!album) {
-        const albumPath = song.path.replace(`/${song.file}`, "");
-        album = await db.albums.get(
-            md5(`${albumPath} - ${song.album}`.toLowerCase()),
-        );
+        if (get(userSettings).beetsDbLocation) {
+            album = await invoke("get_albums_by_id", {
+                albumIds: [song.albumId],
+            });
+        } else {
+            const albumPath = song.path.replace(`/${song.file}`, "");
+            album = await db.albums.get(
+                md5(`${albumPath} - ${song.album}`.toLowerCase()),
+            );
+        }
     }
 
     let result;
@@ -368,9 +374,8 @@ async function fetchImage(
 
     // Fetch image
     const imageData = await fetch(imageUrl);
-    let imageArray = await imageData.body.getReader().read();
-
-    let imageBody = imageArray.value;
+    const arrayBuffer = await imageData.arrayBuffer();
+    const imageBody = new Uint8Array(arrayBuffer);
 
     console.log("imageData");
 

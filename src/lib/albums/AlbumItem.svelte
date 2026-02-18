@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
     import type { Album } from "../../App";
-    import { db } from "../../data/db";
+    import { db, getAlbumTracks } from "../../data/db";
     import { current, isPlaying, userSettings } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";
@@ -28,17 +28,8 @@
         if (isPlayingCurrentAlbum) {
             audioPlayer.togglePlay();
         } else {
-            if ($userSettings.beetsDbLocation) {
-                const albumTracks = await albumTracksSearch.updateSearch(
-                    {},
-                    album.id,
-                );
-
-                setQueue(albumTracks, 0);
-            } else {
-                const tracks = await db.songs.bulkGet(album.tracksIds);
-                setQueue(tracks, 0);
-            }
+            const tracks = await getAlbumTracks(album);
+            setQueue(tracks, 0);
         }
     }
 
@@ -70,7 +61,7 @@
             cancel = false;
 
             if (e.button === 0) {
-                const songs = await db.songs.bulkGet(album.tracksIds);
+                const songs = await getAlbumTracks(album);
 
                 if (cancel) {
                     resetDraggedSongs();

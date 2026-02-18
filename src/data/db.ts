@@ -13,6 +13,9 @@ import type {
     SongProject,
 } from "src/App";
 import type { SavedSmartQuery } from "src/lib/smart-query/QueryPart";
+import { get } from "svelte/store";
+import { userSettings } from "./store";
+import { invoke } from "@tauri-apps/api/core";
 
 export class MySubClassedDexie extends Dexie {
     // 'songs' is added by dexie when declaring the stores()
@@ -135,4 +138,41 @@ export async function deleteDatabase() {
     await db.scrapbook.clear();
     await db.playlists.clear();
     await db.delete();
+}
+
+// Helper functions for querying DB (using dexie or beets)
+
+export async function getAlbum(albumId: string): Promise<Album> {
+    try {
+        if (get(userSettings).beetsDbLocation) {
+            const albums = await invoke<Album[]>("get_albums_by_id", {
+                albumIds: [albumId],
+            });
+            return albums[0];
+        } else {
+            db.albums.get(albumId);
+        }
+    } catch (err) {
+        console.error(err);
+        throw new Error("Error getting album: " + err);
+    }
+}
+
+// Get album tracks
+export async function getAlbumTracks(album: Album): Promise<Song[]> {
+    try {
+        if (get(userSettings).beetsDbLocation) {
+            const tracks = await invoke<Song[]>("get_beets_album_tracks", {
+                albumId: album.id,
+            });
+            return tracks;
+        } else {
+            return (await db.songs.bulkGet(album.tracksIds))
+                .filter((song) => song)
+                .sort((a, b) => a.trackNumber - b.trackNumber);
+        }
+    } catch (err) {
+        console.error(err);
+        throw new Error("Error getting album tracks: " + err);
+    }
 }

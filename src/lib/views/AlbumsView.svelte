@@ -3,7 +3,7 @@
     import md5 from "md5";
     import { onMount } from "svelte";
     import type { Album, AlbumsSortBy, Song } from "../../App";
-    import { db } from "../../data/db";
+    import { db, getAlbumTracks } from "../../data/db";
     import {
         compressionSelected,
         current,
@@ -143,19 +143,45 @@
 
         if (!showSingles) {
             activeAlbums = activeAlbums.filter((a) => a.tracksIds.length > 1);
+            console.log("Filtered", activeAlbums.length);
         }
 
         onResize();
     }
 
     async function onQueryChanged(query: string, sortBy: AlbumsSortBy) {
-        await beetsAlbumSearch.updateSearch({
-            query,
-            sortBy: sortBy,
-            descending: false,
-        });
+        if ($userSettings.beetsDbLocation) {
+            await beetsAlbumSearch.updateSearch({
+                query,
+                sortBy: sortBy,
+                descending: false,
+            });
+        } else {
+            queriedAlbums =
+                $albums?.filter(
+                    (a) =>
+                        a.artist.toLowerCase().includes(query.toLowerCase()) ||
+                        a.title.includes(query.toLowerCase()),
+                ) || [];
+
+            activeAlbums = queriedAlbums;
+        }
+
+        if (columnCount) {
+            rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
+            // Add this line to keep sizes in sync with the new count
+            itemSizes = Array(rowCount).fill(rowHeight);
+        }
+
+        if (previousQuery !== query) {
+            virtualList.scrollToIndex = 0;
+        }
+        previousQuery = query || "";
+
         isLoading = false;
     }
+
+    let previousQuery = $query || "";
 
     $: {
         onQueryChanged($query || "", $uiPreferences.albumsViewSortBy);
@@ -217,7 +243,6 @@
     function onAfterScroll(e) {
         if (currentAlbum && container) {
             const { offset } = e.detail;
-            console.log("after scroll");
             updateInView(offset);
         }
     }
@@ -229,10 +254,6 @@
     function onResize() {
         if (!container) {
             return;
-        }
-
-        if (columnCount) {
-            rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
         }
 
         height = container?.clientHeight;
@@ -263,13 +284,16 @@
         }
 
         columnCount = count;
-
+        rowCount = Math.ceil(activeAlbums.length / columnCount) + 2;
         rowHeight = Math.floor(columnWidth + (showInfo ? 55 : 0));
+        const newSizes = Array(rowCount).fill(rowHeight);
+        if (newSizes.length > 0) {
+            newSizes[0] = PADDING;
+            newSizes[newSizes.length - 1] = PADDING;
+        }
+        itemSizes = newSizes;
 
-        itemSizes = Array(rowCount).fill(rowHeight);
-        itemSizes[0] = PADDING;
-        itemSizes[itemSizes.length - 1] = PADDING;
-
+        console.log("itemSizes", itemSizes, "rowCount", rowCount);
         if (currentAlbum) {
             updatePlayingAlbumOffset();
             updateInView();
@@ -315,20 +339,9 @@
     async function onRightClick(e, album) {
         highlightedAlbum = album.id;
 
-        const songs = (await db.songs.bulkGet(album.tracksIds))
-            // make sure that the song exist
-            .filter((song) => song)
-            // sort by track number
-            .sort((a, b) => a.trackNumber - b.trackNumber);
-
+        const songs = await getAlbumTracks(album);
         albumMenu?.open(album, songs, { x: e.clientX, y: e.clientY });
     }
-
-    const albumTracksSearch = createBeetsSearch();
-    const albumTracksReadable = derived(
-        albumTracksSearch,
-        ($albumTracksSearch) => $albumTracksSearch.songs,
-    );
 
     async function onLeftClick(e, album, index) {
         if (detailsAlbum == album) {
@@ -352,9 +365,7 @@
                 e.currentTarget.offsetTop,
                 e.currentTarget.scrollTop,
             );
-            detailsAlbumTracks = $userSettings.beetsDbLocation
-                ? await albumTracksSearch.updateSearch({}, album.id)
-                : await db.songs.bulkGet(album.tracksIds);
+            detailsAlbumTracks = await getAlbumTracks(album);
             detailsAlbumIndex = index;
         }
     }
