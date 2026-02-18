@@ -149,9 +149,7 @@ mod cpal {
                 .supported_output_configs()
                 .unwrap()
                 .find(|c| {
-                    return c
-                        .try_with_sample_rate(cpal::SampleRate(spec.rate))
-                        .is_some();
+                    return c.try_with_sample_rate(spec.rate).is_some();
                 })
                 .is_some();
 
@@ -163,7 +161,7 @@ mod cpal {
             let rate = if supports_sample_rate {
                 spec.rate
             } else {
-                config.sample_rate().0
+                config.sample_rate()
             };
 
             let device_spec = SignalSpec::new_with_layout(
@@ -289,7 +287,7 @@ mod cpal {
             let config = if cfg!(not(target_os = "windows")) {
                 cpal::StreamConfig {
                     channels: num_channels as cpal::ChannelCount,
-                    sample_rate: cpal::SampleRate(spec.rate),
+                    sample_rate: spec.rate,
                     buffer_size: cpal::BufferSize::Default,
                 }
             } else {
@@ -302,11 +300,11 @@ mod cpal {
 
             let time_base = TimeBase {
                 numer: 1,
-                denom: config.sample_rate.0 * config.channels as u32,
+                denom: config.sample_rate * config.channels as u32,
             };
 
             // Create a ring buffer with a capacity
-            let ring_len = (((BUFFER_SIZE as usize * 1000) * config.sample_rate.0 as usize) / 1000)
+            let ring_len = (((BUFFER_SIZE as usize * 1000) * config.sample_rate as usize) / 1000)
                 * num_channels;
 
             let ring_buf = SpscRb::new(ring_len);
@@ -570,7 +568,7 @@ mod cpal {
                 sample_buf,
                 stream,
                 resampler: None,
-                sample_rate: config.sample_rate.0,
+                sample_rate: config.sample_rate,
                 name: device.name().unwrap_or(String::from("Unknown")),
                 time_base: time_base.clone(),
             })))
