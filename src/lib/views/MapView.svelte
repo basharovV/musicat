@@ -437,13 +437,14 @@
             // Play country
             onRegionClick(event, code) {
                 if (!data) return;
-                if (data[code]) {
+                let countryValue = getCountryData(code);
+                if (countryValue) {
                     selectedCountry = code;
                     selectedCountryPos = {
                         x: event.pageX - 11 - mapPadding * 2,
                         y: event.pageY,
                     };
-                    dataSetCountryValue = data[code] || null;
+                    dataSetCountryValue = countryValue || null;
                     onCountryClicked();
                 }
             },
@@ -547,17 +548,25 @@
     }
     let globeRef: Globe;
 
+    function getCountryData(code: string) {
+        let countryValue;
+        if ($userSettings.beetsDbLocation) {
+            countryValue = data[code]; // Beets also uses 2 char code.
+        } else {
+            countryValue = data[countries[code]];
+        }
+        return countryValue;
+    }
+
     /**
      * Show the tooltip.
      * Called from both the map view and the globe.
-     * @param code
+     * @param code 2-letter country code
      */
     function onCountryHovered(code: string) {
         if (!data) return;
-        if (data[code]) {
-            const countryValue = data[code] || null;
-            // countryValue.data.length  = number artists
-
+        let countryValue = getCountryData(code);
+        if (countryValue) {
             // Hovered country
             let hoveredCountryPlaylist: Song[] = countryValue.data;
 

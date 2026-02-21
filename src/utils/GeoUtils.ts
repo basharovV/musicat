@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { Color } from "three";
 import type { Song, SongsByCountry } from "../App";
+import { get } from "svelte/store";
+import { userSettings } from "../data/store";
+import { countries } from "../lib/data/CountryCodes";
 
 // Convert XYZ coordinates to latitude and longitude
 export function xyzToLatLng(point: THREE.Vector3): {
@@ -128,7 +131,12 @@ export function getCountryColor(
         max = Math.max(max, count);
     }
 
-    const countryData = songsByCountry[countryCode];
+    let countryData;
+    if (get(userSettings).beetsDbLocation) {
+        countryData = songsByCountry[countryCode];
+    } else {
+        countryData = songsByCountry[countries[countryCode]];
+    }
     if (!countryData) {
         return null;
     }

@@ -5,7 +5,7 @@
     import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
     import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
     import type { SongsByCountry } from "../../App";
-    import { queueCountry } from "../../data/store";
+    import { queueCountry, userSettings } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import { locale } from "../../i18n/i18n-svelte";
     import { currentThemeObject } from "../../theming/store";
@@ -19,6 +19,7 @@
     import FakeGlowMaterial from "./FakeGlowMaterial";
     import Dropdown from "../ui/Dropdown.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import { countries } from "../data/CountryCodes";
 
     let globeContainer: HTMLDivElement;
     let scene: THREE.Scene;
@@ -157,6 +158,7 @@
                     $currentThemeObject["mapview-scale-1"],
                     $currentThemeObject["mapview-scale-2"],
                 );
+
                 if (color) {
                     mesh.material.uniforms.color.value = color;
                     mesh.material.opacity = 1;
@@ -391,7 +393,13 @@
 
         if (!code) return;
 
-        const songs = songData[code]?.data;
+        let songs;
+        console.log("code", code, "songData", songData);
+        if ($userSettings.beetsDbLocation) {
+            songs = songData[code]?.data;
+        } else {
+            songs = songData[countries[code]]?.data;
+        }
         if (!songs) return;
 
         // Play!
@@ -489,6 +497,7 @@
                     onMouseDown,
                 );
                 renderer.domElement.removeEventListener("mouseup", onMouseUp);
+                window.removeEventListener("resize", onResize);
             }
         };
     });
@@ -709,15 +718,7 @@
 
         animate();
         // Adjust canvas size on window resize
-        window.addEventListener("resize", () => {
-            camera.aspect =
-                globeContainer.clientWidth / globeContainer.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(
-                globeContainer.clientWidth,
-                globeContainer.clientHeight,
-            );
-        });
+        window.addEventListener("resize", () => onResize());
 
         await initCountries();
 
@@ -727,6 +728,17 @@
         renderer.domElement.addEventListener("mouseup", onMouseUp);
 
         isMounted = true;
+    }
+
+    function onResize() {
+        if (!globeContainer) return;
+        camera.aspect =
+            globeContainer.clientWidth / globeContainer.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(
+            globeContainer.clientWidth,
+            globeContainer.clientHeight,
+        );
     }
 
     // Function to convert spherical coordinates to Cartesian coordinates
