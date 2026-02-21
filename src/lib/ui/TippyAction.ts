@@ -48,17 +48,23 @@ export const optionalTippy: Tippy = (element, props) => {
             }
         },
         update(newProps) {
-            if (newProps) {
-                if (newProps["show"] !== undefined) {
-                    if (!newProps["show"] && tippy) {
-                        tippy.destroy();
-                        return;
-                    }
+            const shouldShow =
+                !newProps || newProps.show === undefined || newProps.show;
+
+            if (!shouldShow) {
+                if (tippy) {
+                    tippy.destroy();
+                    tippy = undefined!;
                 }
-                tippy = runTippy(element, newProps);
-                tippy.setProps(newProps);
-            } else if (!newProps || (!newProps["show"] && tippy)) {
-                tippy.destroy();
+                return;
+            }
+
+            const { show: _, ...tippyProps } = newProps ?? {};
+
+            if (tippy) {
+                tippy.setProps(tippyProps);
+            } else {
+                tippy = runTippy(element, tippyProps);
             }
         },
     };

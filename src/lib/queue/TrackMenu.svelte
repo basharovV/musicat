@@ -1,24 +1,23 @@
 <script lang="ts">
     import { type } from "@tauri-apps/plugin-os";
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
+    import type { Song } from "../../App";
     import {
         canShowInfoPopup,
         isShuffleEnabled,
         popupOpen,
         rightClickedAlbum,
-        rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
+    import { findQueueIndexes, updateQueues } from "../../data/storeHelper";
+    import { LL } from "../../i18n/i18n-svelte";
+    import { openInFinder } from "../menu/file";
+    import Icon from "../ui/Icon.svelte";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
-    import type { Song } from "../../App";
-    import { findQueueIndexes, updateQueues } from "../../data/storeHelper";
-    import { openInFinder } from "../menu/file";
-    import Icon from "../ui/Icon.svelte";
     import ToolsMenu from "./ToolsMenu.svelte";
-    import { get } from "svelte/store";
-    import { LL } from "../../i18n/i18n-svelte";
 
     type ActionType = "delete";
 
@@ -87,13 +86,7 @@
     $: isLoading = (type: ActionType): boolean => loadingType === type;
 
     function openInfo() {
-        if (songs.length === 1) {
-            $rightClickedTracks = [];
-            $rightClickedTrack = song;
-        } else {
-            $rightClickedTracks = songs;
-            $rightClickedTrack = null;
-        }
+        $rightClickedTracks = songs;
         $rightClickedAlbum = null;
 
         close();

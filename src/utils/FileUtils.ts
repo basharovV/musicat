@@ -53,32 +53,45 @@ export function getImageFormat(extension: string): string {
     }
 }
 
+export function getImageExtension(mimeType: string): string {
+    switch (mimeType) {
+        case "image/jpeg":
+            return "jpg";
+        case "image/png":
+            return "png";
+        case "image/webp":
+            return "webp";
+        default:
+            return null;
+    }
+}
+
 export function getContentFileType(filename: string): ContentFileType {
     const extensionMatches = filename.match(/\.[0-9a-z]+$/i);
     const extension = extensionMatches ? extensionMatches[0] : "unsupported";
     if (isAudioFile(filename)) {
         return {
             type: "audio",
-            extension
+            extension,
         };
     } else if (isVideoFile(filename)) {
         return {
             type: "video",
-            extension
+            extension,
         };
     } else if (isImageFile(filename)) {
         return {
             type: "image",
-            extension
+            extension,
         };
     } else if (isTextFile(filename)) {
         return {
             type: "txt",
-            extension
+            extension,
         };
     }
     return {
         type: "unsupported",
-        extension
+        extension,
     };
 }

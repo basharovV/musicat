@@ -54,7 +54,6 @@
         queue,
         repeatMode,
         rightClickedAlbum,
-        rightClickedTrack,
         rightClickedTracks,
         seekTime,
         selectedPlaylistFile,
@@ -82,6 +81,7 @@
     import SmartQuery from "../smart-query/Query";
     import type { SavedSmartQuery } from "../smart-query/QueryPart";
     import "../tippy.css";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import Input from "../ui/Input.svelte";
     import PlaybackSpeed from "../ui/PlaybackSpeed.svelte";
@@ -91,8 +91,6 @@
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
-    import { timeSince } from "../../utils/DateUtils";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -285,8 +283,7 @@
 
     function openTrackInfo() {
         if (song) {
-            $rightClickedTrack = song;
-            $rightClickedTracks = [];
+            $rightClickedTracks = [song];
             $rightClickedAlbum = null;
             $popupOpen = "track-info";
         }
@@ -1903,8 +1900,7 @@
                             disabled={!song}
                             onClick={() => {
                                 if (song) {
-                                    $rightClickedTrack = song;
-                                    $rightClickedTracks = [];
+                                    $rightClickedTracks = [song];
                                     $rightClickedAlbum = null;
                                     $popupOpen = "track-info";
                                 }
@@ -2010,7 +2006,9 @@
 
         &.floating {
             grid-template-rows: 1fr;
-
+            background-color: var(--panel-background);
+            backdrop-filter: blur(8px);
+            border-right: 0.7px solid var(--panel-separator);
             .top {
                 border: 0;
             }

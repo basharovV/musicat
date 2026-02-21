@@ -3,13 +3,22 @@
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Icon from "./Icon.svelte";
     import Input from "./Input.svelte";
+    import PortalMenu from "./menu/PortalMenu.svelte";
 
     export let selected;
     export let onSelect = null;
     export let size = null;
+    export let placeholder;
+
+    interface InputOption {
+        value: string;
+        label: string;
+    }
 
     // Only show songs with selected compression type
-    export let options = [];
+    export let options: InputOption[] = [];
+
+    let inputField;
 
     $: filteredList = options.filter(
         (o) =>
@@ -21,7 +30,7 @@
 
     let showSelector = false;
 
-    let inputValue = "";
+    let inputValue = selected?.value ?? "";
 
     $: {
         if (inputValue?.length > 0) {
@@ -34,6 +43,7 @@
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
+        bind:this={inputField}
         on:click={() => {
             showSelector = !showSelector;
             initialState = true;
@@ -44,30 +54,19 @@
         <Icon icon="heroicons-solid:selector" size={14} />
     </div>
     {#if showSelector}
-        <div class="menu">
-            <Menu
-                position="auto"
-                onClickOutside={() => (showSelector = false)}
-                scrollable
-            >
-                {#each filteredList as option}
-                    <MenuOption
-                        onClick={() => {
-                            selected = option;
-                            inputValue = option.value;
-                            showSelector = false;
-                            onSelect && onSelect(option.value);
-                            initialState = true;
-                        }}
-                        singleSelection
-                        text={option.label}
-                        checked={option.value === selected.value}
-                    />
-                {:else}
-                    <MenuOption text="No results"></MenuOption>
-                {/each}
-            </Menu>
-        </div>
+        <PortalMenu
+            items={filteredList.map((i) => ({
+                text: i.label,
+                source: i.value,
+            }))}
+            anchor={inputField}
+            onClose={() => (showSelector = false)}
+            onItemSelected={(s) => {
+                inputValue = s;
+                onSelect(s);
+            }}
+            {placeholder}
+        ></PortalMenu>
     {/if}
 </div>
 
@@ -98,13 +97,6 @@
             &:active {
                 background-color: rgba(128, 128, 128, 0.391);
             }
-        }
-
-        .menu {
-            position: absolute;
-            bottom: 0.5em;
-            left: -0.5em;
-            z-index: 30;
         }
 
         * {

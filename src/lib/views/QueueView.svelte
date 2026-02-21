@@ -12,45 +12,42 @@
     import { fade } from "svelte/transition";
     import { db } from "../../data/db";
 
+    import Konva from "konva";
     import {
         arrowFocus,
         current,
         draggedSongs,
         draggedSource,
         forceRefreshLibrary,
+        isCompactView,
         isShuffleEnabled,
-        isSidebarShowing,
         isSmartQueryBuilderOpen,
-        popupOpen,
         libraryScrollPos,
         os,
-        queue,
+        popupOpen,
         queriedSongs,
         query,
-        rightClickedTrack,
+        queue,
+        rightClickedAlbum,
         rightClickedTracks,
-        shouldFocusFind,
         shuffledQueue,
         singleKeyShortcutsEnabled,
         uiView,
-        rightClickedAlbum,
-        isCompactView,
     } from "../../data/store";
-    import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
-    import Konva from "konva";
-    import audioPlayer from "../player/AudioPlayer";
-    import TrackMenu from "../queue/TrackMenu.svelte";
-    import { currentThemeObject } from "../../theming/store";
-    import ShadowGradient from "../ui/ShadowGradient.svelte";
     import {
         findQueueIndex,
         resetDraggedSongs,
         setQueue,
         updateQueues,
     } from "../../data/storeHelper";
-    import QueueMenu from "../queue/QueueMenu.svelte";
-    import SongHighlighter from "../library/SongHighlighter.svelte";
+    import { currentThemeObject } from "../../theming/store";
     import { isInputFocused } from "../../utils/ActiveElementUtils";
+    import SongHighlighter from "../library/SongHighlighter.svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import QueueMenu from "../queue/QueueMenu.svelte";
+    import TrackMenu from "../queue/TrackMenu.svelte";
+    import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
+    import ShadowGradient from "../ui/ShadowGradient.svelte";
 
     export let autoWidth = false;
     export let dim = false;
@@ -723,13 +720,7 @@
             // Check if there an input in focus currently
             if (songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
-                if (songsHighlighted.length > 1) {
-                    $rightClickedTracks = songsHighlighted;
-                    $rightClickedTrack = null;
-                } else {
-                    $rightClickedTrack = songsHighlighted[0];
-                    $rightClickedTracks = [];
-                }
+                $rightClickedTracks = songsHighlighted;
                 $rightClickedAlbum = null;
                 $popupOpen = "track-info";
             }

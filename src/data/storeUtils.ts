@@ -33,7 +33,7 @@ export function persistentWritable<T>(
     const { version, matchKey, migrate } = options;
 
     const val = writable(initial, (set) => {
-        const persistedStr = localStorage.getItem(key);
+        const persistedStr = storage.getItem(key);
         if (!persistedStr) {
             set(initial);
             return;
@@ -117,7 +117,7 @@ export function persistentWritable<T>(
             __version: version,
             value: val,
         };
-        localStorage.setItem(key, JSON.stringify(toStore));
+        storage.setItem(key, JSON.stringify(toStore));
     });
 
     const { set } = val;
@@ -149,7 +149,7 @@ function handleUpgrade<T>(
                 `[persistentWritable] Migrated "${key}" successfully.`,
             );
             set(migrated);
-            localStorage.setItem(
+            storage.setItem(
                 key,
                 JSON.stringify({ __version: newVersion, value: migrated }),
             );
@@ -158,7 +158,7 @@ function handleUpgrade<T>(
     }
     console.warn(`[persistentWritable] Resetting "${key}" to defaults.`);
     set(initial);
-    localStorage.setItem(
+    storage.setItem(
         key,
         JSON.stringify({ __version: newVersion, value: initial }),
     );
@@ -181,3 +181,23 @@ function mergeValues<T>(initial: T, persisted: any, matchKey?: string): T {
     }
     return persisted ?? initial;
 }
+
+// Safe wrapper to prevent ReferenceErrors
+export const storage = {
+    getItem: (key: string) => {
+        if (typeof window !== "undefined" && window.localStorage) {
+            return localStorage.getItem(key);
+        }
+        return null;
+    },
+    setItem: (key: string, value: string) => {
+        if (typeof window !== "undefined" && window.localStorage) {
+            localStorage.setItem(key, value);
+        }
+    },
+    removeItem: (key: string) => {
+        if (typeof window !== "undefined" && window.localStorage) {
+            localStorage.removeItem(key);
+        }
+    },
+};

@@ -16,6 +16,12 @@ export type Translation = RootTranslation
 export type Translations = RootTranslation
 
 type RootTranslation = {
+	common: {
+		/**
+		 * N​o​ ​r​e​s​u​l​t​s
+		 */
+		noResults: string
+	}
 	infoPopup: {
 		/**
 		 * B​u​i​l​t​ ​b​y
@@ -238,6 +244,10 @@ type RootTranslation = {
 			 * F​a​v​o​u​r​i​t​e​s
 			 */
 			favourites: string
+			/**
+			 * W​i​t​h​ ​S​t​e​m​s
+			 */
+			withStems: string
 		}
 		builder: {
 			/**
@@ -409,7 +419,7 @@ type RootTranslation = {
 		 */
 		title: string
 		/**
-		 * U​s​e​ ​U​P​ ​a​n​d​ ​D​O​W​N​ ​t​o​ ​c​h​a​n​g​e​ ​t​r​a​c​k​s
+		 * U​s​e​ ​↑​ ​a​n​d​ ​↓​ ​t​o​ ​c​h​a​n​g​e​ ​t​r​a​c​k​s
 		 */
 		subtitle: string
 		/**
@@ -449,25 +459,82 @@ type RootTranslation = {
 		 */
 		enrichmentCenter: string
 		/**
-		 * C​o​u​n​t​r​y​ ​o​f​ ​O​r​i​g​i​n
-		 */
-		countryOfOrigin: string
-		/**
-		 * S​e​t​ ​t​h​i​s​ ​t​o​ ​u​s​e​ ​t​h​e​ ​M​a​p​ ​v​i​e​w​ ​a​n​d​ ​f​i​l​t​e​r​ ​b​y​ ​c​o​u​n​t​r​y​ ​i​n​ ​S​m​a​r​t​ ​P​l​a​y​l​i​s​t​s
-		 */
-		countryOfOriginTooltip: string
-		/**
-		 * L​o​a​d​i​n​g​.​.​.
-		 */
-		fetchingOriginCountry: string
-		/**
 		 * S​a​v​e
 		 */
 		save: string
-		/**
-		 * F​e​t​c​h​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a
-		 */
-		fetchFromWikipedia: string
+		enrichment: {
+			country: {
+				/**
+				 * C​o​u​n​t​r​y​ ​o​f​ ​O​r​i​g​i​n
+				 */
+				title: string
+				/**
+				 * S​e​t​ ​t​h​i​s​ ​t​o​ ​u​s​e​ ​t​h​e​ ​M​a​p​ ​v​i​e​w​ ​a​n​d​ ​f​i​l​t​e​r​ ​b​y​ ​c​o​u​n​t​r​y​ ​i​n​ ​S​m​a​r​t​ ​P​l​a​y​l​i​s​t​s
+				 */
+				infoTooltip: string
+				fetchButton: {
+					/**
+					 * F​e​t​c​h
+					 */
+					title: string
+					/**
+					 * L​o​a​d​i​n​g​.​.​.
+					 */
+					loading: string
+					/**
+					 * F​e​t​c​h​ ​c​o​u​n​t​r​y​ ​o​f​ ​o​r​i​g​i​n​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a
+					 */
+					tooltip: string
+				}
+				saveButton: {
+					/**
+					 * S​a​v​e
+					 */
+					title: string
+				}
+				/**
+				 * C​o​u​n​t​r​y​ ​e​n​r​i​c​h​m​e​n​t​ ​n​o​t​ ​a​v​a​i​l​a​b​l​e​ ​w​h​e​n​ ​u​s​i​n​g​ ​r​e​a​d​-​o​n​l​y​ ​b​e​e​t​s​ ​d​a​t​a​b​a​s​e​.
+				 */
+				disabled: string
+			}
+		}
+		artwork: {
+			saveButton: {
+				/**
+				 * W​r​i​t​e​ ​t​o​ ​f​i​l​e
+				 */
+				file: string
+				/**
+				 * S​a​v​e​ ​a​s​ ​{​f​i​l​e​}​ ​t​o​ ​f​o​l​d​e​r
+				 * @param {unknown} file
+				 */
+				folder: RequiredParams<'file'>
+			}
+			fetchButton: {
+				/**
+				 * F​e​t​c​h​ ​a​r​t
+				 */
+				title: string
+				/**
+				 * F​e​t​c​h​ ​a​r​t​ ​f​r​o​m​ ​W​i​k​i​p​e​d​i​a​,​ ​M​u​s​i​c​b​r​a​i​n​z​,​ ​G​e​n​i​u​s​ ​o​r​ ​D​i​s​c​o​g​s​ ​a​n​d​ ​s​a​v​e​ ​t​o​ ​a​l​b​u​m​ ​f​o​l​d​e​r
+				 */
+				tooltip: string
+			}
+			searchButton: {
+				/**
+				 * S​e​a​r​c​h​ ​a​r​t
+				 */
+				title: string
+				/**
+				 * O​p​e​n​ ​a​ ​b​r​o​w​s​e​r​ ​s​e​a​r​c​h​ ​f​o​r​ ​t​h​e​ ​a​l​b​u​m​ ​c​o​v​e​r
+				 */
+				tooltip: string
+			}
+			/**
+			 * C​l​i​c​k​ ​t​o​ ​r​e​p​l​a​c​e​,​ ​o​r​ ​p​a​s​t​e​ ​a​n​ ​i​m​a​g​e
+			 */
+			pasteTooltip: string
+		}
 		/**
 		 * R​e​a​d​y​ ​t​o​ ​s​a​v​e
 		 */
@@ -481,13 +548,13 @@ type RootTranslation = {
 		 */
 		noArtwork: string
 		/**
+		 * M​u​l​t​i​p​l​e​ ​a​r​t​w​o​r​k​s
+		 */
+		multiArtwork: string
+		/**
 		 * P​a​s​t​e​ ​i​m​a​g​e​ ​o​r​ ​c​l​i​c​k​ ​t​o​ ​s​e​l​e​c​t​ ​f​i​l​e
 		 */
 		artworkTooltip: string
-		/**
-		 * F​e​t​c​h​ ​A​r​t
-		 */
-		fetchArt: string
 		/**
 		 * M​e​t​a​d​a​t​a
 		 */
@@ -1098,6 +1165,12 @@ type RootTranslation = {
 }
 
 export type TranslationFunctions = {
+	common: {
+		/**
+		 * No results
+		 */
+		noResults: () => LocalizedString
+	}
 	infoPopup: {
 		/**
 		 * Built by
@@ -1318,6 +1391,10 @@ export type TranslationFunctions = {
 			 * Favourites
 			 */
 			favourites: () => LocalizedString
+			/**
+			 * With Stems
+			 */
+			withStems: () => LocalizedString
 		}
 		builder: {
 			/**
@@ -1488,7 +1565,7 @@ export type TranslationFunctions = {
 		 */
 		title: () => LocalizedString
 		/**
-		 * Use UP and DOWN to change tracks
+		 * Use ↑ and ↓ to change tracks
 		 */
 		subtitle: () => LocalizedString
 		/**
@@ -1528,25 +1605,81 @@ export type TranslationFunctions = {
 		 */
 		enrichmentCenter: () => LocalizedString
 		/**
-		 * Country of Origin
-		 */
-		countryOfOrigin: () => LocalizedString
-		/**
-		 * Set this to use the Map view and filter by country in Smart Playlists
-		 */
-		countryOfOriginTooltip: () => LocalizedString
-		/**
-		 * Loading...
-		 */
-		fetchingOriginCountry: () => LocalizedString
-		/**
 		 * Save
 		 */
 		save: () => LocalizedString
-		/**
-		 * Fetch from Wikipedia
-		 */
-		fetchFromWikipedia: () => LocalizedString
+		enrichment: {
+			country: {
+				/**
+				 * Country of Origin
+				 */
+				title: () => LocalizedString
+				/**
+				 * Set this to use the Map view and filter by country in Smart Playlists
+				 */
+				infoTooltip: () => LocalizedString
+				fetchButton: {
+					/**
+					 * Fetch
+					 */
+					title: () => LocalizedString
+					/**
+					 * Loading...
+					 */
+					loading: () => LocalizedString
+					/**
+					 * Fetch country of origin from Wikipedia
+					 */
+					tooltip: () => LocalizedString
+				}
+				saveButton: {
+					/**
+					 * Save
+					 */
+					title: () => LocalizedString
+				}
+				/**
+				 * Country enrichment not available when using read-only beets database.
+				 */
+				disabled: () => LocalizedString
+			}
+		}
+		artwork: {
+			saveButton: {
+				/**
+				 * Write to file
+				 */
+				file: () => LocalizedString
+				/**
+				 * Save as {file} to folder
+				 */
+				folder: (arg: { file: unknown }) => LocalizedString
+			}
+			fetchButton: {
+				/**
+				 * Fetch art
+				 */
+				title: () => LocalizedString
+				/**
+				 * Fetch art from Wikipedia, Musicbrainz, Genius or Discogs and save to album folder
+				 */
+				tooltip: () => LocalizedString
+			}
+			searchButton: {
+				/**
+				 * Search art
+				 */
+				title: () => LocalizedString
+				/**
+				 * Open a browser search for the album cover
+				 */
+				tooltip: () => LocalizedString
+			}
+			/**
+			 * Click to replace, or paste an image
+			 */
+			pasteTooltip: () => LocalizedString
+		}
 		/**
 		 * Ready to save
 		 */
@@ -1560,13 +1693,13 @@ export type TranslationFunctions = {
 		 */
 		noArtwork: () => LocalizedString
 		/**
+		 * Multiple artworks
+		 */
+		multiArtwork: () => LocalizedString
+		/**
 		 * Paste image or click to select file
 		 */
 		artworkTooltip: () => LocalizedString
-		/**
-		 * Fetch Art
-		 */
-		fetchArt: () => LocalizedString
 		/**
 		 * Metadata
 		 */

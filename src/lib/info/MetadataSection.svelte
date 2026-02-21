@@ -1,40 +1,19 @@
 <svelte:options accessors={true} />
 
 <script lang="ts">
-    import { fly } from "svelte/transition";
-    import Icon from "../ui/Icon.svelte";
-    import LL from "../../i18n/i18n-svelte";
-    import {
-        current,
-        lastWrittenSongs,
-        playerTime,
-        rightClickedTrack,
-        rightClickedTracks,
-    } from "../../data/store";
-    import type { MetadataEntry, TagType, ToImport } from "src/App";
-    import { invoke } from "@tauri-apps/api/core";
-    import {
-        getAlbumId,
-        readMappedMetadataFromSong,
-        reImport,
-    } from "../../data/LibraryUtils";
-    import toast from "svelte-french-toast";
-    import { db } from "../../data/db";
-    import { get } from "svelte/store";
-    import audioPlayer from "../player/AudioPlayer";
-    import { optionalTippy } from "../ui/TippyAction";
-    import Input from "../ui/Input.svelte";
-    import {
-        ENCODINGS,
-        decodeLegacy,
-        encodeUtf8,
-    } from "../../utils/EncodingUtils";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
-    import { cloneDeep, isEqual, uniqBy } from "lodash-es";
-    import { onMount } from "svelte";
-    import tippy from "svelte-tippy";
     import { type IndexableTypeArray } from "dexie";
-    import hotkeys from "hotkeys-js";
+    import { cloneDeep, isEqual, uniqBy } from "lodash-es";
+    import type { MetadataEntry, TagType } from "src/App";
+    import { onMount } from "svelte";
+    import { fly } from "svelte/transition";
+    import { db } from "../../data/db";
+    import { readMappedMetadataFromSong } from "../../data/LibraryUtils";
+    import { rightClickedTracks } from "../../data/store";
+    import LL from "../../i18n/i18n-svelte";
+    import { decodeLegacy, encodeUtf8 } from "../../utils/EncodingUtils";
+    import Icon from "../ui/Icon.svelte";
+    import Input from "../ui/Input.svelte";
+    import { optionalTippy } from "../ui/TippyAction";
 
     type ValidationErrors = "err:invalid-chars" | "err:null-chars";
     type ValidationWarnings = "warn:custom-tag" | "warn:cyrillic-encoding";
@@ -66,15 +45,12 @@
             "Custom tags can't be parsed. If a custom tag can be a standard tag, use that instead.",
     };
 
-    export let completeEvent: (event) => {};
     export let hasChanges = false;
     export let data: { mappedMetadata: MetadataEntry[]; tagType: TagType } = {
         mappedMetadata: [],
         tagType: null,
     };
-    export let hasArtworkToSet: () => boolean;
-    export let reset: () => void;
-    export let rollbackArtwork: () => void;
+    export let writeMetadata: () => {};
 
     /**
      * Some tags have a \u0000 character dangling at the end.
@@ -138,7 +114,6 @@
             //     errors[currentTag.id].warnings.push("warn:cyrillic-encoding");
             // }
 
-            console.log("hasErrors", hasError("err:null-chars"));
             return errors;
         }, {}) ?? {};
 
@@ -387,10 +362,14 @@
     }
 
     function onTagLabelClick(tag: MetadataEntry) {
+        if ($rightClickedTracks.length > 1) {
+            // Only supported for single track info
+            return;
+        }
         // Double-clicking on title populates the title from the filename
-        if (tag.id === "title") {
+        if (tag.id === "TrackTitle") {
             // Strip file extension from filename if any
-            const filename = $rightClickedTrack.file;
+            const filename = $rightClickedTracks[0].file;
             const extension = filename.split(".").pop();
             const filenameWithoutExtension = filename.replace(
                 "." + extension,
@@ -425,30 +404,23 @@
         // The tag type to write back to file
         let tagType: TagType = null;
 
-        if ($rightClickedTracks.length) {
-            const mappedMetadata = await Promise.all(
-                $rightClickedTracks.map((t) => readMappedMetadataFromSong(t)),
-            );
-            // Check if every track has the same tag type.
-            const tagTypes = mappedMetadata.map((s) => s.tagType);
-            if (tagTypes.every((t) => t === tagTypes[0])) {
-                differentTagTypes = false;
-                tagType = tagTypes[0];
+        const mappedMetadata = await Promise.all(
+            $rightClickedTracks.map((t) => readMappedMetadataFromSong(t)),
+        );
+        // Check if every track has the same tag type.
+        const tagTypes = mappedMetadata.map((s) => s.tagType);
+        if (tagTypes.every((t) => t === tagTypes[0])) {
+            differentTagTypes = false;
+            tagType = tagTypes[0];
 
-                displayMetadata = mergeDefault(
-                    combineMultipleTrackMetadata(
-                        mappedMetadata.map((s) => s.mappedMetadata),
-                    ),
-                    tagType,
-                );
-            } else {
-                differentTagTypes = true;
-            }
+            displayMetadata = mergeDefault(
+                combineMultipleTrackMetadata(
+                    mappedMetadata.map((s) => s.mappedMetadata),
+                ),
+                tagType,
+            );
         } else {
-            const { mappedMetadata, tagType: tag } =
-                await readMappedMetadataFromSong($rightClickedTrack);
-            tagType = tag;
-            displayMetadata = mergeDefault(mappedMetadata, tagType);
+            differentTagTypes = true;
         }
 
         data = {
@@ -469,106 +441,17 @@
         writeMetadata();
     }
 
-    /**
-     * Send an event to the backend to write the new metadata, overwriting any existing tags.
-     */
-    export async function writeMetadata() {
-        const toWrite = data.mappedMetadata
-            .filter((m) => m.originalValue !== m.value) // only changed values
-            .map((m) => {
-                if (m.originalValue?.length && !m.value) {
-                    m.value = null;
-                }
-                return m;
-            })
-            .map(({ id, value }) => ({
-                id: id,
-                value: value?.length ? value : null,
-            }));
-
-        const writtenTracks = $rightClickedTrack
-            ? [$rightClickedTrack]
-            : $rightClickedTracks;
-        const tracks = [];
-        const songIdToOldAlbumId = {};
-
-        for (const song of writtenTracks) {
-            tracks.push(
-                completeEvent({
-                    song_id: song.id,
-                    metadata: toWrite,
-                    tag_type: data.tagType,
-                    file_path: song.path,
-                }),
-            );
-
-            songIdToOldAlbumId[song.id] = getAlbumId(song);
-        }
-        console.log("Writing: ", tracks);
-
-        if (tracks.length) {
-            const toImport = await invoke<ToImport>("write_metadatas", {
-                event: {
-                    tracks,
-                },
-            });
-
-            console.log("To reimport: ", toImport);
-
-            if (toImport) {
-                if (toImport.error) {
-                    console.error("Error writing metadata: ", toImport.error);
-                    // Show error
-                    toast.error(toImport.error);
-                    // Roll back to current artwork
-                    rollbackArtwork();
-                } else {
-                    reImport(toImport, writtenTracks, songIdToOldAlbumId);
-
-                    toast.success("Successfully written metadata!", {
-                        position: "top-right",
-                    });
-                }
-            }
-
-            $lastWrittenSongs = writtenTracks;
-
-            const id = $current.song?.id;
-
-            if (id && writtenTracks.some((t) => t.id == id)) {
-                // Update sidebar infos
-                $current = $current;
-
-                // If we changed the artwork tag, this offsets the audio data in the file,
-                // so we need to reload the song and seek to the current position
-                // (will cause audible gap)
-                if (hasArtworkToSet()) {
-                    audioPlayer.setSeek(get(playerTime));
-                }
-            }
-
-            await reset();
-        } else {
-            toast.error("No songs to write metadata into!", {
-                position: "top-right",
-            });
-        }
-    }
-
     onMount(async () => {
         resetMetadata();
     });
 </script>
 
 <section class="metadata-section boxed">
-    <h5 class="section-title">
-        <Icon icon="fe:music" size={30} />{$LL.trackInfo.metadata()}
-    </h5>
     {#if differentTagTypes}
         <p>
             {$LL.trackInfo.differentTagTypes()}
         </p>
-    {:else if $rightClickedTrack || $rightClickedTracks[0]}
+    {:else if $rightClickedTracks[0]}
         {#if isUnsupportedFormat}
             <p>
                 {$LL.trackInfo.unsupportedFormat()}
@@ -623,7 +506,7 @@
                             use:optionalTippy={{
                                 content:
                                     $LL.trackInfo.setTitleFromFileNameHint(),
-                                show: tag.id === "title",
+                                show: tag.id === "TrackTitle",
                                 placement: "bottom",
                             }}
                         >
@@ -657,51 +540,6 @@
                     </div>
                 {/each}
             </form>
-            {#if data?.mappedMetadata?.length}
-                <div class="tools">
-                    <h5 class="section-title">
-                        <Icon icon="ri:tools-fill" />{$LL.trackInfo.tools()}
-                    </h5>
-                    <div class="tool">
-                        <div class="description">
-                            <p>
-                                {$LL.trackInfo.fixLegacyEncodings.title()}
-                            </p>
-                            <small
-                                use:tippy={{
-                                    allowHTML: true,
-                                    content:
-                                        $LL.trackInfo.fixLegacyEncodings.body(),
-                                    placement: "top",
-                                }}><Icon icon="ic:round-info" /></small
-                            >
-                        </div>
-                        <select bind:value={selectedEncoding}>
-                            <option value="placeholder"
-                                >{$LL.trackInfo.fixLegacyEncodings.hint()}</option
-                            >
-                            {#each ENCODINGS as encoding}
-                                <option
-                                    value={encoding}
-                                    class="encoding"
-                                    on:click={() => {
-                                        selectedEncoding = encoding;
-                                    }}
-                                >
-                                    <p>{encoding}</p>
-                                </option>
-                            {/each}
-                        </select>
-                        <ButtonWithIcon
-                            text={$LL.trackInfo.fix()}
-                            theme="translucent"
-                            size="small"
-                            onClick={fixEncoding}
-                            disabled={selectedEncoding === "placeholder"}
-                        />
-                    </div>
-                </div>
-            {/if}
         {/if}
     {:else}
         <p>{$LL.trackInfo.noMetadata()}</p>
@@ -710,13 +548,12 @@
 
 <style lang="scss">
     .metadata-section {
-        margin-top: 2em;
+        box-sizing: border-box;
         border-radius: 5px;
         position: relative;
-        padding: 2em 1em;
+        padding: 1em 2em 1em;
         color: var(--text);
         position: relative;
-        width: 100%;
         border: 1px solid var(--popup-track-section-border);
 
         font-family:

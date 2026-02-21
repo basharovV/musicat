@@ -244,7 +244,7 @@ export const codes = {
     "Western Sahara": "EH",
     Yemen: "YE",
     Zambia: "ZM",
-    Zimbabwe: "ZW"
+    Zimbabwe: "ZW",
 };
 
 export const countries = {
@@ -493,5 +493,14 @@ export const countries = {
     EH: "Western Sahara",
     YE: "Yemen",
     ZM: "Zambia",
-    ZW: "Zimbabwe"
+    ZW: "Zimbabwe",
 };
+
+export function getFlagEmoji(countryCode: string): string {
+    const codePoints = countryCode
+        .toUpperCase()
+        .split("")
+        .map((char) => 127397 + char.charCodeAt(0));
+
+    return String.fromCodePoint(...codePoints);
+}

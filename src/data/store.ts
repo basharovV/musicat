@@ -43,7 +43,7 @@ import SmartQuery from "../lib/smart-query/Query";
 import { scanPlaylists } from "./M3UUtils";
 import { liveQuery } from "dexie";
 import { db } from "./db";
-import { persistentWritable } from "./storeUtils";
+import { storage, persistentWritable } from "./storeUtils";
 import { loadLocale } from "../i18n/i18n-util.sync";
 
 export const L = derived(locale, (l) => {
@@ -54,7 +54,7 @@ export const isInit = writable(true);
 export const isSongReady = writable(false);
 export const forceRefreshLibrary = writable(false);
 export const query: Writable<Query> = writable("", (set) => {
-    const item = localStorage.getItem("query");
+    const item = storage.getItem("query");
 
     if (typeof item === "string") {
         set(item);
@@ -63,7 +63,7 @@ export const query: Writable<Query> = writable("", (set) => {
     }
 });
 query.subscribe((query) => {
-    localStorage.setItem("query", query);
+    storage.setItem("query", query);
 });
 
 export const librarySongOrder: Writable<SongOrder> = writable(
@@ -72,7 +72,7 @@ export const librarySongOrder: Writable<SongOrder> = writable(
         reverse: false,
     },
     (set) => {
-        const item = localStorage.getItem("librarySongOrder");
+        const item = storage.getItem("librarySongOrder");
 
         if (item) {
             const data = JSON.parse(item);
@@ -82,7 +82,7 @@ export const librarySongOrder: Writable<SongOrder> = writable(
     },
 );
 librarySongOrder.subscribe((query) => {
-    localStorage.setItem("librarySongOrder", JSON.stringify(query));
+    storage.setItem("librarySongOrder", JSON.stringify(query));
 });
 
 export const genericSongOrder: Writable<SongOrder> = writable(
@@ -91,7 +91,7 @@ export const genericSongOrder: Writable<SongOrder> = writable(
         reverse: false,
     },
     (set) => {
-        const item = localStorage.getItem("genericSongOrder");
+        const item = storage.getItem("genericSongOrder");
 
         if (item) {
             const data = JSON.parse(item);
@@ -101,7 +101,7 @@ export const genericSongOrder: Writable<SongOrder> = writable(
     },
 );
 genericSongOrder.subscribe((query) => {
-    localStorage.setItem("genericSongOrder", JSON.stringify(query));
+    storage.setItem("genericSongOrder", JSON.stringify(query));
 });
 
 export const allSongs: Writable<Song[]> = writable([]);
@@ -110,7 +110,7 @@ export const queriedSongs: Writable<Song[]> = writable([]);
 export const isPlaying = writable(false);
 
 async function restoreCurrentSong() {
-    const item = localStorage.getItem("current");
+    const item = storage.getItem("current");
 
     if (item) {
         const data = JSON.parse(item);
@@ -144,7 +144,7 @@ current.subscribe(({ song, index, position }) => {
             ? { song: song.id, index, position }
             : { song: null, index: 0, position: 0 };
 
-    localStorage.setItem("current", JSON.stringify(data));
+    storage.setItem("current", JSON.stringify(data));
 });
 
 async function readQueueFromFile() {
@@ -194,14 +194,11 @@ export const songsJustAdded: Writable<Song[]> = writable([]);
 export const songJustAdded = writable(false);
 export const shouldShowToast = writable(true);
 export const rightClickedAlbum: Writable<Album> = writable(null);
-export const rightClickedTrack: Writable<Song> = writable(null);
 export const rightClickedTracks: Writable<Song[]> = writable(null);
 export const playerTime = writable(0);
 export const seekTime = writable(0);
 export const volume: Writable<number> = writable(
-    localStorage.getItem("volume")
-        ? parseFloat(localStorage.getItem("volume"))
-        : 0.6,
+    storage.getItem("volume") ? parseFloat(storage.getItem("volume")) : 0.6,
 );
 export const playbackSpeed = writable(1.0);
 export const isFullScreenVisualiser = writable(false);
@@ -247,15 +244,15 @@ export const fileDropHandler: Writable<string> = writable(null);
 
 // Artist's toolkit details
 export const songbookSelectedArtist: Writable<ArtistProject> = writable(
-    localStorage.getItem("selectedArtist")
-        ? JSON.parse(localStorage.getItem("selectedArtist"))
+    storage.getItem("selectedArtist")
+        ? JSON.parse(storage.getItem("selectedArtist"))
         : null || null,
 );
 songbookSelectedArtist.subscribe((val) => {
     if (val !== null && val !== undefined) {
-        localStorage.setItem("selectedArtist", JSON.stringify(val));
+        storage.setItem("selectedArtist", JSON.stringify(val));
     } else {
-        localStorage.removeItem("selectedArtist");
+        storage.removeItem("selectedArtist");
     }
 });
 export const songbookArtists = writable<ArtistProject[]>([]);

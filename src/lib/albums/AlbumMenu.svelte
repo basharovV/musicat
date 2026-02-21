@@ -1,35 +1,34 @@
 <script lang="ts">
+    import { invoke } from "@tauri-apps/api/core";
     import { type } from "@tauri-apps/plugin-os";
     import { onMount } from "svelte";
+    import toast from "svelte-french-toast";
+    import type { Album, Song, ToImport } from "../../App";
     import { db } from "../../data/db";
+    import { reImport } from "../../data/LibraryUtils";
     import {
         popupOpen,
-        userSettings,
         rightClickedAlbum,
-        rightClickedTrack,
         rightClickedTracks,
+        userSettings,
     } from "../../data/store";
-    import Menu from "../ui/menu/Menu.svelte";
-    import MenuDivider from "../ui/menu/MenuDivider.svelte";
-    import MenuOption from "../ui/menu/MenuOption.svelte";
+    import { removeQueuedSongs } from "../../data/storeHelper";
+    import LL from "../../i18n/i18n-svelte";
     import {
-        type EnricherResult,
+        type FetchArtworkResult,
         enrichSongCountry,
         fetchAlbumArt,
         rescanAlbumArtwork,
     } from "../data/LibraryEnrichers";
-    import type { Album, Song, ToImport } from "../../App";
-    import { invoke } from "@tauri-apps/api/core";
     import { openInFinder } from "../menu/file";
     import {
         searchArtistOnWikiPanel,
         searchArtistOnYouTube,
         searchArtworkOnBrave,
     } from "../menu/search";
-    import { removeQueuedSongs } from "../../data/storeHelper";
-    import { reImport } from "../../data/LibraryUtils";
-    import toast from "svelte-french-toast";
-    import LL from "../../i18n/i18n-svelte";
+    import Menu from "../ui/menu/Menu.svelte";
+    import MenuDivider from "../ui/menu/MenuDivider.svelte";
+    import MenuOption from "../ui/menu/MenuOption.svelte";
 
     type ActionType =
         | "artwork-local"
@@ -45,7 +44,7 @@
     let explorerName: string;
     let loadingType: ActionType = null;
     let position = { x: 0, y: 0 };
-    let result: EnricherResult;
+    let result: FetchArtworkResult;
     let resultType: ActionType;
     let showMenu = false;
     let song: Song;
@@ -125,15 +124,8 @@
     }
 
     function openInfo() {
-        if (songs.length === 1) {
-            $rightClickedTracks = [];
-            $rightClickedTrack = song;
-            $rightClickedAlbum = null;
-        } else {
-            $rightClickedTracks = songs;
-            $rightClickedTrack = null;
-            $rightClickedAlbum = album;
-        }
+        $rightClickedTracks = songs;
+        $rightClickedAlbum = album;
 
         close();
 

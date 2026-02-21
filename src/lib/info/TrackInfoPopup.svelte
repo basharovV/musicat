@@ -3,17 +3,18 @@
     import { open } from "@tauri-apps/plugin-dialog";
 
     import hotkeys from "hotkeys-js";
-    import type { Song } from "src/App";
+    import type { MetadataEntry, Song, TagType, ToImport } from "src/App";
     import { onDestroy, onMount } from "svelte";
     import toast from "svelte-french-toast";
-    import tippy from "svelte-tippy";
-    import { fade, fly } from "svelte/transition";
+    import { fade } from "svelte/transition";
     import {
         artworkDirectory,
+        current,
+        lastWrittenSongs,
         os,
+        playerTime,
         popupOpen,
         rightClickedAlbum,
-        rightClickedTrack,
         rightClickedTracks,
     } from "../../data/store";
     import { focusTrap } from "../../utils/FocusTrap";
@@ -21,20 +22,27 @@
 
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import {
-        type EnricherResult,
+        type FetchArtworkResult,
         fetchAlbumArt,
     } from "../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
 
     import { Image } from "@tauri-apps/api/image";
-    import { openPath } from "@tauri-apps/plugin-opener";
+    import { writeFile } from "@tauri-apps/plugin-fs";
     import { Buffer } from "buffer";
     import LL from "../../i18n/i18n-svelte";
     import { clickOutside } from "../../utils/ClickOutside";
     import { searchArtworkOnBrave } from "../menu/search";
+    import { animateHeight } from "../ui/AnimatedHeight";
+    import Tabs from "../ui/Tabs.svelte";
+    import ArtworkTab from "./ArtworkTab.svelte";
     import CountrySection from "./CountrySection.svelte";
+    import FileTab from "./FileTab.svelte";
     import MetadataSection from "./MetadataSection.svelte";
+    import audioPlayer from "../player/AudioPlayer";
+    import { get } from "svelte/store";
+    import { getAlbumId, reImport } from "../../data/LibraryUtils";
 
     // The artwork for this track(s)
     let artworkBuffer: Buffer;
@@ -48,60 +56,92 @@
     let previousArtworkFormat;
     let previousArtworkSrc;
 
-    // The preliminary artwork to be set (from an image on disk)
+    // The preliminary artwork to be set
+    // (from an image on disk, or paste)
     let artworkToSetSrc = null;
     let artworkToSetFormat = null;
     let artworkToSetData: Uint8Array = null;
-    let isArtworkSet:
+
+    /**
+     * The preliminary action to be taken on the artwork
+     * (replace or delete)
+     */
+    let artworkSetAction:
         | "delete-file"
         | "delete-metadata"
         | "replace-file"
         | "replace-metadata"
-        | false = false;
+        | null = null;
+
+    /**
+     * Artwork will be shown if:
+     * - There is already existing artwork
+     * - There is new artwork to be set
+     */
+    $: shouldDisplayArtwork =
+        (!artworkSetAction || !artworkSetAction.startsWith("delete")) &&
+        ((artworkToSetSrc && artworkToSetFormat) ||
+            (previousArtworkSrc && previousArtworkFormat) ||
+            (artworkSrc && artworkFormat));
+
+    $: displayArtworkSrc =
+        artworkToSetSrc ||
+        (isMultiArt && "/images/multiart.png") ||
+        previousArtworkSrc ||
+        artworkSrc;
+
     let artworkFileToSet = null;
 
     let unlisten;
 
-    let previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
+    let previousAlbum = $rightClickedTracks[0].album;
 
-    let metadata: MetadataSection;
+    let metadataSection: MetadataSection;
+    let metadata: { mappedMetadata: MetadataEntry[]; tagType: TagType };
     let hasMetadataChanges: false;
 
     type ActionType = "artwork";
 
     let loadingType: ActionType = null;
-    let result: EnricherResult;
+    let result: FetchArtworkResult;
     let resultType: ActionType;
 
-    $: hasChanges = !!isArtworkSet || hasMetadataChanges;
+    $: hasChanges = !!artworkSetAction || hasMetadataChanges;
 
-    function completeMetadataEvent(event) {
-        event.artwork_file = artworkFileToSet ? artworkFileToSet : "";
-        event.artwork_data = artworkToSetData ?? [];
-        event.artwork_data_mime_type = artworkToSetFormat;
-        event.delete_artwork = isArtworkSet === "delete-metadata";
+    function completeMetadataEvent(event, writeType: WriteMetadataType) {
+        if (writeType === "tags") {
+            event.artwork_file = "";
+            event.artwork_data = [];
+            event.artwork_data_mime_type = "";
+            event.delete_artwork = false;
+        } else {
+            event.artwork_file = artworkFileToSet ? artworkFileToSet : "";
+            event.artwork_data = artworkToSetData ?? [];
+            event.artwork_data_mime_type = artworkToSetFormat;
+            event.delete_artwork = artworkSetAction === "delete-metadata";
+        }
 
         return event;
     }
 
     function deleteArtwork() {
         if (artworkFileName) {
-            isArtworkSet = "delete-file";
+            artworkSetAction = "delete-file";
         } else if (artworkToSetSrc) {
             artworkToSetSrc = null;
             artworkToSetFormat = null;
         } else {
-            isArtworkSet = "delete-metadata";
+            artworkSetAction = "delete-metadata";
         }
     }
 
     async function getArtwork() {
-        if ($rightClickedTrack === null && !$rightClickedTracks.length) {
+        if (!$rightClickedTracks.length) {
             return;
         }
-        console.log("getting artwork", $rightClickedTrack, $rightClickedTracks);
+        console.log("getting artwork", $rightClickedTracks);
 
-        let path = ($rightClickedTrack || $rightClickedTracks[0]).path;
+        let path = $rightClickedTracks[0].path;
         if (path) {
             const songWithArtwork = await invoke<Song>("get_song_metadata", {
                 event: {
@@ -118,7 +158,7 @@
                     `Error reading file ${path}. Check permissions, or if the file is used by another program.`,
                     { className: "app-toast" },
                 );
-                metadata.data = { mappedMetadata: [], tagType: null };
+                metadata = { mappedMetadata: [], tagType: null };
             }
 
             if (songWithArtwork?.artwork) {
@@ -130,7 +170,10 @@
                         "base64",
                     )}`;
                 } else if (songWithArtwork.artwork.src) {
-                    artworkSrc = convertFileSrc(songWithArtwork.artwork.src);
+                    artworkSrc =
+                        convertFileSrc(songWithArtwork.artwork.src) +
+                        "?v=" +
+                        new Date().getTime(); // cache bust
                     artworkFilePath = songWithArtwork.artwork.src;
                     artworkFileName = await basename(
                         songWithArtwork.artwork.src,
@@ -144,10 +187,7 @@
             }
 
             // Avoid a 'flash' while scrolling through same album (with same art from same source)
-            if (
-                previousAlbum ===
-                ($rightClickedTrack || $rightClickedTracks[0]).album
-            ) {
+            if (previousAlbum === $rightClickedTracks[0].album) {
                 previousArtworkFormat = artworkFormat;
                 previousArtworkSrc = artworkSrc;
             } else {
@@ -159,19 +199,11 @@
         }
     }
 
-    function getDurationText(durationInSeconds: number) {
-        return `${(~~(durationInSeconds / 60))
-            .toString()
-            .padStart(2, "0")}:${(~~(durationInSeconds % 60))
-            .toString()
-            .padStart(2, "0")}`;
-    }
-
     function hasArtworkToSet() {
         return (
             artworkFileToSet ||
             artworkToSetData ||
-            isArtworkSet === "delete-metadata"
+            artworkSetAction === "delete-metadata"
         );
     }
 
@@ -209,10 +241,11 @@
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
                 artworkSrc = src;
-                isArtworkSet =
-                    isArtworkSet === "delete-file" || artworkFileName
+                artworkSetAction =
+                    artworkSetAction === "delete-file" || artworkFileName
                         ? "replace-file"
                         : "replace-metadata";
+                console.log("Setting src", src);
                 artworkFileToSet = selected;
                 artworkToSetData = null;
                 artworkToSetSrc = src;
@@ -223,8 +256,8 @@
 
     async function reset() {
         updateArtwork();
-        previousAlbum = ($rightClickedTrack || $rightClickedTracks[0]).album;
-        metadata?.resetMetadata();
+        previousAlbum = $rightClickedTracks[0].album;
+        metadataSection?.resetMetadata();
     }
 
     function rollbackArtwork() {
@@ -241,7 +274,7 @@
         artworkToSetData = null;
         artworkFileName = null;
         artworkFilePath = null;
-        isArtworkSet = false;
+        artworkSetAction = null;
         artworkFileToSet = null;
 
         await getArtwork();
@@ -253,7 +286,7 @@
 
     hotkeys(`${modifier}+enter`, "track-info", (event, handler) => {
         if (hasChanges) {
-            metadata?.writeMetadata();
+            metadataSection?.writeMetadata();
         }
     });
     hotkeys("esc", "track-info", (event) => {
@@ -262,48 +295,25 @@
     });
 
     $: {
-        if ($rightClickedTrack || $rightClickedTracks[0]) {
+        if ($rightClickedTracks[0]) {
             reset();
         }
     }
 
     $: isMultiMode = $rightClickedTracks?.length;
 
-    // File(s) table
-    let tableOuterContainer;
-    let tableInnerScrollArea;
-    let showTableTopScrollShadow = false;
-    let showTableBottomScrollShadow = false;
-
-    function onTableResize() {
-        console.log("scrollTop");
-        // Check scroll area size, add shadows if necessary
-        if (tableInnerScrollArea) {
-            showTableTopScrollShadow =
-                tableInnerScrollArea.scrollTop > 0 &&
-                tableInnerScrollArea.scrollHeight >
-                    tableInnerScrollArea.clientHeight;
-            showTableBottomScrollShadow =
-                tableInnerScrollArea.scrollHeight >
-                tableInnerScrollArea.clientHeight;
-        }
-    }
-
-    function onTableScroll(e) {
-        const tableHeight = tableOuterContainer.clientHeight;
-        const scrollPercentage =
-            tableInnerScrollArea.scrollTop /
-            (tableInnerScrollArea.scrollHeight -
-                tableInnerScrollArea.clientHeight);
-        // Show top shadow
-        showTableTopScrollShadow =
-            tableInnerScrollArea.scrollTop > 0 &&
-            tableInnerScrollArea.scrollHeight >
-                tableInnerScrollArea.clientHeight;
-    }
-
     async function onPaste(event: ClipboardEvent) {
         if (!artworkFocused) {
+            return;
+        }
+
+        if (!areAllTracksInSameFolder()) {
+            toast.error(
+                "Artwork can only be set for tracks in the same folder.",
+                {
+                    duration: 3000,
+                },
+            );
             return;
         }
 
@@ -311,63 +321,227 @@
         let arrayBuffer: ArrayBuffer;
 
         let mimeType: string;
-        if (event.clipboardData.items[0]) {
+        // Find file
+        if (event.clipboardData.files.length > 0) {
             try {
-                mimeType = event.clipboardData.items[0].type;
-                arrayBuffer = await event.clipboardData.items[0]
-                    .getAsFile()
-                    .arrayBuffer();
-                console.log("mimeType", mimeType);
+                const file = event.clipboardData.files.item(0);
+                mimeType = file.type;
+                arrayBuffer = await file.arrayBuffer();
             } catch (err) {
                 console.error(err);
             }
         }
 
-        // try {
-        //     img = await readImage();
-        //     console.log("paste", await img.size());
-        // } catch (err) {
-        //     console.error(err);
-        // }
-
         if (arrayBuffer && mimeType) {
-            // const rgba = await img.rgba();
-            const b64 = Buffer.from(arrayBuffer).toString("base64");
-            // Convert to base64 for src
-            const base64 = `data:${mimeType};base64, ${b64}`;
-            artworkToSetSrc = base64;
-            artworkToSetFormat = mimeType;
-            artworkToSetData = new Uint8Array(arrayBuffer);
-            artworkFileToSet = null;
-            isArtworkSet =
-                isArtworkSet === "delete-file" || artworkFileName
+            setArtworkFromBuffer(arrayBuffer, mimeType);
+            artworkSetAction =
+                artworkSetAction === "delete-file" || artworkFileName
                     ? "replace-file"
                     : "replace-metadata";
         }
-        // const src = "asset://localhost/" + folder + artworkFileName;
     }
 
-    async function save() {
-        if (
-            $rightClickedAlbum &&
-            $rightClickedAlbum.tracksIds.length ==
-                $rightClickedTracks?.length &&
-            (isArtworkSet === "delete-file" || isArtworkSet === "replace-file")
-        ) {
-            await invoke("delete_files", {
-                event: {
-                    files: [artworkFilePath],
-                },
-            });
+    function setArtworkFromBuffer(imageBuffer: ArrayBuffer, mimeType: string) {
+        const b64 = Buffer.from(imageBuffer).toString("base64");
+        // Convert to base64 for src
+        const base64 = `data:${mimeType};base64, ${b64}`;
+        artworkToSetSrc = base64;
+        artworkToSetFormat = mimeType;
+        artworkToSetData = new Uint8Array(imageBuffer);
+    }
+
+    type SaveType =
+        | "tags"
+        | "embed-art"
+        | "folder-art"
+        | "tags+embed-art"
+        | "tags+folder-art";
+
+    type ArtworkSaveLocation = "embed" | "folder";
+
+    let saveType: SaveType;
+
+    /**
+     * By default we write artwork to the folder as cover.jpg/png.
+     * Note: in multi-mode when different artworks are selected, only "embed" is supported
+     */
+    let preferredArtworkLocation: ArtworkSaveLocation;
+
+    $: {
+        let saveTypeToSet = "";
+        if (hasMetadataChanges) {
+            saveTypeToSet += "tags";
         }
 
-        await metadata.writeMetadata();
+        if (artworkSetAction) {
+            if (saveTypeToSet) {
+                saveTypeToSet += "+";
+            }
+            if (
+                preferredArtworkLocation === "embed" ||
+                artworkSetAction === "delete-metadata" ||
+                artworkSetAction === "replace-metadata"
+            ) {
+                saveTypeToSet += "embed-art";
+            } else if (
+                preferredArtworkLocation === "folder" ||
+                artworkSetAction === "delete-file"
+            ) {
+                saveTypeToSet += "folder-art";
+            }
+        }
+
+        console.log(
+            "saveTypeToSet",
+            saveTypeToSet,
+            hasMetadataChanges,
+            artworkSetAction,
+        );
+        if (saveTypeToSet) {
+            saveType = saveTypeToSet as SaveType;
+        }
+    }
+
+    type WriteMetadataType = "tags" | "artwork";
+
+    /**
+     * Send an event to the backend to write the new metadata, overwriting any existing tags.
+     */
+    export async function writeMetadata(type: WriteMetadataType = "tags") {
+        const toWrite = metadata.mappedMetadata
+            .filter((m) => m.originalValue !== m.value) // only changed values
+            .map((m) => {
+                if (m.originalValue?.length && !m.value) {
+                    m.value = null;
+                }
+                return m;
+            })
+            .map(({ id, value }) => ({
+                id: id,
+                value: value?.length ? value : null,
+            }));
+
+        const writtenTracks = $rightClickedTracks;
+        const tracks = [];
+        const songIdToOldAlbumId = {};
+
+        for (const song of writtenTracks) {
+            tracks.push(
+                completeMetadataEvent(
+                    {
+                        song_id: song.id,
+                        metadata: type === "artwork" ? [] : toWrite,
+                        tag_type: metadata.tagType,
+                        file_path: song.path,
+                    },
+                    type,
+                ),
+            );
+
+            songIdToOldAlbumId[song.id] = getAlbumId(song);
+        }
+        console.log("Writing: ", tracks);
+
+        if (tracks.length) {
+            const toImport = await invoke<ToImport>("write_metadatas", {
+                event: {
+                    tracks,
+                },
+            });
+
+            console.log("To reimport: ", toImport);
+
+            if (toImport) {
+                if (toImport.error) {
+                    console.error("Error writing metadata: ", toImport.error);
+                    // Show error
+                    toast.error(toImport.error);
+                    // Roll back to current artwork
+                    rollbackArtwork();
+                } else {
+                    reImport(toImport, writtenTracks, songIdToOldAlbumId);
+
+                    toast.success("Successfully written metadata!", {
+                        position: "top-right",
+                    });
+                }
+            }
+
+            $lastWrittenSongs = writtenTracks;
+
+            const id = $current.song?.id;
+
+            if (id && writtenTracks.some((t) => t.id == id)) {
+                // Update sidebar infos
+                $current = $current;
+
+                // If we changed the artwork tag, this offsets the audio data in the file,
+                // so we need to reload the song and seek to the current position
+                // (will cause audible gap)
+                if (hasArtworkToSet()) {
+                    audioPlayer.setSeek(get(playerTime));
+                }
+            }
+
+            await reset();
+        } else {
+            toast.error("No songs to write metadata into!", {
+                position: "top-right",
+            });
+        }
+    }
+
+    function areAllTracksInSameFolder() {
+        if ($rightClickedTracks?.length > 1) {
+            const firstTrackFolder = $rightClickedTracks[0].path
+                .split("/")
+                .slice(0, -1)
+                .join("/");
+            return $rightClickedTracks.every((track) => {
+                const folder = track.path.split("/").slice(0, -1).join("/");
+                console.log("folder", folder);
+                return folder === firstTrackFolder;
+            });
+        }
+        return true;
+    }
+
+    $: isMultiArt =
+        $rightClickedTracks?.length > 1 && !areAllTracksInSameFolder();
+
+    async function save() {
+        await writeMetadata("tags");
+    }
+    async function saveArtworkToFile() {
+        await writeMetadata("artwork");
+    }
+
+    async function saveArtworkToFolder() {
+        if (!areAllTracksInSameFolder()) {
+            console.error(
+                "Can't save folder artwork. Tracks are not all in the same folder",
+            );
+            toast.error(
+                "Can't save artwork. Tracks need to all be in the same folder",
+            );
+            return;
+        }
+        switch (artworkSetAction) {
+            case "delete-file":
+                await invoke("delete_files", {
+                    event: {
+                        files: [artworkFilePath],
+                    },
+                });
+                break;
+            case "replace-file":
+                const artPath = artworkFilePath ?? $rightClickedTracks[0];
+                await writeFile(artworkFilePath, artworkToSetData);
+        }
     }
 
     function searchArtwork() {
-        if ($rightClickedTrack) {
-            searchArtworkOnBrave($rightClickedTrack);
-        } else if ($rightClickedAlbum) {
+        if ($rightClickedAlbum) {
             searchArtworkOnBrave($rightClickedAlbum);
         } else {
             searchArtworkOnBrave($rightClickedTracks[0]);
@@ -380,8 +554,6 @@
         previousScope = hotkeys.getScope();
         hotkeys.setScope("track-info");
         document.addEventListener("paste", onPaste);
-
-        onTableResize();
     });
 
     onDestroy(() => {
@@ -406,14 +578,15 @@
 
         result = await fetchAlbumArt(
             $rightClickedAlbum,
-            $rightClickedTrack || $rightClickedTracks[0],
+            $rightClickedTracks[0],
         );
 
-        if (result.success) {
-            toast.success("Found album art and written to album!", {
+        if (result.image) {
+            toast.success("Found album art!", {
                 position: "top-right",
             });
-            updateArtwork();
+            // Update src
+            setArtworkFromBuffer(result.image, result.mimeType);
         } else if (result.error) {
             toast.error("Couldn't find album art", {
                 position: "top-right",
@@ -422,223 +595,84 @@
 
         loadingType = null;
     }
+
+    const tabs = [
+        { id: "file", label: "File Info", icon: "bi:file-earmark-play" },
+        { id: "metadata", label: "Metadata", icon: "fe:music" },
+        { id: "artwork", label: "Artwork", icon: "bi:file-earmark-play" },
+        { id: "enrichment", label: "Enrichment", icon: "iconoir:atom" },
+    ];
+
+    let currentTab = tabs[1].id;
 </script>
 
 <container use:focusTrap use:clickOutside={onClose}>
     <header>
-        <div class="close">
-            <Icon icon="mingcute:close-circle-fill" onClick={onClose} />
-            <small>ESC</small>
-        </div>
-        <div class="button-container">
-            <ButtonWithIcon
-                disabled={!hasChanges}
-                onClick={save}
-                text={`Overwrite file${isMultiMode ? "s" : ""}`}
-            />
-            <small>Cmd + ENTER</small>
-        </div>
+        <div class="top">
+            <div class="close">
+                <Icon icon="mingcute:close-circle-fill" onClick={onClose} />
+                <small>ESC</small>
+            </div>
+            <div class="button-container">
+                {#if currentTab === "metadata"}
+                    <ButtonWithIcon
+                        disabled={!hasChanges}
+                        onClick={save}
+                        text={`${$LL.trackInfo.save()}`}
+                    />
+                {/if}
+            </div>
 
-        <div class="title-container">
-            <h2>
-                {$rightClickedTracks?.length
-                    ? `${$rightClickedTracks?.length} tracks selected`
-                    : "Track info"}
-            </h2>
-            <small class="subtitle">{$LL.trackInfo.subtitle()}</small>
+            <div class="title-container">
+                <h3>
+                    {$rightClickedTracks?.length > 1
+                        ? `${$rightClickedTracks?.length} tracks selected`
+                        : $rightClickedTracks[0].title}
+                </h3>
+                <small class="subtitle">{$LL.trackInfo.subtitle()}</small>
+            </div>
+        </div>
+        <div class="tabs">
+            <Tabs {tabs} bind:currentTab />
         </div>
     </header>
-    <div class="top">
-        <div>
-            <section class="file-section boxed" bind:this={tableOuterContainer}>
-                <h5 class="section-title">
-                    <Icon icon="bi:file-earmark-play" size={26} />File info
-                </h5>
-
-                {#if $rightClickedTrack || $rightClickedTracks.length}
-                    {#if showTableTopScrollShadow}
-                        <div in:fade={{ duration: 150 }} class="top-shadow" />
-                    {/if}
-                    {#if showTableBottomScrollShadow}
-                        <div
-                            in:fly={{ duration: 150, y: 20 }}
-                            class="bottom-shadow"
-                        />
-                    {/if}
-                    <div
-                        class="file-info-container"
-                        bind:this={tableInnerScrollArea}
-                        on:scroll={onTableScroll}
-                    >
-                        <table class="file-info">
-                            <thead>
-                                <tr>
-                                    <td>{$LL.trackInfo.file()}</td>
-                                    <td>{$LL.trackInfo.codec()}</td>
-                                    <td>{$LL.trackInfo.tagType()}</td>
-                                    <td>{$LL.trackInfo.duration()}</td>
-                                    <td>{$LL.trackInfo.sampleRate()}</td>
-                                    <td>{$LL.trackInfo.bitRate()}</td>
-                                </tr>
-                            </thead>
-                            {#each $rightClickedTrack ? [$rightClickedTrack] : $rightClickedTracks as track}
-                                <tr>
-                                    <td class="file-path">
-                                        <div
-                                            on:click={() =>
-                                                openPath(
-                                                    track.path.replace(
-                                                        track.file,
-                                                        "",
-                                                    ),
-                                                )}
-                                        >
-                                            <span>
-                                                <Icon
-                                                    icon="bi:file-earmark-play"
-                                                    size={12}
-                                                />
-                                            </span>
-                                            {track.file}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <p>{track.fileInfo.codec}</p>
-                                    </td>
-                                    <td>
-                                        <p>{track.fileInfo.tagType}</p>
-                                    </td>
-                                    <td>
-                                        <p>
-                                            {getDurationText(
-                                                track.fileInfo.duration,
-                                            )}
-                                        </p>
-                                    </td>
-                                    <td>
-                                        <p>{track.fileInfo.sampleRate} hz</p>
-                                    </td>
-                                    <td>
-                                        {#if track.fileInfo.bitDepth}
-                                            <p>
-                                                {track.fileInfo.bitDepth}
-                                                {$LL.trackInfo.bit()}
-                                            </p>
-                                        {/if}
-                                    </td>
-                                </tr>
-                            {/each}
-                        </table>
-                    </div>
-                {:else}
-                    <p>{$LL.trackInfo.noMetadata()}</p>
+    <div class="content" use:animateHeight>
+        {#key currentTab}
+            <div in:fade={{ duration: 150, delay: 100 }}>
+                {#if currentTab === "file"}
+                    <FileTab />
+                {:else if currentTab === "metadata"}
+                    <MetadataSection
+                        bind:data={metadata}
+                        bind:this={metadataSection}
+                        bind:hasChanges={hasMetadataChanges}
+                        {writeMetadata}
+                    />
+                {:else if currentTab === "artwork"}
+                    <ArtworkTab
+                        bind:artworkFocused
+                        {shouldDisplayArtwork}
+                        {displayArtworkSrc}
+                        {artworkSrc}
+                        {artworkFormat}
+                        {artworkToSetSrc}
+                        {artworkToSetFormat}
+                        {deleteArtwork}
+                        {openArtworkFilePicker}
+                        {artworkSetAction}
+                        {isMultiArt}
+                        {artworkFileName}
+                        {loadingType}
+                        {fetchArtwork}
+                        {searchArtwork}
+                        {saveArtworkToFile}
+                        {saveArtworkToFolder}
+                    />
+                {:else if currentTab === "enrichment"}
+                    <CountrySection />
                 {/if}
-            </section>
-
-            <CountrySection />
-        </div>
-
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <section class="artwork-section">
-            <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <div
-                contenteditable
-                class="artwork-container"
-                class:focused={artworkFocused}
-                on:mouseenter={() => (artworkFocused = true)}
-                on:mouseleave={() => (artworkFocused = false)}
-                use:tippy={{
-                    content: $LL.trackInfo.artworkTooltip(),
-                    placement: "bottom",
-                    trigger: "focusin",
-                }}
-            >
-                <div class="artwork-frame">
-                    {#if (!isArtworkSet || !isArtworkSet.startsWith("delete")) && ((artworkToSetSrc && artworkToSetFormat) || (previousArtworkSrc && previousArtworkFormat) || (artworkSrc && artworkFormat))}
-                        <img
-                            alt=""
-                            class="artwork"
-                            src={artworkToSetSrc ||
-                                previousArtworkSrc ||
-                                artworkSrc}
-                        />
-                        {#if artworkFocused && artworkSrc && artworkFormat}
-                            <div class="artwork-options">
-                                <Icon
-                                    icon={artworkToSetSrc
-                                        ? "mingcute:close-circle-fill"
-                                        : "ant-design:delete-outlined"}
-                                    onClick={deleteArtwork}
-                                />
-                                <Icon
-                                    icon="material-symbols:folder"
-                                    onClick={openArtworkFilePicker}
-                                />
-                            </div>
-                        {/if}
-                    {:else}
-                        <div class="artwork-placeholder">
-                            {#if artworkFocused}
-                                <div
-                                    class="artwork-options"
-                                    on:click={openArtworkFilePicker}
-                                >
-                                    <Icon icon="material-symbols:folder" />
-                                </div>
-                            {:else}
-                                <Icon icon="mdi:music-clef-treble" />
-                            {/if}
-                        </div>
-                    {/if}
-                </div>
             </div>
-            {#if isArtworkSet}
-                <small>{$LL.trackInfo.artworkReadyToSave()}</small>
-            {:else if artworkFileName}
-                <small>{artworkFileName}</small>
-            {:else if artworkSrc}
-                <small>{$LL.trackInfo.encodedInFile()}</small>
-            {:else}
-                <small class="notfound">{$LL.trackInfo.noArtwork()}</small>
-            {/if}
-            <span
-                use:tippy={{
-                    allowHTML: true,
-                    content: $LL.trackInfo.artworkTooltipBody(),
-                    placement: "left",
-                }}
-                ><Icon icon="ic:round-info" /><small
-                    >{$LL.trackInfo.aboutArtwork()}</small
-                ></span
-            >
-            <div class="find-art-btn">
-                <ButtonWithIcon
-                    disabled={isArtworkSet || artworkSrc}
-                    icon={loadingType === "artwork"
-                        ? "line-md:loading-loop"
-                        : "ic:twotone-downloading"}
-                    text="Fetch art"
-                    theme="transparent"
-                    onClick={fetchArtwork}
-                />
-                <ButtonWithIcon
-                    icon="mdi:search-web"
-                    text="Search art"
-                    theme="transparent"
-                    onClick={searchArtwork}
-                />
-            </div>
-        </section>
-    </div>
-    <div class="bottom">
-        <MetadataSection
-            bind:this={metadata}
-            bind:hasChanges={hasMetadataChanges}
-            completeEvent={completeMetadataEvent}
-            {hasArtworkToSet}
-            {reset}
-            {rollbackArtwork}
-        />
+        {/key}
     </div>
 </container>
 
@@ -646,11 +680,7 @@
     :global {
         .info {
             section.boxed {
-                border: 1px solid var(--popup-section-border);
-                border-radius: 5px;
-                min-width: 575px;
                 position: relative;
-                background-color: var(--popup-section-bg);
             }
 
             .section-title {
@@ -665,16 +695,19 @@
                 z-index: 11;
                 border: 1px solid rgb(from var(--inverse) r g b / 0.08);
                 top: -15px;
-                padding: 0 10px;
+                padding: 0 10px 0 0;
                 letter-spacing: 1px;
                 font-weight: 400;
-                left: 3em;
+                left: 1.2em;
                 right: 0;
                 width: fit-content;
                 margin: 0.5em 0;
                 text-align: start;
                 color: var(--popup-section-title-text);
                 text-transform: uppercase;
+                > :first-child {
+                    margin-left: -4px;
+                }
             }
         }
     }
@@ -687,9 +720,10 @@
     container {
         width: fit-content;
         max-height: 85%;
-        max-width: 750px;
-        min-width: 750px;
         margin: auto;
+        @media screen and (max-width: 750px) {
+            margin: auto 1em;
+        }
         display: flex;
         flex-direction: column;
         position: relative;
@@ -715,23 +749,38 @@
     }
 
     header {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto auto;
         align-items: center;
         position: sticky;
         top: -1px;
-        padding: 0.4em 0;
         width: 100%;
-        background-color: var(--popup-header-bg-many);
-        border-bottom: 1px solid var(--popup-header-border);
         backdrop-filter: blur(10px);
         z-index: 20;
 
+        .top {
+            grid-row: 1;
+            grid-column: 1 /4;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            background-color: var(--popup-header-bg-many);
+            border-bottom: 1px solid var(--popup-header-border);
+            padding: 0.6em 1em;
+        }
+
         .title-container {
+            flex: 1;
+            order: 1;
+            h2 {
+                font-weight: 200;
+            }
             > .subtitle {
                 opacity: 0.5;
                 display: block;
                 margin: 0;
+                line-height: 1.8em;
                 font-family:
                     system-ui,
                     -apple-system,
@@ -760,9 +809,6 @@
             .button-container {
                 top: 0.4em;
                 right: 15px;
-                small {
-                    display: none;
-                }
             }
             .close {
                 top: 1.5em;
@@ -773,128 +819,37 @@
             .title-container {
                 display: flex;
                 flex-direction: column;
-                align-items: center;
-                text-align: center;
-                h2 {
-                    margin: 0.2em;
+                h3 {
+                    margin: 0;
                 }
                 small {
                     margin: 0;
                 }
             }
         }
+
+        .tabs {
+            width: 100%;
+            grid-row: 2;
+            grid-column: 1 / 4;
+            background: var(--popup-header-bg-lone);
+        }
     }
 
-    .artwork-container {
-        padding: 0em;
-        width: 120px;
-        height: 120px;
-        border-radius: 4px;
+    .content {
+        margin: 1em 0 1em 0;
+        min-width: 470px;
         overflow: hidden;
-        cursor: pointer;
-        caret-color: transparent;
-        border: 1px solid
-            color-mix(in srgb, var(--background) 60%, var(--inverse));
-
-        &:hover {
-            border: 1px solid rgb(from var(--inverse) r g b / 0.517);
-        }
-
-        &.focused {
-            background-image: linear-gradient(
-                    90deg,
-                    silver 50%,
-                    transparent 50%
-                ),
-                linear-gradient(90deg, silver 50%, transparent 50%),
-                linear-gradient(0deg, silver 50%, transparent 50%),
-                linear-gradient(0deg, silver 50%, transparent 50%);
-            background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-            background-size:
-                15px 2px,
-                15px 2px,
-                2px 15px,
-                2px 15px;
-            background-position:
-                left top,
-                right bottom,
-                left bottom,
-                right top;
-            animation: border-dance 2s infinite linear;
-
-            .artwork-frame {
-                img {
-                    transform: scale(0.96);
-                }
-            }
-        }
-
-        @keyframes border-dance {
-            0% {
-                background-position:
-                    left top,
-                    right bottom,
-                    left bottom,
-                    right top;
-            }
-
-            100% {
-                background-position:
-                    left 15px top,
-                    right 15px bottom,
-                    left bottom 15px,
-                    right top 15px;
-            }
-        }
-
-        .artwork-frame {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            user-select: none;
-            /* border-radius: 3px; */
-            /* border: 1px solid rgb(94, 94, 94); */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            img {
-                height: 100%;
-                width: 100%;
-            }
-
-            .artwork-options {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: center;
-                gap: 2em;
-                background-color: var(--background);
-            }
-
-            .artwork-placeholder {
-                opacity: 0.2;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1em;
-            }
-        }
+        transition: height 200ms cubic-bezier(0.61, 0.26, 0.46, 0.95);
     }
 
     .button-container {
-        position: absolute;
-        top: 0.8em;
-        right: 15px;
-
+        order: 2;
+        position: relative;
+        top: -0.4em;
         small {
             position: absolute;
-            top: 3.2em;
+            top: 3em;
             right: 0;
             left: 0;
             opacity: 0.3;
@@ -903,9 +858,7 @@
     }
 
     .close {
-        position: absolute;
-        top: 1.5em;
-        left: 1em;
+        order: 0;
         z-index: 20;
         display: flex;
         flex-direction: row;
@@ -917,200 +870,15 @@
     }
 
     .top {
-        padding: 1em 1em 0;
+        padding: 1.5em 1em 0;
         display: grid;
-        grid-template-columns: 1fr 130px;
+        grid-template-columns: 1fr 150px;
+        column-gap: 1em;
         width: 100%;
     }
 
     .bottom {
         padding: 0 1em 1em;
         width: 100%;
-    }
-
-    .file-section {
-        padding: 4px;
-
-        .section-title {
-            top: -10px;
-            margin: 0;
-        }
-
-        .top-shadow {
-            font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
-            pointer-events: none;
-            background: linear-gradient(
-                to bottom,
-                hsl(320, 4.92%, 11.96%) 0%,
-                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-                hsla(320, 4.92%, 11.96%, 0.016) 90%,
-                hsla(320, 4.92%, 11.96%, 0) 100%
-            );
-            height: 40px;
-            width: 100%;
-            position: absolute;
-            top: 0;
-            right: 0;
-            left: 0;
-            z-index: 4;
-            opacity: 0.5;
-        }
-        .bottom-shadow {
-            font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
-            pointer-events: none;
-            background: linear-gradient(
-                to top,
-                hsl(320, 4.92%, 11.96%) 0%,
-                hsla(320, 4.92%, 11.96%, 0.988) 2.6%,
-                hsla(320, 4.92%, 11.96%, 0.952) 5.8%,
-                hsla(320, 4.92%, 11.96%, 0.898) 9.7%,
-                hsla(320, 4.92%, 11.96%, 0.828) 14.3%,
-                hsla(320, 4.92%, 11.96%, 0.745) 19.5%,
-                hsla(320, 4.92%, 11.96%, 0.654) 25.3%,
-                hsla(320, 4.92%, 11.96%, 0.557) 31.6%,
-                hsla(320, 4.92%, 11.96%, 0.458) 38.5%,
-                hsla(320, 4.92%, 11.96%, 0.361) 45.9%,
-                hsla(320, 4.92%, 11.96%, 0.268) 53.9%,
-                hsla(320, 4.92%, 11.96%, 0.184) 62.2%,
-                hsla(320, 4.92%, 11.96%, 0.112) 71.1%,
-                hsla(320, 4.92%, 11.96%, 0.055) 80.3%,
-                hsla(320, 4.92%, 11.96%, 0.016) 90%,
-                hsla(320, 4.92%, 11.96%, 0) 100%
-            );
-            height: 40px;
-            width: 100%;
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            left: 0;
-            z-index: 4;
-            opacity: 0.5;
-        }
-        .file-info-container {
-            max-height: 200px;
-            overflow-y: auto;
-            position: relative;
-            padding-bottom: 1em;
-            padding-top: 0.5em;
-        }
-
-        .file-info {
-            table-layout: auto;
-            display: table;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 1em;
-            text-align: left;
-            width: 100%;
-            font-size: 13px;
-            -webkit-border-horizontal-spacing: 0px;
-            -webkit-border-vertical-spacing: 0px;
-            border-collapse: collapse;
-            /* border: 1px solid rgb(97, 92, 92); */
-
-            > thead {
-                > tr {
-                }
-                td {
-                    opacity: 0.5;
-                }
-            }
-            tr {
-                > td {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    border-right: 5px solid transparent;
-
-                    p {
-                        background-color: var(--popup-track-data-field-bg);
-                        padding: 0.2em 0.5em;
-                        width: fit-content;
-                        border-radius: 4px;
-                        color: var(--text);
-                        user-select: none;
-                        cursor: default;
-                        margin: 0;
-                    }
-                }
-
-                .file-path {
-                    margin: auto;
-                    font-family: -apple-system, Avenir, Helvetica, Arial,
-                        sans-serif;
-                    cursor: default;
-                    min-width: 170px;
-                    max-width: 170px;
-
-                    span {
-                        vertical-align: middle;
-                        position: relative;
-                        display: flex;
-                    }
-
-                    & > div {
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                        font-size: 13px;
-                        width: 100%;
-                        vertical-align: middle;
-                        display: flex;
-                        gap: 4px;
-                    }
-
-                    &:hover {
-                        text-decoration: underline;
-                    }
-                }
-            }
-        }
-    }
-
-    .artwork-section {
-        padding: 0 0 0 1em;
-        > small {
-            color: var(--popup-track-artwork-found);
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            display: block;
-
-            &.notfound {
-                color: var(--popup-track-artwork-notfound);
-            }
-        }
-        span {
-            cursor: default;
-            margin: 0.3em auto 0;
-            width: fit-content;
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            color: var(--popup-track-artwork-about);
-            user-select: none;
-            &:hover {
-                opacity: 0.7;
-            }
-
-            &:active {
-                opacity: 0.5;
-            }
-        }
-        .find-art-btn {
-            margin-top: 1em;
-        }
     }
 </style>

@@ -1,18 +1,21 @@
 <script lang="ts">
-    import { onDestroy } from "svelte";
+    import { onDestroy, tick } from "svelte";
     import { fade } from "svelte/transition";
     import type { MenuItem, MenuSection } from "../../../App";
     import { clickOutside } from "../../../utils/ClickOutside";
     import MenuOption from "./MenuOption.svelte";
+    import { portal } from "../Portal";
 
     export let x = 0;
     export let y = 0;
     export let fixed = false;
     export let items: MenuItem[] = [];
+    export let placeholder: string = null;
     export let onItemSelected = null;
     export let onClickOutside = null;
     export let position: "auto" | "manual" | "relative" = "auto";
     export let maxHeight: number = null; // If this exists, we wrap the contents
+    export let minWidth: number = null;
     export let padding = 0;
     export let sections: MenuSection[] = null;
     export let submenu = false;
@@ -29,19 +32,27 @@
     export function getBoundingClientRect() {
         return menuEl.getBoundingClientRect();
     }
-
+    function scrollHoveredIntoView() {
+        // Defer so Svelte has updated the DOM before we query
+        setTimeout(() => {
+            const highlighted = menuEl?.querySelector(".highlighted");
+            highlighted?.scrollIntoView({ block: "nearest" });
+        }, 0);
+    }
     function onKeyUp() {
         if (hoveredItemIdx > 0) {
             hoveredItemIdx--;
         } else {
             hoveredItemIdx = 0;
         }
+        scrollHoveredIntoView();
     }
 
     function onKeyDown() {
         if (hoveredItemIdx < numberOfItems - 1) {
             hoveredItemIdx = hoveredItemIdx + 1;
         }
+        scrollHoveredIntoView();
     }
 
     function onKeyLeft() {
@@ -147,8 +158,8 @@
     bind:this={menuEl}
     use:clickOutside={() => onClickOutside && onClickOutside()}
     style="top: {y}px; left: {x}px;gap: {padding}px;{maxHeight
-        ? `max-height: ${maxHeight}px`
-        : ''}"
+        ? `max-height: ${maxHeight}px;`
+        : ''}{minWidth ? `min-width: ${minWidth}px;` : ''}"
 >
     {#if sections}
         <div class="sections">
@@ -187,6 +198,9 @@
             {:else}
                 <slot />
             {/each}
+            {#if placeholder && items.length === 0 && !$$slots.default}
+                <MenuOption text={placeholder} />
+            {/if}
         </div>
     {/if}
 </menu>
@@ -204,10 +218,7 @@
         padding: 3px;
         font-weight: 400;
         box-shadow: 10px 10px 10px 0px var(--menu-shadow);
-        z-index: 22;
-        max-width: 300px;
-        min-width: 65px;
-        scale: 0.97;
+        z-index: 9999;
         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
         &.fixed {
             position: fixed;
@@ -220,7 +231,8 @@
         }
         &.scrollable {
             max-height: 300px;
-            overflow: auto;
+            width: fit-content;
+            overflow: overlay; /* Chromium + Safari */
         }
         &.fullWidth {
             width: 100%;

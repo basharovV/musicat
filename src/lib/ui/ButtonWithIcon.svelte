@@ -1,6 +1,8 @@
 <script lang="ts">
+    import type { TippyProps } from "svelte-tippy";
     import LL from "../../i18n/i18n-svelte";
     import Icon from "./Icon.svelte";
+    import { optionalTippy } from "./TippyAction";
 
     export let icon = null;
     export let iconSize = 20;
@@ -14,6 +16,8 @@
     export let confirmText = null;
     export let isDestructive = false;
     export let noOutline = false;
+    export let fullWidth = false;
+    export let tooltip: TippyProps = null;
 
     /**
      * If options exist, this becomes a segmented button
@@ -35,7 +39,12 @@
     }
 </script>
 
-<div class="button-container" class:segmented={options.length > 0}>
+<div
+    class="button-container"
+    class:segmented={options.length > 0}
+    class:full-width={fullWidth}
+    use:optionalTippy={tooltip}
+>
     {#if options.length > 0}
         {#each options as option}
             <div
@@ -83,7 +92,12 @@
     .button-container {
         display: flex;
         width: fit-content;
-
+        &.full-width {
+            width: 100%;
+            .button {
+                width: 100%;
+            }
+        }
         &.segmented {
             // Match the border-color of the theme if necessary
 
@@ -116,7 +130,7 @@
         border-radius: 6px;
         white-space: nowrap;
         cursor: pointer;
-        transition: all 0.1s ease;
+        transition: background 0.1s ease;
         user-select: none;
 
         p {
@@ -126,6 +140,8 @@
 
         &.disabled {
             opacity: 0.5;
+            cursor: default;
+            pointer-events: none;
         }
         &:active {
             opacity: 0.8;
@@ -155,7 +171,7 @@
                 );
             }
 
-            &:disabled {
+            &.disabled {
                 background-color: var(--button-active-disabled-bg);
                 color: var(--button-active-disabled-text);
 
@@ -206,7 +222,7 @@
 
         &.theme-transparent {
             border: 1px solid
-                color-mix(in srgb, var(--inverse) 10%, transparent);
+                color-mix(in srgb, var(--inverse) 20%, transparent);
             color: var(--text);
 
             &:hover:not(.disabled) {

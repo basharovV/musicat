@@ -144,7 +144,7 @@ popup-header-bg-lone: color-mix(in srgb, var(--background) 26%, transparent)
 popup-header-bg-many: color-mix(in srgb, var(--background) 1%, transparent)
 popup-header-border: color-mix(in srgb, var(--background) 60%, var(--inverse))
 popup-section-bg: color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))
-popup-section-border: color-mix(in srgb, var(--background) 70%, var(--inverse))
+popup-section-border: color-mix(in srgb, var(--overlay-bg) 80%, var(--inverse))
 popup-section-title-bg: color-mix(in srgb, var(--background) 50%, var(--inverse))
 popup-section-title-text: var(--title)
 popup-track-artwork-about: "#82c9df"

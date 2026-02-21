@@ -10,7 +10,11 @@ import { path } from "@tauri-apps/api";
 import { get, type Writable } from "svelte/store";
 import { fetch } from "@tauri-apps/plugin-http";
 
-export type EnricherResult = { success?: string; error?: string };
+export type FetchArtworkResult = {
+    image?: ArrayBuffer;
+    mimeType?: string;
+    error?: string;
+};
 
 export async function findCountryByArtist(artistName) {
     if (!artistName?.length) return null;
@@ -62,7 +66,7 @@ export async function findCountryByArtist(artistName) {
 export async function fetchAlbumArt(
     album: Album = null,
     song: Song = null,
-): Promise<EnricherResult> {
+): Promise<FetchArtworkResult> {
     if (!album) {
         if (get(userSettings).beetsDbLocation) {
             album = await invoke("get_albums_by_id", {
@@ -76,15 +80,15 @@ export async function fetchAlbumArt(
         }
     }
 
-    let result;
+    let result: FetchArtworkResult;
 
     result = await fetchAlbumArtWithWikipedia(album);
-    if (result.success) {
+    if (result.image) {
         return result;
     }
 
     result = await fetchAlbumArtWithMusicBrainz(album);
-    if (result.success) {
+    if (result.image) {
         return result;
     }
 
@@ -92,14 +96,14 @@ export async function fetchAlbumArt(
 
     if (settings.geniusApiKey) {
         result = await fetchAlbumArtWithGenius(album, settings.geniusApiKey);
-        if (result.success) {
+        if (result.image) {
             return result;
         }
     }
 
     if (settings.discogsApiKey) {
         result = await fetchAlbumArtWithDiscogs(album, settings.discogsApiKey);
-        if (result.success) {
+        if (result.image) {
             return result;
         }
     }
@@ -111,7 +115,7 @@ export async function fetchAlbumArt(
 
 async function fetchAlbumArtWithWikipedia(
     album: Album,
-): Promise<EnricherResult> {
+): Promise<FetchArtworkResult> {
     try {
         const ecArtist = encodeURIComponent(album.artist);
         const dbpediaResult = await (
@@ -155,9 +159,12 @@ async function fetchAlbumArtWithWikipedia(
             }
         }
 
-        if (await fetchImage(album, imageUrl, imageExtension)) {
+        const image = await fetchImage(imageUrl);
+
+        if (image) {
             return {
-                success: "Artwork saved!",
+                image,
+                mimeType: `image/${getImageFormat(imageExtension)}`,
             };
         }
 
@@ -178,7 +185,7 @@ async function fetchAlbumArtWithWikipedia(
 async function fetchAlbumArtWithGenius(
     album: Album,
     geniusApiKey: string,
-): Promise<EnricherResult> {
+): Promise<FetchArtworkResult> {
     try {
         const query = encodeURIComponent(
             `${album.displayTitle} - ${album.artist}`,
@@ -215,9 +222,12 @@ async function fetchAlbumArtWithGenius(
 
             const imageExtension = imageUrl.split("?")[0].split(".")?.pop();
 
-            if (await fetchImage(album, imageUrl, imageExtension)) {
+            const image = await fetchImage(imageUrl);
+
+            if (image) {
                 return {
-                    success: "Artwork saved!",
+                    image,
+                    mimeType: `image/${getImageFormat(imageExtension)}`,
                 };
             }
         }
@@ -237,7 +247,7 @@ async function fetchAlbumArtWithGenius(
 async function fetchAlbumArtWithDiscogs(
     album: Album,
     discogsApiKey: string,
-): Promise<EnricherResult> {
+): Promise<FetchArtworkResult> {
     try {
         const ecRelease = encodeURIComponent(album.displayTitle);
 
@@ -272,9 +282,12 @@ async function fetchAlbumArtWithDiscogs(
             const imageUrl = hit.cover_image;
             const imageExtension = imageUrl.split("?")[0].split(".")?.pop();
 
-            if (await fetchImage(album, imageUrl, imageExtension)) {
+            const image = await fetchImage(imageUrl);
+
+            if (image) {
                 return {
-                    success: "Artwork saved!",
+                    image,
+                    mimeType: `image/${getImageFormat(imageExtension)}`,
                 };
             }
         }
@@ -293,7 +306,7 @@ async function fetchAlbumArtWithDiscogs(
 
 async function fetchAlbumArtWithMusicBrainz(
     album: Album,
-): Promise<EnricherResult> {
+): Promise<FetchArtworkResult> {
     try {
         const ecRelease = encodeURIComponent(album.displayTitle);
         const ecArtist = encodeURIComponent(album.artist);
@@ -338,9 +351,12 @@ async function fetchAlbumArtWithMusicBrainz(
             }
         }
 
-        if (imageUrl && (await fetchImage(album, imageUrl, "jpg"))) {
+        const image = await fetchImage(imageUrl);
+
+        if (image) {
             return {
-                success: "Artwork saved!",
+                image,
+                mimeType: `image/${getImageFormat("jpg")}`,
             };
         }
 
@@ -363,47 +379,19 @@ function toComparableString(str) {
         .toLowerCase();
 }
 
-async function fetchImage(
-    album: Album,
-    imageUrl?: string,
-    imageExtension?: string,
-): Promise<boolean> {
-    if (!imageUrl || !imageExtension) {
-        return false;
+async function fetchImage(imageUrl?: string): Promise<ArrayBuffer | null> {
+    if (!imageUrl) {
+        return null;
     }
 
-    // Fetch image
     const imageData = await fetch(imageUrl);
     const arrayBuffer = await imageData.arrayBuffer();
-    const imageBody = new Uint8Array(arrayBuffer);
 
-    console.log("imageData");
-
-    if (imageBody) {
-        const filePath = await path.join(album.path, `cover.${imageExtension}`);
-        console.log("filepath", filePath);
-        // Write a binary file to the `$APPDATA/avatar.png` path
-        await writeFile(filePath, imageBody);
-        let format = getImageFormat(imageExtension);
-        // Success! Let's write the artwork to the album
-
-        // TODO: Option to write to track directly?
-
-        await db.albums.update(album, {
-            artwork: {
-                src: convertFileSrc(filePath) + `?${Date.now()}`,
-                format: format,
-                size: {
-                    width: 200,
-                    height: 200,
-                },
-            },
-        });
-        return true;
-        // Double success! Artwork should now be visible in the library
+    if (!arrayBuffer.byteLength) {
+        return null;
     }
 
-    return false;
+    return arrayBuffer;
 }
 
 export async function addCountryDataAllSongs() {
@@ -473,7 +461,7 @@ export async function enrichSongCountry(song: Song): Promise<void> {
 
 export async function rescanAlbumArtwork(
     album: Album,
-): Promise<EnricherResult> {
+): Promise<FetchArtworkResult> {
     // console.log("adding artwork from song", album);
     const response = await invoke<ToImport>("scan_paths", {
         event: {

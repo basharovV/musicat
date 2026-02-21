@@ -1,17 +1,15 @@
 <script lang="ts">
     import type { Song } from "src/App";
 
+    import { window as tauriWindow } from "@tauri-apps/api";
     import {
-        expandedSongWithStems,
         isFindFocused,
         os,
         popupOpen,
-        rightClickedTrack,
         rightClickedTracks,
         shouldFocusFind,
     } from "../../data/store";
     import { isInputFocused } from "../../utils/ActiveElementUtils";
-    import { window as tauriWindow } from "@tauri-apps/api";
 
     /**
      * This class is used to highlight songs in the library
@@ -36,10 +34,8 @@
         );
         if (songsHighlighted.length > 0) {
             $rightClickedTracks = songsHighlighted;
-            $rightClickedTrack = null;
         } else {
             $rightClickedTracks = [];
-            $rightClickedTrack = null;
         }
     }
 
@@ -128,7 +124,6 @@
                 rangeEndSongIdx = null;
             }
 
-            $rightClickedTrack = null;
             $rightClickedTracks = songsHighlighted;
         } else if (isQueryChanged) {
             songIdxsHighlighted.clear();
@@ -143,12 +138,6 @@
             $rightClickedTracks?.length
         ) {
             songsHighlighted = $rightClickedTracks;
-        } else if (
-            isDefault &&
-            $popupOpen !== "track-info" &&
-            $rightClickedTrack
-        ) {
-            songsHighlighted = [$rightClickedTrack];
         } else {
             if (!isDefault) {
                 $shouldFocusFind = { target: "search", action: "unfocus" };
@@ -185,7 +174,6 @@
                     }
                     rangeStartSongIdx = rangeEndSongIdx;
                     rangeEndSongIdx = null;
-                    $rightClickedTrack = null;
 
                     // console.log("highlighted2", songsHighlighted);
                 }

@@ -15,7 +15,6 @@
         isTagCloudOpen,
         popupOpen,
         rightClickedAlbum,
-        rightClickedTrack,
         rightClickedTracks,
         selectedPlaylistFile,
         selectedTags,
@@ -36,6 +35,7 @@
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuInput from "../ui/menu/MenuInput.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
+    import { closeCurrentMenu } from "../ui/ContextMenu";
 
     type ActionType = "country" | "delete" | "remove" | "remove_from_playlist";
 
@@ -44,8 +44,6 @@
     let confirmingType: ActionType = null;
     let explorerName: string;
     let loadingType: ActionType = null;
-    let position = { x: 0, y: 0 };
-    let showMenu = false;
 
     export let songs: Song[] = [];
     let song: Song;
@@ -74,11 +72,7 @@
     });
 
     export function close() {
-        showMenu = false;
-    }
-
-    export function isOpen() {
-        return showMenu;
+        closeCurrentMenu();
     }
 
     let stems: Stem[] = [];
@@ -202,11 +196,9 @@
 
     function openInfo() {
         if (song) {
-            $rightClickedTracks = [];
-            $rightClickedTrack = song;
+            $rightClickedTracks = [song];
         } else {
             $rightClickedTracks = songs;
-            $rightClickedTrack = null;
         }
         $rightClickedAlbum = null;
 

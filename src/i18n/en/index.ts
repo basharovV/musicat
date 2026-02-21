@@ -1,6 +1,9 @@
 import type { BaseTranslation } from "../i18n-types";
 
 const en = {
+    common: {
+        noResults: "No results",
+    },
     infoPopup: {
         builtBy: "Built by",
         andContributors: "and contributors",
@@ -68,6 +71,7 @@ const en = {
         builtIn: {
             recentlyAdded: "Recently Added",
             favourites: "Favourites",
+            withStems: "With Stems",
         },
         builder: {
             close: "Close editor",
@@ -135,7 +139,7 @@ const en = {
     },
     trackInfo: {
         title: "Track Info",
-        subtitle: "Use UP and DOWN to change tracks",
+        subtitle: "Use ↑ and ↓ to change tracks",
         overwriteFile: "Overwrite file",
         fileInfo: "File Info",
         file: "File",
@@ -145,17 +149,45 @@ const en = {
         sampleRate: "Sample rate",
         bitRate: "Bitrate",
         enrichmentCenter: "Enrichment Center",
-        countryOfOrigin: "Country of Origin",
-        countryOfOriginTooltip:
-            "Set this to use the Map view and filter by country in Smart Playlists",
-        fetchingOriginCountry: "Loading...",
         save: "Save",
-        fetchFromWikipedia: "Fetch from Wikipedia",
+        enrichment: {
+            country: {
+                title: "Country of Origin",
+                infoTooltip:
+                    "Set this to use the Map view and filter by country in Smart Playlists",
+                fetchButton: {
+                    title: "Fetch",
+                    loading: "Loading...",
+                    tooltip: "Fetch country of origin from Wikipedia",
+                },
+                saveButton: {
+                    title: "Save",
+                },
+                disabled:
+                    "Country enrichment not available when using read-only beets database.",
+            },
+        },
+        artwork: {
+            saveButton: {
+                file: "Write to file",
+                folder: "Save as {file} to folder",
+            },
+            fetchButton: {
+                title: "Fetch art",
+                tooltip:
+                    "Fetch art from Wikipedia, Musicbrainz, Genius or Discogs and save to album folder",
+            },
+            searchButton: {
+                title: "Search art",
+                tooltip: "Open a browser search for the album cover",
+            },
+            pasteTooltip: "Click to replace, or paste an image",
+        },
         artworkReadyToSave: "Ready to save",
         artworkFound: "Found",
         noArtwork: "No artwork",
+        multiArtwork: "Multiple artworks",
         artworkTooltip: "Paste image or click to select file",
-        fetchArt: "Fetch Art",
         metadata: "Metadata",
         tools: "Tools",
         aboutArtwork: "About artwork",

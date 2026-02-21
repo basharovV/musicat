@@ -1,32 +1,29 @@
 <script lang="ts">
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { Buffer } from "buffer";
-    import tippy from "tippy.js";
     import type { Song } from "../../App";
     import { db } from "../../data/db";
     import {
         current,
         isPlaying,
         isShuffleEnabled,
-        popupOpen,
         isSidebarOpen,
-        isWaveformOpen,
+        lastWrittenSongs,
         playerTime,
+        popupOpen,
         queriedSongs,
         queue,
-        rightClickedTrack,
+        repeatMode,
+        rightClickedAlbum,
         rightClickedTracks,
         seekTime,
-        lastWrittenSongs,
-        rightClickedAlbum,
-        repeatMode,
     } from "../../data/store";
+    import { setQueue } from "../../data/storeHelper";
     import { currentThemeObject } from "../../theming/store";
     import audioPlayer from "../player/AudioPlayer";
     import Seekbar from "../sidebar/Seekbar.svelte";
     import Icon from "../ui/Icon.svelte";
     import VolumeSlider from "../ui/VolumeSlider.svelte";
-    import { setQueue } from "../../data/storeHelper";
 
     let duration;
     let artworkSrc;
@@ -192,8 +189,7 @@
                         size={16}
                         icon="mdi:information"
                         onClick={() => {
-                            $rightClickedTrack = $current.song;
-                            $rightClickedTracks = [];
+                            $rightClickedTracks = [$current.song];
                             $rightClickedAlbum = null;
                             $popupOpen = "track-info";
                         }}

@@ -962,7 +962,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 10000;
+        z-index: 1000;
         display: flex;
         background-color: var(--popup-backdrop);
     }

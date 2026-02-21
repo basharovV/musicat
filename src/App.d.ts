@@ -80,7 +80,7 @@ interface Song {
     // User-specific
     playCount: number;
     originCountry?: string;
-    originCountryName?: string;
+    originCountryName?: string; // beets only deals with country codes so we need a name here?
     songProjectId?: number; // Link to project id
     isFavourite: boolean;
     markers: Marker[];

@@ -1,7 +1,7 @@
 <!-- SongDataGrid.svelte -->
 
 <script lang="ts">
-    import { liveQuery, type Observable } from "dexie";
+    import { type Observable } from "dexie";
     import hotkeys from "hotkeys-js";
     import { Layer as Lyr } from "konva/lib/Layer";
     import { Stage as Stg } from "konva/lib/Stage";
@@ -17,7 +17,6 @@
     import { onDestroy, onMount, tick } from "svelte";
     import {
         Group,
-        type KonvaWheelEvent,
         Label,
         Layer,
         Path,
@@ -27,12 +26,14 @@
         Text,
         type KonvaDragTransformEvent,
         type KonvaMouseEvent,
+        type KonvaWheelEvent,
     } from "svelte-konva";
     import { db } from "../../data/db";
 
     import Konva from "konva";
     import { Context } from "konva/lib/Context";
     import toast from "svelte-french-toast";
+    import type { Readable } from "svelte/store";
     import {
         addSongsToPlaylist,
         insertSongsToPlaylist,
@@ -40,17 +41,17 @@
     } from "../../data/M3UUtils";
     import {
         arrowFocus,
-        current,
         compressionSelected,
+        current,
         draggedColumnIdx,
         draggedSongs,
         emptyDropEvent,
+        expandedSongWithStems,
         fileDropHandler,
         forceRefreshLibrary,
         importStatus,
+        isFindFocused,
         isPlaying,
-        isQueueOpen,
-        isSidebarShowing,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
@@ -59,52 +60,49 @@
         popupOpen,
         queriedSongs,
         queueMirrorsSearch,
-        rightClickedTrack,
+        rightClickedAlbum,
         rightClickedTracks,
         scrollToSong,
         selectedPlaylistFile,
         selectedTags,
-        shouldFocusFind,
         singleKeyShortcutsEnabled,
         smartQuery,
         smartQueryInitiator,
         smartQueryResults,
         uiView,
-        rightClickedAlbum,
-        expandedSongWithStems,
-        isFindFocused,
     } from "../../data/store";
-    import LL from "../../i18n/i18n-svelte";
-    import { currentThemeObject } from "../../theming/store";
-    import {
-        moveArrayElement,
-        swapArrayElements,
-    } from "../../utils/ArrayUtils";
-    import { timeSince } from "../../utils/DateUtils";
-    import AudioPlayer from "../player/AudioPlayer";
-    import { getQueryPart } from "../smart-query/QueryParts";
-    import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
-    import { UserQueryPart } from "../smart-query/UserQueryPart";
-    import ShadowGradient from "../ui/ShadowGradient.svelte";
-    import ColumnPicker from "./ColumnPicker.svelte";
-    import ImportPlaceholder from "./ImportPlaceholder.svelte";
-    import TrackMenu from "./TrackMenu.svelte";
-    import Scrollbar from "../ui/Scrollbar.svelte";
     import {
         resetDraggedSongs,
         setDraggedSongs,
         setQueue,
     } from "../../data/storeHelper";
-    import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
-    import ScrollTo from "../ui/ScrollTo.svelte";
-    import audioPlayer from "../player/AudioPlayer";
-    import SongHighlighter from "./SongHighlighter.svelte";
-    import { isInputFocused } from "../../utils/ActiveElementUtils";
     import type { PersistentWritable } from "../../data/storeUtils";
+    import LL from "../../i18n/i18n-svelte";
+    import { currentThemeObject } from "../../theming/store";
+    import { isInputFocused } from "../../utils/ActiveElementUtils";
+    import {
+        moveArrayElement,
+        swapArrayElements,
+    } from "../../utils/ArrayUtils";
+    import { timeSince } from "../../utils/DateUtils";
+    import {
+        default as AudioPlayer,
+        default as audioPlayer,
+    } from "../player/AudioPlayer";
+    import { getQueryPart } from "../smart-query/QueryParts";
+    import SmartQueryResultsPlaceholder from "../smart-query/SmartQueryResultsPlaceholder.svelte";
+    import { UserQueryPart } from "../smart-query/UserQueryPart";
+    import { closeCurrentMenu, openContextMenu } from "../ui/ContextMenu";
+    import ScrollTo from "../ui/ScrollTo.svelte";
+    import Scrollbar from "../ui/Scrollbar.svelte";
+    import ShadowGradient from "../ui/ShadowGradient.svelte";
+    import ColumnPicker from "./ColumnPicker.svelte";
+    import ImportPlaceholder from "./ImportPlaceholder.svelte";
     import { getAllColumns } from "./LibraryColumns";
-    import { contextMenu, openContextMenu } from "../ui/ContextMenu";
+    import QueryResultsPlaceholder from "./QueryResultsPlaceholder.svelte";
+    import SongHighlighter from "./SongHighlighter.svelte";
     import StemsDropdown from "./StemsDropdown.svelte";
-    import type { Readable } from "svelte/store";
+    import TrackMenu from "./TrackMenu.svelte";
 
     export let songsReadable: Readable<Song[]> | Observable<Song[]> = null;
     export let songsArray: Song[] = [];
@@ -785,12 +783,7 @@
         }
 
         // console.log("songIdsHighlighted", songsHighlighted);
-        if (songsHighlighted.length > 1) {
-            $rightClickedTracks = songsHighlighted;
-            $rightClickedTrack = null;
-        } else {
-            $rightClickedTrack = song;
-        }
+        $rightClickedTracks = songsHighlighted;
 
         await tick();
         openTrackMenu(e, songsHighlighted);
@@ -809,6 +802,7 @@
     }
 
     function openStemsDropdown(evt: MouseEvent, song: Song) {
+        console.log("Opening stems dropdown", song);
         openContextMenu(evt, {
             component: StemsDropdown,
             props: {
@@ -942,11 +936,8 @@
             !isInputFocused()
         ) {
             console.log("hmmm");
-            if (trackMenu?.isOpen()) {
-                trackMenu.close();
-            } else {
-                songHighlighter?.reset();
-            }
+            closeCurrentMenu();
+            songHighlighter?.reset();
         }
         // Single key shortcuts
         else if (
@@ -960,13 +951,7 @@
             // Check if there an input in focus currently
             if (songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
-                if (songsHighlighted.length > 1) {
-                    $rightClickedTracks = songsHighlighted;
-                    $rightClickedTrack = null;
-                } else {
-                    $rightClickedTrack = songsHighlighted[0];
-                    $rightClickedTracks = [];
-                }
+                $rightClickedTracks = songsHighlighted;
                 $rightClickedAlbum = null;
                 $popupOpen = "track-info";
             }
@@ -979,7 +964,7 @@
             // 't' for tags/right-click menu
             event.preventDefault();
             // Check if there an input in focus currently
-            if (!trackMenu.isOpen && songsHighlighted.length) {
+            if (songsHighlighted.length) {
                 console.log("opening info", songsHighlighted);
 
                 const topTrack = songsHighlighted[0];
@@ -991,13 +976,15 @@
                         )
                         .getAbsolutePosition().y +
                     ROW_HEIGHT +
-                    HEADER_HEIGHT +
-                    10;
+                    HEADER_HEIGHT;
                 console.log("top track y", topTrackY);
 
-                trackMenu.open(
-                    songsHighlighted.length > 1 ? songsHighlighted : topTrack,
-                    { x: 250, y: topTrackY },
+                openTrackMenu(
+                    new MouseEvent("mousedown", {
+                        clientX: 250,
+                        clientY: topTrackY,
+                    }),
+                    songsHighlighted,
                 );
             }
         } else if (event.key === "Enter" && $popupOpen !== "track-info") {

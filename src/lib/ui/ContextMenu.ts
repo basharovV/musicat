@@ -7,6 +7,16 @@ export interface ContextMenuOptions {
     props?: Record<string, any>;
 }
 
+export async function closeCurrentMenu() {
+    // Close all existing
+    const existingMenus = document.body.querySelectorAll(
+        ".musicat-context-menu",
+    );
+    existingMenus?.forEach((el) => {
+        document.body.removeChild(el);
+    });
+}
+
 /**
  * Imperatively opens a context menu at a given mouse event position.
  * Closes all other context menus before opening the new one.
@@ -21,13 +31,7 @@ export async function openContextMenu(
     const { component: MenuComponent, props = {} } = options;
 
     // Close all existing
-    const existingMenus = document.body.querySelectorAll(
-        ".musicat-context-menu",
-    );
-    console.log("existing", existingMenus);
-    existingMenus?.forEach((el) => {
-        document.body.removeChild(el);
-    });
+    closeCurrentMenu();
 
     const container = document.createElement("div");
     container.className = "musicat-context-menu";
@@ -80,9 +84,9 @@ export async function openContextMenu(
 export function contextMenu(node: HTMLElement, options: ContextMenuOptions) {
     let current: { close: () => void } | null = null;
 
-    function handleContextMenu(event: MouseEvent) {
+    async function handleContextMenu(event: MouseEvent) {
         current?.close();
-        current = openContextMenu(event, options);
+        current = await openContextMenu(event, options);
     }
 
     node.addEventListener("contextmenu", handleContextMenu);
