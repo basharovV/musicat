@@ -87,7 +87,7 @@ export function setQueue(
     nextSong: Song | number | boolean = null,
 ): void {
     const newDuration = newQueue.reduce((total, song) => {
-        return total + song.fileInfo.duration;
+        return total + song?.fileInfo?.duration;
     }, 0);
 
     if (typeof nextSong === "boolean") {
