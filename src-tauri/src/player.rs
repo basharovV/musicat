@@ -579,6 +579,8 @@ fn decode_loop(
 
             if probe_result.is_err() {
                 error!("Error probing file: {}", probe_result.err().unwrap());
+                app_handle.emit("error", "Error reading file").unwrap();
+
                 is_transition = false; // Revert transition mode so that track/seek info is changed straight away
 
                 // clear receiver since it might contains invalid data
@@ -719,12 +721,19 @@ fn decode_loop(
                 && !follow_system_output
                 && audio_device_name.is_some()
             {
-                info!("Using cached audio device: {:?}", audio_device_name);
+                info!(
+                    "Using cached audio device: {:?}. Cached devices: {:?}",
+                    audio_device_name,
+                    cached_devices.as_ref().unwrap().len()
+                );
                 cached_devices
                     .as_ref()
                     .unwrap()
                     .iter()
-                    .map(|d| d.device.clone())
+                    .map(|d| {
+                        info!("Device: {:?}", d.device.name());
+                        d.device.clone()
+                    })
                     .find(|device| device.name().unwrap() == audio_device_name.clone().unwrap())
             } else {
                 let default = output::default_device();
@@ -773,17 +782,15 @@ fn decode_loop(
                             .by_ref()
                             .map(|c| format!(
                                 "min: {}, max: {}",
-                                c.min_sample_rate().0,
-                                c.max_sample_rate().0
+                                c.min_sample_rate(),
+                                c.max_sample_rate()
                             ))
                             .collect::<Vec<String>>()
                     );
                     supports_sample_rate = output_configs
                         .iter()
                         .find(|c| {
-                            return c
-                                .try_with_sample_rate(cpal::SampleRate(spec.rate))
-                                .is_some();
+                            return c.try_with_sample_rate(spec.rate).is_some();
                         })
                         .is_some();
                 } else if supported_output_configs.is_none() {
@@ -811,6 +818,10 @@ fn decode_loop(
                 false,
                 &app_handle,
             );
+
+            if prev_song.is_none() {
+                prev_song = song.clone();
+            }
 
             if audio_output.is_none() || should_reset_audio {
                 info!("player: Resetting audio device");

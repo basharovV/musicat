@@ -1458,140 +1458,138 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
     if v.tag_type.is_some() {
         // We know which tag type this is, continue with writing...
 
-        if !v.metadata.is_empty() {
-            // info!("{:?}", v.metadata);
-            let tag_type_evt = v.tag_type.as_deref().unwrap();
-            let tag_type = match tag_type_evt.to_lowercase().as_str() {
-                "vorbis" => TagType::VorbisComments,
-                "id3v1" => TagType::Id3v1,
-                "id3v2" => TagType::Id3v2,
-                "id3v2.2" => TagType::Id3v2,
-                "id3v2.3" => TagType::Id3v2,
-                "id3v2.4" => TagType::Id3v2,
-                "mp4ilst" => TagType::Mp4Ilst,
-                _ => panic!("Unhandled tag type: {:?}", v.tag_type),
-            };
-            info!("tag fileType: {:?}", &tag_type);
-            let options = ParseOptions::new().max_junk_bytes(2048);
+        // info!("{:?}", v.metadata);
+        let tag_type_evt = v.tag_type.as_deref().unwrap();
+        let tag_type = match tag_type_evt.to_lowercase().as_str() {
+            "vorbis" => TagType::VorbisComments,
+            "id3v1" => TagType::Id3v1,
+            "id3v2" => TagType::Id3v2,
+            "id3v2.2" => TagType::Id3v2,
+            "id3v2.3" => TagType::Id3v2,
+            "id3v2.4" => TagType::Id3v2,
+            "mp4ilst" => TagType::Mp4Ilst,
+            _ => panic!("Unhandled tag type: {:?}", v.tag_type),
+        };
+        info!("tag fileType: {:?}", &tag_type);
+        let options = ParseOptions::new().max_junk_bytes(2048);
 
-            let mut file = File::options().read(true).write(true).open(&v.file_path)?;
+        let mut file = File::options().read(true).write(true).open(&v.file_path)?;
 
-            let reader = BufReader::new(&file);
-            let probe = Probe::new(reader).options(options);
-            // Try to guess the file type
-            let probe = probe.guess_file_type();
-            // Handle error
-            let probe = match probe {
-                Ok(probe) => probe,
-                Err(e) => {
-                    info!("Error probing file: {}", e);
-                    return Err(anyhow::anyhow!(e));
-                }
-            };
-
-            let file_type = &probe.file_type();
-            info!("fileType: {:?}", &file_type);
-            // let mut tagged_file = read_from_path(&v.file_path)?;
-            let mut tagged_file = probe.read().expect("ERROR: Failed to read file!");
-
-            let tag = if let Some(primary_tag) = tagged_file.primary_tag_mut() {
-                primary_tag
-            } else if let Some(first_tag) = tagged_file.first_tag_mut() {
-                first_tag
-            } else {
-                tagged_file.insert_tag(lofty::tag::Tag::new(tag_type));
-
-                tagged_file.first_tag_mut().unwrap()
-            };
-
-            if tag.tag_type() == TagType::Id3v1 || tag.tag_type() == TagType::Id3v2 {
-                // upgrade to ID3v2.4
-                info!("Upgrading to ID3v2.4");
-                tag.re_map(TagType::Id3v2);
+        let reader = BufReader::new(&file);
+        let probe = Probe::new(reader).options(options);
+        // Try to guess the file type
+        let probe = probe.guess_file_type();
+        // Handle error
+        let probe = match probe {
+            Ok(probe) => probe,
+            Err(e) => {
+                info!("Error probing file: {}", e);
+                return Err(anyhow::anyhow!(e));
             }
+        };
 
-            tag.remove_empty();
+        let file_type = &probe.file_type();
+        info!("fileType: {:?}", &file_type);
+        // let mut tagged_file = read_from_path(&v.file_path)?;
+        let mut tagged_file = probe.read().expect("ERROR: Failed to read file!");
 
-            for item in v.metadata.iter() {
-                println!("To write item: {:?}\n", item);
-                if item.id == "METADATA_BLOCK_PICTURE" {
-                    // Ignore picture, set by artwork_file_to_set
-                } else if item.id == "year" {
-                    match &item.value {
-                        None => {}
-                        Some(None) => tag.remove_year(),
-                        Some(Some(year)) => {
-                            tag.set_year(year.parse().unwrap());
-                        }
-                    }
-                } else {
-                    let item_key = ItemKey::from_str(&item.id.as_str());
+        let tag = if let Some(primary_tag) = tagged_file.primary_tag_mut() {
+            primary_tag
+        } else if let Some(first_tag) = tagged_file.first_tag_mut() {
+            first_tag
+        } else {
+            tagged_file.insert_tag(lofty::tag::Tag::new(tag_type));
 
-                    match &item.value {
-                        None => {}
-                        Some(None) => tag.remove_key(&item_key),
-                        Some(Some(value)) => {
-                            let item_value: ItemValue = ItemValue::Text(value.clone());
-                            println!("WRITING: {:?} {:?}", item_key, item_value);
+            tagged_file.first_tag_mut().unwrap()
+        };
 
-                            tag.insert(TagItem::new(item_key, item_value));
-                        }
-                    }
-                }
-            }
-
-            // Delete artwork if requested
-            if v.delete_artwork && tag.pictures().len() > 0 {
-                while tag.pictures().len() > 0 {
-                    tag.remove_picture(0);
-                }
-            }
-            // Set artwork if provided
-            else if !v.artwork_file.is_empty() {
-                let picture_file = File::options()
-                    .read(true)
-                    .write(true)
-                    .open(&Path::new(&v.artwork_file))?;
-
-                let mut reader = BufReader::new(picture_file);
-                let pic = Picture::from_reader(reader.get_mut());
-                tag.set_picture(0, pic.unwrap());
-            } else if !v.artwork_data.is_empty() {
-                let mime_type = if let Some(mime) = &v.artwork_data_mime_type {
-                    match mime.as_str() {
-                        "image/jpeg" => MimeType::Jpeg,
-                        "image/png" => MimeType::Png,
-                        "image/tiff" => MimeType::Tiff,
-                        _ => MimeType::Unknown(mime.to_string()),
-                    }
-                } else {
-                    MimeType::Png
-                };
-                let pic = Picture::new_unchecked(
-                    lofty::picture::PictureType::CoverFront,
-                    Some(mime_type),
-                    None,
-                    v.artwork_data.clone(),
-                );
-                tag.set_picture(0, pic);
-            }
-
-            // Keep picture, overwrite everything else
-            let _pictures = tag.pictures();
-
-            // Writing file
-
-            let mut file = File::options().read(true).write(true).open(&v.file_path)?;
-
-            let reader = BufReader::new(&file);
-            let probe = Probe::new(reader).options(options);
-            // Try to guess the file type
-            let probe = probe.guess_file_type()?;
-            let file_type = &probe.file_type();
-            info!("fileType just before save: {:?}", &file_type);
-            tagged_file.save_to(&mut file, WriteOptions::new())?;
-            info!("File saved succesfully!");
+        if tag.tag_type() == TagType::Id3v1 || tag.tag_type() == TagType::Id3v2 {
+            // upgrade to ID3v2.4
+            info!("Upgrading to ID3v2.4");
+            tag.re_map(TagType::Id3v2);
         }
+
+        tag.remove_empty();
+
+        for item in v.metadata.iter() {
+            println!("To write item: {:?}\n", item);
+            if item.id == "METADATA_BLOCK_PICTURE" {
+                // Ignore picture, set by artwork_file_to_set
+            } else if item.id == "year" {
+                match &item.value {
+                    None => {}
+                    Some(None) => tag.remove_year(),
+                    Some(Some(year)) => {
+                        tag.set_year(year.parse().unwrap());
+                    }
+                }
+            } else {
+                let item_key = ItemKey::from_str(&item.id.as_str());
+
+                match &item.value {
+                    None => {}
+                    Some(None) => tag.remove_key(&item_key),
+                    Some(Some(value)) => {
+                        let item_value: ItemValue = ItemValue::Text(value.clone());
+                        println!("WRITING: {:?} {:?}", item_key, item_value);
+
+                        tag.insert(TagItem::new(item_key, item_value));
+                    }
+                }
+            }
+        }
+
+        // Delete artwork if requested
+        if v.delete_artwork && tag.pictures().len() > 0 {
+            while tag.pictures().len() > 0 {
+                tag.remove_picture(0);
+            }
+        }
+        // Set artwork if provided
+        else if !v.artwork_file.is_empty() {
+            let picture_file = File::options()
+                .read(true)
+                .write(true)
+                .open(&Path::new(&v.artwork_file))?;
+
+            let mut reader = BufReader::new(picture_file);
+            let pic = Picture::from_reader(reader.get_mut());
+            tag.set_picture(0, pic.unwrap());
+        } else if !v.artwork_data.is_empty() {
+            let mime_type = if let Some(mime) = &v.artwork_data_mime_type {
+                match mime.as_str() {
+                    "image/jpeg" => MimeType::Jpeg,
+                    "image/png" => MimeType::Png,
+                    "image/tiff" => MimeType::Tiff,
+                    _ => MimeType::Unknown(mime.to_string()),
+                }
+            } else {
+                MimeType::Png
+            };
+            let pic = Picture::new_unchecked(
+                lofty::picture::PictureType::CoverFront,
+                Some(mime_type),
+                None,
+                v.artwork_data.clone(),
+            );
+            tag.set_picture(0, pic);
+        }
+
+        // Keep picture, overwrite everything else
+        let _pictures = tag.pictures();
+
+        // Writing file
+
+        let mut file = File::options().read(true).write(true).open(&v.file_path)?;
+
+        let reader = BufReader::new(&file);
+        let probe = Probe::new(reader).options(options);
+        // Try to guess the file type
+        let probe = probe.guess_file_type()?;
+        let file_type = &probe.file_type();
+        info!("fileType just before save: {:?}", &file_type);
+        tagged_file.save_to(&mut file, WriteOptions::new())?;
+        info!("File saved succesfully!");
     } else {
         info!("tagType is missing");
     }
