@@ -24,6 +24,15 @@
         "fs:allow-watch",
         "fs:allow-unwatch",
         "fs:allow-log-write",
+
+        {
+            "identifier": "opener:allow-open-url",
+            "allow": [
+                {
+                    "url": "**"
+                }
+            ]
+        },
         {
             "identifier": "opener:allow-open-path",
             "allow": [
