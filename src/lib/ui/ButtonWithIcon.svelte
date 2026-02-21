@@ -17,7 +17,7 @@
     export let isDestructive = false;
     export let noOutline = false;
     export let fullWidth = false;
-    export let tooltip: TippyProps = null;
+    export let tooltip: TippyProps & { show: boolean } = null;
 
     /**
      * If options exist, this becomes a segmented button

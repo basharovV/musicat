@@ -462,6 +462,34 @@ type RootTranslation = {
 		 * S​a​v​e
 		 */
 		save: string
+		metadata: {
+			/**
+			 * M​e​t​a​d​a​t​a
+			 */
+			title: string
+			saveTooltip: {
+				/**
+				 * P​e​n​d​i​n​g​ ​c​h​a​n​g​e​s
+				 */
+				title: string
+				/**
+				 * a​d​d​e​d
+				 */
+				added: string
+				/**
+				 * r​e​m​o​v​e​d
+				 */
+				removed: string
+				/**
+				 * c​h​a​n​g​e​d
+				 */
+				modified: string
+				/**
+				 * ⌘​ ​+​ ​E​n​t​e​r​ ​t​o​ ​s​a​v​e
+				 */
+				hint: string
+			}
+		}
 		enrichment: {
 			country: {
 				/**
@@ -505,10 +533,15 @@ type RootTranslation = {
 				 */
 				file: string
 				/**
-				 * S​a​v​e​ ​a​s​ ​{​f​i​l​e​}​ ​t​o​ ​f​o​l​d​e​r
+				 * S​a​v​e​ ​{​f​i​l​e​}​ ​t​o​ ​f​o​l​d​e​r
 				 * @param {unknown} file
 				 */
 				folder: RequiredParams<'file'>
+				/**
+				 * D​e​l​e​t​e​ ​{​f​i​l​e​}​ ​i​n​ ​f​o​l​d​e​r
+				 * @param {unknown} file
+				 */
+				deleteFolderArt: RequiredParams<'file'>
 			}
 			fetchButton: {
 				/**
@@ -555,10 +588,6 @@ type RootTranslation = {
 		 * P​a​s​t​e​ ​i​m​a​g​e​ ​o​r​ ​c​l​i​c​k​ ​t​o​ ​s​e​l​e​c​t​ ​f​i​l​e
 		 */
 		artworkTooltip: string
-		/**
-		 * M​e​t​a​d​a​t​a
-		 */
-		metadata: string
 		/**
 		 * T​o​o​l​s
 		 */
@@ -1608,6 +1637,34 @@ export type TranslationFunctions = {
 		 * Save
 		 */
 		save: () => LocalizedString
+		metadata: {
+			/**
+			 * Metadata
+			 */
+			title: () => LocalizedString
+			saveTooltip: {
+				/**
+				 * Pending changes
+				 */
+				title: () => LocalizedString
+				/**
+				 * added
+				 */
+				added: () => LocalizedString
+				/**
+				 * removed
+				 */
+				removed: () => LocalizedString
+				/**
+				 * changed
+				 */
+				modified: () => LocalizedString
+				/**
+				 * ⌘ + Enter to save
+				 */
+				hint: () => LocalizedString
+			}
+		}
 		enrichment: {
 			country: {
 				/**
@@ -1651,9 +1708,13 @@ export type TranslationFunctions = {
 				 */
 				file: () => LocalizedString
 				/**
-				 * Save as {file} to folder
+				 * Save {file} to folder
 				 */
 				folder: (arg: { file: unknown }) => LocalizedString
+				/**
+				 * Delete {file} in folder
+				 */
+				deleteFolderArt: (arg: { file: unknown }) => LocalizedString
 			}
 			fetchButton: {
 				/**
@@ -1700,10 +1761,6 @@ export type TranslationFunctions = {
 		 * Paste image or click to select file
 		 */
 		artworkTooltip: () => LocalizedString
-		/**
-		 * Metadata
-		 */
-		metadata: () => LocalizedString
 		/**
 		 * Tools
 		 */

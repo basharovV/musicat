@@ -43,6 +43,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import { get } from "svelte/store";
     import { getAlbumId, reImport } from "../../data/LibraryUtils";
+    import { getImageExtension } from "../../utils/FileUtils";
 
     // The artwork for this track(s)
     let artworkBuffer: Buffer;
@@ -66,12 +67,7 @@
      * The preliminary action to be taken on the artwork
      * (replace or delete)
      */
-    let artworkSetAction:
-        | "delete-file"
-        | "delete-metadata"
-        | "replace-file"
-        | "replace-metadata"
-        | null = null;
+    let artworkSetAction: "delete" | "replace" | null = null;
 
     /**
      * Artwork will be shown if:
@@ -118,20 +114,22 @@
             event.artwork_file = artworkFileToSet ? artworkFileToSet : "";
             event.artwork_data = artworkToSetData ?? [];
             event.artwork_data_mime_type = artworkToSetFormat;
-            event.delete_artwork = artworkSetAction === "delete-metadata";
+            event.delete_artwork = artworkSetAction === "delete";
         }
 
         return event;
     }
 
     function deleteArtwork() {
-        if (artworkFileName) {
-            artworkSetAction = "delete-file";
-        } else if (artworkToSetSrc) {
+        if (artworkToSetSrc) {
+            // Undo existing set
             artworkToSetSrc = null;
             artworkToSetFormat = null;
+            artworkToSetData = null;
+            artworkSetAction = null;
         } else {
-            artworkSetAction = "delete-metadata";
+            // Or prepare to delete
+            artworkSetAction = "delete";
         }
     }
 
@@ -203,7 +201,7 @@
         return (
             artworkFileToSet ||
             artworkToSetData ||
-            artworkSetAction === "delete-metadata"
+            artworkSetAction === "delete"
         );
     }
 
@@ -241,15 +239,10 @@
                 const type = response.headers.get("Content-Type");
                 artworkFormat = type;
                 artworkSrc = src;
-                artworkSetAction =
-                    artworkSetAction === "delete-file" || artworkFileName
-                        ? "replace-file"
-                        : "replace-metadata";
+                artworkSetAction = "replace";
                 console.log("Setting src", src);
                 artworkFileToSet = selected;
-                artworkToSetData = null;
-                artworkToSetSrc = src;
-                artworkToSetFormat = type;
+                setArtworkFromBuffer(await response.arrayBuffer(), type);
             }
         }
     }
@@ -300,20 +293,8 @@
         }
     }
 
-    $: isMultiMode = $rightClickedTracks?.length;
-
     async function onPaste(event: ClipboardEvent) {
         if (!artworkFocused) {
-            return;
-        }
-
-        if (!areAllTracksInSameFolder()) {
-            toast.error(
-                "Artwork can only be set for tracks in the same folder.",
-                {
-                    duration: 3000,
-                },
-            );
             return;
         }
 
@@ -334,10 +315,7 @@
 
         if (arrayBuffer && mimeType) {
             setArtworkFromBuffer(arrayBuffer, mimeType);
-            artworkSetAction =
-                artworkSetAction === "delete-file" || artworkFileName
-                    ? "replace-file"
-                    : "replace-metadata";
+            artworkSetAction = "replace";
         }
     }
 
@@ -348,58 +326,6 @@
         artworkToSetSrc = base64;
         artworkToSetFormat = mimeType;
         artworkToSetData = new Uint8Array(imageBuffer);
-    }
-
-    type SaveType =
-        | "tags"
-        | "embed-art"
-        | "folder-art"
-        | "tags+embed-art"
-        | "tags+folder-art";
-
-    type ArtworkSaveLocation = "embed" | "folder";
-
-    let saveType: SaveType;
-
-    /**
-     * By default we write artwork to the folder as cover.jpg/png.
-     * Note: in multi-mode when different artworks are selected, only "embed" is supported
-     */
-    let preferredArtworkLocation: ArtworkSaveLocation;
-
-    $: {
-        let saveTypeToSet = "";
-        if (hasMetadataChanges) {
-            saveTypeToSet += "tags";
-        }
-
-        if (artworkSetAction) {
-            if (saveTypeToSet) {
-                saveTypeToSet += "+";
-            }
-            if (
-                preferredArtworkLocation === "embed" ||
-                artworkSetAction === "delete-metadata" ||
-                artworkSetAction === "replace-metadata"
-            ) {
-                saveTypeToSet += "embed-art";
-            } else if (
-                preferredArtworkLocation === "folder" ||
-                artworkSetAction === "delete-file"
-            ) {
-                saveTypeToSet += "folder-art";
-            }
-        }
-
-        console.log(
-            "saveTypeToSet",
-            saveTypeToSet,
-            hasMetadataChanges,
-            artworkSetAction,
-        );
-        if (saveTypeToSet) {
-            saveType = saveTypeToSet as SaveType;
-        }
     }
 
     type WriteMetadataType = "tags" | "artwork";
@@ -526,18 +452,34 @@
             );
             return;
         }
+        console.log("save artwork to folder", artworkSetAction);
         switch (artworkSetAction) {
-            case "delete-file":
+            case "delete":
                 await invoke("delete_files", {
                     event: {
                         files: [artworkFilePath],
                     },
                 });
                 break;
-            case "replace-file":
-                const artPath = artworkFilePath ?? $rightClickedTracks[0];
-                await writeFile(artworkFilePath, artworkToSetData);
+            case "replace":
+                let artPath = artworkFilePath;
+                if (!artPath) {
+                    const filePath = $rightClickedTracks[0].path;
+                    const folder = filePath.split("/").slice(0, -1).join("/");
+                    artPath = `${folder}/cover.${getImageExtension(artworkToSetFormat)}`;
+                }
+                console.log(
+                    "save artwork to folder",
+                    artPath,
+                    artworkToSetData,
+                );
+                await writeFile(artPath, artworkToSetData);
         }
+        toast.success("Artwork saved!", {
+            position: "top-right",
+        });
+
+        await updateArtwork();
     }
 
     function searchArtwork() {
@@ -604,6 +546,102 @@
     ];
 
     let currentTab = tabs[1].id;
+
+    $: saveTooltip = (() => {
+        if (!metadata?.mappedMetadata) return "";
+
+        const changes = metadata.mappedMetadata.filter(
+            (m) => m.originalValue !== m.value,
+        );
+
+        if (!changes.length && !artworkSetAction) return "";
+
+        const added = changes.filter(
+            (m) => !m.originalValue?.length && m.value?.length,
+        );
+        const removed = changes.filter(
+            (m) => m.originalValue?.length && !m.value?.length,
+        );
+        const modified = changes.filter(
+            (m) => m.originalValue?.length && m.value?.length,
+        );
+
+        const badge = (type: "added" | "removed" | "modified") => {
+            const styles: Record<string, string> = {
+                added: "background:#1a472a;color:#69db7c;",
+                removed: "background:#3b0d0d;color:#ff6b6b;",
+                modified: "background:#3a2a00;color:#fcc419;",
+            };
+            const labels = {
+                added: $LL.trackInfo.metadata.saveTooltip.added().toUpperCase(),
+                removed: $LL.trackInfo.metadata.saveTooltip
+                    .removed()
+                    .toUpperCase(),
+                modified: $LL.trackInfo.metadata.saveTooltip
+                    .modified()
+                    .toUpperCase(),
+            };
+            return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;${styles[type]}">${labels[type]}</span>`;
+        };
+
+        const row = (
+            type: "added" | "removed" | "modified",
+            id: string,
+            from?: string,
+            to?: string,
+        ) => {
+            const colors = {
+                added: "#69db7c",
+                removed: "#ff6b6b",
+                modified: "#fcc419",
+            };
+            const color = colors[type];
+            const detail =
+                type === "added"
+                    ? `<span style="color:#69db7c">${to}</span>`
+                    : type === "removed"
+                      ? `<span style="color:#ff6b6b;text-decoration:line-through">${from}</span>`
+                      : `<span style="color:#aaa">${from}</span> <span style="color:#555">→</span> <span style="color:#fcc419">${to}</span>`;
+            return `<li style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #ffffff0f">
+            ${badge(type)}
+            <span style="color:${color};font-weight:600;min-width:80px;font-size:11px">${id}</span>
+            <span style="color:#ccc;font-size:11px;flex:1">${detail}</span>
+        </li>`;
+        };
+
+        const rows = [
+            ...added.map((m) => row("added", m.id, undefined, m.value)),
+            ...removed.map((m) => row("removed", m.id, m.originalValue)),
+            ...modified.map((m) =>
+                row("modified", m.id, m.originalValue, m.value),
+            ),
+        ];
+
+        const summaryParts = [
+            added.length
+                ? `<span style="color:#69db7c">+${added.length} added</span>`
+                : "",
+            removed.length
+                ? `<span style="color:#ff6b6b">−${removed.length} removed</span>`
+                : "",
+            modified.length
+                ? `<span style="color:#74c0fc">~${modified.length} changed</span>`
+                : "",
+        ]
+            .filter(Boolean)
+            .join("<span style='color:#555;margin:0 4px'>·</span>");
+
+        return `<div style="font-family:monospace;min-width:320px;max-width:480px;padding:0.5em 1em 0 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;margin-bottom:4px;border-bottom:2px solid #ffffff15">
+            <span style="color:#fff;font-weight:700;font-size:12px;letter-spacing:.5px">${$LL.trackInfo.metadata.saveTooltip.title().toUpperCase()}</span>
+            <span style="font-size:11px">${summaryParts}</span>
+        </div>
+        <ul style="list-style:none;margin:0;padding:0">
+            ${rows.join("")}
+        </ul>
+        <div style="margin-top:8px;text-align:right;color:#555;font-size:10px">${$LL.trackInfo.metadata.saveTooltip.hint()}</div>
+    </div>`;
+    })();
 </script>
 
 <container use:focusTrap use:clickOutside={onClose}>
@@ -613,14 +651,21 @@
                 <Icon icon="mingcute:close-circle-fill" onClick={onClose} />
                 <small>ESC</small>
             </div>
-            <div class="button-container">
-                {#if currentTab === "metadata"}
-                    <ButtonWithIcon
-                        disabled={!hasChanges}
-                        onClick={save}
-                        text={`${$LL.trackInfo.save()}`}
-                    />
-                {/if}
+            <div
+                class="button-container"
+                class:hidden={currentTab !== "metadata"}
+            >
+                <ButtonWithIcon
+                    disabled={!hasChanges}
+                    onClick={save}
+                    text={`${$LL.trackInfo.save()}`}
+                    tooltip={{
+                        show: hasChanges,
+                        content: saveTooltip,
+                        allowHTML: true,
+                        placement: "bottom",
+                    }}
+                />
             </div>
 
             <div class="title-container">
@@ -854,6 +899,9 @@
             left: 0;
             opacity: 0.3;
             font-size: 0.8em;
+        }
+        &.hidden {
+            visibility: hidden;
         }
     }
 

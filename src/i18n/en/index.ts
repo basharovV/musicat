@@ -150,6 +150,16 @@ const en = {
         bitRate: "Bitrate",
         enrichmentCenter: "Enrichment Center",
         save: "Save",
+        metadata: {
+            title: "Metadata",
+            saveTooltip: {
+                title: "Pending changes",
+                added: `added`,
+                removed: `removed`,
+                modified: `changed`,
+                hint: "⌘ + Enter to save",
+            },
+        },
         enrichment: {
             country: {
                 title: "Country of Origin",
@@ -170,7 +180,8 @@ const en = {
         artwork: {
             saveButton: {
                 file: "Write to file",
-                folder: "Save as {file} to folder",
+                folder: "Save {file} to folder",
+                deleteFolderArt: "Delete {file} in folder",
             },
             fetchButton: {
                 title: "Fetch art",
@@ -188,7 +199,6 @@ const en = {
         noArtwork: "No artwork",
         multiArtwork: "Multiple artworks",
         artworkTooltip: "Paste image or click to select file",
-        metadata: "Metadata",
         tools: "Tools",
         aboutArtwork: "About artwork",
         artworkTooltipTitle: "🎨 Artwork priority",

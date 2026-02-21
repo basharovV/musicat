@@ -140,19 +140,25 @@
                 theme="translucent"
                 onClick={saveArtworkToFile}
                 fullWidth
-                disabled={!artworkToSetSrc}
+                disabled={!artworkSetAction}
             />
             <ButtonWithIcon
                 icon="material-symbols:folder"
-                text={$LL.trackInfo.artwork.saveButton.folder({
-                    file: artworkExtension
-                        ? `cover.${artworkExtension}`
-                        : `cover.jpg`,
-                })}
+                text={artworkFileName && artworkSetAction === "delete"
+                    ? $LL.trackInfo.artwork.saveButton.deleteFolderArt({
+                          file: artworkFileName,
+                      })
+                    : $LL.trackInfo.artwork.saveButton.folder({
+                          file: artworkExtension
+                              ? `cover.${artworkExtension}`
+                              : `cover.jpg`,
+                      })}
                 theme="translucent"
                 onClick={saveArtworkToFolder}
                 fullWidth
-                disabled={!artworkToSetSrc}
+                disabled={!artworkSetAction ||
+                    (artworkSetAction === "delete" && !artworkFileName) ||
+                    isMultiArt}
             />
         </div>
     </div>
