@@ -57,6 +57,10 @@ async function whereGenreIs(genre: string) {
     return db.songs.where("genre").equals(genre);
 }
 
+async function withStems() {
+    return db.songs.filter((s) => s.stems?.length > 0);
+}
+
 export async function findQuery(queryId: string) {
     console.log("find", queryId);
     if (queryId === undefined) return null;
@@ -67,12 +71,12 @@ export async function findQuery(queryId: string) {
             found = (await db.smartQueries.get(id)) ?? null;
         }
     }
-    
+
     // If it's a built-in query, resolve the name function to get the translated text
-    if (found && typeof found.name === 'function') {
+    if (found && typeof found.name === "function") {
         found = { ...found, name: found.name() };
     }
-    
+
     console.log("found", found);
     return found;
 }
@@ -87,6 +91,11 @@ const BUILT_IN_QUERIES = {
         name: () => get(LL).smartPlaylists.builtIn.recentlyAdded(),
         value: "recentlyAdded",
         run: recentlyAdded,
+    },
+    withStems: {
+        name: () => get(LL).smartPlaylists.builtIn.withStems(),
+        value: "withStems",
+        run: withStems,
     },
 };
 
