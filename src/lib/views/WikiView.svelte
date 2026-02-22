@@ -113,7 +113,7 @@
         ev.preventDefault();
         ev.stopPropagation();
         const albumId = ev.currentTarget.getAttribute("data-album");
-        playAlbum(albumId);
+        audioPlayer.playAlbum(albumId);
     }
 
     function onArtistClicked(ev: MouseEvent) {
@@ -255,22 +255,6 @@
         // mention.element(closes)
     }
 
-    async function playAlbum(albumId: string) {
-        const album = await getAlbum(albumId);
-        if (
-            $current.song?.album.toLowerCase() ===
-            album.displayTitle.toLowerCase()
-        ) {
-            if ($isPlaying) {
-                audioPlayer.pause();
-            } else {
-                audioPlayer.play(true);
-            }
-        } else if (album) {
-            let tracks = await getAlbumTracks(album);
-            setQueue(tracks, 0);
-        }
-    }
     async function playArtist(artist: string) {
         if ($current.song?.artist.toLowerCase() === artist.toLowerCase()) {
             if ($isPlaying) {

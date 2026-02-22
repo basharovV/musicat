@@ -5,10 +5,11 @@
     import type { Album, Song, SongOrder } from "../../App";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { groupBy } from "../../utils/ArrayUtils";
-    import AlbumsTimeline from "../ui/AlbumsTimeline.svelte";
+    import AlbumsTimeline from "../analytics/AlbumsTimeline.svelte";
     import { fade } from "svelte/transition";
     import { cubicInOut } from "svelte/easing";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import GenreMap from "../analytics/GenreMap.svelte";
 
     export let songOrder: SongOrder;
 
@@ -193,60 +194,8 @@
         </div>
     {:else}
         <div class="analytics" in:fade={{ duration: 500 }}>
-            <section class="plays">
-                <h1><span>{stats.totalSongs}</span> songs</h1>
-                <h2>
-                    <span
-                        >{(stats.totalDurationMins / 60).toFixed(2)} hours</span
-                    >
-                </h2>
-                <p>
-                    You have listened to {stats.percentageListened.toPrecision(
-                        2,
-                    )}% of your library ({stats.distinctPlays} / {$songs?.length}
-                    songs)
-                </p>
-
-                <ProgressBar percent={stats.percentageListened} />
-            </section>
-
             <section class="genres">
-                <h1>
-                    <span>{stats.genres.count} </span>genres
-                </h1>
-                <h2>
-                    The genre dominating your library is <span
-                        >{stats.genres.mostPlayed}</span
-                    >
-                </h2>
-                <p>
-                    from {stats.genres.playCount} tracks
-                </p>
-            </section>
-
-            <section class="country">
-                {#if stats.country.mostPlayed && stats.country.count}
-                    <h1>
-                        <span>{stats.country.count} </span>countries
-                    </h1>
-                    <h2>
-                        You have more music from <span
-                            >{stats.country.mostPlayed}</span
-                        >
-                        than any other country
-                    </h2>
-
-                    <p>
-                        from {stats.country.playCount} tracks
-                    </p>
-                {:else}
-                    <p>No country data in your library</p>
-                    <br />
-                    <ButtonWithIcon
-                        text="Add country data"
-                        onClick={() => ($uiView = "map")}
-                    />
-                {/if}
+                <GenreMap songs={$songs} />
             </section>
             <section class="timeline">
                 <AlbumsTimeline {albumsByYear} />
@@ -291,8 +240,8 @@
     .analytics {
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
 
         section {
             padding: 4em;
@@ -318,119 +267,22 @@
                 margin: 1em 0 0 0;
                 opacity: 0.5;
             }
-
-            &.plays {
-                grid-row: 1;
-                grid-column: 1 / 3;
-                border-right: 1px solid var(--analytics-border);
-                border-bottom: 1px solid var(--analytics-border);
-            }
             &.genres {
                 grid-row: 1;
-                grid-column: 3 / 5;
+                grid-column: 1 / 4;
                 border-right: 1px solid var(--analytics-border);
                 border-bottom: 1px solid var(--analytics-border);
                 span {
                     color: var(--analytics-text-secondary);
                 }
             }
-            &.country {
-                grid-row: 1;
-                grid-column: 5 / 7;
-                border-bottom: 1px solid var(--analytics-border);
-                span {
-                    color: var(--analytics-text-primary);
-                }
-            }
+
             &.timeline {
-                padding: 0 2em;
                 grid-row: 2;
-                grid-column: 1 / 7;
-                border-bottom: 1px solid var(--analytics-border);
-                span {
-                    color: var(--analytics-text-primary);
-                }
-            }
-            &.short-summary {
-                padding: 2em;
-                grid-row: 3;
-                grid-column: 1 / 7;
-                border-bottom: 1px solid var(--analytics-border);
-                align-items: center;
-                justify-content: flex-start;
-                h3 {
-                    color: var(--analytics-text-primary);
-                    font-weight: 300;
-                    text-align: left;
-                    margin: 0;
-                }
-                h2 {
-                    max-width: none;
-                    line-height: 1.5em;
-                    text-align: left;
-                    font-weight: 400;
-                    font-size: 1.7em;
-                }
-            }
-            &.summary {
-                grid-row: 4;
                 grid-column: 1 / 4;
                 border-bottom: 1px solid var(--analytics-border);
-                border-right: 1px solid var(--analytics-border);
-                align-items: flex-start;
-                justify-content: flex-start;
-                h3 {
+                span {
                     color: var(--analytics-text-primary);
-                    font-weight: 300;
-                    text-align: left;
-                }
-                h2 {
-                    max-width: none;
-                    line-height: 1.5em;
-                    text-align: left;
-                    font-weight: 400;
-                    font-size: 1.3em;
-                    :global(span) {
-                        border-radius: 4px;
-                        border-bottom: 1px solid rgba(128, 128, 128, 0.514);
-                        padding: 2px 4px;
-                        font-weight: 500;
-                        &:hover {
-                            border-bottom: 1px solid white;
-                            cursor: pointer;
-                        }
-                    }
-                }
-            }
-            &.did-you-know {
-                grid-row: 4;
-                grid-column: 4 / 7;
-                border-bottom: 1px solid var(--analytics-border);
-                align-items: flex-start;
-                justify-content: flex-start;
-                h3 {
-                    color: var(--analytics-text-primary);
-
-                    font-weight: 300;
-                    text-align: left;
-                }
-                h2 {
-                    max-width: none;
-                    line-height: 1.5em;
-                    text-align: left;
-                    font-weight: 400;
-                    font-size: 1.3em;
-
-                    :global(span) {
-                        border-radius: 4px;
-                        border-bottom: 1px solid rgba(128, 128, 128, 0.514);
-                        padding: 2px 4px;
-                        font-weight: 500;
-                        &:hover {
-                            border-bottom: 1px solid white;
-                            cursor: pointer;
-                        }
-                    }
                 }
             }
         }

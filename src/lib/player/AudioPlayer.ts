@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { get } from "svelte/store";
 import type { ArtworkSrc, Song, ToImport } from "../../App";
-import { db } from "../../data/db";
+import { db, getAlbum, getAlbumTracks } from "../../data/db";
 import {
     current,
     currentSongArtworkSrc,
@@ -683,6 +683,24 @@ class AudioPlayer {
         } else {
             this.currentSong = null;
             current.set({ song: null, index: 0, position: 0 });
+        }
+    }
+
+    async playAlbum(albumId: string) {
+        const album = await getAlbum(albumId);
+        console.log("album", album, albumId);
+        if (
+            get(current).song?.album.toLowerCase() ===
+            album.displayTitle.toLowerCase()
+        ) {
+            if (get(isPlaying)) {
+                audioPlayer.pause();
+            } else {
+                audioPlayer.play(true);
+            }
+        } else if (album) {
+            let tracks = await getAlbumTracks(album);
+            setQueue(tracks, 0);
         }
     }
 
