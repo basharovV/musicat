@@ -95,7 +95,7 @@
         position: relative;
         padding: 0px 10px;
         cursor: default;
-        font-size: 13.5px;
+        font-size: 12.5px;
         display: flex;
         align-items: center;
         grid-gap: 5px;
@@ -150,7 +150,7 @@
 
         span {
             display: block;
-            padding: 0.2em 0 0.3em 0;
+            padding: 0.1em 0;
             z-index: 1;
             width: 100%;
             p {
