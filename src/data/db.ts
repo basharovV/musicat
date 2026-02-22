@@ -150,7 +150,7 @@ export async function getAlbum(albumId: string): Promise<Album> {
             });
             return albums[0];
         } else {
-            db.albums.get(albumId);
+            return db.albums.get(albumId);
         }
     } catch (err) {
         console.error(err);
