@@ -1,6 +1,9 @@
-import type { BaseTranslation } from "../i18n-types";
+import type { Translation } from "../i18n-types";
 
 const es = {
+    common: {
+        noResults: "No results",
+    },
     infoPopup: {
         builtBy: "Creado por",
         andContributors: "y colaboradores",
@@ -68,6 +71,7 @@ const es = {
         builtIn: {
             recentlyAdded: "Añadidos recientemente",
             favourites: "Favoritos",
+            withStems: "Con stems",
         },
         builder: {
             close: "Cerrar editor",
@@ -135,7 +139,7 @@ const es = {
     },
     trackInfo: {
         title: "Información de la pista",
-        subtitle: "Usa ARRIBA y ABAJO para cambiar de pista",
+        subtitle: "Usa ↑ y ↓ para cambiar de pista",
         overwriteFile: "Sobrescribir archivo",
         fileInfo: "Información del archivo",
         file: "Archivo",
@@ -145,18 +149,57 @@ const es = {
         sampleRate: "Frecuencia muestreo",
         bitRate: "Tasa de bits",
         enrichmentCenter: "Centro de enriquecimiento",
-        countryOfOrigin: "País de origen",
-        countryOfOriginTooltip:
-            "Configura esto para usar la vista de mapa y filtrar por país en listas inteligentes",
-        fetchingOriginCountry: "Cargando...",
         save: "Guardar",
-        fetchFromWikipedia: "Obtener de Wikipedia",
         artworkReadyToSave: "Listo para guardar",
         artworkFound: "Encontrado",
         noArtwork: "Sin imagen",
         artworkTooltip: "Pega la imagen o haz clic para seleccionar un archivo",
-        fetchArt: "Buscar imagen",
-        metadata: "Metadatos",
+        multiArtwork: "Multiples imagenes",
+        metadata: {
+            title: "Metadatos",
+            saveTooltip: {
+                title: "Cambios pendientes",
+                added: "añadido",
+                removed: "eliminado",
+                modified: "cambiado",
+                hint: "⌘ + Enter para guardar",
+            },
+        },
+        enrichment: {
+            country: {
+                title: "País de origen",
+                infoTooltip:
+                    "Configúralo para usar la vista de Mapa y filtrar por país en las Listas de reproducción inteligentes",
+                fetchButton: {
+                    title: "Obtener",
+                    loading: "Cargando...",
+                    tooltip: "Obtener país de origen desde Wikipedia",
+                },
+                saveButton: {
+                    title: "Guardar",
+                },
+                disabled:
+                    "El enriquecimiento de país no está disponible al usar una base de datos de beets de solo lectura.",
+            },
+        },
+        artwork: {
+            saveButton: {
+                file: "Escribir en archivo",
+                folder: "Guardar {file} en carpeta",
+                deleteFolderArt: "Eliminar {file} en carpeta",
+            },
+            fetchButton: {
+                title: "Obtener carátula",
+                tooltip:
+                    "Obtener carátula desde Wikipedia, Musicbrainz, Genius o Discogs y guardar en la carpeta del álbum",
+            },
+            searchButton: {
+                title: "Buscar carátula",
+                tooltip:
+                    "Abrir una búsqueda en el navegador para la portada del álbum",
+            },
+            pasteTooltip: "Clic para reemplazar, o pegar una imagen",
+        },
         tools: "Herramientas",
         aboutArtwork: "Sobre la imagen",
         artworkTooltipTitle: "🎨 Prioridad de la imagen",
@@ -215,6 +258,7 @@ const es = {
         openApiKey: "Clave API de OpenAI",
         geniusApiKey: "Clave API de Genius",
         discogsApiKey: "Clave API de Discogs",
+        beetsDbLocation: "Ubicación de la base de datos beets",
     },
     wiki: {
         inArticle: "Menciones encontradas en tu biblioteca:",
@@ -280,45 +324,79 @@ const es = {
             tracksLabel: "pistas",
         },
     },
-    trackMenu: {
-        reImportTrack: "",
-        reImportTracks: "",
-        reImportTrackHint: "",
-        separateTitle: "",
-        separateStems: "",
-        editTag: "",
-        lookingOnline: "",
-        originCountry: "",
-        originCountryC: "",
-        originCountryHint: "",
-        wikiPanel: "",
-        removeFromLibrary: "Eliminar {{track | ?? tracks}} de la biblioteca",
-        deleteFile: "Eliminar {{file | ?? files}}",
-        deleteFileHint: "Mover a la papelera del sistema",
+    albumMenu: {
+        reImportAlbum: "Reimportar álbum",
+        enrich: "⚡️ Enriquecer",
+        originCountry: "País de origen",
+        originCountryC: "País de origen ✅",
+        originCountryHint: "de Wikipedia",
+        fetchArtwork: "Obtener carátula de Wikipedia",
+        fetchArtworkHint: "Guardar en la carpeta como cover.jpg",
+        fetchFromWikipedia: "Obteniendo desde Wikipedia...",
+        scanExistingArtwork: "Escanear carátula existente",
+        scanningExistingArtwork: "Reescaneando...",
+        scanExistingArtworkHint:
+            "Comprobar arte codificado en pistas / imagen de carpeta",
+        searchFromBrave: "Buscar carátula en Brave",
+        wikiPanel: "Página Wiki:",
+        removeFromLibrary: "Eliminar álbum de la biblioteca",
         openInFileManager: "Abrir en {explorerName}",
-        infoMetadata: "",
+        infoMetadata: "Info y metadatos",
+    },
+    trackMenu: {
+        reImportTrack: "Reimportar pista",
+        reImportTracks: "Reimportar {n} pistas",
+        reImportTrackHint: "También reimportará los álbumes",
+        separateTitle: "Stems (clic para reproducir)",
+        separateStems: "Separar stems",
+        editTag: "Editar etiquetas",
+        enrich: "⚡️ Enriquecer",
+        lookingOnline: "Buscando en línea...",
+        wikiPanel: "Panel Wiki:",
+        removeFromLibrary: "Eliminar {{track | ?? pistas}} de la biblioteca",
+        deleteFile: "Eliminar {{file | ?? archivos}}",
+        deleteFileHint: "Mover a la papelera del sistema",
+        moreTools: "Más herramientas",
+        unselectAll: "Deseleccionar todo",
+        removeTrackFromQueue: "Eliminar pista de la cola",
+        removeTracksFromQueue: "Eliminar pistas de la cola",
+        originCountry: "País de origen",
+        originCountryC: "País de origen ✅",
+        originCountryHint: "de Wikipedia",
+        openInFileManager: "Abrir en {explorerName}",
+        infoMetadata: "Info y metadatos",
+    },
+    toolsMenu: {
+        enrich: "⚡️ Enriquecer",
+        lookingOnline: "Buscando en línea...",
+        originCountry: "País de origen",
+        originCountryC: "País de origen ✅",
+        originCountryHint: "de Wikipedia",
+        chords: "Acordes:",
+        lyrics: "Letras:",
+        wikiPanel: "Panel Wiki:",
     },
     toDelete: {
-        title: "Para borrar",
-        description: "Pistas para borrar desde el Modo Poda",
+        title: "Para eliminar",
+        description: "Pistas a eliminar en Modo Purga",
         keepAllBtn: "Conservar todo",
         deleteAllBtn: "Mover todo a la papelera",
         notification: {
-            deleting: "Borrando {{track | ?? tracks}}",
-            deleted: "Borrado {{track | ?? tracks}}",
+            deleting: "Eliminando {{track | ?? pistas}}",
+            deleted: "{{track | ?? pistas}} eliminadas",
         },
     },
     lyrics: {
         autoScroll: "Desplazamiento automático",
     },
     stemSeparation: {
-        loading: "",
-        complete: "",
-        error: "",
-        showStems: "",
-        cancel: "",
-        close: "",
+        loading: "Separando voz e instrumental...",
+        complete: "Separación completada",
+        error: "Error: {{error}}",
+        showStems: "Mostrar stems",
+        cancel: "Cancelar",
+        close: "Cerrar",
     },
-} satisfies BaseTranslation;
+} satisfies Translation;
 
 export default es;

@@ -1,6 +1,9 @@
-import type { BaseTranslation } from "../i18n-types";
+import type { Translation } from "../i18n-types";
 
 const cn = {
+    common: {
+        noResults: "无结果",
+    },
     infoPopup: {
         builtBy: "Built by",
         andContributors: "and contributors",
@@ -68,6 +71,7 @@ const cn = {
         builtIn: {
             recentlyAdded: "最近添加",
             favourites: "喜爱的歌曲",
+            withStems: "包含分轨",
         },
         builder: {
             close: "关闭编辑器",
@@ -145,18 +149,56 @@ const cn = {
         sampleRate: "采样率",
         bitRate: "比特率",
         enrichmentCenter: "拓展中心",
-        countryOfOrigin: "国家来源",
-        countryOfOriginTooltip:
-            "设置此项可在智能播放列表中使用地图视图并按国家/地区筛选。",
-        fetchingOriginCountry: "加载中...",
         save: "保存",
-        fetchFromWikipedia: "从维基百科获取",
         artworkReadyToSave: "准备保存",
         artworkFound: "找到",
         noArtwork: "没有作品",
+        multiArtwork: "多封面",
         artworkTooltip: "粘贴图片或点此选择文件",
-        fetchArt: "获取艺术",
-        metadata: "元数据",
+        metadata: {
+            title: "元数据",
+            saveTooltip: {
+                title: "待处理更改",
+                added: "已添加",
+                removed: "已移除",
+                modified: "已更改",
+                hint: "⌘ + Enter 以保存",
+            },
+        },
+        enrichment: {
+            country: {
+                title: "原产国",
+                infoTooltip:
+                    "设置此项以使用地图视图并在智能播放列表中按国家/地区筛选",
+                fetchButton: {
+                    title: "获取",
+                    loading: "加载中...",
+                    tooltip: "从 Wikipedia 获取原产国",
+                },
+                saveButton: {
+                    title: "保存",
+                },
+                disabled:
+                    "使用只读 beets 数据库时，无法使用国家/地区丰富功能。",
+            },
+        },
+        artwork: {
+            saveButton: {
+                file: "写入文件",
+                folder: "将 {file} 保存到文件夹",
+                deleteFolderArt: "删除文件夹中的 {file}",
+            },
+            fetchButton: {
+                title: "获取封面",
+                tooltip:
+                    "从 Wikipedia、Musicbrainz、Genius 或 Discogs 获取封面并保存到专辑文件夹",
+            },
+            searchButton: {
+                title: "搜索封面",
+                tooltip: "打开浏览器搜索专辑封面",
+            },
+            pasteTooltip: "点击替换，或粘贴图片",
+        },
         tools: "工具",
         aboutArtwork: "关于作品",
         artworkTooltipTitle: "🎨 作品优先级",
@@ -211,6 +253,7 @@ const cn = {
         openApiKey: "OpenAI API Key",
         geniusApiKey: "Genius API Key",
         discogsApiKey: "Discogs API Key",
+        beetsDbLocation: "Beets 数据库位置",
     },
     wiki: {
         inArticle: "从您的曲库中找到相关内容：",
@@ -350,6 +393,6 @@ const cn = {
         cancel: "取消",
         close: "关闭",
     },
-} satisfies BaseTranslation;
+} satisfies Translation;
 
 export default cn;

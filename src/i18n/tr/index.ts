@@ -1,6 +1,9 @@
-import type { BaseTranslation } from "../i18n-types";
+import type { Translation } from "../i18n-types";
 
 const tr = {
+    common: {
+        noResults: "Sonuç yok",
+    },
     infoPopup: {
         builtBy: "Yapımcı",
         andContributors: "ve katkıda bulunanlar",
@@ -69,6 +72,7 @@ const tr = {
         builtIn: {
             recentlyAdded: "Son Eklenenler",
             favourites: "Favoriler",
+            withStems: "Stem'ler ile",
         },
         builder: {
             close: "Düzenleyiciyi kapat",
@@ -147,18 +151,56 @@ const tr = {
         sampleRate: "Örnekleme hızı",
         bitRate: "Bit hızı",
         enrichmentCenter: "Zenginleştirme Merkezi",
-        countryOfOrigin: "Köken Ülke",
-        countryOfOriginTooltip:
-            "Harita görünümünü ve Akıllı Çalma Listelerinde ülkeye göre filtrelemeyi kullanmak için bunu ayarlayın",
-        fetchingOriginCountry: "Yükleniyor...",
         save: "Kaydet",
-        fetchFromWikipedia: "Wikipedia'dan getir",
         artworkReadyToSave: "Kaydedilmeye hazır",
         artworkFound: "Bulundu",
         noArtwork: "Kapak resmi yok",
+        multiArtwork: "Çoklu görsel",
         artworkTooltip: "Resim yapıştırın veya dosya seçmek için tıklayın",
-        fetchArt: "Kapak Resmi Getir",
-        metadata: "Meta veri",
+        metadata: {
+            title: "Üstveri",
+            saveTooltip: {
+                title: "Bekleyen değişiklikler",
+                added: "eklendi",
+                removed: "kaldırıldı",
+                modified: "değiştirildi",
+                hint: "Kaydetmek için ⌘ + Enter",
+            },
+        },
+        enrichment: {
+            country: {
+                title: "Menşe Ülke",
+                infoTooltip:
+                    "Harita görünümünü kullanmak ve Akıllı Çalma Listelerinde ülkeye göre filtrelemek için bunu ayarlayın",
+                fetchButton: {
+                    title: "Getir",
+                    loading: "Yükleniyor...",
+                    tooltip: "Menşe ülkeyi Wikipedia'dan getir",
+                },
+                saveButton: {
+                    title: "Kaydet",
+                },
+                disabled:
+                    "Salt okunur beets veritabanı kullanılırken ülke zenginleştirme özelliği kullanılamaz.",
+            },
+        },
+        artwork: {
+            saveButton: {
+                file: "Dosyaya yaz",
+                folder: "{file} dosyasını klasöre kaydet",
+                deleteFolderArt: "Klasördeki {file} dosyasını sil",
+            },
+            fetchButton: {
+                title: "Görseli getir",
+                tooltip:
+                    "Görseli Wikipedia, Musicbrainz, Genius veya Discogs'tan getir ve albüm klasörüne kaydet",
+            },
+            searchButton: {
+                title: "Görseli ara",
+                tooltip: "Albüm kapağı için tarayıcıda arama yap",
+            },
+            pasteTooltip: "Değiştirmek için tıkla veya bir görsel yapıştır",
+        },
         tools: "Araçlar",
         aboutArtwork: "Kapak resmi hakkında",
         artworkTooltipTitle: "🎨 Kapak resmi önceliği",
@@ -216,6 +258,7 @@ const tr = {
         openApiKey: "OpenAI API Anahtarı",
         geniusApiKey: "Genius API Anahtarı",
         discogsApiKey: "Discogs API Anahtarı",
+        beetsDbLocation: "Beets veritabanı konumu",
     },
     wiki: {
         inArticle: "Kütüphanenizden bulunan bahisler:",
@@ -280,27 +323,61 @@ const tr = {
             tracksLabel: "parça",
         },
     },
+    albumMenu: {
+        reImportAlbum: "Albümü yeniden içe aktar",
+        enrich: "⚡️ Zenginleştir",
+        originCountry: "Menşe ülke",
+        originCountryC: "Menşe ülke ✅",
+        originCountryHint: "Wikipedia'dan",
+        fetchArtwork: "Wikipedia'dan görsel getir",
+        fetchArtworkHint: "Klasöre cover.jpg olarak kaydet",
+        fetchFromWikipedia: "Wikipedia'dan getiriliyor...",
+        scanExistingArtwork: "Mevcut görselleri tara",
+        scanningExistingArtwork: "Yeniden taranıyor...",
+        scanExistingArtworkHint:
+            "Parçalardaki kodlanmış sanatı / klasör görselini kontrol et",
+        searchFromBrave: "Brave'de görsel ara",
+        wikiPanel: "Wiki sayfası:",
+        removeFromLibrary: "Albümü kütüphaneden kaldır",
+        openInFileManager: "{explorerName} içinde aç",
+        infoMetadata: "Bilgi ve Üstveri",
+    },
     trackMenu: {
-        reImportTrack: "",
-        reImportTracks: "",
-        reImportTrackHint: "",
-        separateTitle: "",
-        separateStems: "",
-        editTag: "",
-        lookingOnline: "",
-        originCountry: "",
-        originCountryC: "",
-        originCountryHint: "",
-        wikiPanel: "",
+        reImportTrack: "Parçayı yeniden içe aktar",
+        reImportTracks: "{n} parçayı yeniden içe aktar",
+        reImportTrackHint: "Ayrıca albümleri de yeniden içe aktarır",
+        separateTitle: "Stem'ler (oynatmak için tıkla)",
+        separateStems: "Stem'leri ayır",
+        editTag: "Etiketleri düzenle",
+        enrich: "⚡️ Zenginleştir",
+        lookingOnline: "Çevrimiçi aranıyor...",
+        wikiPanel: "Wiki paneli:",
         removeFromLibrary: "{{track | ?? parça}} kütüphaneden kaldır",
         deleteFile: "{{file | ?? dosya}} sil",
-        deleteFileHint: "Sistem Çöp Kutusuna taşı",
-        openInFileManager: "{explorerName} ile aç",
-        infoMetadata: "",
+        deleteFileHint: "Sistem Çöp Kutusu'na taşı",
+        moreTools: "Daha fazla araç",
+        unselectAll: "Tüm seçimi kaldır",
+        removeTrackFromQueue: "Parçayı kuyruktan çıkar",
+        removeTracksFromQueue: "Parçaları kuyruktan çıkar",
+        originCountry: "Menşe ülke",
+        originCountryC: "Menşe ülke ✅",
+        originCountryHint: "Wikipedia'dan",
+        openInFileManager: "{explorerName} içinde aç",
+        infoMetadata: "Bilgi ve Üstveri",
+    },
+    toolsMenu: {
+        enrich: "⚡️ Zenginleştir",
+        lookingOnline: "Çevrimiçi aranıyor...",
+        originCountry: "Menşe ülke",
+        originCountryC: "Menşe ülke ✅",
+        originCountryHint: "Wikipedia'dan",
+        chords: "Akorlar:",
+        lyrics: "Şarkı sözleri:",
+        wikiPanel: "Wiki paneli:",
     },
     toDelete: {
-        title: "Silinecek",
-        description: "Ayıklama Modundan silinecek parçalar",
+        title: "Silinecekler",
+        description: "Temizleme Modundan silinecek parçalar",
         keepAllBtn: "Hepsini tut",
         deleteAllBtn: "Hepsini çöpe taşı",
         notification: {
@@ -312,13 +389,13 @@ const tr = {
         autoScroll: "Otomatik kaydırma",
     },
     stemSeparation: {
-        loading: "",
-        complete: "",
-        error: "",
-        showStems: "",
-        cancel: "",
-        close: "",
+        loading: "Vokal ve enstrümantal ayrıştırılıyor...",
+        complete: "Ayrıştırma tamamlandı",
+        error: "Hata: {{error}}",
+        showStems: "Stem'leri göster",
+        cancel: "İptal",
+        close: "Kapat",
     },
-} satisfies BaseTranslation;
+} satisfies Translation;
 
 export default tr;

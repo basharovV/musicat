@@ -327,10 +327,9 @@ type RootTranslation = {
 				}
 				titleContains: {
 					/**
-					 * s​o​n​g​ ​t​i​t​l​e​ ​c​o​n​t​a​i​n​s​ ​{​t​e​x​t​}
-					 * @param {unknown} text
+					 * s​o​n​g​ ​t​i​t​l​e​ ​c​o​n​t​a​i​n​s​ ​[​t​e​x​t​]
 					 */
-					title: RequiredParams<'text'>
+					title: string
 					/**
 					 *  ​e​g​.​ ​t​i​t​l​e​ ​c​o​n​t​a​i​n​s​ ​L​o​v​e
 					 */
@@ -1503,9 +1502,9 @@ export type TranslationFunctions = {
 				}
 				titleContains: {
 					/**
-					 * song title contains {text}
+					 * song title contains [text]
 					 */
-					title: (arg: { text: unknown }) => LocalizedString
+					title: () => LocalizedString
 					/**
 					 *  eg. title contains Love
 					 */

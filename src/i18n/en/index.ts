@@ -1,4 +1,4 @@
-import type { BaseTranslation } from "../i18n-types";
+import type { Translation } from "../i18n-types";
 
 const en = {
     common: {
@@ -102,7 +102,7 @@ const en = {
                     example: "eg. released in 1999",
                 },
                 titleContains: {
-                    title: "song title contains {text}",
+                    title: "song title contains [text]",
                     example: " eg. title contains Love",
                 },
                 longerThan: {
@@ -396,6 +396,6 @@ const en = {
         cancel: "Cancel",
         close: "Close",
     },
-} satisfies BaseTranslation;
+} satisfies Translation;
 
 export default en;
