@@ -177,8 +177,8 @@
                 border-left: 1px solid
                     color-mix(in srgb, var(--inverse), transparent 50%);
                 box-shadow:
-                    inset -0.75px -0.5px rgba(255, 255, 255, 0.1),
-                    inset + 0.75px +0.5px rgba(255, 255, 255, 0.025),
+                    inset - 0.75px - 0.5px rgba(255, 255, 255, 0.1),
+                    inset + 0.75px + 0.5px rgba(255, 255, 255, 0.025),
                     3px 2px 10px rgba(0, 0, 0, 0.25),
                     inset 0px 0px 10px 5px rgba(255, 255, 255, 0.025),
                     inset 0px 0px 40px 5px rgba(255, 255, 255, 0.025);
@@ -505,7 +505,7 @@
                     height: 100%;
                     flex-direction: column;
                     align-items: center;
-                    justify-content: end;
+                    justify-content: flex-end;
 
                     p {
                         width: 100%;

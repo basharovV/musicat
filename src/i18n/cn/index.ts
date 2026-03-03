@@ -393,6 +393,26 @@ const cn = {
         cancel: "取消",
         close: "关闭",
     },
+    analytics: {
+        summary: {
+            title: "概览",
+            totalSongs: "歌曲总数",
+            albums: "专辑",
+            artists: "艺人",
+            genres: "流派",
+            longestTrack: "最长曲目",
+        },
+        genreMap: {
+            title: "流派地图",
+            fromSongs: "来自 {n} 首歌曲",
+            clickToPlay: "点击播放",
+        },
+        albumsTimeline: {
+            title: "你的音乐库跨越了 <span>{years}</span> 年",
+            fromAlbums: "来自 <span>{n}</span> 张专辑",
+            clickToPlay: "点击播放",
+        },
+    },
 } satisfies Translation;
 
 export default cn;

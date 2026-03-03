@@ -16,6 +16,7 @@
         { value: "albums", label: "Albums" },
         { value: "map", label: "Map" },
         { value: "wiki", label: "Wiki" },
+        { value: "analytics", label: "Stats" },
     ].filter((v) =>
         !$isCompactView && !$isSidebarOpen && v.value === "queue"
             ? false

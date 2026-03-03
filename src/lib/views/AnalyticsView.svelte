@@ -10,6 +10,7 @@
     import { cubicInOut } from "svelte/easing";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import GenreMap from "../analytics/GenreMap.svelte";
+    import LibrarySummary from "../analytics/LibrarySummary.svelte";
 
     export let songOrder: SongOrder;
 
@@ -194,6 +195,9 @@
         </div>
     {:else}
         <div class="analytics" in:fade={{ duration: 500 }}>
+            <section class="summary">
+                <LibrarySummary songs={$songs} />
+            </section>
             <section class="genres">
                 <GenreMap songs={$songs} />
             </section>
@@ -209,7 +213,6 @@
         overflow: auto;
         display: flex;
         border: 0.7px solid var(--panel-primary-border-main);
-        margin: 5px 5px 0 0;
         border-radius: 5px;
         overflow: hidden;
         background-color: var(--panel-background);
@@ -240,8 +243,8 @@
     .analytics {
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
+        grid-template-columns: minmax(150px, auto) 1fr;
+        grid-template-rows: 1fr auto;
 
         section {
             padding: 4em;
@@ -267,10 +270,20 @@
                 margin: 1em 0 0 0;
                 opacity: 0.5;
             }
-            &.genres {
+            &.summary {
                 grid-row: 1;
-                grid-column: 1 / 4;
+                grid-column: 1;
+                align-items: flex-start;
+                justify-content: flex-start;
+                padding: 3em 4em;
                 border-right: 1px solid var(--analytics-border);
+                border-bottom: 1px solid var(--analytics-border);
+            }
+            &.genres {
+                min-height: 0; // Crucial: prevents the child from expanding the row
+                overflow: hidden;
+                grid-row: 1;
+                grid-column: 2;
                 border-bottom: 1px solid var(--analytics-border);
                 span {
                     color: var(--analytics-text-secondary);
@@ -278,12 +291,36 @@
             }
 
             &.timeline {
+                padding: 2em 4em;
                 grid-row: 2;
-                grid-column: 1 / 4;
+                grid-column: 1 / 3;
                 border-bottom: 1px solid var(--analytics-border);
                 span {
                     color: var(--analytics-text-primary);
                 }
+            }
+        }
+
+        @media only screen and (max-width: 1000px) {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+            overflow: auto;
+            section {
+                min-width: 100%;
+            }
+            section.summary {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            section.genres {
+                grid-column: 1;
+                grid-row: 2;
+                min-height: unset; // Crucial: prevents the child from expanding the row
+                overflow: unset;
+            }
+            section.timeline {
+                grid-column: 1;
+                grid-row: 3;
             }
         }
     }

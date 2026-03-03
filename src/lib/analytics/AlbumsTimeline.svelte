@@ -4,6 +4,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import { current } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
+    import LL from "../../i18n/i18n-svelte";
 
     export let albumsByYear: Record<
         string,
@@ -56,10 +57,10 @@
     const C_LABEL = "rgba(255,255,255,0.4)";
     const C_LABEL_EDGE = "rgba(255,255,255,0.85)";
 
-    const C_DOT_FILL = $currentThemeObject["accent-secondary"]; // --accent-secondary
-    const C_DOT_STROKE = $currentThemeObject["panel-separator"];
-    const C_ACTIVE_FILL = $currentThemeObject["accent"]; // --accent
-    const C_ACTIVE_STROKE = $currentThemeObject["accent"];
+    $: C_DOT_FILL = $currentThemeObject["accent-secondary"];
+    $: C_DOT_STROKE = $currentThemeObject["panel-separator"];
+    $: C_ACTIVE_FILL = $currentThemeObject["accent"];
+    $: C_ACTIVE_STROKE = $currentThemeObject["accent"];
 
     // ── Canvas refs ───────────────────────────────────────────────────────────
     let canvas: HTMLCanvasElement;
@@ -249,7 +250,7 @@
         : 100;
 
     // Redraw whenever active track changes
-    $: if ($current) drawCanvas();
+    $: if ($current || $currentThemeObject) drawCanvas();
 
     const onResize = debounce(drawCanvas, 20);
     let ro: ResizeObserver;
@@ -264,15 +265,24 @@
 </script>
 
 <div class="tl-root" bind:this={wrapper}>
-    {#if yearSpan > 0}
-        <h2>Your library spans <span>{yearSpan} years</span></h2>
-    {:else}
-        <h2>Generating timeline…</h2>
-    {/if}
+    <header>
+        {#if yearSpan > 0}
+            <h2>
+                {@html $LL.analytics.albumsTimeline.title({ years: yearSpan })}
+            </h2>
+            <small
+                >{$LL.analytics.albumsTimeline.fromAlbums({
+                    n: albums.length,
+                })}</small
+            >
+        {:else}
+            <h2>Generating timeline…</h2>
+        {/if}
+    </header>
 
     <div class="canvas-wrap">
         <canvas
-            style="height: {canvasHeight}px"
+            style="height: {canvasHeight}px;"
             bind:this={canvas}
             on:mousemove={onMouseMove}
             on:mouseleave={onMouseLeave}
@@ -297,21 +307,30 @@
         width: 100%;
     }
 
-    h2 {
-        margin: 0 0 0.5em;
-        font-weight: 400;
-        color: var(--text);
-        font-size: 1rem;
-
-        span {
-            color: white;
-            font-weight: 600;
+    header {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        h2 {
+            margin: 0 0 0.1em;
+            font-weight: 400;
+            color: var(--text-secondary);
+            font-size: 1.3rem;
+            text-align: left;
+            :global(span) {
+                color: var(--text);
+                font-weight: 600;
+            }
+        }
+        small {
+            margin: 0;
         }
     }
 
     .canvas-wrap {
         position: relative;
         width: 100%;
+        height: 100%;
     }
 
     canvas {

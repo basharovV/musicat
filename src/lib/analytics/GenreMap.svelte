@@ -3,7 +3,12 @@
     import { setQueue } from "../../data/storeHelper";
     import type { Song } from "../../App";
     import { current } from "../../data/store";
-    import { currentFont, currentThemeObject } from "../../theming/store";
+    import {
+        currentFont,
+        currentThemeName,
+        currentThemeObject,
+    } from "../../theming/store";
+    import LL from "../../i18n/i18n-svelte";
 
     // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -98,7 +103,7 @@
 
     // ── Palette ────────────────────────────────────────────────────────────────
 
-    const PALETTE: string[] = [
+    $: PALETTE = [
         $currentThemeObject["mapview-scale-1"], // Purple
         $currentThemeObject["mapview-scale-2"], // Purple
     ];
@@ -156,7 +161,7 @@
         const rawR = entries.map(([, c]) => (c / maxCount) ** 0.5);
         const rawAreaSum = rawR.reduce((sum, r) => sum + r * r * Math.PI, 0);
         const scale = Math.sqrt(canvasArea / rawAreaSum);
-        const minR = 14;
+        const minR = Math.min(width, height) * 0.02;
         const maxR = Math.min(width, height) * 0.21;
 
         // Greedy angular ordering — similar genres placed at adjacent angles
@@ -268,31 +273,23 @@
         if (!ctx) return;
         ctx.clearRect(0, 0, width, height);
 
-        // Similarity edges
-        ctx.lineWidth = 1;
-        for (let i = 0; i < bubbles.length; i++) {
-            for (let j = i + 1; j < bubbles.length; j++) {
-                const s = similarity(bubbles[i].name, bubbles[j].name);
-                if (s > 0.2) {
-                    ctx.beginPath();
-                    ctx.moveTo(bubbles[i].x, bubbles[i].y);
-                    ctx.lineTo(bubbles[j].x, bubbles[j].y);
-                    ctx.strokeStyle = `rgba(255,255,255,${s * 0.08})`;
-                    ctx.stroke();
-                }
-            }
-        }
-
         // Non-hovered first, hovered on top
         bubbles.forEach((b, i) => {
             if (i !== hoveredIndex)
-                renderBubble(b, false, $current.song?.genre.includes(b.name));
+                renderBubble(
+                    b,
+                    false,
+                    $current.song?.genre.find((g) => g.trim() === b.name) !==
+                        undefined,
+                );
         });
         if (hoveredIndex >= 0)
             renderBubble(
                 bubbles[hoveredIndex],
                 true,
-                $current.song?.genre.includes(bubbles[hoveredIndex].name),
+                $current.song?.genre.find(
+                    (g) => g.trim() === bubbles[hoveredIndex].name,
+                ) !== undefined,
             );
     }
 
@@ -371,7 +368,9 @@
     // ── Genre playback ────────────────────────────────────────────────────────
 
     function playGenre(genre: string): void {
-        const genreSongs = songs.filter((s) => s.genre?.includes(genre));
+        const genreSongs = songs.filter((s) =>
+            s.genre?.find((g) => g.trim() === genre),
+        );
         if (genreSongs.length) setQueue(genreSongs, 0);
     }
 
@@ -455,8 +454,23 @@
 
     // Only reactive statement — watches `songs` prop, nothing internal
     $: songs, current && buildBubbles();
+
+    // Separate trigger for visual-only theme/font updates to avoid re-calculating physics
+    $: if ($currentThemeObject || $currentFont) {
+        if (bubbles.length > 0) {
+            // Update bubble colors from the new palette before redrawing
+            bubbles.forEach((b, i) => {
+                b.color = PALETTE[i % PALETTE.length];
+            });
+            draw();
+        }
+    }
 </script>
 
+<header>
+    <h2>{$LL.analytics.genreMap.title()}</h2>
+    <small>{$LL.analytics.genreMap.fromSongs({ n: songs.length })}</small>
+</header>
 <div class="genre-map" bind:this={container}>
     <canvas
         bind:this={canvas}
@@ -512,6 +526,17 @@
 </svelte:head>
 
 <style lang="scss">
+    header {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        h2 {
+            margin: 0;
+        }
+        small {
+        }
+    }
     .genre-map {
         position: relative;
         width: 100%;
@@ -529,7 +554,6 @@
         align-items: center;
         justify-content: center;
         margin: 0;
-        font-family: "DM Sans", system-ui, sans-serif;
         font-size: 13px;
         color: rgba(255, 255, 255, 0.25);
         letter-spacing: 0.05em;

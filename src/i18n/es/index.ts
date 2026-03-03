@@ -397,6 +397,26 @@ const es = {
         cancel: "Cancelar",
         close: "Cerrar",
     },
+    analytics: {
+        summary: {
+            title: "Resumen",
+            totalSongs: "Total de canciones",
+            albums: "Álbumes",
+            artists: "Artistas",
+            genres: "Géneros",
+            longestTrack: "Pista más larga",
+        },
+        genreMap: {
+            title: "Mapa de géneros",
+            fromSongs: "de {n} canciones",
+            clickToPlay: "Haz clic para reproducir",
+        },
+        albumsTimeline: {
+            title: "Tu biblioteca abarca <span>{years}</span> años",
+            fromAlbums: "de {n} álbumes",
+            clickToPlay: "Haz clic para reproducir",
+        },
+    },
 } satisfies Translation;
 
 export default es;

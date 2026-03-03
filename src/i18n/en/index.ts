@@ -396,6 +396,26 @@ const en = {
         cancel: "Cancel",
         close: "Close",
     },
+    analytics: {
+        summary: {
+            title: "Summary",
+            totalSongs: "Total Songs",
+            albums: "Albums",
+            artists: "Artists",
+            genres: "Genres",
+            longestTrack: "Longest Track",
+        },
+        genreMap: {
+            title: "Genre Map",
+            fromSongs: "from {n} songs",
+            clickToPlay: "Click to play",
+        },
+        albumsTimeline: {
+            title: "Your library spans <span>{years}</span> years",
+            fromAlbums: "from {n} albums",
+            clickToPlay: "Click to play",
+        },
+    },
 } satisfies Translation;
 
 export default en;

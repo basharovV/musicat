@@ -1190,6 +1190,65 @@ type RootTranslation = {
 		 */
 		close: string
 	}
+	analytics: {
+		summary: {
+			/**
+			 * S​u​m​m​a​r​y
+			 */
+			title: string
+			/**
+			 * T​o​t​a​l​ ​S​o​n​g​s
+			 */
+			totalSongs: string
+			/**
+			 * A​l​b​u​m​s
+			 */
+			albums: string
+			/**
+			 * A​r​t​i​s​t​s
+			 */
+			artists: string
+			/**
+			 * G​e​n​r​e​s
+			 */
+			genres: string
+			/**
+			 * L​o​n​g​e​s​t​ ​T​r​a​c​k
+			 */
+			longestTrack: string
+		}
+		genreMap: {
+			/**
+			 * G​e​n​r​e​ ​M​a​p
+			 */
+			title: string
+			/**
+			 * f​r​o​m​ ​{​n​}​ ​s​o​n​g​s
+			 * @param {unknown} n
+			 */
+			fromSongs: RequiredParams<'n'>
+			/**
+			 * C​l​i​c​k​ ​t​o​ ​p​l​a​y
+			 */
+			clickToPlay: string
+		}
+		albumsTimeline: {
+			/**
+			 * Y​o​u​r​ ​l​i​b​r​a​r​y​ ​s​p​a​n​s​ ​<​s​p​a​n​>​{​y​e​a​r​s​}​<​/​s​p​a​n​>​ ​y​e​a​r​s
+			 * @param {unknown} years
+			 */
+			title: RequiredParams<'years'>
+			/**
+			 * f​r​o​m​ ​{​n​}​ ​a​l​b​u​m​s
+			 * @param {unknown} n
+			 */
+			fromAlbums: RequiredParams<'n'>
+			/**
+			 * C​l​i​c​k​ ​t​o​ ​p​l​a​y
+			 */
+			clickToPlay: string
+		}
+	}
 }
 
 export type TranslationFunctions = {
@@ -2358,6 +2417,62 @@ export type TranslationFunctions = {
 		 * Close
 		 */
 		close: () => LocalizedString
+	}
+	analytics: {
+		summary: {
+			/**
+			 * Summary
+			 */
+			title: () => LocalizedString
+			/**
+			 * Total Songs
+			 */
+			totalSongs: () => LocalizedString
+			/**
+			 * Albums
+			 */
+			albums: () => LocalizedString
+			/**
+			 * Artists
+			 */
+			artists: () => LocalizedString
+			/**
+			 * Genres
+			 */
+			genres: () => LocalizedString
+			/**
+			 * Longest Track
+			 */
+			longestTrack: () => LocalizedString
+		}
+		genreMap: {
+			/**
+			 * Genre Map
+			 */
+			title: () => LocalizedString
+			/**
+			 * from {n} songs
+			 */
+			fromSongs: (arg: { n: unknown }) => LocalizedString
+			/**
+			 * Click to play
+			 */
+			clickToPlay: () => LocalizedString
+		}
+		albumsTimeline: {
+			/**
+			 * Your library spans <span>{years}</span> years
+			 */
+			title: (arg: { years: unknown }) => LocalizedString
+			/**
+			 * from {n} albums
+			 */
+			fromAlbums: (arg: { n: unknown }) => LocalizedString
+			/**
+			 * Click to play
+			 */
+			clickToPlay: () => LocalizedString
+		}
 	}
 }
 

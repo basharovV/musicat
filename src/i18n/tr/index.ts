@@ -396,6 +396,26 @@ const tr = {
         cancel: "İptal",
         close: "Kapat",
     },
+    analytics: {
+        summary: {
+            title: "Özet",
+            totalSongs: "Toplam Şarkı",
+            albums: "Albümler",
+            artists: "Sanatçılar",
+            genres: "Türler",
+            longestTrack: "En Uzun Parça",
+        },
+        genreMap: {
+            title: "Tür Haritası",
+            fromSongs: "{n} şarkıdan",
+            clickToPlay: "Çalmak için tıkla",
+        },
+        albumsTimeline: {
+            title: "Kitaplığın <span>{years}</span yılı kapsıyor",
+            fromAlbums: "{n} albümden",
+            clickToPlay: "Çalmak için tıkla",
+        },
+    },
 } satisfies Translation;
 
 export default tr;
