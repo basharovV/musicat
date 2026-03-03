@@ -1,15 +1,11 @@
-use std::{collections::HashMap, path, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex};
 
-use crate::{
-    metadata::{extract_metadata, get_song_metadata},
-    store::load_settings,
-};
+use crate::{metadata::extract_metadata, store::load_settings};
 use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
-use webrtc::media::audio::buffer::info;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeparateStemsEvent {

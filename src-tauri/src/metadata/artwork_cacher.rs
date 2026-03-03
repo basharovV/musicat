@@ -7,7 +7,6 @@ use log::info;
 use tauri::AppHandle;
 use tauri::Manager;
 
-use crate::store::load_settings;
 use crate::store::UserSettings;
 
 const CACHE_DIR: &str = if cfg!(debug_assertions) {

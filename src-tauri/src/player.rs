@@ -47,9 +47,7 @@ use crate::dsp::calculate_peak_value;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::metadata::Song;
-use crate::output::{
-    self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState, TimestampState,
-};
+use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState};
 use crate::store::load_settings;
 use crate::{dsp, GetWaveformRequest, GetWaveformResponse, PlayFileRequest, SampleOffsetEvent};
 

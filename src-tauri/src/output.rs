@@ -79,15 +79,12 @@ pub enum AudioOutputError {
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
 mod cpal {
-    use std::sync::mpsc::{Receiver, Sender};
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
     use crate::constants::BUFFER_SIZE;
     use crate::output::{fft, get_device_by_name, ifft, AudioControlHandles, TimestampState};
-    use crate::player::VolumeControlEvent;
     use crate::resampler::Resampler;
-    use crate::SampleOffsetEvent;
 
     use super::{AudioOutput, AudioOutputError, PlaybackState, Result};
 
@@ -103,7 +100,6 @@ mod cpal {
     use log::{error, info};
     use tauri::{AppHandle, Emitter};
     use tokio::sync::Mutex;
-    use webrtc::data_channel::RTCDataChannel;
 
     pub struct CpalAudioOutput {}
 
@@ -133,7 +129,7 @@ mod cpal {
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let device = get_device_by_name(Some(device_name.clone())).unwrap();
 
-            info!("Default audio device: {:?}", device.name());
+            info!("Default audio device: {:?}", device.description());
 
             let config = match device.default_output_config() {
                 Ok(config) => config,

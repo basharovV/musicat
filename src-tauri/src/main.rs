@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 use futures_util::StreamExt;
-use log::{error, info, warn};
+use log::{error, info};
 #[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
 use metadata::FileInfo;
