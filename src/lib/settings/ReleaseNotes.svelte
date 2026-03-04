@@ -19,11 +19,19 @@
     div {
         height: auto;
         text-align: left;
-        padding: 1em;
+        padding: 1em 2em;
         color: rgb(218, 215, 215);
         position: relative;
         letter-spacing: 0.6px;
+        :global(ul) {
+            list-style-type: disc;
+            padding-inline-start: 1.5em; // This creates the indent for every level
 
+            :global(ul) {
+                list-style-type: circle; // Different bullet for sub-items
+                margin-top: 0.5em;
+            }
+        }
         :global(li) {
             font-size: 1em;
         }
@@ -38,44 +46,6 @@
         :global(strong) {
             color: rgb(187, 176, 240);
             letter-spacing: 0.7px;
-        }
-    }
-    ul {
-        /* border-radius: 5px; */
-        /* max-height: 200px; */
-        width: 100%;
-        height: fit-content;
-        color: rgb(225, 222, 222);
-        font-size: 1em;
-        padding: 0;
-        margin: 0;
-
-        > h3 {
-            position: sticky;
-            top: 0;
-            background-color: #333333;
-            padding: 0.2em;
-            margin: 0;
-            z-index: 5;
-        }
-        section {
-            padding: 1em 2em;
-            i {
-                opacity: 0.3;
-                margin-left: 0.2em;
-                font-size: 14px;
-            }
-            li,
-            h3 {
-                width: fit-content;
-                text-align: left;
-            }
-
-            li {
-                margin-inline-start: 1em;
-                text-align: left;
-                margin-top: 0.6em;
-            }
         }
     }
 </style>

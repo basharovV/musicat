@@ -1,3 +1,28 @@
+### 📦 0.16.0
+
+#### New
+
+- **New UI for Track Info**. The track info and tagger is less cluttered with the fresh tabbed interface (File Info | Metadata | Artwork | Enrichment).
+    - Artwork can now be saved independenty of the tags, with better controls over embed vs. folder art.
+    - In the Metadata tab, any pending changes are shown in a detailed summary when hovering over the "Save" button.
+- **Beets support**. You can point Musicat to your local [Beets](https://beets.io/) database, and it will use that instead of the built-in database. Songs, albums and map view will use data from Beets. At the moment this is read-only.
+- **New 3D globe view in Map view**. Map view is now available in both 2D and 3D views. The globe view can be shown as wireframe (country outlines) or Earth texture. Hovering over countries and playing works just like on the 2D map. There is also a new legend in the bottom right corner. More reason to add country data to your library!
+- **Chinese (Simplified) translation**. Also much improved coverage of other languages. Thanks [@Kwensiu](https://github.com/Kwensiu) for the contribution.
+- Artwork in sidebar is now collapsible, giving more vertical sidebar space. This setting is remembered across restarts.
+- **New Stats view**. The stats view is now composed of three panels - Summary, Genre Map, and Album Timeline. Both the genre map and timeline match the selected theme, and can be used to play music.
+
+#### Improvements
+
+- "New Smart Playlist" button in the sidebar
+- Added built-in "with stems" smart playlist
+
+#### Fixes
+
+- Fixed issues with resizing columns in the library
+- Fixed crash when playing playlist if a song is missing from db.
+- Fixed library highlight when typing into search box.
+- Fixed incorrect song playing in favourites tab #177. Thanks [s1dny](https://github.com/s1dny) for the contribution.
+
 ### 📦 0.15.1
 
 #### Fixes
