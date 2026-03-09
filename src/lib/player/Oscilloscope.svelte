@@ -36,6 +36,10 @@
     onMount(() => {
         width = container.clientWidth;
         isMounted = true;
+
+        return () => {
+            analyser?.tearDown();
+        };
     });
 </script>
 

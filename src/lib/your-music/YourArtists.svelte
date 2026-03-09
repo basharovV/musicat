@@ -159,7 +159,6 @@
     function updateQueryPartsAutocompletePos() {
         inputX = artistInput.offsetLeft;
         inputY = artistInput.offsetTop + 40;
-        console.log("X", inputX, "Y", inputY);
     }
 
     async function showProfilePicPicker() {

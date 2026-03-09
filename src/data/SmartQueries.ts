@@ -62,7 +62,6 @@ async function withStems() {
 }
 
 export async function findQuery(queryId: string) {
-    console.log("find", queryId);
     if (queryId === undefined) return null;
     let found = BUILT_IN_QUERIES[queryId];
     if (!found) {
@@ -77,7 +76,6 @@ export async function findQuery(queryId: string) {
         found = { ...found, name: found.name() };
     }
 
-    console.log("found", found);
     return found;
 }
 

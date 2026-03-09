@@ -281,6 +281,7 @@
     let COLUMN_DIVIDER_COLOR: string;
     let COLUMN_RESIZE_DIVIDER_COLOR: string;
 
+    const RESIZING_PIXEL_RATIO = 1;
     const SCROLLING_PIXEL_RATIO = 1.3;
     const IDLE_PIXEL_RATIO = 1.8;
 
@@ -293,12 +294,14 @@
 
         if (matchMedia(query).matches) {
             // Slightly reduce the ratio for better performance
-            Konva.pixelRatio = IDLE_PIXEL_RATIO;
+            setPixelRatio(IDLE_PIXEL_RATIO);
         }
 
         const resizeObserver = new ResizeObserver((_) => {
-            //Get the block size
-            drawSongDataGrid(true);
+            // Use requestAnimationFrame to stay in sync with the browser's refresh rate
+            requestAnimationFrame(() => {
+                syncDimensions();
+            });
         });
 
         resizeObserver.observe(libraryContainer);
@@ -311,10 +314,14 @@
         drawSongDataGrid();
     }
 
-    function onResize(e: MouseEvent) {
-        e.stopPropagation();
-        e.preventDefault();
-        drawSongDataGrid();
+    function setPixelRatio(ratio: number, draw = false) {
+        Konva.pixelRatio = ratio;
+        if (stage) {
+            stage.getLayers().forEach((l) => {
+                l.canvas.setPixelRatio(ratio);
+                if (draw) l.draw();
+            });
+        }
     }
 
     let contentHeight = HEADER_HEIGHT;
@@ -398,14 +405,39 @@
         isInit = false;
     }
 
+    // 1. Create a single sync function
+    async function syncDimensions() {
+        if (!libraryContainer) return;
+
+        // A. Measure immediately (No setTimeout)
+        width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;
+        viewportHeight = libraryContainer.clientHeight;
+
+        // B. Update internal calculations synchronously
+        contentHeight = HEADER_HEIGHT + (songs?.length ?? 0) * ROW_HEIGHT;
+        scrollableArea = Math.max(0, contentHeight - viewportHeight);
+        isScrollable = contentHeight > viewportHeight;
+
+        // C. Refresh Columns and Slice in one go
+        calculateColumns(true);
+        calculateSongSlice();
+
+        // D. Tell Svelte to finish its DOM work, then tell Konva to paint
+        await tick();
+        if (stage) {
+            stage.batchDraw();
+        }
+    }
+
     async function drawSongDataGrid(isResize: boolean = false) {
         await calculateCanvasSize(isResize);
-        calculateColumns();
+        calculateColumns(isResize);
         if (isResize) {
             onScroll(null, scrollNormalized, null, true);
         } else {
             calculateSongSlice();
         }
+
         shouldRender = true;
         // drawHeaders();
         // drawRows();
@@ -576,22 +608,9 @@
 
     // Change pixel ratio on scroll
     $: if (isScrolling) {
-        // console.log("scrolling");
-        Konva.pixelRatio = SCROLLING_PIXEL_RATIO;
-        if (stage) {
-            stage.getLayers().forEach((l) => {
-                l.canvas.setPixelRatio(SCROLLING_PIXEL_RATIO);
-            });
-        }
+        setPixelRatio(SCROLLING_PIXEL_RATIO);
     } else {
-        // console.log("idle");
-        Konva.pixelRatio = IDLE_PIXEL_RATIO;
-        if (stage) {
-            stage.getLayers().forEach((l) => {
-                l.canvas.setPixelRatio(IDLE_PIXEL_RATIO);
-                l.draw();
-            });
-        }
+        setPixelRatio(IDLE_PIXEL_RATIO, true);
     }
 
     async function onScroll(
@@ -935,7 +954,6 @@
             $singleKeyShortcutsEnabled &&
             !isInputFocused()
         ) {
-            console.log("hmmm");
             closeCurrentMenu();
             songHighlighter?.reset();
         }
@@ -1025,11 +1043,6 @@
     // Re-order columns
     let prevColumnOrder = $columnOrder;
     $: {
-        console.log(
-            "column order changed",
-            $columnOrder.map((c) => c.fieldName),
-            prevColumnOrder.map((c) => c.fieldName),
-        );
         // Check if order changed
         if (
             JSON.stringify(prevColumnOrder.map((c) => c.fieldName)) !==
@@ -1097,8 +1110,6 @@
             columnToInsertIdx = null;
             columnToInsertXPos = 0;
         }
-        console.log("columnToInsertIdx", columnToInsertIdx);
-        console.log("dropidx", dropColumnIdx);
     }
 
     function onGroupClick(ev: KonvaMouseEvent, field) {
@@ -1172,7 +1183,6 @@
             columnOrderOldIdx,
             columnOrderNewIdx,
         );
-        console.log("column order", columnOrder);
         // displayFields = moveArrayElement(displayFields, oldIndex, newIndex);
         resetColumnOrderUi();
     }
@@ -1193,7 +1203,6 @@
             columnOrderNewIdx,
         );
         // displayFields = swapArrayElements(displayFields, oldIndex, newIndex);
-        console.log("column order", columnOrder);
         resetColumnOrderUi();
     }
 

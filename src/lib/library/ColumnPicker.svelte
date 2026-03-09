@@ -2,6 +2,7 @@
     import type { ColumnViewModel, LibraryColumn } from "../../App";
     import type { PersistentWritable } from "../../data/storeUtils";
     import LL from "../../i18n/i18n-svelte";
+    import { closeCurrentMenu } from "../ui/ContextMenu";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
@@ -65,7 +66,7 @@
     // Enrichers
 </script>
 
-<Menu onClickOutside={closeMenu}>
+<Menu>
     <MenuOption text="Columns" isDisabled />
     {#each columns as field}
         <MenuOption
@@ -76,6 +77,18 @@
         />
     {/each}
     <MenuDivider />
-    <MenuOption text={$LL.library.resetColumns()} onClick={onResetOrder} />
-    <MenuOption text={$LL.library.resetSizesOnly()} onClick={onResetSizes} />
+    <MenuOption
+        text={$LL.library.resetColumns()}
+        onClick={() => {
+            onResetOrder();
+            closeCurrentMenu();
+        }}
+    />
+    <MenuOption
+        text={$LL.library.resetSizesOnly()}
+        onClick={() => {
+            onResetSizes();
+            closeCurrentMenu();
+        }}
+    />
 </Menu>

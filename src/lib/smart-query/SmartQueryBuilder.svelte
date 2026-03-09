@@ -134,7 +134,6 @@
     function updateQueryPartsAutocompletePos() {
         inputX = queryInput.offsetLeft;
         inputY = queryInput.offsetTop + 20;
-        console.log("X", inputX, "Y", inputY);
     }
 
     let hoveredItemIdx = 0;

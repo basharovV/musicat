@@ -290,15 +290,9 @@
     }
 
     function openInfoWindow() {
-        // const webview = new WebviewWindow("theUniqueLabel", {
-        //   url: "path/to/page.html",
-        // });
-        console.log("clicked");
         $popupOpen = "info";
     }
-    $: {
-        console.log("info popup:", $popupOpen === "info");
-    }
+
     let height = 0;
     let width = 0;
     let hideArtwork = window.innerHeight < 650;
@@ -473,12 +467,6 @@
     function onMenuResize() {
         // Check scroll area size, add shadows if necessary
         if (menuInnerScrollArea) {
-            console.log(
-                "scrollTop",
-                menuInnerScrollArea.scrollTop,
-                menuInnerScrollArea.clientHeight,
-                menuInnerScrollArea.scrollHeight,
-            );
             showMenuTopScrollShadow =
                 menuInnerScrollArea.scrollTop > 0 &&
                 menuInnerScrollArea.scrollHeight >
@@ -753,8 +741,7 @@
     let isTitleOverflowing = false; // to show marquee
 
     onMount(() => {
-        shouldFocusFind.subscribe((event) => {
-            console.log("event", event);
+        const unsubscribeShouldFocus = shouldFocusFind.subscribe((event) => {
             if (event?.target === "search") {
                 if (searchInput) {
                     if (event.action === "focus") {
@@ -789,7 +776,10 @@
 
         onResize();
 
-        return () => resizeObserver.unobserve(menu);
+        return () => {
+            resizeObserver.unobserve(menu);
+            unsubscribeShouldFocus();
+        };
     });
 
     let canvas: HTMLCanvasElement;
@@ -801,7 +791,6 @@
         displayTitle &&
         $currentThemeObject
     ) {
-        console.log("title", title);
         // Too early - song is changed, but not the title
         isTitleOverflowing =
             titleElement?.scrollWidth > titleElement?.clientWidth;
@@ -830,7 +819,6 @@
 
         let x = (canvas.width - textWidth) / 2; // Initial x-coordinate for the text
         let x2 = x + context.measureText(displayTitle).width + gap;
-        console.log("x", x, "x2", x2);
         let started = false;
         var lastFrameTime = 0;
         var startTime = 0;
@@ -2542,6 +2530,7 @@
                 border: 2px solid var(--panel-separator);
                 padding: 2px;
                 overflow: hidden;
+                background-color: var(--background);
                 .artwork {
                     object-fit: contain;
                 }

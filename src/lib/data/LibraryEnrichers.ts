@@ -128,7 +128,6 @@ async function fetchAlbumArtWithWikipedia(
         // Check if album is in here
         for (let item of dbpediaResult?.results?.bindings) {
             if (item.name.value.toLowerCase() === album.title.toLowerCase()) {
-                console.log("found it");
                 if (item.coverArtVar?.value) {
                     coverArtFile = item.coverArtVar.value;
                     break;

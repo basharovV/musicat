@@ -36,7 +36,6 @@ export function startMenuListener() {
                 popupOpen.set("settings");
                 break;
             case "find":
-                console.log("find");
                 shouldFocusFind.set({
                     target: "search",
                     action: get(isFindFocused) ? "unfocus" : "focus",

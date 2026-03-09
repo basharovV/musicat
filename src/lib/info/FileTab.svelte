@@ -21,7 +21,6 @@
     let showTableBottomScrollShadow = false;
 
     function onTableResize() {
-        console.log("scrollTop");
         // Check scroll area size, add shadows if necessary
         if (tableInnerScrollArea) {
             showTableTopScrollShadow =

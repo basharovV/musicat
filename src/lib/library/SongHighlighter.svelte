@@ -72,8 +72,6 @@
     ) {
         // Compensate for expanded stems
 
-        console.log("song view model index", idx);
-        // console.log("highlighted", song, idx, isKeyboardArrows, isDefault);
         if (isKeyboardArrows) {
             console.log("isShiftPressed", isShiftPressed);
             console.log("isMultiSelect", isMultiSelect());
@@ -85,7 +83,6 @@
                         // Reversing direction - delete the current highlight as well as the next
                         idx -= 1;
                     }
-                    console.log("Going down");
                     previousKeyboardDirection = "down";
                     if (songIdxsHighlighted.has(idx)) {
                         songIdxsHighlighted.delete(idx);
@@ -116,7 +113,6 @@
                     rangeEndSongIdx = idx;
                 }
             } else {
-                console.log("ARROWS");
                 songIdxsHighlighted.clear();
                 songIdxsHighlighted.add(idx);
                 songIdxsHighlighted = songIdxsHighlighted;
@@ -178,7 +174,6 @@
                     // console.log("highlighted2", songsHighlighted);
                 }
             } else {
-                console.log("Single click");
                 // Highlight single song, via a good old click
                 songIdxsHighlighted.clear();
                 songIdxsHighlighted.add(idx);

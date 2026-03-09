@@ -314,8 +314,6 @@
         e.stopPropagation();
         e.preventDefault();
         const containerWidth = window.innerWidth;
-        console.log("container width", containerWidth);
-        console.log("clientX", e.pageX);
         if (containerWidth - e.clientX > WIKI_PANEL_MIN_SIZE) {
             showCloseWikiPrompt = false;
             wikiPanelSize = containerWidth - e.clientX;

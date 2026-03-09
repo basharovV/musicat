@@ -43,7 +43,6 @@
             },
         });
 
-        console.log("Found stems", stems);
         songWithStems = { ...$songToSeparate, stems };
         // Update Song with stems
         await db.songs.put(songWithStems);
