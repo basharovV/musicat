@@ -13,6 +13,7 @@
     import { db } from "../../data/db";
     import {
         expandedSongWithStems,
+        importStatus,
         isInit,
         isLyricsHovered,
         isLyricsOpen,
@@ -38,6 +39,7 @@
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
     import { liveQuery } from "dexie";
+    import ImportPlaceholder from "../library/ImportPlaceholder.svelte";
     export let songOrder: SongOrder;
 
     let isLoading = true;
@@ -291,18 +293,26 @@
         $userSettings.beetsDbLocation &&
             onQueryChanged($query || "", songOrder);
     }
+
+    $: noSongs = !$songs || ($songs.length === 0 && $query.length === 0);
 </script>
 
-<div class="container" class:has-lyrics={$isLyricsOpen}>
-    <CanvasLibrary
-        columnOrder={libraryColumns}
-        bind:query={$query}
-        bind:songOrder
-        songsReadable={songs}
-        dim={$isLyricsHovered}
-        isLoading={false}
-    />
-</div>
+{#if isLoading}
+    <span />
+{:else if ($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && $query?.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false)}
+    <ImportPlaceholder />
+{:else}
+    <div class="container" class:has-lyrics={$isLyricsOpen}>
+        <CanvasLibrary
+            columnOrder={libraryColumns}
+            bind:query={$query}
+            bind:songOrder
+            songsReadable={songs}
+            dim={$isLyricsHovered}
+            isLoading={false}
+        />
+    </div>
+{/if}
 
 <style lang="scss">
     .container {

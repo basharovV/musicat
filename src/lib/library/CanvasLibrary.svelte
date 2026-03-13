@@ -403,6 +403,9 @@
         onScroll(null, 0, null, false, true);
         ready = true;
         isInit = false;
+    } else {
+        ready = true;
+        isInit = false;
     }
 
     // 1. Create a single sync function
@@ -1467,7 +1470,7 @@
     class:dragover={isDraggingOver}
     bind:this={libraryContainer}
 >
-    {#if isLoading}
+    {#if isInit}
         <!-- <div class="loading" out:fade={{ duration: 90, easing: cubicInOut }}>
             <p>💿 one sec...</p>
         </div> -->
@@ -1488,8 +1491,6 @@
                 <p>🪣</p>
             </div>
         </div>
-    {:else if theme === "default" && (($importStatus.isImporting && $importStatus.backgroundImport === false) || (noSongs && query?.length === 0 && $uiView.match(/^(smart-query|favourites|to-delete)/) === null && $isTagCloudOpen === false))}
-        <ImportPlaceholder />
     {:else}
         <div
             id="scroll-container"
