@@ -31,29 +31,36 @@
         songToSeparate,
         uiView,
         uiViewToRestore,
+        userSettings,
     } from "./data/store";
 
     import { type UnlistenFn } from "@tauri-apps/api/event";
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+    import { getCurrentWindow } from "@tauri-apps/api/window";
     import { onDestroy, onMount } from "svelte";
-    import { getLocaleFromNavigator, init, register } from "svelte-i18n";
+    import { init, register } from "svelte-i18n";
     import { cubicInOut, cubicOut } from "svelte/easing";
+    import { get } from "svelte/store";
     import { blur, fade, fly } from "svelte/transition";
     import { startWatchingLibraryFolders } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryUtils";
     import { findQuery } from "./data/SmartQueries";
+    import { resetDraggedSongs } from "./data/storeHelper";
     import { setLocale } from "./i18n/i18n-svelte";
+    import type { Locales } from "./i18n/i18n-types";
     import { loadLocale } from "./i18n/i18n-util.sync";
     import AlbumsHeader from "./lib/albums/AlbumsHeader.svelte";
+    import TrackInfoPopup from "./lib/info/TrackInfoPopup.svelte";
     import DownloadPopup from "./lib/internet-archive/DownloadPopup.svelte";
     import BottomBar from "./lib/library/BottomBar.svelte";
     import Dropzone from "./lib/library/Dropzone.svelte";
     import LyricsView from "./lib/library/LyricsView.svelte";
     import PlaylistHeader from "./lib/library/PlaylistHeader.svelte";
     import SmartPlaylistHeader from "./lib/library/SmartPlaylistHeader.svelte";
+    import StemSeparatePopup from "./lib/library/StemSeparatePopup.svelte";
     import TagCloud from "./lib/library/TagCloud.svelte";
     import ToDeleteHeader from "./lib/library/ToDeleteHeader.svelte";
-    import TrackInfoPopup from "./lib/info/TrackInfoPopup.svelte";
+    import TopNav from "./lib/nav/TopNav.svelte";
     import audioPlayer from "./lib/player/AudioPlayer";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
@@ -77,11 +84,6 @@
         startErrorListener,
         startMenuListener,
     } from "./window/EventListener";
-    import { resetDraggedSongs } from "./data/storeHelper";
-    import TopNav from "./lib/nav/TopNav.svelte";
-    import { get } from "svelte/store";
-    import type { Locales } from "./i18n/i18n-types";
-    import StemSeparatePopup from "./lib/library/StemSeparatePopup.svelte";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -111,8 +113,6 @@
     startImportListener();
     startErrorListener();
 
-    let unlistenFileDrop: UnlistenFn;
-    let unlistenFolderWatch: UnlistenFn;
     // function onDragEnter(e) {
     //     e.preventDefault();
 
@@ -135,24 +135,22 @@
     let wikiPanelSize = 500;
     const WIKI_PANEL_MIN_SIZE = 300;
 
-    /**
-     * Listen for native file drop and hover events here.
-     *
-     * How this will be handled depends on the current UI view shown:
-     * - Main library view: Import track(s)
-     * - Artist's toolkit view: Add to scrapbook or song project
-     */
-    onMount(async () => {
-        initLocale();
-        appWindow.emit("opened");
-        // File associations: check for opened urls on the window
-        // @ts-expect-error
-        console.log("window opened urls: ", window.openedUrls);
+    let unlistenThemeChange: UnlistenFn;
+    let unlistenFileDrop: UnlistenFn;
+    let unlistenFolderWatch: UnlistenFn;
 
+    async function setupAppListeners() {
         window["onFileOpen"] = (urls) => {
             console.log("onFileOpen: ", urls);
             audioPlayer.handleOpenedUrls(urls);
         };
+
+        unlistenThemeChange = await getCurrentWindow().listen(
+            "tauri://theme-changed",
+            ({ payload }) => {
+                $userSettings = $userSettings;
+            },
+        );
 
         unlistenFileDrop = await appWindow.onDragDropEvent((evt) => {
             switch (evt.payload.type) {
@@ -195,6 +193,28 @@
             unlistenFolderWatch && unlistenFolderWatch();
             unlistenFolderWatch = await startWatchingLibraryFolders();
         });
+    }
+    /**
+     * Listen for native file drop and hover events here.
+     *
+     * How this will be handled depends on the current UI view shown:
+     * - Main library view: Import track(s)
+     * - Artist's toolkit view: Add to scrapbook or song project
+     */
+    onMount(() => {
+        initLocale();
+        appWindow.emit("opened");
+        // File associations: check for opened urls on the window
+        // @ts-expect-error
+        console.log("window opened urls: ", window.openedUrls);
+
+        setupAppListeners();
+
+        return () => {
+            unlistenThemeChange && unlistenThemeChange();
+            unlistenFileDrop && unlistenFileDrop();
+            unlistenFolderWatch && unlistenFolderWatch();
+        };
     });
 
     function onDragMove(evt: MouseEvent) {

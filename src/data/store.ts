@@ -305,6 +305,7 @@ const defaultSettings: UserSettings = {
     playlistsLocation: null,
     generatedStemsLocation: null,
     theme: "dark",
+    followSystemTheme: true,
     outputDevice: null, // default system device,
     followSystemOutput: true,
 };
@@ -340,6 +341,10 @@ const defaultUIPreferences: UIPreferences = {
     albumsViewShowInfo: true,
     albumsViewSortBy: "title",
     albumsViewGridSize: 197,
+    audioAnalyzer: {
+        isEnabled: true,
+        analyzerType: "time",
+    },
 };
 
 // UI preferences

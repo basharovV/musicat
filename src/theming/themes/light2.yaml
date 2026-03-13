@@ -67,9 +67,9 @@ oscilloscope: "#590194"
 # Panels
 panel-background: "#e3dfe8"
 panel-primary-border-main: color-mix(in srgb, var(--inverse) 40%, transparent)
-panel-primary-border-accent1: color-mix(in srgb, var(--inverse) 30%, transparent)
+panel-primary-border-accent1: color-mix(in srgb, var(--inverse) 10%, transparent)
 panel-primary-border-accent2: color-mix(in srgb, var(--inverse) 10%, transparent)
-panel-secondary-border-main: "#ffffff2a"
+panel-secondary-border-main: "#4d4d4d2a"
 panel-secondary-border-accent: "#ffffff19"
 panel-separator: "#ffffff17"
 # Popups

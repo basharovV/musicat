@@ -231,6 +231,7 @@ const cn = {
         miniPlayerLocation: "迷你播放器位置",
         language: "语言",
         theme: "主题",
+        followSystemTheme: "跟随系统主题",
         features: "功能",
         subtitle: "配置内容",
         version: "版本",

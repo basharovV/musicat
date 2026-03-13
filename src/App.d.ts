@@ -169,6 +169,8 @@ interface ArtworkSrc {
     };
 }
 
+type ThemeVariant = "auto" | "light" | "dark";
+
 interface UserSettings {
     foldersToWatch: string[];
     albumArtworkFilenames: string[];
@@ -181,6 +183,8 @@ interface UserSettings {
     playlistsLocation: string;
     generatedStemsLocation: string;
     theme: string;
+    themeVariant: ThemeVariant;
+    followSystemTheme: boolean;
     outputDevice?: string;
     followSystemOutput: boolean;
     geniusApiKey?: string;

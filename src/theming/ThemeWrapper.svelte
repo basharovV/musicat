@@ -76,11 +76,9 @@
         // determine the users preferred mode
         const preferredMode = darkSchemeQuery.matches ? "dark" : "light";
         // listen for media query status change
-        darkSchemeQuery.addEventListener(
-            "change",
-            ({ matches }) =>
-                mode === "auto" && currentMode.set(matches ? "dark" : "light"),
-        );
+        darkSchemeQuery.addEventListener("change", ({ matches }) => {
+            mode === "auto" && currentMode.set(matches ? "dark" : "light");
+        });
 
         // loading order: saved, prefers, fallback
         const saved = key ? localStorage && localStorage.getItem(key) : null;

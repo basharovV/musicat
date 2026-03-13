@@ -694,6 +694,10 @@ type RootTranslation = {
 		 */
 		theme: string
 		/**
+		 * U​s​e​ ​s​y​s​t​e​m​ ​t​h​e​m​e
+		 */
+		followSystemTheme: string
+		/**
 		 * F​e​a​t​u​r​e​s
 		 */
 		features: string
@@ -1925,6 +1929,10 @@ export type TranslationFunctions = {
 		 * Theme
 		 */
 		theme: () => LocalizedString
+		/**
+		 * Use system theme
+		 */
+		followSystemTheme: () => LocalizedString
 		/**
 		 * Features
 		 */

@@ -376,7 +376,7 @@
                             </select>
                         </td>
                     </tr>
-                    <tr>
+                    <tr class="divider">
                         <td>{$LL.settings.language() || "Language"}</td>
                         <td>
                             <select
@@ -391,10 +391,14 @@
                             </select>
                         </td>
                     </tr>
+
                     <tr>
                         <td>{$LL.settings.theme() || "Theme"}</td>
                         <td>
-                            <select bind:value={$userSettings.theme}>
+                            <select
+                                bind:value={$userSettings.theme}
+                                disabled={$userSettings.followSystemTheme}
+                            >
                                 <optgroup label="light themes">
                                     {#each Object.entries(lightThemes) as [name, theme]}
                                         <option value={name}
@@ -411,6 +415,21 @@
                                 </optgroup>
                             </select>
                         </td>
+                    </tr>
+                    <tr class="divider">
+                        <td>{$LL.settings.followSystemTheme()}</td>
+                        <td
+                            ><input
+                                type="checkbox"
+                                checked={$userSettings.followSystemTheme}
+                                on:change={(e) => {
+                                    userSettings.update((v) => ({
+                                        ...v,
+                                        followSystemTheme: e.target.checked,
+                                    }));
+                                }}
+                            /></td
+                        >
                     </tr>
                     <tr>
                         <td
@@ -619,6 +638,10 @@
             border-collapse: separate;
             border-spacing: 0 0.4em;
             tr {
+                &.divider td {
+                    border-bottom: 1px solid var(--panel-primary-border-accent1);
+                    padding-bottom: 1em;
+                }
                 th {
                     text-align: start;
                     vertical-align: middle;
@@ -646,7 +669,7 @@
                     padding-right: 10px;
                     text-align: start;
                     opacity: 0.7;
-                    width: 40%;
+                    width: 45%;
                 }
                 td:nth-child(2) {
                     text-align: start;

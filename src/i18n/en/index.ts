@@ -234,6 +234,7 @@ const en = {
         miniPlayerLocation: "Mini Player Location",
         language: "Language",
         theme: "Theme",
+        followSystemTheme: "Use system theme",
         features: "Features",
         subtitle: "Configure stuff",
         version: "Version",
