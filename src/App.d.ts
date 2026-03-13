@@ -183,7 +183,6 @@ interface UserSettings {
     playlistsLocation: string;
     generatedStemsLocation: string;
     theme: string;
-    themeVariant: ThemeVariant;
     followSystemTheme: boolean;
     outputDevice?: string;
     followSystemOutput: boolean;
@@ -192,11 +191,18 @@ interface UserSettings {
     beetsDbLocation?: string;
 }
 
+type AnalyzerType = "time" | "frequency";
+interface AudioAnalyzer {
+    isEnabled: boolean;
+    analyzerType: AnalyzerType;
+}
+
 interface UIPreferences {
     albumsViewShowSingles: boolean;
     albumsViewShowInfo: boolean;
     albumsViewSortBy: AlbumsSortBy;
     albumsViewGridSize: number;
+    audioAnalyzer: AudioAnalyzer;
 }
 
 type AlbumsSortBy = "title" | "artist" | "year";

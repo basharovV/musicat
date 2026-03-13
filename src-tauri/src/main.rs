@@ -259,27 +259,6 @@ fn decode_control(event: FlowControlEvent, state: State<AudioPlayer>) {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct StreamStatus {
-    is_open: bool,
-}
-
-#[tauri::command]
-async fn init_streamer(
-    event: Option<String>,
-    state: State<'_, AudioPlayer<'_>>,
-    _app_handle: tauri::AppHandle,
-) -> Result<StreamStatus, ()> {
-    info!("Get stream status {:?}", event);
-    // Close existing connection
-    state.clone().reset().await;
-
-    let _ = state.init_webrtc(_app_handle).await;
-
-    return Ok(StreamStatus { is_open: false });
-}
-
 #[tauri::command]
 async fn download_file(
     url: String,
@@ -487,7 +466,7 @@ fn main() {
                 tauri::WebviewWindowBuilder::new(app, "main", Default::default())
                     .initialization_script(&format!("window.openedUrls = `{opened_urls}`"))
                     .initialization_script(&format!("console.log(`{opened_urls}`)"))
-                    .theme(Some(tauri::Theme::Dark))
+                    .theme(None)
                     .fullscreen(false)
                     .inner_size(1200f64, 780f64)
                     .min_inner_size(210f64, 210f64)
@@ -539,37 +518,6 @@ fn main() {
             app.listen_any("opened", move |_| {
                 let inner_size = window2.inner_size().unwrap();
                 handle_decorations(&window2, &inner_size);
-            });
-
-            // Listen for metadata write event
-            // listen to the `event-name` (emitted on any window)
-
-            let _id3 = app.listen_any("webrtc-signal", move |event| {
-                info!("webrtc-signal {:?}", event);
-                let event_clone = event.clone();
-                let app_clone = app2_.clone();
-
-                let handle_clone = strm1.clone();
-                tokio::spawn(async move {
-                    // Handle client's offer
-                    let answer = handle_clone.handle_signal(event_clone.payload()).await;
-                    if let Some(ans) = answer {
-                        let _ = app_clone.emit("webrtc-answer", ans.clone());
-                    }
-                });
-            });
-
-            let _id3 = app.listen_any("webrtc-icecandidate-server", move |event| {
-                info!("webrtc-signal {:?}", event);
-                let event_clone = event.clone();
-                let handle_clone = strm2.clone();
-                tokio::spawn(async move {
-                    // Handle client's offer
-                    let _answer = handle_clone
-                        .clone()
-                        .handle_ice_candidate(event_clone.payload())
-                        .await;
-                });
             });
 
             let command_clone = strm3.clone();
@@ -721,10 +669,12 @@ fn main() {
             get_file_size,
             play_file,
             queue_next,
-            init_streamer,
             decode_control,
+            player::init_webrtc,
+            player::handle_answer,
             player::volume_control,
             player::playback_speed_control,
+            player::analyzer_control,
             get_waveform,
             stem_separator::separate_stems,
             stem_separator::get_stems,

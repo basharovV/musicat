@@ -120,10 +120,6 @@
                 </p>
             </div>
         {/if}
-
-        <div class="spectrum">
-            <Oscilloscope show={showVisualiser} width={visualiserWidth} />
-        </div>
     </div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->

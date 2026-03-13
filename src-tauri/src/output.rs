@@ -12,8 +12,9 @@ use std::sync::mpsc::{Receiver, Sender};
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
 use ::cpal::{default_host, Device, SupportedStreamConfigRange};
+use rustfft::Fft;
 use rustfft::{num_complex::Complex, FftPlanner};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use symphonia::core::audio::{AudioBufferRef, SignalSpec};
 use tokio::sync::Mutex;
@@ -35,6 +36,7 @@ pub struct AudioControlHandles {
     pub device_disconnected_tx: LockedSender<bool>,
     pub timestamp_tx: LockedSender<f64>,
     pub data_channel: Arc<tokio::sync::Mutex<Option<Arc<RTCDataChannel>>>>,
+    pub analyzer_state_rx: LockedReceiver<AnalyzerState>,
 }
 
 pub trait AudioOutput {
@@ -67,6 +69,21 @@ pub struct TimestampState {
     pub emit_to_client: usize, // 0 = not emit, 1 = emit
 }
 
+#[derive(Debug, Clone)]
+pub struct AnalyzerState {
+    pub is_enabled: bool,
+    pub analyzer_type: Option<AnalyzerType>,
+}
+
+impl Default for AnalyzerState {
+    fn default() -> Self {
+        AnalyzerState {
+            is_enabled: true,
+            analyzer_type: Some(AnalyzerType::Time),
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
@@ -78,12 +95,37 @@ pub enum AudioOutputError {
 
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
+// Global static instance
+static VISUALIZER: OnceLock<std::sync::Mutex<AudioProcessor>> = OnceLock::new();
+const MAX_FFT_SIZE: usize = 1024;
+
+pub fn get_visualizer() -> &'static std::sync::Mutex<AudioProcessor> {
+    VISUALIZER.get_or_init(|| {
+        // Initialize with your desired bin count and FFT size
+        std::sync::Mutex::new(AudioProcessor::new(32, MAX_FFT_SIZE))
+    })
+}
+
+// Global wrapper function for ease of use
+pub fn analyze_fft_time(input: &[f32]) -> Vec<u8> {
+    let mut processor = get_visualizer().lock().unwrap();
+    processor.compute_time(input)
+}
+
+pub fn analyze_fft_freq(input: &[f32]) -> Vec<u8> {
+    let mut processor = get_visualizer().lock().unwrap();
+    processor.compute_freq(input)
+}
+
 mod cpal {
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
     use crate::constants::BUFFER_SIZE;
-    use crate::output::{fft, get_device_by_name, ifft, AudioControlHandles, TimestampState};
+    use crate::output::{
+        analyze_fft_freq, analyze_fft_time, get_device_by_name, get_visualizer, AnalyzerState,
+        AnalyzerType, AudioControlHandles, TimestampState, MAX_FFT_SIZE,
+    };
     use crate::resampler::Resampler;
 
     use super::{AudioOutput, AudioOutputError, PlaybackState, Result};
@@ -125,6 +167,7 @@ mod cpal {
             sample_buf_size: u64,
             controls: AudioControlHandles,
             vol: Option<f64>,
+            analyzer_state: Option<AnalyzerState>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let device = get_device_by_name(Some(device_name.clone())).unwrap();
@@ -160,6 +203,9 @@ mod cpal {
                 config.sample_rate()
             };
 
+            let mut processor = get_visualizer().lock().unwrap();
+            processor.set_sample_rate(rate as f32);
+
             let device_spec = SignalSpec::new_with_layout(
                 rate,
                 match spec.channels.count() {
@@ -183,14 +229,18 @@ mod cpal {
                     &device,
                     controls,
                     |packet, volume| ((packet as f64) * volume) as f32,
-                    |data| {
-                        let fft_result = fft(&data);
-
-                        let time_domain_signal = ifft(&fft_result);
-
-                        Bytes::from(time_domain_signal)
+                    |data, fft_type| match fft_type {
+                        AnalyzerType::Time => {
+                            let bars = analyze_fft_time(&data);
+                            Bytes::from(bars)
+                        }
+                        AnalyzerType::Frequency => {
+                            let bars: Vec<u8> = analyze_fft_freq(&data);
+                            Bytes::from(bars)
+                        }
                     },
                     vol,
+                    analyzer_state,
                     app_handle,
                 ),
                 cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(
@@ -202,7 +252,7 @@ mod cpal {
                         ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
                             .clamp(i16::MIN as f64, i16::MAX as f64) as i16
                     },
-                    |data| {
+                    |data, fft_type| {
                         let mut byte_array = Vec::with_capacity(data.len());
 
                         for d in &mut data.iter() {
@@ -211,6 +261,7 @@ mod cpal {
                         Bytes::from(byte_array)
                     },
                     vol,
+                    analyzer_state,
                     app_handle,
                 ),
                 cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(
@@ -222,7 +273,7 @@ mod cpal {
                         ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
                             .clamp(0.0, u16::MAX as f64) as u16
                     },
-                    |data| {
+                    |data, fft_type| {
                         let mut byte_array = Vec::with_capacity(data.len());
 
                         for d in &mut data.iter() {
@@ -231,6 +282,7 @@ mod cpal {
                         Bytes::from(byte_array)
                     },
                     vol,
+                    analyzer_state,
                     app_handle,
                 ),
                 _ => CpalAudioOutputImpl::<f32>::try_open(
@@ -239,14 +291,18 @@ mod cpal {
                     &device,
                     controls,
                     |packet, volume| ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0)) as f32,
-                    |data| {
-                        let fft_result = fft(&data);
-
-                        let time_domain_signal = ifft(&fft_result);
-
-                        Bytes::from(time_domain_signal)
+                    |data, fft_type| match fft_type {
+                        AnalyzerType::Time => {
+                            let bars = analyze_fft_time(&data);
+                            Bytes::from(bars)
+                        }
+                        AnalyzerType::Frequency => {
+                            let bars: Vec<u8> = analyze_fft_freq(&data);
+                            Bytes::from(bars)
+                        }
                     },
                     vol,
+                    analyzer_state,
                     app_handle,
                 ),
             }
@@ -274,8 +330,9 @@ mod cpal {
             device: &cpal::Device,
             controls: AudioControlHandles,
             volume_change: fn(T, f64) -> T,
-            get_viz_bytes: fn(Vec<T>) -> Bytes,
+            get_viz_bytes: fn(Vec<T>, AnalyzerType) -> Bytes,
             vol: Option<f64>,
+            analyzer_state: Option<AnalyzerState>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
@@ -306,6 +363,7 @@ mod cpal {
             let ring_buf = SpscRb::new(ring_len);
             let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
             info!("Ring buffer capacity: {:?}", ring_buf.capacity());
+
             // States
             let volume_state = Arc::new(RwLock::new(vol.unwrap()));
             let frame_idx_state = Arc::new(RwLock::new(0.0f64));
@@ -317,6 +375,8 @@ mod cpal {
             }));
             let timestamp_state: Arc<RwLock<TimestampState>> =
                 Arc::new(RwLock::new(TimestampState { emit_to_client: 1 }));
+            let analyzer_state: Arc<RwLock<AnalyzerState>> =
+                Arc::new(RwLock::new(analyzer_state.unwrap()));
 
             let device_state = Arc::new(RwLock::new(
                 device.name().unwrap_or(String::from("Unknown")),
@@ -327,7 +387,10 @@ mod cpal {
             let dc = Arc::new(controls.data_channel);
 
             let rt = tokio::runtime::Runtime::new().unwrap();
-            let mut viz_data = Vec::with_capacity(1024);
+            let mut viz_data = Vec::with_capacity(MAX_FFT_SIZE);
+
+            let mut last_viz_emit = std::time::Instant::now();
+            let viz_interval = std::time::Duration::from_millis(16); // ~60fps
 
             let stream_result = device.build_output_stream(
                 &config,
@@ -358,6 +421,14 @@ mod cpal {
                         }
                     }
 
+                    let analyzer_control = controls.analyzer_state_rx.try_lock();
+                    if let Ok(analyzer_state_lock) = analyzer_control {
+                        let mut state = analyzer_state.write().unwrap();
+                        if let Ok(control) = analyzer_state_lock.try_recv() {
+                            info!("Got analyzer control: {:?}", control);
+                            *state = control;
+                        }
+                    }
                     // info!("playing back {:?}", data.len());
                     // If file changed, reset
                     let reset = controls.reset_control_rx.try_lock();
@@ -433,14 +504,12 @@ mod cpal {
                                 i += 1;
                             }
 
-                            let length = data.len();
+                            let length = MAX_FFT_SIZE;
 
-                            let mut should_send = false;
-                            for d in &mut *data {
-                                if viz_data.len() < length {
+                            for d in &data[..written] {
+                                // We still want to keep viz_data at a manageable size (e.g. 1024 or 2048)
+                                if viz_data.len() < MAX_FFT_SIZE {
                                     viz_data.push(*d);
-                                } else {
-                                    should_send = true;
                                 }
                             }
 
@@ -502,15 +571,39 @@ mod cpal {
                                     *duration = current_frac;
                                 }
                             }
-                            let viz = viz_data.clone();
                             // Every x samples - send viz data to frontend
-                            if should_send {
+                            // Check if it's time to send (60 FPS gate)
+                            if last_viz_emit.elapsed() >= viz_interval && viz_data.len() == length {
+                                let viz = viz_data.clone();
                                 viz_data.clear();
+                                last_viz_emit = std::time::Instant::now(); // Reset timer
+
                                 if let Ok(dc_guard) = dc.try_lock() {
                                     if let Some(dc1) = dc_guard.as_ref().cloned() {
-                                        rt.spawn(async move {
-                                            let _ = dc1.send(&get_viz_bytes(viz)).await;
-                                        });
+                                        let analyzer_guard = analyzer_state.read().unwrap();
+                                        match analyzer_guard.analyzer_type {
+                                            Some(AnalyzerType::Frequency) => {
+                                                rt.spawn(async move {
+                                                    let _ = dc1
+                                                        .send(&get_viz_bytes(
+                                                            viz,
+                                                            AnalyzerType::Frequency,
+                                                        ))
+                                                        .await;
+                                                });
+                                            }
+                                            Some(AnalyzerType::Time) => {
+                                                rt.spawn(async move {
+                                                    let _ = dc1
+                                                        .send(&get_viz_bytes(
+                                                            viz,
+                                                            AnalyzerType::Time,
+                                                        ))
+                                                        .await;
+                                                });
+                                            }
+                                            _ => {}
+                                        }
                                     }
                                 }
                             }
@@ -808,6 +901,7 @@ pub fn try_open(
     sample_buf_size: u64,
     controls: AudioControlHandles,
     vol: Option<f64>,
+    analyzer_state: Option<AnalyzerState>,
     app_handle: tauri::AppHandle,
 ) -> Result<Arc<tokio::sync::Mutex<dyn AudioOutput>>> {
     cpal::CpalAudioOutput::try_open(
@@ -816,6 +910,7 @@ pub fn try_open(
         sample_buf_size,
         controls,
         vol,
+        analyzer_state,
         app_handle,
     )
 }
@@ -871,83 +966,215 @@ pub fn enumerate_devices() -> Vec<DeviceWithConfig> {
         .collect()
 }
 
-fn fft(input: &[f32]) -> Vec<Complex<f32>> {
-    let len = input.len();
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(len);
-
-    // Apply Hanning window
-    // let windowed_input: Vec<f32> = input
-    //     .iter()
-    //     .enumerate()
-    //     .map(|(i, &x)| x * hamming_window(i, len))
-    //     .collect();
-
-    // Convert input into complex numbers
-    let mut complex_input: Vec<Complex<f32>> =
-        input.iter().map(|&x| Complex::new(x, 0.0)).collect();
-
-    // Perform FFT
-    fft.process(&mut complex_input);
-
-    complex_input
+pub struct AudioProcessor {
+    num_bins: usize,
+    fft_size: usize,
+    sample_rate: f32, // Added sample rate
+    prev_bins: Vec<f32>,
+    fft: Arc<dyn Fft<f32>>,
+    attack: f32,
+    decay: f32,
 }
 
-fn ifft(input: &[Complex<f32>]) -> Vec<u8> {
-    let len = input.len();
-    let mut planner = FftPlanner::new();
-    let ifft = planner.plan_fft_inverse(len);
+#[derive(Debug, Clone)]
+pub enum AnalyzerType {
+    Time,
+    Frequency,
+}
 
-    let mut output: Vec<Complex<f32>> = input.to_vec();
+impl AudioProcessor {
+    pub fn new(num_bins: usize, fft_size: usize) -> Self {
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(fft_size);
 
-    // Perform inverse FFT
-    ifft.process(&mut output);
-
-    // Extract real parts and scale
-    let mut time_domain_signal = output.iter().map(|&freq| freq.re).collect::<Vec<f32>>();
-
-    // Remove any residual imaginary part due to precision issues
-    for val in time_domain_signal.iter_mut() {
-        if val.abs() < 1e-6 {
-            *val = 0.0;
+        Self {
+            num_bins,
+            fft_size,
+            sample_rate: 44100.0, // just to initialize, will be set later
+            prev_bins: vec![0.0; num_bins],
+            fft,
+            attack: 0.9,
+            decay: 0.5,
         }
     }
 
-    let interpolated_signal: Vec<f32> = time_domain_signal
-        .windows(2)
-        .map(|pair| {
-            let (x0, x1) = (pair[0], pair[1]);
-            smoothing(x0, x1, 0.2f32)
-        })
-        .collect();
-
-    let mut interleaved_bytes: Vec<u8> = Vec::new();
-
-    // Iterate through each complex number in the FFT result
-    for i in 0..interpolated_signal.len() {
-        // Every 2nd sample, sum the last two together and divide by two
-        if i % 2 == 0 && i + 1 < interpolated_signal.len() {
-            let freq1 = interpolated_signal[i];
-            let freq2 = interpolated_signal[i + 1];
-
-            // Calculate magnitude of the complex number
-            // let magnitude1 = (freq1.re.powi(2) + freq1.im.powi(2)).sqrt();
-            // let magnitude2 = (freq2.re.powi(2) + freq2.im.powi(2)).sqrt();
-            let summed = (((freq1 - freq2) * 0.8 / 2.0) + 128.0) as u8;
-            // info!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
-
-            // Split the f32 into its individual bytes
-            // let bytes = summed.to_ne_bytes();
-            interleaved_bytes.push(summed);
-
-            // Interleave the bytes
-            // for &byte in bytes.iter() {
-            //     interleaved_bytes.push(byte);
-            // }
-        }
+    // Easy way to update sample rate if it changes (e.g., changing audio devices)
+    pub fn set_sample_rate(&mut self, sample_rate: f32) {
+        self.sample_rate = sample_rate;
     }
 
-    interleaved_bytes
+    pub fn compute_freq(&mut self, input: &[f32]) -> Vec<u8> {
+        let n = input.len();
+        if n == 0 {
+            return vec![0; self.num_bins];
+        }
+
+        // 1. Windowing & FFT
+        let mut buffer: Vec<Complex<f32>> = input
+            .iter()
+            .enumerate()
+            .map(|(i, &val)| {
+                let window =
+                    0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / (n as f32 - 1.0)).cos());
+                Complex {
+                    re: val * window,
+                    im: 0.0,
+                }
+            })
+            .collect();
+        self.fft.process(&mut buffer);
+
+        let half_n = n / 2;
+        let safe_limit = (half_n as f32 * 0.90) as usize;
+
+        let mut current_mags = vec![0.0f32; self.num_bins];
+        let mut counts = vec![0usize; self.num_bins];
+        let min_freq = 20.0; // Sub-bass
+        let max_freq = 20000.0; // Top of human hearing
+
+        for (i, c) in buffer[1..safe_limit].iter().enumerate() {
+            let bin_idx_raw = i + 1;
+            let freq = (bin_idx_raw as f32 * self.sample_rate) / n as f32;
+
+            // SKIP bins outside our desired 20Hz - 20kHz range
+            if freq < min_freq || freq > max_freq {
+                continue;
+            }
+
+            let mag = (c.re * c.re + c.im * c.im).sqrt();
+
+            // 3dB Slope logic
+            let octaves = (freq / 1000.0).log2();
+            let slope_factor = 10.0f32.powf((octaves * 3.0) / 20.0);
+            let corrected_mag = mag * slope_factor;
+
+            // Map frequency to visual bin using a Logarithmic scale relative to our range
+            // This ensures 20Hz is the first bar and 20kHz is the last.
+            let log_pos = ((freq / min_freq).log2() / (max_freq / min_freq).log2())
+                .clamp(0.0, 1.0 - f32::EPSILON);
+
+            let v_bin = (log_pos * self.num_bins as f32) as usize;
+
+            current_mags[v_bin] += corrected_mag.powi(2);
+            counts[v_bin] += 1;
+        }
+
+        // 3. Interpolation (Handled as in your original code...)
+        for i in 0..self.num_bins {
+            if counts[i] == 0 {
+                let left = (0..i).rev().find(|&j| counts[j] > 0);
+                let right = (i + 1..self.num_bins).find(|&j| counts[j] > 0);
+                current_mags[i] = match (left, right) {
+                    (Some(l), Some(r)) => {
+                        (current_mags[l] / counts[l] as f32 + current_mags[r] / counts[r] as f32)
+                            / 2.0
+                    }
+                    (Some(l), None) => current_mags[l] / counts[l] as f32,
+                    (None, Some(r)) => current_mags[r] / counts[r] as f32,
+                    _ => 0.0,
+                };
+                counts[i] = 1;
+            }
+        }
+
+        // 4. Temporal smoothing & scaling
+        let mut output = Vec::with_capacity(self.num_bins);
+        for i in 0..self.num_bins {
+            let avg_mag = (current_mags[i] / counts[i] as f32).sqrt();
+            let factor = if avg_mag > self.prev_bins[i] {
+                self.attack
+            } else {
+                self.decay
+            };
+            let smoothed = self.prev_bins[i] + (avg_mag - self.prev_bins[i]) * factor;
+            self.prev_bins[i] = smoothed;
+
+            output.push(self.scale_to_u8(smoothed, n));
+        }
+
+        output
+    }
+
+    fn scale_to_u8(&self, mag: f32, n: usize) -> u8 {
+        let normalized = mag / n as f32;
+        let db = 20.0 * (normalized + 1e-9).log10();
+
+        // Standardized range
+        let min_db = -100.0;
+        let max_db = 0.0;
+
+        let res = (db - min_db) / (max_db - min_db);
+        (res.clamp(0.02, 1.0) * 255.0) as u8
+    }
+
+    pub fn compute_time(&mut self, input: &[f32]) -> Vec<u8> {
+        // First do FFT
+        let len = input.len();
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(len);
+
+        // Convert input into complex numbers
+        let mut complex_input: Vec<Complex<f32>> =
+            input.iter().map(|&x| Complex::new(x, 0.0)).collect();
+
+        // Perform FFT
+        fft.process(&mut complex_input);
+
+        let len = complex_input.len();
+        let mut planner = FftPlanner::new();
+        let ifft = planner.plan_fft_inverse(len);
+
+        let mut output: Vec<Complex<f32>> = complex_input.to_vec();
+
+        // Perform inverse FFT
+        ifft.process(&mut output);
+
+        // Extract real parts and scale
+        let mut time_domain_signal = output.iter().map(|&freq| freq.re).collect::<Vec<f32>>();
+
+        // Remove any residual imaginary part due to precision issues
+        for val in time_domain_signal.iter_mut() {
+            if val.abs() < 1e-6 {
+                *val = 0.0;
+            }
+        }
+
+        let interpolated_signal: Vec<f32> = time_domain_signal
+            .windows(2)
+            .map(|pair| {
+                let (x0, x1) = (pair[0], pair[1]);
+                smoothing(x0, x1, 0.2f32)
+            })
+            .collect();
+
+        let mut interleaved_bytes: Vec<u8> = Vec::new();
+
+        // Iterate through each complex number in the FFT result
+        for i in 0..interpolated_signal.len() {
+            // Every 2nd sample, sum the last two together and divide by two
+            if i % 2 == 0 && i + 1 < interpolated_signal.len() {
+                let freq1 = interpolated_signal[i];
+                let freq2 = interpolated_signal[i + 1];
+
+                // Calculate magnitude of the complex number
+                // let magnitude1 = (freq1.re.powi(2) + freq1.im.powi(2)).sqrt();
+                // let magnitude2 = (freq2.re.powi(2) + freq2.im.powi(2)).sqrt();
+                let summed = (((freq1 - freq2) * 0.8 / 2.0) + 128.0) as u8;
+                // info!("L: {}, R: {}, summed: {}", freq1, freq2, summed);
+
+                // Split the f32 into its individual bytes
+                // let bytes = summed.to_ne_bytes();
+                interleaved_bytes.push(summed);
+
+                // Interleave the bytes
+                // for &byte in bytes.iter() {
+                //     interleaved_bytes.push(byte);
+                // }
+            }
+        }
+
+        interleaved_bytes
+    }
 }
 
 fn smoothing(x0: f32, x1: f32, factor: f32) -> f32 {

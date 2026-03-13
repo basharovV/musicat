@@ -63,6 +63,7 @@
         smartQuery,
         smartQueryInitiator,
         toDeletePlaylist,
+        uiPreferences,
         uiView,
         userPlaylists,
         userSettings,
@@ -92,6 +93,7 @@
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
     import Noise from "../ui/Noise.svelte";
+    import Oscilloscope from "../player/Oscilloscope.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -1821,34 +1823,12 @@
                                 ></canvas>
                             </div>
                         {/if}
-                        {#if artist}
-                            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                            <p
-                                class="artist"
-                                on:click={() => {
-                                    $isWikiOpen = !$isWikiOpen;
-                                }}
-                                use:optionalTippy={{
-                                    show: !$isMiniPlayer,
-                                    content: $LL.sidebar.openWikiTooltip({
-                                        artist,
-                                    }),
-                                    placement: "right",
-                                }}
-                            >
-                                {artist}
-                            </p>
-                        {/if}
-                        {#if !title && !album && !artist}
-                            <button
-                                class="add-metadata-btn"
-                                on:click={openTrackInfo}
-                                >{$LL.sidebar.addMetadataHint()}</button
-                            >
-                        {/if}
-                        {#if album}
-                            <small>{album}</small>
-                        {/if}
+                        <div class="oscilloscope">
+                            <Oscilloscope
+                                show={$uiPreferences.audioAnalyzer.isEnabled}
+                                width={300}
+                            />
+                        </div>
                     {:else}
                         <p class="is-placeholder">
                             {$LL.sidebar.takeControl()}
@@ -2471,6 +2451,16 @@
             }
         }
 
+        .oscilloscope {
+            position: absolute;
+            left: 40px;
+            right: 40px;
+            height: 30px;
+            top: 13.5px;
+            z-index: -1;
+            pointer-events: all;
+        }
+
         .artist {
             white-space: nowrap;
             font-weight: 500;
@@ -2994,9 +2984,8 @@
                 margin-top: 0.9em;
             }
 
-            .seekbar {
-                padding: 0.5em 1em;
-                margin-bottom: -0.5em;
+            .oscilloscope {
+                top: -8px;
             }
 
             .artwork-container {

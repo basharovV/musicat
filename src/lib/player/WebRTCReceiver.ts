@@ -1,254 +1,138 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import type { StreamStatus } from "../../App";
 import { streamInfo } from "../../data/store";
-const appWindow = getCurrentWebviewWindow();
+import { emit } from "@tauri-apps/api/event";
 
+const appWindow = getCurrentWebviewWindow();
 const THROUGHPUT_SAMPLE_SIZE = 10;
 
 export default class WebRTCReceiver {
-    playerConnection: RTCPeerConnection;
-    remoteConnection: RTCPeerConnection;
-    dataChannel: RTCDataChannel;
-    onSampleData: (samples: Uint8Array) => void;
-    shouldRestart = false;
-    throughputSample: number[] = Array(THROUGHPUT_SAMPLE_SIZE).fill(0);
-    lastSnapshotTime;
-    packetCount = 0;
+    playerConnection = null;
+    dataChannel = null;
+    onSampleData = null;
 
-    // Flow control (based on resume/pause decoding signals)
-    maxBufferSizeSeconds = 10; // When buffer goes past this length, pause decoding
-    minBufferSizeSeconds = 5; // When buffer decreases to this length, resume decoding
-    isFillingBuffer = true; // While decoding
-    currentBufferedSeconds = 0;
+    // Track signaling state to prevent race conditions
+    #isSettingRemoteDescription = false;
+    #iceCandidateQueue = [];
 
     constructor() {
         this.init();
     }
 
-    createDataChannel() {
-        this.dataChannel = this.playerConnection.createDataChannel("data", {
-            maxRetransmits: 0,
-            ordered: false,
-        });
+    async init() {
+        // If connection is closed, try to re-initialize
+        if (this.playerConnection?.signalingState === "closed") {
+            console.log("webrtc::Connection closed, re-initializing");
+            await this.setup();
+            return;
+        }
+
+        // Ignore if already initialized and data channel is open
+        if (this.dataChannel && this.dataChannel.readyState === "open") {
+            console.log("webrtc::Already initialized");
+            return;
+        }
+
+        await this.setup();
     }
 
-    async init() {
-        this.playerConnection = new RTCPeerConnection({ iceServers: [] });
-        await this.checkExistingConnection();
-        this.listenForIceCandidate();
-        this.createDataChannel();
-        await this.createLocalOffer();
+    async setup() {
+        // Close existing connection if any
+        if (this.playerConnection) {
+            this.playerConnection.close();
+        }
 
-        // Setup listeners
+        this.playerConnection = new RTCPeerConnection({
+            iceServers: [], // Localhost doesn't need STUN
+        });
 
-        // Setup listeners
+        // 1. Setup ICE handling first
+        this.setupIceListeners();
+
+        // 2. Setup DataChannel discovery
+        this.playerConnection.addEventListener("datachannel", (event) => {
+            console.log("webrtc::Data channel received from Rust");
+            this.dataChannel = event.channel;
+            this.setupDataChannelListeners();
+        });
+
+        // 3. Start listening for the Offer
+        // We do this BEFORE invoking Rust so we don't miss the event
+        const unlisten = await this.setupOfferListener();
+
+        // 4. Tell Rust to start the WebRTC handshake
+        await invoke("init_webrtc");
+    }
+
+    setupIceListeners() {
+        // Send local candidates to Rust
         this.playerConnection.addEventListener("icecandidate", (event) => {
-            console.log("webrtc::Ice candidate", event);
-            // Send ice candidate to server
-            // Check if the candidate is a local candidate
-            if (
-                event.candidate &&
-                event.candidate.candidate.match(/(127.0.0.1|localhost|.local)/)
-            ) {
-                console.log("webrtc::Sending candidate to remote...");
-                this.sendIceCandidateToRemote(event.candidate);
+            if (event.candidate) {
+                // Filter for localhost/LAN to keep it clean, but usually fine to send all
+                emit("handle_ice_candidate", {
+                    candidate: JSON.stringify(event.candidate),
+                });
             }
         });
-        this.playerConnection.addEventListener("datachannel", (event) => {
-            console.log("webrtc::Data channel", event);
-            this.dataChannel = event.channel;
 
-            // Listener for when the datachannel is opened
-            this.dataChannel.addEventListener("open", (event) => {
-                // Force the binary type to be ArrayBuffer
-                this.dataChannel.binaryType = "arraybuffer";
+        // Receive candidates from Rust
+        appWindow.listen("webrtc-icecandidate-from-rust", async (event) => {
+            const candidate = event.payload;
 
-                // this.sendAudioContextState();
-                console.log("webrtc::Data channel opened");
-            });
-
-            // Listener for when the datachannel is closed
-            this.dataChannel.addEventListener("close", (event) => {
-                // Tear down audio
-                console.log("webrtc::Data channel closed");
-            });
-
-            // on event
-            this.dataChannel.addEventListener("message", (event) => {
-                // console.log("webrtc::Data channel message", event);
-                if (event.data) {
-                    this.onSampleData && this.onSampleData(event.data);
-
-                    // Calculate throughput
-                    this.throughputSample[this.packetCount] =
-                        event.data.byteLength;
-
-                    if (this.packetCount === THROUGHPUT_SAMPLE_SIZE - 1) {
-                        // Calculate
-                        let totalBytes = this.throughputSample.reduce(
-                            (sum, p) => (sum += p),
-                            0,
-                        );
-                        let timeToSend =
-                            performance.now() - this.lastSnapshotTime;
-                        // If 148 bytes took 1.405s to send, that means the rate is
-                        // 148 / 1405 = bytes per millisecond,  * 1000 = bytes per 1s
-                        // Times 8 to get kbits/sec
-                        // console.log("total bytes", totalBytes, timeToSend);
-                        let receiveBitrate =
-                            ((totalBytes * 8) / timeToSend) * 1000;
-                        streamInfo.update((s) => ({
-                            ...s,
-                            receiveRate: receiveBitrate,
-                        }));
-
-                        this.packetCount = 0;
-                        this.lastSnapshotTime = performance.now();
-                    } else {
-                        this.packetCount++;
-                    }
-                    streamInfo.update((s) => ({
-                        ...s,
-                        bytesReceived: s.bytesReceived + event.data.byteLength,
-                    }));
-                }
-            });
+            // CRITICAL: Buffer candidates if the remote description isn't ready
+            if (
+                !this.playerConnection.remoteDescription ||
+                this.#isSettingRemoteDescription
+            ) {
+                this.#iceCandidateQueue.push(candidate);
+            } else {
+                await this.playerConnection.addIceCandidate(candidate);
+            }
         });
-        this.playerConnection.addEventListener(
-            "connectionstatechange",
-            (event) => {
-                console.log(
-                    "webrtc::Connectionstatechange",
-                    this.playerConnection.connectionState,
+    }
+
+    async setupOfferListener() {
+        return await appWindow.listen("webrtc-offer", async (event) => {
+            console.log("webrtc::Received offer from Rust");
+            const offer = event.payload as RTCSessionDescriptionInit;
+
+            this.#isSettingRemoteDescription = true;
+            try {
+                await this.playerConnection.setRemoteDescription(
+                    new RTCSessionDescription(offer),
                 );
-                if (this.playerConnection.connectionState === "disconnected") {
-                    // Try to re-establish
-                    this.init();
+
+                const answer = await this.playerConnection.createAnswer();
+                await this.playerConnection.setLocalDescription(answer);
+
+                // Send Answer back
+                await invoke("handle_answer", {
+                    answer: JSON.stringify(answer),
+                });
+
+                this.#isSettingRemoteDescription = false;
+
+                // Process any queued candidates
+                while (this.#iceCandidateQueue.length > 0) {
+                    const cand = this.#iceCandidateQueue.shift();
+                    await this.playerConnection.addIceCandidate(cand);
                 }
-            },
-        );
+            } catch (err) {
+                console.error("Signaling error:", err);
+                this.#isSettingRemoteDescription = false;
+            }
+        });
     }
 
-    async checkExistingConnection() {
-        let status = await invoke<StreamStatus>("init_streamer");
-        console.log("webrtc::is_open::" + status.isOpen);
-        this.shouldRestart = status.isOpen;
-    }
+    setupDataChannelListeners() {
+        this.dataChannel.binaryType = "arraybuffer";
 
-    async createLocalOffer() {
-        try {
-            const localOffer = await this.playerConnection.createOffer({
-                iceRestart: true,
-            });
-            await this.handleLocalDescription(localOffer);
-            this.listenForAnswer();
-            await this.sendOfferToRemote(localOffer);
-        } catch (e) {
-            console.error("webrtc::Failed to create session description: ", e);
-        }
-    }
+        this.dataChannel.onopen = () =>
+            console.log("webrtc::Data Channel OPEN");
 
-    async listenForAnswer() {
-        try {
-            const unlisten = await appWindow.listen(
-                "webrtc-answer",
-                async (event) => {
-                    console.log("webrtc::answer", event);
-                    if (this.playerConnection?.signalingState !== "stable") {
-                        await this.playerConnection.setRemoteDescription(
-                            event.payload as any,
-                        );
-                        unlisten();
-                    }
-                },
-            );
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async listenForIceCandidate() {
-        try {
-            const unlisten = await appWindow.listen(
-                "webrtc-icecandidate-client",
-                async (event) => {
-                    console.log("webrtc::icecandidate-client", event);
-                    this.playerConnection.addIceCandidate(event.payload);
-                    unlisten();
-                },
-            );
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async sendOfferToRemote(offer: RTCSessionDescriptionInit) {
-        try {
-            await appWindow.emit("webrtc-signal", offer);
-        } catch (e) {
-            console.error("webrtc::Failed to send session description: ", e);
-        }
-    }
-
-    async sendIceCandidateToRemote(candidate: RTCIceCandidateInit) {
-        try {
-            await appWindow.emit("webrtc-icecandidate-server", candidate);
-        } catch (e) {
-            console.error("webrtc::Failed to send candidate: ", e);
-        }
-    }
-    async handleLocalDescription(desc) {
-        this.playerConnection.setLocalDescription(desc);
-        console.log("webrtc::Offer from localConnection:\n", desc.sdp);
-        try {
-            // const remoteAnswer = await this.remoteConnection.createAnswer();
-            // this.handleRemoteAnswer(remoteAnswer);
-        } catch (e) {
-            console.error("webrtc::Error when creating remote answer: ", e);
-        }
-    }
-
-    handleRemoteAnswer(desc) {
-        console.log("webrtc::Answer from remoteConnection:\n", desc.sdp);
-        this.playerConnection.setRemoteDescription(desc);
-    }
-
-    prepareForNewStream() {
-        this.throughputSample = Array(THROUGHPUT_SAMPLE_SIZE).fill(0);
-        this.packetCount = 0;
-        streamInfo.update((s) => ({
-            ...s,
-            bytesReceived: 0,
-            receiveRate: 0,
-            playedSamples: 0,
-            bufferedSamples: 0,
-        }));
-    }
-
-    doFlowControl(bufferedTimeSeconds: number) {
-        if (
-            this.isFillingBuffer &&
-            bufferedTimeSeconds > this.maxBufferSizeSeconds
-        ) {
-            // Pause decoding for a bit
-            invoke("decode_control", {
-                event: {
-                    decoding_active: false,
-                },
-            });
-            this.isFillingBuffer = false;
-        } else if (
-            !this.isFillingBuffer &&
-            bufferedTimeSeconds < this.minBufferSizeSeconds
-        ) {
-            // Resume decoding again
-            invoke("decode_control", {
-                event: {
-                    decoding_active: true,
-                },
-            });
-            this.isFillingBuffer = true;
-        }
+        this.dataChannel.onmessage = (event) => {
+            if (this.onSampleData)
+                this.onSampleData(new Uint8Array(event.data));
+        };
     }
 }

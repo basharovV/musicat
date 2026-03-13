@@ -47,7 +47,10 @@ use crate::dsp::calculate_peak_value;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
 use crate::metadata::Song;
-use crate::output::{self, get_device_by_name, AudioOutput, DeviceWithConfig, PlaybackState};
+use crate::output::{
+    self, get_device_by_name, AnalyzerState, AnalyzerType, AudioOutput, DeviceWithConfig,
+    PlaybackState,
+};
 use crate::store::load_settings;
 use crate::{dsp, GetWaveformRequest, GetWaveformResponse, PlayFileRequest, SampleOffsetEvent};
 
@@ -70,6 +73,7 @@ pub enum PlayerControlEvent {
     LoopRegion(LoopRegionRequest),
     ChangeAudioDevice(ChangeAudioDeviceRequest),
     ChangePlaybackSpeed(PlaybackSpeedControlEvent),
+    ChangeAnalyzer(AnalyzerControlEvent),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -80,6 +84,12 @@ pub struct VolumeControlEvent {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlaybackSpeedControlEvent {
     playback_speed: Option<f64>, // 0.3 to 3
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AnalyzerControlEvent {
+    is_enabled: Option<bool>,
+    analyzer_type: Option<String>,
 }
 
 #[tauri::command]
@@ -137,6 +147,75 @@ pub fn playback_speed_control(event: PlaybackSpeedControlEvent, state: State<Aud
             info!("Error sending playback_speed_control info (channel inactive)");
         }
     }
+}
+
+#[tauri::command]
+pub fn analyzer_control(event: AnalyzerControlEvent, state: State<AudioPlayer>) {
+    info!("Received analyzer_control event");
+
+    match state
+        .player_control_sender
+        .send(PlayerControlEvent::ChangeAnalyzer(event))
+    {
+        Ok(_) => {}
+        Err(_err) => {
+            info!("Error sending analyzer control (channel inactive)");
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct StreamStatus {
+    is_open: bool,
+}
+
+#[tauri::command]
+pub async fn init_webrtc(
+    event: Option<String>,
+    state: State<'_, AudioPlayer<'_>>,
+    _app_handle: tauri::AppHandle,
+) -> Result<StreamStatus, ()> {
+    info!("Get stream status {:?}", event);
+    // Close existing connection
+    state.clone().reset().await;
+
+    let _ = state.init_webrtc(_app_handle).await;
+
+    return Ok(StreamStatus { is_open: false });
+}
+
+#[tauri::command]
+pub async fn handle_answer(
+    audio_player: tauri::State<'_, AudioPlayer<'_>>,
+    answer: String,
+) -> Result<(), String> {
+    // 1. Deserialize the SDP Answer from JS
+    let parsed_answer: RTCSessionDescription =
+        serde_json::from_str(&answer).map_err(|e| format!("Failed to parse SDP answer: {}", e))?;
+
+    info!("Received answer from JS frontend");
+
+    // 2. Access the PeerConnection
+    // Use a block or explicit drop to ensure the lock is released quickly
+    let pc_clone = {
+        let pc_guard = audio_player.peer_connection.lock().await;
+        pc_guard.as_ref().cloned()
+    };
+
+    if let Some(pc) = pc_clone {
+        // 3. Set Remote Description
+        // This is the final step of the SDP handshake.
+        pc.set_remote_description(parsed_answer)
+            .await
+            .map_err(|e| format!("Failed to set remote description: {}", e))?;
+
+        info!("WebRTC Remote Description set. Connection should transition to 'Connected' soon.");
+
+        return Ok(());
+    }
+
+    Err("PeerConnection not initialized. Call init_webrtc first.".to_string())
 }
 
 pub const PAUSED: u32 = 0;
@@ -263,79 +342,98 @@ impl<'a> AudioPlayer<'a> {
             ice_servers: Vec::new(),
             ..Default::default()
         };
-
-        // Create a new RTCPeerConnection
         let peer_connection = Arc::new(api.new_peer_connection(config).await?);
 
-        // Create a datachannel with label 'data'
+        // 1. Setup Data Channel BEFORE the offer
+        // For reliability on localhost, we use ordered: true.
+        // max_retransmits: None (Reliable mode).
         let data_channel = peer_connection
             .create_data_channel(
                 "data",
                 Some(RTCDataChannelInit {
-                    max_retransmits: Some(0),
                     ordered: Some(false),
+                    max_retransmits: None,
                     ..Default::default()
                 }),
             )
             .await?;
 
-        data_channel.on_open(Box::new(move || {
-            info!("Data channel opened");
-            Box::pin(async {})
-        }));
-
-        // Set the handler for Peer connection state
-        // This will notify you when the peer has connected/disconnected
-        peer_connection.on_peer_connection_state_change(Box::new(
-            move |s: RTCPeerConnectionState| {
-                info!("Peer Connection State has changed: {s}");
-
-                if s == RTCPeerConnectionState::Failed {
-                    // Wait until PeerConnection has had no network activity for 30 seconds or another failure. It may be reconnected using an ICE Restart.
-                    // Use webrtc.PeerConnectionStateDisconnected if you are interested in detecting faster timeout.
-                    // Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
-                    info!("Peer Connection has gone to failed exiting");
-                }
-
-                Box::pin(async {})
-            },
-        ));
-
-        // Listen for ICE candidates
+        // 2. Set up ICE Candidate Handler BEFORE creating the offer
+        let handle_clone = app_handle.clone();
         peer_connection.on_ice_candidate(Box::new(move |c| {
-            info!("on_ice_candidate {:?}", c);
-            if let Some(cand) = c {
-                // let candidate = serde_json::to_string(&cand.to_json().unwrap());
-                if cand.address.contains("127.0.0.1") {
-                    let _ = app_handle.emit("webrtc-icecandidate-client", &cand.to_json().unwrap());
+            let h = handle_clone.clone();
+            Box::pin(async move {
+                if let Some(cand) = c {
+                    let json_cand = cand.to_json().unwrap();
+                    // Localhost check is fine, but usually we send all and let WebRTC decide
+                    let _ = h.emit("webrtc-icecandidate-from-rust", json_cand);
                 }
-            }
+            })
+        }));
+
+        // 3. Set up Data Channel State Listeners
+        let dc_label = data_channel.label().to_string();
+        data_channel.on_open(Box::new(move || {
+            info!("Data channel '{}' is now OPEN", dc_label);
             Box::pin(async {})
         }));
 
-        // Set the new peer connection and data channel
-        if let Ok(mut conn) = self.peer_connection.try_lock() {
-            conn.replace(peer_connection);
-        }
+        // 4. Create and Set Local Description
+        let offer = peer_connection.create_offer(None).await?;
 
-        // Set the new datachannel
-        if let Ok(mut dc) = self.data_channel.try_lock() {
-            dc.replace(data_channel);
-        }
+        // This starts ICE gathering immediately
+        peer_connection.set_local_description(offer.clone()).await?;
+
+        // 5. Finally, emit the offer to JS
+        app_handle.emit("webrtc-offer", offer)?;
+
+        // Store in your struct (Using replace to handle existing sessions)
+        let mut pc_guard = self.peer_connection.lock().await;
+        *pc_guard = Some(peer_connection);
+
+        let mut dc_guard = self.data_channel.lock().await;
+        *dc_guard = Some(data_channel);
 
         Ok(())
     }
 
-    pub async fn handle_ice_candidate(
-        self,
-        candidate: &str,
-    ) -> Result<(), Box<dyn std::error::Error + Send>> {
-        info!("handle_ice_candidate {:?}", candidate);
-        let parsed: RTCIceCandidateInit = serde_json::from_str(candidate).unwrap();
+    pub async fn handle_answer(
+        &self,
+        answer: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let parsed_answer: RTCSessionDescription = serde_json::from_str(answer)?;
+        info!("Received answer from frontend");
 
-        if let Ok(pc_mutex) = self.peer_connection.try_lock() {
-            if let Some(pc) = pc_mutex.clone().or(None) {
-                let _ = pc.add_ice_candidate(parsed).await;
+        if let Ok(pc_guard) = self.peer_connection.try_lock() {
+            if let Some(pc) = pc_guard.as_ref() {
+                // 1. Set the remote description (The Answer)
+                pc.set_remote_description(parsed_answer).await?;
+                info!("Remote description set successfully");
+
+                // Note: Once this is set, the ICE agent will automatically
+                // begin pairing candidates.
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn handle_ice_candidate(
+        &self,
+        candidate: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let parsed: RTCIceCandidateInit = serde_json::from_str(candidate)?;
+
+        if let Ok(pc_guard) = self.peer_connection.try_lock() {
+            if let Some(pc) = pc_guard.as_ref() {
+                // Check if we are ready to accept candidates
+                if pc.remote_description().await.is_some() {
+                    pc.add_ice_candidate(parsed).await?;
+                    info!("ICE Candidate added");
+                } else {
+                    // If not ready, you could technically buffer these in a Vec
+                    // but usually, the frontend will retry or send several.
+                    warn!("Received candidate before remote description was set. Dropping.");
+                }
             }
         }
         Ok(())
@@ -459,6 +557,9 @@ fn decode_loop(
     let (device_change_sender, device_change_receiver) = std::sync::mpsc::channel();
     let (device_disconnected_sender, device_disconnected_receiver) = std::sync::mpsc::channel();
     let (sender_sample_offset, receiver_sample_offset) = std::sync::mpsc::channel();
+    let (analyzer_state_sender, analyzer_state_receiver) = std::sync::mpsc::channel();
+
+    // Receivers and senders for real-time control during the cpal audio callback
     let sample_offset_receiver = Arc::new(Mutex::new(receiver_sample_offset));
     let (timestamp_sender, timestamp_receiver) = std::sync::mpsc::channel();
     let timestamp_send = Arc::new(Mutex::new(timestamp_sender));
@@ -467,6 +568,11 @@ fn decode_loop(
     let reset_control = Arc::new(Mutex::new(reset_control_receiver));
     let device_change = Arc::new(Mutex::new(device_change_receiver));
     let device_disconnect_sender = Arc::new(Mutex::new(device_disconnected_sender));
+    let analyzer_receiver = Arc::new(Mutex::new(analyzer_state_receiver));
+
+    // Keep track of the analyzer state here instead of in the AudioOutput,
+    // since it may be recreated when switching tracks
+    let mut analyzer_state = Some(AnalyzerState::default());
 
     /* Devices are cached to avoid accessing current audio device during playback
     (which can cause an audible glitch when switching tracks automatically ie. gapless transition).
@@ -524,6 +630,24 @@ fn decode_loop(
                         info!("audio: change playback speed! {:?}", request);
                         if let Some(speed) = request.playback_speed {
                             playback_speed = speed;
+                        }
+                    }
+                    PlayerControlEvent::ChangeAnalyzer(request) => {
+                        info!("audio: change analyzer! {:?}", request);
+                        if let Some(request_type) = &request.analyzer_type {
+                            let new_state = AnalyzerState {
+                                is_enabled: request.is_enabled.unwrap_or(true),
+                                analyzer_type: if request_type.eq("time") {
+                                    Some(AnalyzerType::Time)
+                                } else {
+                                    Some(AnalyzerType::Frequency)
+                                },
+                            };
+
+                            analyzer_state.replace(new_state.clone());
+                            let _ = analyzer_state_sender.send(new_state);
+                        } else {
+                            info!("Analyzer type is not set");
                         }
                     }
                 }
@@ -875,8 +999,10 @@ fn decode_loop(
                         device_disconnected_tx: device_disconnect_sender.clone(),
                         timestamp_tx: timestamp_send.clone(),
                         data_channel: data_channel.clone(),
+                        analyzer_state_rx: analyzer_receiver.clone(),
                     },
                     volume.clone(),
+                    analyzer_state.clone(),
                     app_handle.clone(),
                 ));
             } else {
@@ -1010,6 +1136,24 @@ fn decode_loop(
                                             false,
                                         );
                                     }
+                                    PlayerControlEvent::ChangeAnalyzer(request) => {
+                                        info!("audio: change analyzer! {:?}", request);
+                                        if let Some(request_type) = &request.analyzer_type {
+                                            let new_state = AnalyzerState {
+                                                is_enabled: request.is_enabled.unwrap_or(true),
+                                                analyzer_type: if request_type.eq("time") {
+                                                    Some(AnalyzerType::Time)
+                                                } else {
+                                                    Some(AnalyzerType::Frequency)
+                                                },
+                                            };
+
+                                            analyzer_state.replace(new_state.clone());
+                                            let _ = analyzer_state_sender.send(new_state);
+                                        } else {
+                                            info!("Analyzer type is not set");
+                                        }
+                                    }
                                 }
                             }
 
@@ -1122,6 +1266,24 @@ fn decode_loop(
                                                 playback_speed,
                                                 false,
                                             );
+                                        }
+                                        PlayerControlEvent::ChangeAnalyzer(request) => {
+                                            info!("audio: change analyzer! {:?}", request);
+                                            if let Some(request_type) = &request.analyzer_type {
+                                                let new_state = AnalyzerState {
+                                                    is_enabled: request.is_enabled.unwrap_or(true),
+                                                    analyzer_type: if request_type.eq("time") {
+                                                        Some(AnalyzerType::Time)
+                                                    } else {
+                                                        Some(AnalyzerType::Frequency)
+                                                    },
+                                                };
+
+                                                analyzer_state.replace(new_state.clone());
+                                                let _ = analyzer_state_sender.send(new_state);
+                                            } else {
+                                                info!("Analyzer type is not set");
+                                            }
                                         }
                                     }
                                 }

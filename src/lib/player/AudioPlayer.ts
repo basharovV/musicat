@@ -242,13 +242,12 @@ class AudioPlayer {
                 ) {
                     // Try to reconnect
                     this.webRTCReceiver.playerConnection?.close();
-                    this.webRTCReceiver.remoteConnection?.close();
                     this.webRTCReceiver.dataChannel?.close();
                     this.webRTCReceiver.init();
                 }
 
                 // If the WebRTC receiver is ready to receive data, invoke the streamer
-                this.webRTCReceiver.prepareForNewStream();
+                this.webRTCReceiver.init();
 
                 invoke("play_file", {
                     event: {
@@ -655,7 +654,7 @@ class AudioPlayer {
                 }
 
                 // If the WebRTC receiver is ready to receive data, invoke the streamer
-                this.webRTCReceiver.prepareForNewStream();
+                this.webRTCReceiver.init();
                 invoke("play_file", {
                     event: {
                         path: this.currentSong.path,
