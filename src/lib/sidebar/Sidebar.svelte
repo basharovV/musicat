@@ -91,6 +91,7 @@
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
+    import Noise from "../ui/Noise.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -154,6 +155,8 @@
                 // (unless the metadata was just written to eg. updated artwork)
                 return;
             }
+
+            let isSwitchSong = song !== undefined;
 
             song = current.song;
 
@@ -259,8 +262,6 @@
             sampleRate = song.fileInfo.sampleRate;
             duration = song.fileInfo.duration;
 
-            previousArtworkSrc = artworkSrc;
-
             if (artworkSrc) {
                 console.log("artworkSrc", artworkSrc);
 
@@ -275,6 +276,23 @@
             }
 
             drawArtwork(previousSongIdx > current.index);
+            previousArtworkSrc = artworkSrc;
+
+            // Play switching animation
+            if (isSwitchSong && canvas && sidebarWidth && $currentThemeObject) {
+                // Too early - song is changed, but not the title
+                isTitleOverflowing =
+                    titleElement?.scrollWidth > titleElement?.clientWidth;
+                console.log("Reset marquee", song.title);
+                const newLines = [song.title, song.artist, song.album].filter(
+                    Boolean,
+                ); // Only include if they exist
+
+                resetMarquee(
+                    newLines,
+                    previousSongIdx < current.index ? "next" : "prev",
+                );
+            }
             previousSongIdx = current.index;
         } else {
             song = null;
@@ -740,6 +758,8 @@
     let titleElement: HTMLParagraphElement;
     let isTitleOverflowing = false; // to show marquee
 
+    let isMounted = false;
+
     onMount(() => {
         const unsubscribeShouldFocus = shouldFocusFind.subscribe((event) => {
             if (event?.target === "search") {
@@ -776,6 +796,8 @@
 
         onResize();
 
+        isMounted = true;
+
         return () => {
             resizeObserver.unobserve(menu);
             unsubscribeShouldFocus();
@@ -784,118 +806,167 @@
 
     let canvas: HTMLCanvasElement;
 
-    $: if (
-        song &&
-        canvas &&
-        sidebarWidth &&
-        displayTitle &&
-        $currentThemeObject
-    ) {
-        // Too early - song is changed, but not the title
-        isTitleOverflowing =
-            titleElement?.scrollWidth > titleElement?.clientWidth;
-
-        resetMarquee();
-    }
-
     function clearMarquee() {
         const context = canvas.getContext("2d");
         if (!context) return;
         context.clearRect(0, 0, canvas.width, canvas.height);
     }
+
     let animation;
-    function resetMarquee() {
+    let currentLines = []; // Tracks [title, artist, album]
+    let marqueeConfig = {
+        title: {
+            size: 36,
+            color: $currentThemeObject["text-active"],
+            weight: "bold",
+        },
+        artist: {
+            size: 36,
+            color: $currentThemeObject["text-active"] || "#888", // Example: Grayer
+            weight: "normal",
+        },
+        album: {
+            size: 34,
+            color: $currentThemeObject["text-secondary"] || "#666", // Example: Smaller/Dimmer
+            weight: "normal",
+        },
+        lineSpacing: 20,
+        marqueeSpeed: 0.08,
+        gap: 80,
+        slideDuration: 450,
+    };
+
+    $: if (currentThemeObject) {
+        marqueeConfig.title.color = $currentThemeObject["text-active"];
+        marqueeConfig.artist.color = $currentThemeObject["text-active"];
+        marqueeConfig.album.color = $currentThemeObject["text-secondary"];
+    }
+
+    // 1. Reactive trigger when song changes
+    $: if (canvas && !currentLines?.length) {
+        const newLines = [
+            $current.song.title,
+            $current.song.artist,
+            $current.song.album,
+        ].filter(Boolean); // Only include if they exist
+
+        // Determine if we should "slide" (next/prev) or just "reset"
+        resetMarquee(newLines);
+    }
+    function resetMarquee(nextLines, direction = null) {
         if (animation !== undefined) cancelAnimationFrame(animation);
 
         const context = canvas.getContext("2d");
         if (!canvas || !context) return;
-        const speed = 2; // Adjust the speed as needed
 
-        context.font =
-            "bold 36px -apple-system, Avenir, Helvetica, Arial, sans-serif";
-        context.fillStyle = $currentThemeObject["text-active"];
-        let gap = 100;
-        let textWidth = context.measureText(displayTitle).width;
+        const oldLines = [...currentLines];
+        currentLines = nextLines;
 
-        let x = (canvas.width - textWidth) / 2; // Initial x-coordinate for the text
-        let x2 = x + context.measureText(displayTitle).width + gap;
-        let started = false;
-        var lastFrameTime = 0;
-        var startTime = 0;
-        let yPos = 35;
+        // --- NEW CONFIGURABLE STYLES ---
 
-        function animate(elapsedTime) {
-            if (!canvas) return;
-            let textWidth = context.measureText(displayTitle).width;
-            let isOverflowing = textWidth > canvas.width;
-            if (isOverflowing) {
-                // console.log("isOverflowing", isOverflowing, started);
-                if (!started) {
-                    started = true;
-                    startTime = elapsedTime;
-                    x = 0; // Initial x-coordinate for the text
-                    x2 = x + context.measureText(displayTitle).width + gap;
-                    animation = requestAnimationFrame(animate);
-                } else {
-                    animation = requestAnimationFrame(animate);
-                }
-                // calculate the delta since the last frame
-                var delta = elapsedTime - (lastFrameTime || 0);
+        // Helper to get config based on line index
+        function getStyleForLine(index) {
+            if (index === 0) return marqueeConfig.title;
+            if (index === 1) return marqueeConfig.artist;
+            return marqueeConfig.album; // Index 2 and beyond
+        }
 
-                // Hold the marquee for 500ms
-                let timeSinceStart = elapsedTime - startTime;
+        // Dynamic Canvas Height Calculation using config values
+        const totalHeight = nextLines.reduce((acc, _, i) => {
+            return acc + getStyleForLine(i).size + marqueeConfig.lineSpacing;
+        }, 20);
 
-                if (timeSinceStart < 500) {
-                    clearMarquee();
-                    context.fillText(displayTitle, x, yPos);
-                    context.fillText(displayTitle, x2, yPos);
-                    return;
-                }
+        canvas.height = 173;
 
-                // if we *don't* already have a first frame, and the
-                // delta is less than 33ms (30fps in this case) then
-                // don't do anything and return
+        let startTime = null;
 
-                if (lastFrameTime && delta < 20) {
-                    return;
-                }
+        function getLineFont(index) {
+            const style = getStyleForLine(index);
+            return `${style.weight} ${style.size}px -apple-system, sans-serif`;
+        }
 
-                context.clearRect(0, 0, canvas.width, canvas.height);
+        function drawLine(text, index, xOffset, alpha = 1, marqueeElapsed = 0) {
+            const style = getStyleForLine(index);
 
-                // else we have a frame we want to draw at 30fps...
+            context.font = getLineFont(index);
+            context.globalAlpha = alpha;
+            context.fillStyle = style.color;
+            context.textBaseline = "top";
 
-                // capture the last frame draw time so we can work out
-                // a delta next time.
-                lastFrameTime = elapsedTime;
+            const textWidth = context.measureText(text).width;
 
-                // now do the frame update and render work
-                // ...
-                context.fillText(displayTitle, x, yPos);
-                context.fillText(displayTitle, x2, yPos);
+            // Calculate Y position dynamically based on cumulative sizes of previous lines
+            let y = 10;
+            for (let i = 0; i < index; i++) {
+                y += getStyleForLine(i).size + marqueeConfig.lineSpacing;
+            }
 
-                x -= speed;
-                x2 -= speed;
+            const isOverflowing = textWidth > canvas.width;
 
-                // Reset x-coordinate when the text goes off the left side of the canvas
-                if (x < -context.measureText(displayTitle).width) {
-                    x = x2 + context.measureText(displayTitle).width + gap;
-                }
-                if (x2 < -context.measureText(displayTitle).width) {
-                    x2 = x + context.measureText(displayTitle).width + gap;
-                }
+            if (!isOverflowing || marqueeElapsed === 0) {
+                const x = (canvas.width - textWidth) / 2 + xOffset;
+                context.fillText(text, x, y);
             } else {
-                context.clearRect(0, 0, canvas.width, canvas.height);
+                const pauseTime = 800;
+                const totalLoopWidth = textWidth + marqueeConfig.gap;
 
-                context.fillText(
-                    displayTitle,
-                    (canvas.width - textWidth) / 2,
-                    yPos,
-                );
+                if (marqueeElapsed < pauseTime) {
+                    context.fillText(
+                        text,
+                        (canvas.width - textWidth) / 2 + xOffset,
+                        y,
+                    );
+                } else {
+                    const scrollOffset =
+                        (marqueeElapsed - pauseTime) *
+                        marqueeConfig.marqueeSpeed;
+                    const startX = (canvas.width - textWidth) / 2;
+                    let x = startX - (scrollOffset % totalLoopWidth) + xOffset;
+
+                    context.fillText(text, x, y);
+                    context.fillText(text, x + totalLoopWidth, y);
+                }
             }
         }
+
+        function animate(currentTime) {
+            if (!startTime) startTime = currentTime;
+            const elapsed = currentTime - startTime;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (direction && elapsed < marqueeConfig.slideDuration) {
+                const progress = elapsed / marqueeConfig.slideDuration;
+                const ease = 1 - Math.pow(1 - progress, 3);
+                const moveDist = canvas.width * ease;
+
+                const nextXOffset =
+                    direction === "next"
+                        ? canvas.width - moveDist
+                        : -(canvas.width - moveDist);
+                const oldXOffset = direction === "next" ? -moveDist : moveDist;
+
+                oldLines.forEach((line, i) =>
+                    drawLine(line, i, oldXOffset, 1 - progress),
+                );
+                nextLines.forEach((line, i) =>
+                    drawLine(line, i, nextXOffset, 1),
+                );
+
+                animation = requestAnimationFrame(animate);
+                return;
+            }
+
+            const marqueeElapsed = direction
+                ? elapsed - marqueeConfig.slideDuration
+                : elapsed;
+            nextLines.forEach((line, i) =>
+                drawLine(line, i, 0, 1, marqueeElapsed),
+            );
+            animation = requestAnimationFrame(animate);
+        }
+
         animation = requestAnimationFrame(animate);
     }
-
     /**
      * Draws artwork from artworkSrc and artworkFormat, otherwise shows the placeholder image
      * Also animates changes between tracks by sliding the artwork to the left
@@ -905,7 +976,7 @@
             const context = artworkCanvas.getContext("2d");
             if (!context) return;
 
-            context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
+            // context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
             if (song) {
                 const artwork = artworkSrc;
                 console.log("artwork", artwork);
@@ -951,8 +1022,15 @@
                         context.drawImage(placeholderArtwork, 45, 45, 120, 120);
                     }
                 }
+                console.log(
+                    "drawArtwork",
+                    isPrevious,
+                    previousArtworkSrc,
+                    artworkSrc,
+                );
                 // If previousArtworkSrc differs from artworkSrc, animate the artwork
                 if (artwork && previousArtworkSrc !== artworkSrc) {
+                    console.log("animating artwork");
                     animateArtwork(
                         context,
                         previousArtworkSrc,
@@ -1484,7 +1562,7 @@
                                 <div class="new-playlist new-smart-playlist">
                                     <ButtonWithIcon
                                         size="small"
-                                        text="New Smart Playlist"
+                                        text={$LL.smartPlaylists.newSmartPlaylist()}
                                         theme="translucent"
                                         onClick={() => {
                                             $smartQueryInitiator = `smart-query:${$selectedSmartQuery}`;
@@ -1493,6 +1571,7 @@
                                             $isSmartQueryValid = false;
                                             $isSmartQueryBuilderOpen = true;
                                             $isSmartQuerySaveUiOpen = false;
+                                            $uiView = "smart-query";
                                         }}
                                     />
                                 </div>
@@ -1679,6 +1758,9 @@
             <div class="track-info-content">
                 <!-- svelte-ignore a11y-mouse-events-have-key-events -->
 
+                <div class="noise">
+                    <Noise theme={$currentThemeObject["variant"]} />
+                </div>
                 {#if !$isMiniPlayer}
                     <div
                         class="sidebar-toggle"
@@ -1796,29 +1878,29 @@
                 </div>
             </div>
         </div>
-        {#if song}
-            <div
-                class="artwork-container"
-                class:collapsed={$isArtworkCollapsed && !$isMiniPlayer}
-                class:disabled={$isMiniPlayer}
-                on:click={() => {
-                    if (!$isMiniPlayer) {
-                        $isArtworkCollapsed = !$isArtworkCollapsed;
-                    }
-                }}
-            >
-                <div class="artwork-frame">
-                    <canvas
-                        class="artwork"
-                        bind:this={artworkCanvas}
-                        width={210}
-                        height={210}
-                    />
-                </div>
-            </div>
-        {/if}
         <div class="bottom" data-tauri-drag-region>
-            <div class="seekbar">
+            {#if song}
+                <div
+                    class="artwork-container"
+                    class:collapsed={$isArtworkCollapsed && !$isMiniPlayer}
+                    class:disabled={$isMiniPlayer}
+                    on:click={() => {
+                        if (!$isMiniPlayer) {
+                            $isArtworkCollapsed = !$isArtworkCollapsed;
+                        }
+                    }}
+                >
+                    <div class="artwork-frame">
+                        <canvas
+                            class="artwork"
+                            bind:this={artworkCanvas}
+                            width={210}
+                            height={210}
+                        />
+                    </div>
+                </div>
+            {/if}
+            <div class="transport">
                 <Seekbar
                     {duration}
                     onSeek={(time) => seekTime.set(time)}
@@ -1921,6 +2003,9 @@
     $xsmall_y_breakpoint: 320px;
     $sidebar_primary_color: transparent;
     $sidebar_secondary_color: transparent;
+    $track_info_artwork_margin: 5px;
+    $artwork_bottom: 143px;
+    $bottom_height: 340px;
 
     :global {
         sidebar {
@@ -1972,7 +2057,7 @@
     sidebar {
         position: relative;
         display: grid;
-        grid-template-rows: minmax(198px, 1fr) auto 1fr; // top, menu, track info, empty space (bottom stuff is absolute)
+        grid-template-rows: minmax(198px, 1fr) auto $bottom_height; // top, menu, track info, empty space (bottom stuff is absolute)
         flex-direction: column;
         justify-content: flex-end;
         align-items: flex-end;
@@ -2234,7 +2319,6 @@
             font-size: 13px;
             color: var(--text-active, initial);
             border: 1px solid var(--sidebar-search-border);
-            backdrop-filter: blur(8px);
             z-index: 10;
             background-color: transparent;
             &::placeholder {
@@ -2261,13 +2345,12 @@
 
     .track-info {
         width: 100%;
-        height: 198px;
+        height: auto;
         /* height: 150px; */
         /* min-height: 150px; */
         width: 100%;
-        position: sticky;
+        position: relative;
         /* top: 110px; */
-        top: 0px;
         cursor: default;
         user-select: none;
         pointer-events: none;
@@ -2292,34 +2375,27 @@
 
     .track-info-content {
         width: 100%;
-        height: fit-content;
+        height: 100%;
+
         position: sticky;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
 
         @media only screen and (min-width: 211px) {
-            &:after {
-                content: "";
+            .noise {
                 position: absolute;
-                left: 5px;
-                right: 5px;
-                top: 5px;
-                bottom: 5px;
+                left: $track_info_artwork_margin;
+                right: $track_info_artwork_margin;
+                top: $track_info_artwork_margin;
+                bottom: 0px;
                 background-color: transparent;
-                @media only screen and (max-height: 820px) {
-                    background-color: color-mix(
-                        in srgb,
-                        var(--background) 30%,
-                        transparent
-                    );
-
-                    box-shadow: 0px 0px 10px 1px
-                        color-mix(in srgb, var(--type-bw) 10%, transparent);
-
-                    backdrop-filter: blur(5px);
-                }
+                box-shadow: 0px 0px 10px 1px
+                    color-mix(in srgb, var(--type-bw) 10%, transparent);
+                // background: url("/images/blur.png");
+                background-size: cover;
                 border-radius: 5px;
+                overflow: hidden;
                 z-index: -1;
             }
         }
@@ -2351,10 +2427,10 @@
         background-color: $sidebar_primary_color;
         color: var(--text, initial);
         width: 100%;
-        padding: 0.5em 0.3em;
+        padding: 0 0.5em 0.3em 0.5em;
 
         .marquee-container {
-            height: 20px;
+            height: 65px;
             width: 100%;
             pointer-events: all;
             margin-bottom: 0.3em;
@@ -2368,9 +2444,20 @@
             );
 
             &:hover {
-                background-color: var(--sidebar-info-title-hover-bg);
-                border-radius: 5px;
-                mask-image: none;
+                // mask-image: none;
+                // position: relative;
+                // &::after {
+                //     content: "";
+                //     position: absolute;
+                //     top: 2px;
+                //     height: 100%;
+                //     left: 10px;
+                //     right: 10px;
+                //     bottom: 0;
+                //     background-color: var(--sidebar-info-title-hover-bg);
+                //     border-radius: 5px;
+                //     z-index: 2;
+                // }
             }
 
             canvas {
@@ -2492,6 +2579,7 @@
     }
 
     .cd-gif {
+        visibility: hidden;
         margin-top: 1.3em;
         margin-bottom: 0.5em;
         width: 25px;
@@ -2509,30 +2597,32 @@
     .artwork-container {
         padding: 0em;
         width: 100%;
-        height: 209px;
-        position: sticky;
-        bottom: 140px;
-        margin: auto;
+        height: auto;
+        position: relative;
         opacity: 1;
         box-sizing: content-box;
         z-index: 1;
-        transition: all 0.2s cubic-bezier(0.2, 0.01, 0.02, 0.99);
         cursor: zoom-out;
         &.collapsed {
-            bottom: 250px;
+            bottom: 120px;
             height: 80px;
             width: 80px;
             margin: auto;
             cursor: zoom-in;
             z-index: 4;
             .artwork-frame {
+                transition: all 0.2s cubic-bezier(0.2, 0.01, 0.02, 0.99);
+
                 border-radius: 3px;
                 border: 2px solid var(--panel-separator);
                 padding: 2px;
                 overflow: hidden;
                 background-color: var(--background);
                 .artwork {
+                    width: 100%;
+                    height: 100%;
                     object-fit: contain;
+                    border-radius: 0px;
                 }
             }
         }
@@ -2548,8 +2638,8 @@
             align-items: center;
             justify-content: center;
             .artwork {
-                width: 100%;
-                height: 100%;
+                width: calc(100% - $track_info_artwork_margin * 2);
+                border-radius: 5px;
                 object-fit: cover;
             }
             .artwork-placeholder {
@@ -2568,13 +2658,13 @@
 
     .bottom {
         width: 100%;
-        position: absolute;
-        bottom: 0;
+        height: 100%;
+        position: relative;
         z-index: 3;
-        height: 140px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+        gap: 5px;
         /* background-color: #242026bc; */
     }
 
@@ -2592,7 +2682,7 @@
         height: 100%;
     }
 
-    .seekbar {
+    .transport {
         width: 100%;
         padding: 0 1em;
         display: flex;
@@ -2753,6 +2843,10 @@
                 opacity: 1 !important;
             }
 
+            .transport {
+                opacity: 1 !important;
+            }
+
             .artwork-container {
                 opacity: 0.1 !important;
             }
@@ -2760,7 +2854,7 @@
     }
 
     .empty {
-        grid-template-rows: 1fr auto 140px;
+        grid-template-rows: 1fr auto $artwork_bottom;
         .track-info {
             background: none;
         }
@@ -2781,12 +2875,12 @@
     .has-current-song {
         &.artwork-collapsed {
             @media only screen and (min-height: 650px) {
-                grid-template-rows: 1fr auto 88px;
+                grid-template-rows: 1fr auto 135px;
             }
         }
 
         @media only screen and (min-height: 821px) {
-            grid-template-rows: 1fr auto 310px;
+            grid-template-rows: 1fr auto $bottom_height;
         }
 
         .file.empty {
@@ -2796,7 +2890,7 @@
         }
 
         @media only screen and (max-height: 785px) {
-            .file:not(.empty) {
+            &:not(.artwork-collapsed) .file:not(.empty) {
                 display: none;
             }
         }
@@ -2854,21 +2948,50 @@
                 display: none;
             }
             .track-info,
-            .bottom,
             .mini-toggle {
                 opacity: 0 !important;
             }
             .mini-toggle {
                 top: 0px;
                 right: 0px;
+                z-index: 2;
+            }
+            .track-info {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                height: auto;
+                z-index: 10;
+            }
+
+            .bottom {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                height: 100%;
+
+                .transport {
+                    opacity: 0;
+                    padding: 0.5em 1em 0 1em;
+                    transport {
+                        padding-bottom: 0.5em;
+                    }
+                }
+                .other-controls {
+                    padding: 0 0 0.75em;
+                }
             }
             .track-info-content {
                 margin-top: 0.75em;
                 margin-bottom: 2.5em;
             }
 
-            .other-controls {
-                padding: 0 0 0.75em;
+            .marquee-container {
+                margin-top: 0.9em;
             }
 
             .seekbar {
@@ -2878,6 +3001,18 @@
 
             .artwork-container {
                 opacity: 1 !important;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex !important;
+                justify-content: center;
+                .artwork {
+                    width: 100%;
+                    height: 100%;
+                    border-radius: none;
+                }
             }
         }
 
