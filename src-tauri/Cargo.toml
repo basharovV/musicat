@@ -84,7 +84,6 @@ rusqlite = { version = "0.38.0", features = ["bundled"] }
 objc2 = "0.5.2"
 block2 = "0.5.1"
 objc2-foundation = { version = "0.2.2", features = ["all"] }
-window-vibrancy = "0.5.2"
 
 [patch.crates-io]
 tao = { git = "https://github.com/basharovV/tao.git", branch = "dev" }

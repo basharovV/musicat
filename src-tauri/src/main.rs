@@ -25,8 +25,6 @@ use tauri::{Emitter, Listener, LogicalPosition};
 use tauri::{Manager, State};
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
-#[cfg(target_os = "macos")]
-use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 use crate::stem_separator::StemProcessState;
 
@@ -478,11 +476,19 @@ fn main() {
 
             #[cfg(target_os = "macos")]
             {
+                use tauri::window::{Color, EffectsBuilder};
+                use tauri_utils::WindowEffect;
+
                 window_builder = window_builder
                     .traffic_light_position(LogicalPosition { x: 16, y: 18 })
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .hidden_title(true)
-                    .transparent(true);
+                    .background_color(Color(0, 0, 0, 1)) // <-
+                    .effects(
+                        EffectsBuilder::new()
+                            .effects(vec![WindowEffect::Sidebar])
+                            .build(),
+                    );
             }
 
             #[cfg(target_os = "windows")]
@@ -498,11 +504,6 @@ fn main() {
             let window = window_builder.build().unwrap();
 
             let window2 = window.clone();
-            #[cfg(target_os = "macos")]
-            {
-                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
-                    .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-            }
 
             window.clone().on_window_event(move |event| match event {
                 tauri::WindowEvent::Resized(size) => {
