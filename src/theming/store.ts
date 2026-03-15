@@ -48,7 +48,6 @@ export function applyTheme(userSettings: UserSettings): Theme {
         const foundTheme = Object.entries(allThemes).find(
             (t) => t[0] === theme,
         );
-        console.log("foundTheme", foundTheme, allThemes);
         return foundTheme ? foundTheme[1] : DEFAULT_THEME_DARK;
     } else {
         return DEFAULT_THEME_DARK;

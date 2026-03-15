@@ -12,7 +12,7 @@
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
     import { cubicInOut } from "svelte/easing";
-    import { fade, fly } from "svelte/transition";
+    import { fade, fly, scale } from "svelte/transition";
     import type { PlaylistFile, Song } from "../../App";
     import {
         addSongsToPlaylist,
@@ -1859,27 +1859,6 @@
             </div>
         </div>
         <div class="bottom" data-tauri-drag-region>
-            {#if song}
-                <div
-                    class="artwork-container"
-                    class:collapsed={$isArtworkCollapsed && !$isMiniPlayer}
-                    class:disabled={$isMiniPlayer}
-                    on:click={() => {
-                        if (!$isMiniPlayer) {
-                            $isArtworkCollapsed = !$isArtworkCollapsed;
-                        }
-                    }}
-                >
-                    <div class="artwork-frame">
-                        <canvas
-                            class="artwork"
-                            bind:this={artworkCanvas}
-                            width={210}
-                            height={210}
-                        />
-                    </div>
-                </div>
-            {/if}
             <div class="transport">
                 <Seekbar
                     {duration}
@@ -1975,6 +1954,27 @@
                 </div>
             </div>
         </div>
+        {#if song}
+            <div
+                class="artwork-container"
+                class:collapsed={$isArtworkCollapsed && !$isMiniPlayer}
+                class:disabled={$isMiniPlayer}
+                on:click={() => {
+                    if (!$isMiniPlayer) {
+                        $isArtworkCollapsed = !$isArtworkCollapsed;
+                    }
+                }}
+            >
+                <div class="artwork-frame">
+                    <canvas
+                        class="artwork"
+                        bind:this={artworkCanvas}
+                        width={210}
+                        height={210}
+                    />
+                </div>
+            </div>
+        {/if}
     {/if}
 </sidebar>
 
@@ -1986,6 +1986,7 @@
     $track_info_artwork_margin: 5px;
     $artwork_bottom: 143px;
     $bottom_height: 340px;
+    $bottom_height_collapsed: 100px;
 
     :global {
         sidebar {
@@ -2045,6 +2046,7 @@
         max-width: 210px;
         min-width: 210px;
         background-color: $sidebar_primary_color;
+        transition: grid-template-rows 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
 
         .click-curtain {
             position: fixed;
@@ -2584,27 +2586,62 @@
         }
     }
 
+    .artwork-spacer {
+        width: 210px;
+        &.show {
+            animation: in 0.2s ease-in-out forwards;
+        }
+
+        &.hide {
+            animation: out 0.2s ease-in-out forwards;
+        }
+
+        @keyframes in {
+            from {
+                min-height: 0px;
+            }
+            to {
+                min-height: 210px;
+            }
+        }
+        @keyframes out {
+            from {
+                min-height: 210px;
+            }
+            to {
+                min-height: 100px;
+            }
+        }
+    }
+
     .artwork-container {
+        position: absolute;
+        bottom: 135px;
         padding: 0em;
-        width: 100%;
+        width: 210px;
+        margin: auto;
+        left: 0;
+        right: 0;
         height: auto;
-        position: relative;
         opacity: 1;
         box-sizing: content-box;
-        z-index: 1;
+        z-index: 5;
         cursor: zoom-out;
+        transition: all 0.2s cubic-bezier(0.2, 0.05, 0.02, 0.99);
         &.collapsed {
-            bottom: 120px;
+            bottom: 268px;
             height: 80px;
+            left: 0;
+            right: 0;
             width: 80px;
             margin: auto;
             cursor: zoom-in;
-            z-index: 4;
+            z-index: 3;
             .artwork-frame {
-                transition: all 0.2s cubic-bezier(0.2, 0.01, 0.02, 0.99);
-
-                border-radius: 3px;
-                border: 2px solid var(--panel-separator);
+                border-radius: 3px 3px 0px 0px;
+                border-top: 1px solid var(--panel-separator);
+                border-left: 1px solid var(--panel-separator);
+                border-right: 1px solid var(--panel-separator);
                 padding: 2px;
                 overflow: hidden;
                 background-color: var(--background);
@@ -2864,6 +2901,24 @@
 
     .has-current-song {
         &.artwork-collapsed {
+            grid-template-rows: 1fr auto $bottom_height_collapsed;
+            .track-info {
+                z-index: 4;
+                padding-bottom: 5px;
+                border-bottom: 0.7px solid var(--panel-separator);
+                box-shadow: 0px -16px 20px 0px rgba(0, 0, 0, 0.15);
+                .noise {
+                    backdrop-filter: blur(4px);
+                    background-color: color-mix(
+                        in srgb,
+                        var(--overlay-bg) 60%,
+                        transparent
+                    );
+                }
+            }
+            .bottom {
+                z-index: 5;
+            }
             @media only screen and (min-height: 650px) {
                 grid-template-rows: 1fr auto 135px;
             }

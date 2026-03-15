@@ -643,8 +643,8 @@
 
     main {
         border-radius: 11px;
-        border: 0.5px solid
-            color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
+        // border: 0.5px solid
+        //     color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
         box-sizing: border-box;
         display: grid;
         grid-template-columns: auto auto 1fr auto auto; // Sidebar, queue, panel, resizer, wiki

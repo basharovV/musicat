@@ -3,7 +3,7 @@ variant: dark
 # Basics
 accent: "#45fffcf3"
 accent-secondary: "#632fff"
-background: "#242026cb"
+background: "#2420264e"
 button-active-bg: "#624dd4"
 button-active-disabled-bg: "#4935b8"
 button-active-disabled-text: "#747272"
