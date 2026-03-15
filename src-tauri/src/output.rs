@@ -8,10 +8,11 @@
 //! Platform-dependant Audio Outputs
 
 use std::result;
+use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender};
 
 use ::cpal::traits::{DeviceTrait, HostTrait};
-use ::cpal::{default_host, Device, SupportedStreamConfigRange};
+use ::cpal::{default_host, Device, DeviceId, SupportedStreamConfigRange};
 use rustfft::Fft;
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::{Arc, OnceLock};
@@ -123,7 +124,7 @@ mod cpal {
 
     use crate::constants::BUFFER_SIZE;
     use crate::output::{
-        analyze_fft_freq, analyze_fft_time, get_device_by_name, get_visualizer, AnalyzerState,
+        analyze_fft_freq, analyze_fft_time, get_device_by_id, get_visualizer, AnalyzerState,
         AnalyzerType, AudioControlHandles, TimestampState, MAX_FFT_SIZE,
     };
     use crate::resampler::Resampler;
@@ -162,7 +163,7 @@ mod cpal {
 
     impl CpalAudioOutput {
         pub fn try_open(
-            device_name: &String,
+            device_id: &String,
             spec: SignalSpec,
             sample_buf_size: u64,
             controls: AudioControlHandles,
@@ -170,7 +171,7 @@ mod cpal {
             analyzer_state: Option<AnalyzerState>,
             app_handle: AppHandle,
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
-            let device = get_device_by_name(Some(device_name.clone())).unwrap();
+            let device = get_device_by_id(Some(device_id.clone())).unwrap();
 
             info!("Default audio device: {:?}", device.description());
 
@@ -378,12 +379,8 @@ mod cpal {
             let analyzer_state: Arc<RwLock<AnalyzerState>> =
                 Arc::new(RwLock::new(analyzer_state.unwrap()));
 
-            let device_state = Arc::new(RwLock::new(
-                device.name().unwrap_or(String::from("Unknown")),
-            ));
-            let device_name_state = Arc::new(RwLock::new(
-                device.name().unwrap_or(String::from("Unknown")),
-            ));
+            let device_state = Arc::new(RwLock::new(device.id().unwrap().to_string()));
+            let device_name_state = Arc::new(RwLock::new(device.id().unwrap().to_string()));
             let dc = Arc::new(controls.data_channel);
 
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -658,7 +655,7 @@ mod cpal {
                 stream,
                 resampler: None,
                 sample_rate: config.sample_rate,
-                name: device.name().unwrap_or(String::from("Unknown")),
+                name: device.id().unwrap().to_string(),
                 time_base: time_base.clone(),
             })))
         }
@@ -915,26 +912,22 @@ pub fn try_open(
     )
 }
 
-pub fn get_device_by_name(name: Option<String>) -> Option<Device> {
+pub fn get_device_by_id(id_str: Option<String>) -> Option<Device> {
     let host = default_host();
-    if name.is_none() {
-        return host.default_output_device();
-    }
-    let name = name.unwrap();
-    return host
-        .devices()
-        .unwrap()
-        .find(|device| {
-            device.name().unwrap() == name
-                && device.supported_output_configs().is_ok_and(|configs| {
-                    let mut has = false;
-                    for _config in configs {
-                        has = true;
-                    }
-                    has
-                })
-        })
-        .or(host.default_output_device());
+
+    // 1. If no ID is provided, use the default output device
+    let id_string = match id_str {
+        Some(s) => s,
+        None => return host.default_output_device(),
+    };
+
+    // 2. Try to parse the string into a stable cpal::DeviceId
+    // 3. Use host.device_by_id to find it directly
+    DeviceId::from_str(&id_string)
+        .ok()
+        .and_then(|id| host.device_by_id(&id))
+        // 4. Fallback to default if the ID is invalid or device is missing
+        .or_else(|| host.default_output_device())
 }
 
 pub fn default_device() -> Option<Device> {

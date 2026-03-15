@@ -48,7 +48,7 @@ use crate::dsp::calculate_peak_value;
 use crate::mediakeys;
 use crate::metadata::Song;
 use crate::output::{
-    self, get_device_by_name, AnalyzerState, AnalyzerType, AudioOutput, DeviceWithConfig,
+    self, get_device_by_id, AnalyzerState, AnalyzerType, AudioOutput, DeviceWithConfig,
     PlaybackState,
 };
 use crate::store::load_settings;
@@ -310,6 +310,28 @@ impl<'a> AudioPlayer<'a> {
         &self,
         app_handle: AppHandle,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Close existing connection if any
+        if self.peer_connection.lock().await.is_some() {
+            let _ = self
+                .data_channel
+                .lock()
+                .await
+                .as_ref()
+                .unwrap()
+                .close()
+                .await;
+            let _ = self
+                .peer_connection
+                .lock()
+                .await
+                .as_ref()
+                .unwrap()
+                .close()
+                .await;
+            self.peer_connection.lock().await.take();
+            self.data_channel.lock().await.take();
+        }
+
         // Create a MediaEngine object to configure the supported codec
         let mut m = MediaEngine::default();
 
@@ -546,7 +568,7 @@ fn decode_loop(
     let mut volume = None;
     let mut playback_speed = 1.0f64;
     let mut audio_device_name = None;
-    let mut previous_audio_device_name: String = String::new();
+    let mut previous_audio_device_id: String = String::new();
     let mut previous_sample_rate = 44100;
     let mut previous_channels = 2;
 
@@ -866,14 +888,17 @@ fn decode_loop(
                 default
             };
 
-            let device_name = output_device.clone().unwrap().name().unwrap();
+            let device_id = output_device.clone().unwrap().id().unwrap().to_string();
             // If we have a default audio device (we always should, but just in case)
             // we check if the track spec differs from the output device
             // if it does - resample the decoded audio using Symphonia.
 
             // Check if track sample rate differs from current OS config
             if let Some(mut device) = output_device {
-                info!("cpal: Default device {:?}", device.name());
+                info!(
+                    "cpal: Default device {:?}",
+                    device.id().unwrap().to_string()
+                );
                 // Only resample when audio device doesn't support file sample rate
                 // so we can't switch the device rate to match.
                 // info!(
@@ -888,7 +913,7 @@ fn decode_loop(
                             .as_ref()
                             .unwrap()
                             .iter()
-                            .find(|d| d.device.name().unwrap() == device_name)
+                            .find(|d| d.device.id().unwrap().to_string() == device_id)
                             .unwrap()
                             .config
                             .clone(),
@@ -917,12 +942,12 @@ fn decode_loop(
                         .is_some();
                 } else if supported_output_configs.is_none() {
                     error!("failed to get audio output device config");
-                    device = get_device_by_name(None).unwrap();
+                    device = get_device_by_id(None).unwrap();
                 }
                 // If sample rate or channels changed - reinit the audio device with the new spec
                 // (if this sample rate isn't supported, it will be resampled)
 
-                should_reset_audio = previous_audio_device_name != device.name().unwrap()
+                should_reset_audio = previous_audio_device_id != device.id().unwrap().to_string()
                     || supports_sample_rate && spec.rate != previous_sample_rate
                     || spec.channels.count() != previous_channels
                     || max_frames_changed;
@@ -930,7 +955,7 @@ fn decode_loop(
 
             previous_sample_rate = spec.rate;
             previous_channels = spec.channels.count();
-            previous_audio_device_name = device_name.clone();
+            previous_audio_device_id = device_id.clone();
 
             let song = crate::metadata::extract_metadata(
                 &Path::new(&p.clone().as_str()),
@@ -986,7 +1011,7 @@ fn decode_loop(
                     }
                 }
                 audio_output = Some(output::try_open(
-                    &previous_audio_device_name,
+                    &previous_audio_device_id,
                     spec,
                     current_max_frames,
                     output::AudioControlHandles {
@@ -1012,8 +1037,8 @@ fn decode_loop(
             let mut last_sent_time;
 
             if !is_transition {
-                let clone_device_name = device_name.clone();
-                let clone_device_name2 = device_name.clone();
+                let clone_device_name = device_id.clone();
+                let clone_device_name2 = device_id.clone();
                 if seek.is_none() {
                     let _ = reset_control_sender.send(true);
                 }
