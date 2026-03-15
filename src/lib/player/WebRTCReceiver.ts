@@ -7,8 +7,8 @@ const appWindow = getCurrentWebviewWindow();
 const THROUGHPUT_SAMPLE_SIZE = 10;
 
 export default class WebRTCReceiver {
-    playerConnection = null;
-    dataChannel = null;
+    playerConnection: RTCPeerConnection = null;
+    dataChannel: RTCDataChannel = null;
     onSampleData = null;
 
     // Track signaling state to prevent race conditions
@@ -21,7 +21,21 @@ export default class WebRTCReceiver {
 
     async init() {
         // If connection is closed, try to re-initialize
-        if (this.playerConnection?.signalingState === "closed") {
+        console.log("webrtc::init() called");
+        console.log(
+            "webrtc::Signaling state",
+            this.playerConnection?.signalingState,
+        );
+        console.log(
+            "webrtc::Connection state",
+            this.playerConnection?.connectionState,
+        );
+        console.log(
+            "webrtc::Ice state",
+            this.playerConnection?.iceConnectionState,
+        );
+
+        if (this.isDisconnected()) {
             console.log("webrtc::Connection closed, re-initializing");
             await this.setup();
             return;
@@ -36,10 +50,29 @@ export default class WebRTCReceiver {
         await this.setup();
     }
 
+    isDisconnected() {
+        return (
+            this.playerConnection?.signalingState.match(
+                /(failed|closed|disconnected)/,
+            ) ||
+            this.playerConnection?.connectionState.match(
+                /(failed|closed|disconnected)/,
+            ) ||
+            this.playerConnection?.iceConnectionState.match(
+                /(failed|closed|disconnected)/,
+            )
+        );
+    }
+
     async setup() {
         // Close existing connection if any
         if (this.playerConnection) {
             this.playerConnection.close();
+        }
+
+        // Close existing data channel if any
+        if (this.dataChannel) {
+            this.dataChannel.close();
         }
 
         this.playerConnection = new RTCPeerConnection({

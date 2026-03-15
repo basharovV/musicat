@@ -78,18 +78,6 @@ export interface IAnimation {
         }
         if (audioPlayer.webRTCReceiver) {
             audioPlayer.webRTCReceiver.onSampleData = (samples: Uint8Array) => {
-                // check if second has passed
-                if (performance.now() - this.lastTick < 1000) {
-                    this.receivedPerSecond++;
-                } else {
-                    console.log(
-                        "received per second",
-                        this.receivedPerSecond,
-                        "FPS",
-                    );
-                    this.receivedPerSecond = 0;
-                    this.lastTick = performance.now();
-                }
                 this.timeDomain = samples;
                 this.freqDomain = samples;
             };
