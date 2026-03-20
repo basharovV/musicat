@@ -722,6 +722,8 @@
 </container>
 
 <style lang="scss">
+    @use "../../styles/mixins" as *;
+
     :global {
         .info {
             section.boxed {
@@ -763,6 +765,7 @@
         user-select: none;
     }
     container {
+        @include popup;
         width: fit-content;
         max-height: 85%;
         margin: auto;
@@ -773,11 +776,6 @@
         flex-direction: column;
         position: relative;
         align-items: center;
-        border-radius: 5px;
-        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
-        background-color: var(--popup-body-bg);
-        box-shadow: 0px 5px 40px var(--overlay-shadow);
-        backdrop-filter: blur(8px);
         overflow-y: auto;
         overflow-x: hidden;
         font-family:

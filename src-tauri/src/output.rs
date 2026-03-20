@@ -55,6 +55,12 @@ pub trait AudioOutput {
         playback_speed: f64,
         is_reset: bool,
     ) -> bool;
+    fn update_equalizer(
+        &mut self,
+        spec: SignalSpec,
+        bands: &Vec<(f32, f32, f32)>,
+        is_enabled: bool,
+    );
     fn has_remaining_samples(&self) -> bool;
     fn get_resampler_delay(&self) -> f64;
     fn ramp_down(&mut self, buffer: AudioBufferRef, num_samples: usize);
@@ -118,11 +124,12 @@ pub fn analyze_fft_freq(input: &[f32]) -> Vec<u8> {
     processor.compute_freq(input)
 }
 
-mod cpal {
+pub mod cpal {
     use std::sync::{Arc, RwLock};
     use std::time::Duration;
 
     use crate::constants::BUFFER_SIZE;
+    use crate::equalizer::Equalizer;
     use crate::output::{
         analyze_fft_freq, analyze_fft_time, get_device_by_id, get_visualizer, AnalyzerState,
         AnalyzerType, AudioControlHandles, TimestampState, MAX_FFT_SIZE,
@@ -134,7 +141,7 @@ mod cpal {
     use bytes::Bytes;
     use cpal::Sample;
     use symphonia::core::audio::{AudioBufferRef, Layout, RawSample, SampleBuffer, SignalSpec};
-    use symphonia::core::conv::{ConvertibleSample, IntoSample};
+    use symphonia::core::conv::{ConvertibleSample, FromSample, IntoSample};
     use symphonia::core::units::TimeBase;
 
     use cpal::traits::{DeviceTrait, StreamTrait};
@@ -146,11 +153,12 @@ mod cpal {
 
     pub struct CpalAudioOutput {}
 
-    trait AudioOutputSample:
+    pub trait AudioOutputSample:
         cpal::Sample
         + cpal::SizedSample
         + ConvertibleSample
         + IntoSample<f32>
+        + FromSample<f32>
         + RawSample
         + std::marker::Send
         + 'static
@@ -319,6 +327,7 @@ mod cpal {
         sample_buf: SampleBuffer<T>,
         stream: Option<cpal::Stream>,
         resampler: Option<Resampler<T>>,
+        equalizer: Option<Equalizer<T>>,
         sample_rate: u32,
         name: String,
         time_base: TimeBase,
@@ -655,6 +664,7 @@ mod cpal {
                 stream,
                 resampler: None,
                 sample_rate: config.sample_rate,
+                equalizer: None,
                 name: device.id().unwrap().to_string(),
                 time_base: time_base.clone(),
             })))
@@ -708,14 +718,14 @@ mod cpal {
                     if ramp_up_samples > 0 {
                         info!("Ramping up first {:?}", ramp_up_samples);
                         self.ramp_up(decoded, ramp_up_samples as usize);
-                        self.sample_buf.samples()
+                        self.sample_buf.samples_mut()
                     } else if ramp_down_samples > 0 {
                         info!("Ramping down last {:?}", ramp_down_samples);
                         self.ramp_down(decoded, ramp_down_samples as usize);
-                        self.sample_buf.samples()
+                        self.sample_buf.samples_mut()
                     } else {
                         self.sample_buf.copy_interleaved_ref(decoded);
-                        self.sample_buf.samples()
+                        self.sample_buf.samples_mut()
                     }
                 } else {
                     // The sample buffer is not big enough to process all the samples.
@@ -724,13 +734,17 @@ mod cpal {
                 }
             };
 
+            if let Some(eq) = &mut self.equalizer {
+                eq.process(samples);
+            }
+
             // Write all samples to the ring buffer.
             // info!("Writing samples: {}", samples.len());
             while let Ok(Some(written)) = self
                 .ring_buf_producer
                 .write_blocking_timeout(samples, Duration::from_secs_f64(0.5))
             {
-                samples = &samples[written..];
+                samples = &mut samples[written..];
                 // Print written
                 // info!("written: {}", written);
             }
@@ -887,6 +901,30 @@ mod cpal {
             {
                 let factor = i as f32 / ramp_len as f32;
                 sample.mul_amp(factor.to_sample());
+            }
+        }
+
+        fn update_equalizer(
+            &mut self,
+            spec: SignalSpec,
+            bands: &Vec<(f32, f32, f32)>,
+            is_enabled: bool,
+        ) {
+            if !is_enabled {
+                self.equalizer = None;
+                return;
+            }
+
+            // Lazy initialization or re-initialization if band count changed
+            if self.equalizer.is_none()
+                || self.equalizer.as_ref().map_or(0, |e| e.filters.len()) != bands.len()
+            {
+                self.equalizer = Some(Equalizer::new(spec, bands));
+            } else if let Some(eq) = &mut self.equalizer {
+                // Just update existing filters to avoid allocations
+                for (i, &(freq, gain, q)) in bands.iter().enumerate() {
+                    eq.update_band(i, freq, gain, q);
+                }
             }
         }
     }

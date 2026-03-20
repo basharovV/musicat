@@ -60,6 +60,8 @@ const en = {
             both: "lossy + lossless",
         },
         waveform: "Waveform",
+        equalizer: "Equalizer",
+        selectPreset: "Select preset",
         nextUp: "Next Up",
         stats: {
             songs: "songs",

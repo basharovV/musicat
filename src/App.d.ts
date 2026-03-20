@@ -197,6 +197,25 @@ interface AudioAnalyzer {
     analyzerType: AnalyzerType;
 }
 
+interface EqualizerBand {
+    id: number;
+    freq: number;
+    gain: number;
+    q: number;
+    type: string;
+    label: string;
+}
+
+type EqualizerPreset = {
+    name?: string;
+    bands: EqualizerBand[];
+};
+
+interface EqualizerSettings {
+    isEnabled: boolean;
+    settings: EqualizerPreset;
+}
+
 interface UIPreferences {
     albumsViewShowSingles: boolean;
     albumsViewShowInfo: boolean;

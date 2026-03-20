@@ -59,7 +59,9 @@ const es = {
             lossless: "sin pérdida",
             both: "con y sin pérdida",
         },
-        waveform: "",
+        waveform: "Waveform",
+        equalizer: "Equalizador",
+        selectPreset: "Seleccionar preset",
         nextUp: "Siguiente",
         stats: {
             songs: "canciones",

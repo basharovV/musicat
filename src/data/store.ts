@@ -35,6 +35,7 @@ import type {
     WaveformPlayerState,
     RepeatMode,
     LibraryColumn,
+    EqualizerSettings,
 } from "src/App";
 import { derived, get, writable, type Writable } from "svelte/store";
 import { locale, setLocale } from "../i18n/i18n-svelte";
@@ -45,6 +46,8 @@ import { liveQuery } from "dexie";
 import { db } from "./db";
 import { storage, persistentWritable } from "./storeUtils";
 import { loadLocale } from "../i18n/i18n-util.sync";
+import { DEFAULT_EQ } from "../lib/player/EqualizerPresets";
+import { invoke } from "@tauri-apps/api/core";
 
 export const L = derived(locale, (l) => {
     return i18nString(l);
@@ -416,6 +419,29 @@ export const isSidebarFloating = writable(false);
 export const isSidebarShowing = writable(true);
 
 export const isWaveformOpen = persistentWritable(false, "isWaveformOpen");
+
+// Equalizer
+export const isEqualizerOpen = writable(false);
+const defaultEqualizerSettings: EqualizerSettings = {
+    isEnabled: false,
+    settings: {
+        name: "",
+        bands: DEFAULT_EQ,
+    },
+};
+export const equalizerSettings = persistentWritable(
+    { ...defaultEqualizerSettings },
+    "equalizerSettings",
+);
+equalizerSettings.subscribe((eq) => {
+    invoke("equalizer_control", {
+        event: {
+            is_enabled: eq.isEnabled,
+            bands: eq.settings.bands.map((b) => [b.freq, b.gain, b.q]),
+        },
+    });
+});
+
 export const isArtworkCollapsed = writable(false);
 export const waveformPeaks: Writable<WaveformPlayerState> = writable({
     songId: null,

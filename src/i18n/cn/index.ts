@@ -60,6 +60,8 @@ const cn = {
             both: "lossy + lossless",
         },
         waveform: "波形图",
+        equalizer: "均衡器",
+        selectPreset: "选择预设",
         nextUp: "即将播放",
         stats: {
             songs: "歌曲",

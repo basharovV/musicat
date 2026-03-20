@@ -31,6 +31,7 @@ use crate::stem_separator::StemProcessState;
 mod beets;
 mod constants;
 mod dsp;
+mod equalizer;
 mod files;
 mod logger;
 #[cfg(target_os = "macos")]
@@ -676,6 +677,7 @@ fn main() {
             player::volume_control,
             player::playback_speed_control,
             player::analyzer_control,
+            player::equalizer_control,
             get_waveform,
             stem_separator::separate_stems,
             stem_separator::get_stems,

@@ -60,7 +60,9 @@ const tr = {
             lossless: "kayıpsız",
             both: "kayıplı + kayıpsız",
         },
-        waveform: "",
+        waveform: "Seçenekler",
+        equalizer: "Esensizleme",
+        selectPreset: "Esensizlemeyi seç",
         nextUp: "Sıradaki",
         stats: {
             songs: "şarkı",

@@ -74,6 +74,7 @@ pub enum PlayerControlEvent {
     ChangeAudioDevice(ChangeAudioDeviceRequest),
     ChangePlaybackSpeed(PlaybackSpeedControlEvent),
     ChangeAnalyzer(AnalyzerControlEvent),
+    ChangeEqualizer(EqualizerControlEvent),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -90,6 +91,21 @@ pub struct PlaybackSpeedControlEvent {
 pub struct AnalyzerControlEvent {
     is_enabled: Option<bool>,
     analyzer_type: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EqualizerControlEvent {
+    is_enabled: Option<bool>,
+    bands: Option<Vec<(f32, f32, f32)>>,
+}
+
+impl EqualizerControlEvent {
+    fn default() -> Self {
+        EqualizerControlEvent {
+            is_enabled: Some(false),
+            bands: None,
+        }
+    }
 }
 
 #[tauri::command]
@@ -160,6 +176,21 @@ pub fn analyzer_control(event: AnalyzerControlEvent, state: State<AudioPlayer>) 
         Ok(_) => {}
         Err(_err) => {
             info!("Error sending analyzer control (channel inactive)");
+        }
+    }
+}
+
+#[tauri::command]
+pub fn equalizer_control(event: EqualizerControlEvent, state: State<AudioPlayer>) {
+    info!("Received analyzer_control event");
+
+    match state
+        .player_control_sender
+        .send(PlayerControlEvent::ChangeEqualizer(event))
+    {
+        Ok(_) => {}
+        Err(_err) => {
+            info!("Error sending equalizer control (channel inactive)");
         }
     }
 }
@@ -567,6 +598,9 @@ fn decode_loop(
 
     let mut volume = None;
     let mut playback_speed = 1.0f64;
+    let mut equalizer_settings: Option<EqualizerControlEvent> =
+        Some(EqualizerControlEvent::default());
+
     let mut audio_device_name = None;
     let mut previous_audio_device_id: String = String::new();
     let mut previous_sample_rate = 44100;
@@ -671,6 +705,10 @@ fn decode_loop(
                         } else {
                             info!("Analyzer type is not set");
                         }
+                    }
+                    PlayerControlEvent::ChangeEqualizer(request) => {
+                        info!("audio: change equalizer settings! {:?}", request);
+                        equalizer_settings.replace(request);
                     }
                 }
             }
@@ -908,16 +946,18 @@ fn decode_loop(
                 let supported_output_configs = if !is_transition || cached_devices.is_none() {
                     device.supported_output_configs().ok().map(|c| c.collect()) // Read from device (may cause small glitch if playing)
                 } else {
-                    Some(
-                        cached_devices
-                            .as_ref()
-                            .unwrap()
-                            .iter()
-                            .find(|d| d.device.id().unwrap().to_string() == device_id)
-                            .unwrap()
-                            .config
-                            .clone(),
-                    )
+                    let found_cached_device = cached_devices
+                        .as_ref()
+                        .unwrap()
+                        .iter()
+                        .find(|d| d.device.id().unwrap().to_string() == device_id);
+                    if let Some(cached_device) = found_cached_device {
+                        Some(cached_device.config.clone())
+                    } else {
+                        // In this case, we don't have a cached device (maybe headphones were connected), so we read from the device
+                        // which may cause a small glitch
+                        device.supported_output_configs().ok().map(|c| c.collect())
+                    }
                 };
 
                 let mut supports_sample_rate = false;
@@ -1062,9 +1102,19 @@ fn decode_loop(
                     if let Ok(mut guard) = ao.try_lock() {
                         let mut transition_time = Instant::now();
                         let mut started_transition = false;
+
                         // Resampling stuff
                         guard.resume();
                         guard.update_resampler(spec, current_max_frames, playback_speed, is_reset);
+
+                        // Equalizer setup
+                        if let Some(equalizer) = &equalizer_settings {
+                            guard.update_equalizer(
+                                spec,
+                                &equalizer.bands.clone().unwrap_or_default(),
+                                equalizer.is_enabled.unwrap_or_default(),
+                            )
+                        }
 
                         // Until all samples have been flushed - don't start decoding
                         // Keep checking until all samples have been played (buffer is empty)
@@ -1178,6 +1228,14 @@ fn decode_loop(
                                         } else {
                                             info!("Analyzer type is not set");
                                         }
+                                    }
+                                    PlayerControlEvent::ChangeEqualizer(request) => {
+                                        info!("audio: change equalizer settings! {:?}", request);
+                                        guard.update_equalizer(
+                                            spec,
+                                            &request.bands.unwrap_or_default(),
+                                            request.is_enabled.unwrap_or(false),
+                                        );
                                     }
                                 }
                             }
@@ -1309,6 +1367,17 @@ fn decode_loop(
                                             } else {
                                                 info!("Analyzer type is not set");
                                             }
+                                        }
+                                        PlayerControlEvent::ChangeEqualizer(request) => {
+                                            info!(
+                                                "audio: change equalizer settings! {:?}",
+                                                request
+                                            );
+                                            guard.update_equalizer(
+                                                spec,
+                                                &request.bands.unwrap_or_default(),
+                                                request.is_enabled.unwrap_or(false),
+                                            );
                                         }
                                     }
                                 }

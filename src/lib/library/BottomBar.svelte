@@ -24,6 +24,8 @@
     import { isIAPlaying } from "../player/WebAudioPlayer";
     import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
+    import ToggleButton from "../ui/ToggleButton.svelte";
+    import Equalizer from "../player/Equalizer.svelte";
 
     let right;
     let nextUp;
@@ -74,44 +76,34 @@
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="left" data-tauri-drag-region>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <div
-            class="toggle-button"
-            class:selected={$isQueueOpen}
-            on:click={() => {
+        <ToggleButton
+            isSelected={$isQueueOpen}
+            onClick={() => {
                 $isQueueOpen = !$isQueueOpen;
             }}
-        >
-            <Icon icon="mdi:playlist-music" size={14} />
-            <p>{$LL.bottomBar.queue()}</p>
-        </div>
+            icon="mdi:playlist-music"
+            iconSize={14}
+            text={$LL.bottomBar.queue()}
+        />
         {#if !$isIAPlaying}
-            <div
-                class="toggle-button lyrics"
-                class:selected={$isLyricsOpen}
-                on:click={() => {
+            <ToggleButton
+                isSelected={$isLyricsOpen}
+                onClick={() => {
                     $isLyricsOpen = !$isLyricsOpen;
                 }}
-            >
-                <Icon icon="material-symbols:lyrics" size={14} />
-                <p>{$LL.bottomBar.lyrics()}</p>
-            </div>
-        {/if}
-        <div
-            class="toggle-button waveform"
-            class:selected={$isWaveformOpen}
-            on:click={() => ($isWaveformOpen = !$isWaveformOpen)}
-        >
-            <Icon
-                class={$isWaveformOpen ? "active" : "inactive"}
-                icon="ph:wave-sine-duotone"
+                icon="material-symbols:lyrics"
+                iconSize={14}
+                text={$LL.bottomBar.lyrics()}
             />
-            <p>{$LL.bottomBar.waveform()}</p>
-        </div>
-        <!-- {#if $uiView.match(/(library|albums|playlists|favourites|smart-query)/)}
-            <div class="lossy-selector">
-                <CompressionSelector />
-            </div>
-        {/if} -->
+        {/if}
+        <ToggleButton
+            isSelected={$isWaveformOpen}
+            onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
+            icon="ph:wave-sine-duotone"
+            iconSize={14}
+            text={$LL.bottomBar.waveform()}
+        />
+        <Equalizer />
         {#if !$isIAPlaying && $nextUpSong}
             <div class="next-up" bind:this={nextUp}>
                 <p class="label">{$LL.bottomBar.nextUp()}:</p>
@@ -251,67 +243,6 @@
                     user-select: none;
                     cursor: default;
                     color: var(--text-secondary);
-                }
-            }
-
-            .toggle-button {
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                gap: 5px;
-                cursor: default;
-
-                border: 1px solid rgba(128, 128, 128, 0.159);
-                border-radius: 4px;
-                padding: 0 4px;
-                margin-right: 8px;
-                position: relative;
-                &:hover {
-                    background-color: rgba(128, 128, 128, 0.191);
-                }
-                &:active {
-                    background-color: rgba(128, 128, 128, 0.391);
-                }
-                &.selected {
-                    border: 1px solid
-                        rgb(from var(--type-bw-inverse) r g b / 0.5);
-                    ::before {
-                        position: absolute;
-                        top: -11px;
-                        left: 0;
-                        right: 0;
-                        margin: 0 auto;
-                        height: 10px;
-                        width: 1.5px;
-                        background-color: rgb(
-                            from var(--type-bw-inverse) r g b / 0.5
-                        );
-                    }
-                }
-                p {
-                    color: var(--text-secondary);
-                    margin: 0 0 1px 0;
-                    line-height: normal;
-                }
-            }
-
-            .spectrum {
-                display: flex;
-                width: 100%;
-                margin-left: 10px;
-                max-width: 200px;
-                height: 30px;
-                position: relative;
-                mask-image: linear-gradient(
-                    to right,
-                    transparent 0%,
-                    #242026 15%,
-                    #242026 85%,
-                    transparent 100%
-                );
-
-                @media only screen and (max-width: 1050px) {
-                    display: none;
                 }
             }
         }

@@ -30,9 +30,14 @@ export function persistentWritable<T>(
     key: string,
     options: PersistentOptions<T> = { version: 1 },
 ): PersistentWritable<T> {
-    const { version, matchKey, migrate } = options;
+    const defaultValues =
+        typeof initial === "object" && initial !== null
+            ? structuredClone(initial)
+            : initial;
 
-    const val = writable(initial, (set) => {
+    const { version, matchKey, migrate } = options;
+    console.log("initial value", initial);
+    const val = writable(defaultValues, (set) => {
         const persistedStr = storage.getItem(key);
         if (!persistedStr) {
             set(initial);
@@ -124,7 +129,7 @@ export function persistentWritable<T>(
 
     function reset() {
         console.log("Resetting field to default values: ", initial);
-        set(initial);
+        set(structuredClone(defaultValues));
     }
 
     return { ...val, reset };

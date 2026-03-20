@@ -216,6 +216,14 @@ type RootTranslation = {
 		 */
 		waveform: string
 		/**
+		 * E​q​u​a​l​i​z​e​r
+		 */
+		equalizer: string
+		/**
+		 * S​e​l​e​c​t​ ​p​r​e​s​e​t
+		 */
+		selectPreset: string
+		/**
 		 * N​e​x​t​ ​U​p
 		 */
 		nextUp: string
@@ -1453,6 +1461,14 @@ export type TranslationFunctions = {
 		 * Waveform
 		 */
 		waveform: () => LocalizedString
+		/**
+		 * Equalizer
+		 */
+		equalizer: () => LocalizedString
+		/**
+		 * Select preset
+		 */
+		selectPreset: () => LocalizedString
 		/**
 		 * Next Up
 		 */

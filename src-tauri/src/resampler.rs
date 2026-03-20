@@ -21,7 +21,7 @@ impl<T> Resampler<T>
 where
     T: Sample + FromSample<f32> + IntoSample<f32>,
 {
-    fn resample_inner(&mut self) -> &[T] {
+    fn resample_inner(&mut self) -> &mut [T] {
         let num_channels = self.input.len();
         let output_len = self.duration;
         // info!(
@@ -61,7 +61,7 @@ where
             self.playback_pos += self.playback_rate;
         }
 
-        &self.interleaved
+        &mut self.interleaved
     }
 
     pub fn new(spec: SignalSpec, duration: u64) -> Self {
@@ -94,7 +94,7 @@ where
         }
     }
 
-    pub fn resample(&mut self, input: AudioBufferRef<'_>) -> Option<&[T]> {
+    pub fn resample(&mut self, input: AudioBufferRef<'_>) -> Option<&mut [T]> {
         // Copy and convert samples into input buffer.
         convert_samples_any(&input, &mut self.input);
 

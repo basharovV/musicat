@@ -5,6 +5,7 @@ import { db, getAlbum, getAlbumTracks } from "../../data/db";
 import {
     current,
     currentSongArtworkSrc,
+    equalizerSettings,
     isPlaying,
     isShuffleEnabled,
     isSongReady,
@@ -234,19 +235,6 @@ class AudioPlayer {
 
         isSongReady.subscribe(async () => {
             if (this.currentSong) {
-                if (
-                    !this.webRTCReceiver.dataChannel ||
-                    (this.webRTCReceiver.dataChannel.readyState !== "open" &&
-                        this.webRTCReceiver.playerConnection.signalingState !==
-                            "stable")
-                ) {
-                    // Try to reconnect
-                    this.webRTCReceiver.playerConnection?.close();
-                    this.webRTCReceiver.dataChannel?.close();
-                    this.webRTCReceiver.init();
-                }
-
-                // If the WebRTC receiver is ready to receive data, invoke the streamer
                 this.webRTCReceiver.init();
 
                 invoke("play_file", {
@@ -637,24 +625,9 @@ class AudioPlayer {
                 this.onPlay();
 
                 playerTime.set(position);
-                console.log(
-                    "audioplayer::datachannel::",
-                    this.webRTCReceiver.dataChannel?.readyState,
-                );
 
-                if (
-                    !this.webRTCReceiver.dataChannel ||
-                    this.webRTCReceiver.dataChannel.readyState !== "open"
-                ) {
-                    // Try to reconnect
-                    this.webRTCReceiver.playerConnection?.close();
-                    this.webRTCReceiver.remoteConnection?.close();
-                    this.webRTCReceiver.dataChannel?.close();
-                    this.webRTCReceiver.init();
-                }
-
-                // If the WebRTC receiver is ready to receive data, invoke the streamer
                 this.webRTCReceiver.init();
+
                 invoke("play_file", {
                     event: {
                         path: this.currentSong.path,
@@ -663,6 +636,9 @@ class AudioPlayer {
                         volume: get(volume),
                     },
                 });
+
+                this.setEqualizer();
+
                 this.incrementPlayCounter(song);
             }
             this.shouldPlay = play;
@@ -701,6 +677,20 @@ class AudioPlayer {
             let tracks = await getAlbumTracks(album);
             setQueue(tracks, 0);
         }
+    }
+
+    setEqualizer() {
+        const settings = get(equalizerSettings);
+        invoke("equalizer_control", {
+            event: {
+                is_enabled: settings.isEnabled,
+                bands: settings.settings.bands.map((b) => [
+                    b.freq,
+                    b.gain,
+                    b.q,
+                ]),
+            },
+        });
     }
 
     async handleOpenedUrls(openedUrls: string) {

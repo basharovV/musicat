@@ -283,7 +283,10 @@
 </div>
 
 <style lang="scss">
+    @use "../../styles/mixins" as *;
     .container {
+        @include popup;
+
         position: absolute;
         bottom: 3.5em;
         right: 2em;
@@ -293,12 +296,6 @@
         max-width: 360px;
         z-index: 13;
         height: 100%;
-        border-radius: 5px;
-        /* background-color: rgba(0, 0, 0, 0.187); */
-        border: 1px solid var(--panel-primary-border-accent1);
-        background: var(--overlay-bg);
-        box-shadow: 0px 5px 40px var(--overlay-shadow);
-        backdrop-filter: blur(10px);
 
         @media only screen and (max-height: 605px) {
             height: 80%;
@@ -339,7 +336,9 @@
                 p {
                     margin: 0.5em 0;
                     transition: all 0.3s ease-in-out;
+                    color: var(--text-secondary);
                     &.current {
+                        color: var(--text-active);
                         opacity: 1;
                         scale: 1.1;
                     }
