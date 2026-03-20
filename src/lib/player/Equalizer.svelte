@@ -39,7 +39,7 @@
             isEnabled: true,
             settings: {
                 name: preset.name,
-                bands: [...preset.bands],
+                bands: [...preset.bands.map((b) => ({ ...b }))],
             },
         };
         bands = [...preset.bands];
@@ -50,7 +50,7 @@
             isEnabled: true,
             settings: {
                 name: "Custom",
-                bands: [...bands],
+                bands: [...bands.map((b) => ({ ...b }))],
             },
         };
     }
