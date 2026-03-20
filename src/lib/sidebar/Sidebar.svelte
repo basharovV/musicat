@@ -1567,7 +1567,10 @@
                                         text={$LL.smartPlaylists.newSmartPlaylist()}
                                         theme="translucent"
                                         onClick={() => {
-                                            $smartQueryInitiator = `smart-query:${$selectedSmartQuery}`;
+                                            $smartQueryInitiator =
+                                                $uiView === "smart-query"
+                                                    ? `smart-query:${$selectedSmartQuery}`
+                                                    : $uiView;
                                             $selectedSmartQuery = null;
                                             $smartQuery = new SmartQuery();
                                             $isSmartQueryValid = false;

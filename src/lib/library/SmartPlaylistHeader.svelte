@@ -1,12 +1,13 @@
 <script lang="ts">
-    import { db } from "../../data/db";
+    import type { UiView } from "../../App";
+    import BUILT_IN_QUERIES from "../../data/SmartQueries";
     import {
         forceRefreshLibrary,
         isQueueOpen,
+        isSidebarOpen,
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
-        isSidebarOpen,
         queueDuration,
         selectedPlaylistFile,
         selectedSmartQuery,
@@ -30,6 +31,25 @@
         durationText = null;
     }
 
+    function isValidUiView(initiator: string): boolean {
+        const validViews = [
+            "library",
+            "favourites",
+            "smart-query",
+            "your-music",
+            "albums",
+            "playlists",
+            "map",
+            "analytics",
+            "internet-archive",
+            "prune",
+            "to-delete",
+            "queue",
+            "wiki",
+        ];
+        return validViews.includes(initiator);
+    }
+
     function closeSmartPlaylist() {
         if ($smartQueryInitiator === "library-cell") {
             $forceRefreshLibrary = true;
@@ -38,9 +58,16 @@
         } else {
             $isSmartQueryBuilderOpen = false;
             // $uiView = "smart-query";
-
+            console.log("smartQueryInitiator", $smartQueryInitiator);
             if ($smartQueryInitiator.startsWith("smart-query:")) {
-                $selectedSmartQuery = $smartQueryInitiator.substring(12);
+                const id = $smartQueryInitiator.substring(12);
+                if (!id || id === "null") {
+                    $selectedSmartQuery = BUILT_IN_QUERIES.favourites.value;
+                } else {
+                    $selectedSmartQuery = $smartQueryInitiator.substring(12);
+                }
+            } else if (isValidUiView($smartQueryInitiator)) {
+                $uiView = $smartQueryInitiator as UiView;
             }
         }
     }
