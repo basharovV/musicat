@@ -390,6 +390,9 @@ const tr = {
     },
     lyrics: {
         autoScroll: "Otomatik kaydırma",
+        localLyrics: "Yerel sözleri kullan",
+        geniusLyrics: "Genius sözleri kullan",
+        lrcLibLyrics: "LRC.LIB sözleri kullan",
     },
     stemSeparation: {
         loading: "Vokal ve enstrümantal ayrıştırılıyor...",

@@ -390,6 +390,9 @@ const en = {
     },
     lyrics: {
         autoScroll: "Auto scroll",
+        localLyrics: "Using local lyrics file",
+        geniusLyrics: "Using Genius lyrics",
+        lrcLibLyrics: "Using LRC.LIB lyrics",
     },
     stemSeparation: {
         loading: "Separating vocal & instrumental...",

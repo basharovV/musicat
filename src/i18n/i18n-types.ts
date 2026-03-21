@@ -1175,6 +1175,18 @@ type RootTranslation = {
 		 * A​u​t​o​ ​s​c​r​o​l​l
 		 */
 		autoScroll: string
+		/**
+		 * U​s​i​n​g​ ​l​o​c​a​l​ ​l​y​r​i​c​s​ ​f​i​l​e
+		 */
+		localLyrics: string
+		/**
+		 * U​s​i​n​g​ ​G​e​n​i​u​s​ ​l​y​r​i​c​s
+		 */
+		geniusLyrics: string
+		/**
+		 * U​s​i​n​g​ ​L​R​C​.​L​I​B​ ​l​y​r​i​c​s
+		 */
+		lrcLibLyrics: string
 	}
 	stemSeparation: {
 		/**
@@ -2415,6 +2427,18 @@ export type TranslationFunctions = {
 		 * Auto scroll
 		 */
 		autoScroll: () => LocalizedString
+		/**
+		 * Using local lyrics file
+		 */
+		localLyrics: () => LocalizedString
+		/**
+		 * Using Genius lyrics
+		 */
+		geniusLyrics: () => LocalizedString
+		/**
+		 * Using LRC.LIB lyrics
+		 */
+		lrcLibLyrics: () => LocalizedString
 	}
 	stemSeparation: {
 		/**

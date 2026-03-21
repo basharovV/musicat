@@ -364,6 +364,7 @@ interface CurrentSongLyrics {
     lyrics?: string;
     syncedLyrics?: SyncedLyrics[];
     writers?: string[];
+    source: "genius" | "lrclib" | "local";
 }
 
 interface GetFileSizeResponse {

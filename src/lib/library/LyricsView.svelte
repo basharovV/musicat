@@ -1,6 +1,9 @@
 <script lang="ts">
     import { fade, fly } from "svelte/transition";
-    import { getLyrics } from "../../data/LyricsGrabber";
+    import {
+        getGeniusURLandWriters,
+        getLyrics,
+    } from "../../data/LyricsGrabber";
     import {
         current,
         currentSongLyrics,
@@ -64,11 +67,9 @@
             $current.song?.artist
         ) {
             isLoading = true;
+            let result;
             try {
-                let result = await getLyrics(
-                    $current.song.title,
-                    $current.song.artist,
-                );
+                result = await getLyrics($current.song);
                 $currentSongLyrics =
                     result.lyrics || result.syncedLyrics
                         ? {
@@ -76,6 +77,7 @@
                               lyrics: result.lyrics,
                               syncedLyrics: result.syncedLyrics,
                               writers: result.writers,
+                              source: result.source,
                           }
                         : null;
                 error = null;
@@ -83,6 +85,21 @@
                 error = err;
             } finally {
                 isLoading = false;
+            }
+
+            if (result?.source === "local") {
+                // Finally get writers if the lyrics source was local and we have Genius API key
+                // We're doing this at the end to avoid loading spinner in local mode
+                const { writers } = await getGeniusURLandWriters(
+                    $current.song.title,
+                    $current.song.artist,
+                );
+                if (writers) {
+                    $currentSongLyrics = {
+                        ...$currentSongLyrics,
+                        writers,
+                    };
+                }
             }
         }
     }
@@ -176,7 +193,36 @@
                 />
             </div>
             <div class="info">
-                <p>Lyrics</p>
+                <p>
+                    Lyrics
+
+                    {#if $currentSongLyrics?.source === "local"}
+                        <span
+                            ><Icon
+                                icon="bi:file-earmark-text"
+                                size={12}
+                                tooltip={{
+                                    content: $LL.lyrics.localLyrics(),
+                                    placement: "bottom",
+                                }}
+                            /></span
+                        >
+                    {:else if $currentSongLyrics?.source.match(/genius|lrclib/)}
+                        <span
+                            ><Icon
+                                icon="stash:globe"
+                                size={14}
+                                tooltip={{
+                                    content:
+                                        $currentSongLyrics?.source === "lrclib"
+                                            ? $LL.lyrics.lrcLibLyrics()
+                                            : $LL.lyrics.geniusLyrics(),
+                                    placement: "bottom",
+                                }}
+                            /></span
+                        >
+                    {/if}
+                </p>
                 <small>{$current.song.title}</small>
             </div>
             <div class="options">
@@ -412,6 +458,9 @@
                     p {
                         opacity: 1;
                         white-space: initial;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
                     }
                     small {
                         max-width: 200px;

@@ -1,26 +1,76 @@
 import { get } from "svelte/store";
 import { userSettings } from "./store";
 import { invoke } from "@tauri-apps/api/core";
-import type { GetLyricsResponse, SyncedLyrics } from "../App";
+import type { GetLyricsResponse, Song, SyncedLyrics } from "../App";
 import { fetch } from "@tauri-apps/plugin-http";
+import { exists, readTextFile } from "@tauri-apps/plugin-fs";
 
-export async function getLyrics(songTitle: string, artist: string) {
+export async function getLyrics(song: Song) {
     let result = {
         lyrics: null,
         syncedLyrics: null,
         writers: [],
+        source: null, // "genius" | "lrclib", "local"
     };
 
-    // First try to fetch synced lyrics
-    // (and later still use Genius to fetch writers)
-    const synced = await getSyncedLyrics(songTitle, artist);
+    // First try and find lyrics locally
+    // i.e file with the same name as the song in the same folder
 
-    if (synced) {
-        result.syncedLyrics = parseLCRLyrics(synced);
-        console.log("synced lyrics", result.syncedLyrics);
+    let lrcFilePath = song.path.replace(
+        /\.(mp3|wav|flac|m4a|ogg|aac)$/i,
+        ".lrc",
+    );
+    try {
+        // Check if file exists
+        if (await exists(lrcFilePath)) {
+            console.log("lrc file exists");
+            const lrcFile = await readTextFile(lrcFilePath);
+            result.syncedLyrics = parseLCRLyrics(lrcFile);
+            result.source = "local";
+        }
+    } catch (err) {}
+
+    const songTitle = song.title;
+    const artist = song.artist;
+    // Otherwise try to fetch synced lyrics
+    if (!result.syncedLyrics) {
+        const synced = await getSyncedLyrics(songTitle, artist);
+
+        if (synced) {
+            result.syncedLyrics = parseLCRLyrics(synced);
+            result.source = "lrclib";
+        }
     }
 
+    // Otherwise try and fetch lyrics from Genius
+    if (!result.syncedLyrics) {
+        const { geniusPage, writers } = await getGeniusURLandWriters(
+            songTitle,
+            artist,
+        );
+        result.writers = writers;
+        if (geniusPage) {
+            const lyricsResult = await invoke<GetLyricsResponse>("get_lyrics", {
+                event: {
+                    url: geniusPage,
+                },
+            });
+            result.lyrics = lyricsResult?.lyrics;
+            result.source = "genius";
+        }
+    }
+
+    return result;
+}
+
+export async function getGeniusURLandWriters(
+    songTitle: string,
+    artist: string,
+) {
+    // Otherwise try and fetch lyrics from Genius
+
     let geniusPage;
+    let writers = [];
 
     const settings = get(userSettings);
     try {
@@ -64,7 +114,7 @@ export async function getLyrics(songTitle: string, artist: string) {
                     },
                 },
             );
-            result.writers = (
+            writers = (
                 await songResult.json()
             )?.response?.song?.writer_artists?.map((w) => w?.name);
         }
@@ -73,15 +123,10 @@ export async function getLyrics(songTitle: string, artist: string) {
         console.error("Error fetching from Genius" + err);
         throw new Error("Error: " + err);
     }
-    if (!result.syncedLyrics && geniusPage) {
-        const lyricsResult = await invoke<GetLyricsResponse>("get_lyrics", {
-            event: {
-                url: geniusPage,
-            },
-        });
-        result.lyrics = lyricsResult?.lyrics;
-    }
-    return result;
+    return {
+        geniusPage,
+        writers,
+    };
 }
 
 /**

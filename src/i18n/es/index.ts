@@ -391,6 +391,9 @@ const es = {
     },
     lyrics: {
         autoScroll: "Desplazamiento automático",
+        localLyrics: "Usando archivo de letras local",
+        geniusLyrics: "Usando letras de Genius",
+        lrcLibLyrics: "Usando letras de LRC.LIB",
     },
     stemSeparation: {
         loading: "Separando voz e instrumental...",

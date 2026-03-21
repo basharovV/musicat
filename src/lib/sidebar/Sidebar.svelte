@@ -994,35 +994,18 @@
                             artworkCanvas.height,
                         );
                     };
-                } else {
-                    // Show placeholder
-                    if (!placeholderArtwork) {
-                        placeholderArtwork = new Image();
-                        placeholderArtwork.src = "icon.png";
-                        placeholderArtwork.onload = () => {
-                            context.clearRect(
-                                0,
-                                0,
-                                artworkCanvas.width,
-                                artworkCanvas.height,
-                            );
-                            context.drawImage(
-                                placeholderArtwork,
-                                45,
-                                45,
-                                120,
-                                120,
-                            );
-                        };
-                    } else {
+                    img.onerror = () => {
+                        console.error("Failed to load artwork");
                         context.clearRect(
                             0,
                             0,
                             artworkCanvas.width,
                             artworkCanvas.height,
                         );
-                        context.drawImage(placeholderArtwork, 45, 45, 120, 120);
-                    }
+                        drawPlaceholderArtwork(context);
+                    };
+                } else {
+                    drawPlaceholderArtwork(context);
                 }
                 console.log(
                     "drawArtwork",
@@ -1056,6 +1039,26 @@
                     context.drawImage(img, 45, 45, 120, 120);
                 };
             }
+        }
+    }
+
+    function drawPlaceholderArtwork(context: CanvasRenderingContext2D) {
+        // Show placeholder
+        if (!placeholderArtwork) {
+            placeholderArtwork = new Image();
+            placeholderArtwork.src = "icon.png";
+            placeholderArtwork.onload = () => {
+                context.clearRect(
+                    0,
+                    0,
+                    artworkCanvas.width,
+                    artworkCanvas.height,
+                );
+                context.drawImage(placeholderArtwork, 45, 45, 120, 120);
+            };
+        } else {
+            context.clearRect(0, 0, artworkCanvas.width, artworkCanvas.height);
+            context.drawImage(placeholderArtwork, 45, 45, 120, 120);
         }
     }
 

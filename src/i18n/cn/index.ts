@@ -387,6 +387,9 @@ const cn = {
     },
     lyrics: {
         autoScroll: "自动滚动",
+        localLyrics: "使用本地歌词文件",
+        geniusLyrics: "使用 Genius 歌词",
+        lrcLibLyrics: "使用 LRC.LIB 歌词",
     },
     stemSeparation: {
         loading: "分离人声和乐器……",
