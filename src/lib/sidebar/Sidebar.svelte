@@ -1864,6 +1864,14 @@
             </div>
         </div>
         <div class="bottom" data-tauri-drag-region>
+            {#if !$isArtworkCollapsed}
+                <div
+                    class="artwork-spacer"
+                    on:click={() => {
+                        $isArtworkCollapsed = true;
+                    }}
+                ></div>
+            {/if}
             <div class="transport">
                 <Seekbar
                     {duration}
@@ -2591,34 +2599,6 @@
         }
     }
 
-    .artwork-spacer {
-        width: 210px;
-        &.show {
-            animation: in 0.2s ease-in-out forwards;
-        }
-
-        &.hide {
-            animation: out 0.2s ease-in-out forwards;
-        }
-
-        @keyframes in {
-            from {
-                min-height: 0px;
-            }
-            to {
-                min-height: 210px;
-            }
-        }
-        @keyframes out {
-            from {
-                min-height: 210px;
-            }
-            to {
-                min-height: 100px;
-            }
-        }
-    }
-
     .artwork-container {
         position: absolute;
         bottom: 135px;
@@ -2692,12 +2672,23 @@
         width: 100%;
         height: 100%;
         position: relative;
-        z-index: 3;
+        z-index: 6;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
         gap: 5px;
         /* background-color: #242026bc; */
+
+        .artwork-spacer {
+            height: 210px;
+            width: 210px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2;
+            cursor: zoom-out;
+        }
     }
 
     @keyframes marquee {
