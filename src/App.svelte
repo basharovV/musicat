@@ -299,13 +299,13 @@
         showMiniPlayer ||
         (innerHeight >= 650 &&
             $isSidebarOpen &&
-            ((!$isWikiOpen && innerWidth >= 660) ||
+            ((!$isWikiOpen && innerWidth >= 690) ||
                 ($isWikiOpen &&
                     ((!showQueue && innerWidth >= 880) ||
                         (showQueue && innerWidth >= 1000)))));
     $: showWiki =
         $isWikiOpen &&
-        ((!showQueue && innerWidth >= 500) || (showQueue && innerWidth >= 660));
+        ((!showQueue && innerWidth >= 500) || (showQueue && innerWidth >= 690));
     $: isQueueAutoWidth = !showMiniPlayer && innerWidth < 520;
     $: isSplitView = showMainPanel && showQueue && innerWidth < 520;
 
@@ -431,7 +431,7 @@
                         onClick={() => {
                             if (
                                 !showMiniPlayer &&
-                                (innerWidth < 660 || innerHeight < 650)
+                                (innerWidth < 690 || innerHeight < 650)
                             ) {
                                 $isSidebarFloating = true;
                             } else {

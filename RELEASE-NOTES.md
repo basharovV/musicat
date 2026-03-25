@@ -1,3 +1,27 @@
+### 📦 0.17.0
+
+#### New
+
+- **Equalizer**. Open the new Equalizer from the bottom bar. The equalizer is based on Winamp, along with it's classic presets: Rock, Techno, Classical, Full Bass, Dance, Laptop/Headphones and Large Hall. Use one of the presets or just fiddle with the sliders to create your Custom config. Your settings will be remembered across restarts. When the equalizer is enabled, you'll see an outline around the button.
+- **Local LRC lyrics**. Musicat now also looks for a local .lrc file for the lyrics view. The LRC file must be in the same folder as the audio file, and the filename must match.
+- **Audio visualizer v2 + new frequency mode**.
+    - The audio visualizer has been moved to the sidebar, above the track info.
+    - Click to switch modes between: Oscilloscope (shows waveform slice of time), and the **new Frequency mode** (shows frequency bars)
+- **(macOS) Follow system theme**. Toggle this option in settings to follow the system theme, and automatically switch the app theme. Currently this will only use the "Light" and "Dark" themes.
+
+#### Imrovements
+
+- Artwork and track info in the sidebar is now animated when switching tracks
+- Track info in sidebar scrolling text is now applied to title, album and artist.
+- macOS: Using system vibrancy effect on the window, and displaying native window borders
+- macOS: When switching themes, the macOS window theme will switch to match the light/dark mode.
+
+#### Fixes
+
+- Fixed "undefined" smart playlist title when closing editor
+- Fixed visualizer sometimes not reconnecting
+- Fixed empty placeholder view flashing when navigating to library
+
 ### 📦 0.16.0
 
 #### New
