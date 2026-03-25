@@ -9,7 +9,7 @@
 
     let canvas: HTMLCanvasElement;
     let container: HTMLDivElement;
-    export let width;
+    export let width = 130;
     let height = 30;
     let analyser: AudioVisualiser | WebAudioVisualiser;
     export let show = true;
@@ -34,7 +34,7 @@
     }
 
     onMount(() => {
-        width = container.clientWidth;
+        width = container.offsetWidth;
         isMounted = true;
 
         return () => {

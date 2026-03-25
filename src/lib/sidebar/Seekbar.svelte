@@ -172,6 +172,7 @@
         display: flex;
         position: relative;
         z-index: 0;
+        border-radius: 2px;
 
         .buffered {
             position: absolute;

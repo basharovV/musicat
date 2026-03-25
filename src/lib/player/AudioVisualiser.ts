@@ -1,4 +1,4 @@
-import { get } from "svelte/store";
+import { get, type Unsubscriber } from "svelte/store";
 import { isPlaying, uiPreferences } from "../../data/store";
 import { currentThemeObject } from "../../theming/store";
 import audioPlayer from "./AudioPlayer";
@@ -16,50 +16,54 @@ export interface IAnimation {
  * Visualiser for playing audio using Canvas
  */ export class AudioVisualiser {
     canvas: HTMLCanvasElement;
+
     private _canvasContext: CanvasRenderingContext2D;
     private _activeAnimations: IAnimation[] = [];
+    private _subscriptions: Unsubscriber[] = [];
+
     isEnabled = true;
     analyzerType: AnalyzerType = "time";
     shouldStopAnimation = false;
+
     timeDomain: Uint8Array;
-    freqDomain: Uint8Array; // Added frequency storage
+    freqDomain: Uint8Array;
+
     lastTick = performance.now();
     color: string;
+
     private _animationFrameId: number | null = null;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this._canvasContext = this.canvas.getContext("2d");
 
-        // Initialize with neutral values (128 for time, 0 for freq)
         this.timeDomain = new Uint8Array(256).fill(128);
         this.freqDomain = new Uint8Array(256).fill(1);
+        this.color = get(currentThemeObject).oscilloscope;
 
-        isPlaying.subscribe((playing) => {
+        // 1. Store the unsubscribe function for isPlaying
+        const unsubPlaying = isPlaying.subscribe((playing) => {
             this.shouldStopAnimation = !playing;
             if (playing) {
                 this.setupAnalyserAnimation();
             } else {
-                this.timeDomain = new Uint8Array(256).fill(128);
-                this.freqDomain = new Uint8Array(256).fill(1);
-
-                this.clearCanvas();
-
-                if (this.analyzerType === "frequency") {
-                    this.drawFrequencyBars();
-                } else {
-                    this.drawOscilloscope();
-                }
+                this.showEmptyView();
             }
         });
 
-        currentThemeObject.subscribe((theme) => {
+        // 2. Store the unsubscribe function for currentThemeObject
+        const unsubTheme = currentThemeObject.subscribe((theme) => {
             this.color = theme.oscilloscope;
         });
 
-        uiPreferences.subscribe((preferences) => {
+        // 3. Store the unsubscribe function for uiPreferences
+        const unsubPrefs = uiPreferences.subscribe((preferences) => {
             this.isEnabled = preferences.audioAnalyzer.isEnabled;
             this.analyzerType = preferences.audioAnalyzer.analyzerType;
+
+            if (!get(isPlaying)) {
+                this.showEmptyView();
+            }
 
             invoke("analyzer_control", {
                 event: {
@@ -68,6 +72,21 @@ export interface IAnimation {
                 },
             });
         });
+
+        // Push all to our tracking array
+        this._subscriptions.push(unsubPlaying, unsubTheme, unsubPrefs);
+    }
+
+    showEmptyView() {
+        this.timeDomain = new Uint8Array(256).fill(128);
+        this.freqDomain = new Uint8Array(256).fill(3);
+
+        this.clearCanvas();
+        if (this.analyzerType === "frequency") {
+            this.drawFrequencyBars();
+        } else {
+            this.drawOscilloscope();
+        }
     }
 
     receivedPerSecond = 0;
@@ -82,7 +101,6 @@ export interface IAnimation {
                 this.freqDomain = samples;
             };
         }
-
         let tick = () => {
             if (this.shouldStopAnimation) {
                 this._animationFrameId = null;
@@ -171,7 +189,25 @@ export interface IAnimation {
         this._activeAnimations = [];
     }
 
+    /**
+     * Call this when the component unmounts
+     */
     tearDown() {
+        // 1. Stop any pending animation frames
+        if (this._animationFrameId !== null) {
+            cancelAnimationFrame(this._animationFrameId);
+        }
+
+        // 2. Clear out the WebRTC callback to prevent memory leaks
+        if (audioPlayer.webRTCReceiver) {
+            audioPlayer.webRTCReceiver.onSampleData = null;
+        }
+
+        // 3. Unsubscribe from all Svelte stores
+        this._subscriptions.forEach((unsub) => unsub());
+        this._subscriptions = [];
+
+        // 4. Clean up visual state
         this.clearCanvas();
     }
 }

@@ -93,7 +93,7 @@
     import MenuOption from "../ui/menu/MenuOption.svelte";
     import Seekbar from "./Seekbar.svelte";
     import Noise from "../ui/Noise.svelte";
-    import Oscilloscope from "../player/Oscilloscope.svelte";
+    import AudioAnalyzer from "../player/AudioAnalyzer.svelte";
 
     const appWindow = tauriWindow.getCurrentWindow();
 
@@ -1830,9 +1830,8 @@
                             </div>
                         {/if}
                         <div class="oscilloscope">
-                            <Oscilloscope
+                            <AudioAnalyzer
                                 show={$uiPreferences.audioAnalyzer.isEnabled}
-                                width={300}
                             />
                         </div>
                     {:else}

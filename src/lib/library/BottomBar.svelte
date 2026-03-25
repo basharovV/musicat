@@ -16,16 +16,13 @@
         isSidebarOpen,
         isWaveformOpen,
         nextUpSong,
-        uiView,
         userSettings,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
-    import Oscilloscope from "../player/Oscilloscope.svelte";
+    import Equalizer from "../player/Equalizer.svelte";
     import { isIAPlaying } from "../player/WebAudioPlayer";
-    import CompressionSelector from "../ui/CompressionSelector.svelte";
     import Icon from "../ui/Icon.svelte";
     import ToggleButton from "../ui/ToggleButton.svelte";
-    import Equalizer from "../player/Equalizer.svelte";
 
     let right;
     let nextUp;
