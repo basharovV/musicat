@@ -411,6 +411,7 @@
             class:split-view={isSplitView}
             class:floating-sidebar={!showSidebar}
             class:transparent={$os === "macos"}
+            data-os={$os}
             class:compact={$isCompactView}
             bind:this={container}
         >
@@ -653,7 +654,7 @@
     }
 
     main {
-        border-radius: 11px;
+        border-radius: 0;
         // border: 0.5px solid
         //     color-mix(in srgb, var(--type-bw-inverse) 20%, transparent);
         box-sizing: border-box;
@@ -665,6 +666,10 @@
         opacity: 1;
         position: relative;
         background-color: var(--window, initial);
+
+        &[data-os="macos"] {
+            border-radius: 11px;
+        }
 
         @media screen and (max-width: 210px) and (max-height: 210px) {
             grid-template-columns: auto; // Sidebar, queue, panel, resizer, wiki
