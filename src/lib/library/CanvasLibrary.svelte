@@ -178,7 +178,7 @@
     let columnPickerIndex;
     let columnPickerPos;
 
-    let displayFields = [];
+    let displayFields: ColumnViewModel[] = [];
 
     let songsSlice: Song[];
     let songsIdxSlice: number[];
@@ -477,21 +477,18 @@
             });
         }
     }
-
     function calculateColumns(isResize: boolean = false) {
         if (width === 0) return;
 
         let runningX = 0;
         let previousWidth = 0;
 
-        const allFields = cloneDeep(getAllColumns());
+        const allFields: ColumnViewModel[] = cloneDeep(getAllColumns());
 
         if (displayFields?.length === 0) {
             displayFields = allFields;
         }
 
-        // If we're resizing, use the current display fields
-        // Otherwise use all fields to filter again, this might have been triggered by a column order/visibility change
         const fields = isResize ? displayFields : allFields;
 
         const sortedFields = $columnOrder
@@ -499,7 +496,6 @@
                 const field = fields.find((f) => f.value === c.fieldName);
                 if (field === undefined) return null;
                 const cloned = { ...field };
-                // Restore user saved width
                 if (isInit && cloned && c.width) {
                     cloned.viewProps.autoWidth = false;
                     cloned.viewProps.width = c.width;
@@ -508,12 +504,8 @@
             })
             .filter(Boolean);
 
-        // By default, the library fits the columns automatically
-        // Until you manually resize, in which case we ignore the default sizes going forward
-        // and save the new widths to the column config
         let shouldUseAutoWidth = $columnOrder.every((c) => !c.width);
 
-        /* Playlists show an additional file order column */
         if ($uiView === "playlists") {
             sortedFields.unshift({
                 name: "none",
@@ -528,10 +520,8 @@
             });
         }
 
-        let autoWidth = null;
+        let calculatedAutoWidth = 0;
         if (shouldUseAutoWidth) {
-            // Calculate total width of fixed-width rectangles
-
             const fixedWidths = sortedFields
                 .filter((f) => !f.viewProps?.autoWidth)
                 .map((f) => f.viewProps?.width);
@@ -540,29 +530,41 @@
                 (total, width) => total + width,
                 0,
             );
-            // Calculate total available width for 'auto' size rectangles
+
             let availableWidth = width - totalFixedWidth;
+            const autoCount = sortedFields.length - fixedWidths.length;
+
             if (availableWidth < 0) {
                 availableWidth = 0;
                 shouldUseAutoWidth = false;
             }
-            autoWidth =
-                availableWidth / (sortedFields.length - fixedWidths.length);
+
+            calculatedAutoWidth =
+                autoCount > 0 ? availableWidth / autoCount : 0;
         }
 
-        // Final display fields
-        displayFields = [
-            ...sortedFields.map((f) => {
-                const rectWidth =
+        displayFields = sortedFields
+            .map((f) => {
+                let rectWidth =
                     shouldUseAutoWidth && f.viewProps.autoWidth
-                        ? autoWidth
+                        ? calculatedAutoWidth
                         : f.viewProps.width;
-                f.viewProps.x = runningX += previousWidth;
+
+                if (f.viewProps.autoWidth) {
+                    const minAllowed = f.viewProps.minWidth ?? 60;
+                    rectWidth = Math.max(rectWidth, minAllowed);
+                }
+                // -----------------------------------------
+
                 f.viewProps.width = rectWidth;
-                previousWidth = f.viewProps.width;
                 return f;
-            }),
-        ];
+            })
+            .map((f) => {
+                // Re-calculate X positions after filtering and width clamping
+                f.viewProps.x = runningX;
+                runningX += f.viewProps.width;
+                return f;
+            });
     }
 
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.

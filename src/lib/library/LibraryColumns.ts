@@ -10,6 +10,7 @@ export function getAllColumns(): ColumnViewModel[] {
             viewProps: {
                 width: 100,
                 autoWidth: true,
+                minWidth: 100,
             },
         },
         {
@@ -18,6 +19,7 @@ export function getAllColumns(): ColumnViewModel[] {
             viewProps: {
                 width: 100,
                 autoWidth: true,
+                minWidth: 80,
             },
         },
         {
@@ -34,6 +36,7 @@ export function getAllColumns(): ColumnViewModel[] {
             viewProps: {
                 width: 100,
                 autoWidth: true,
+                minWidth: 80,
             },
         },
         {
