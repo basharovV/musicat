@@ -11,6 +11,7 @@
         current,
         isPlaying,
         isWikiOpen,
+        uiView,
         wikiArtist,
     } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
@@ -27,6 +28,7 @@
     let wtfResult: wtf.Document;
     let error;
     let previousArtist = null;
+    let loadingArist = null;
     let isLoading = false;
     let wikiSong: Song;
     $: sections = wtfResult?.sections();
@@ -34,8 +36,19 @@
         console.log(artist);
         if (!artist) return;
         isLoading = true;
+        loadingArist = artist;
         try {
             const url = await getWikipediaUrlForArtist(artist);
+            if (!url) {
+                wikiResult = null;
+                error = null;
+                isLoading = false;
+                console.error(
+                    "Could not fetch wikipedia url for artist",
+                    artist,
+                );
+                return;
+            }
             wikiResult = await invoke<GetHTMLResponse>("get_wikipedia", {
                 event: {
                     url,
@@ -81,13 +94,15 @@
     onMount(() => {
         isMounted = true;
 
+        console.log("current song", $current.song, $wikiArtist);
         if ($current.song?.artist && !$wikiArtist) {
             getWiki($current.song.artist);
         }
-    });
 
-    onDestroy(() => {
-        $wikiArtist = null;
+        return () => {
+            isMounted = false;
+            $wikiArtist = null;
+        };
     });
 
     $: if (
@@ -318,12 +333,16 @@
         on:scroll={onScroll}
     >
         <header>
-            <Icon
-                icon="material-symbols:close"
-                onClick={() => {
-                    $isWikiOpen = false;
-                }}
-            />
+            {#if $uiView !== "wiki"}
+                <div
+                    class="close"
+                    on:click={() => {
+                        $isWikiOpen = false;
+                    }}
+                >
+                    <Icon icon="material-symbols:close" />
+                </div>
+            {/if}
             <div class="info-wiki">
                 {#if isLoading}
                     <small transition:fade={{ duration: 200 }}
@@ -332,9 +351,9 @@
                 {:else}
                     <small>Viewing wiki for:</small>
                 {/if}
-                <p>{previousArtist}</p>
+                <p>{isLoading ? loadingArist : previousArtist}</p>
             </div>
-            {#if previousArtist && $current.song && previousArtist !== $current.song.artist}
+            {#if !isLoading && previousArtist && $current.song && previousArtist !== $current.song.artist}
                 <div class="info-playing">
                     <small>Current artist: </small>
                     <ButtonWithIcon
@@ -485,7 +504,7 @@
         {/if}
     </div>
 
-    <ShadowGradient type="bottom" />
+    <ShadowGradient type="bottom" color="var(--solid)" />
 </div>
 
 <style lang="scss">
@@ -498,50 +517,82 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
-        border-left: 1px solid color-mix(in srgb, var(--bg) 70%, var(--inverse));
-        border-right: 1px solid
-            color-mix(in srgb, var(--bg) 70%, var(--inverse));
         margin: 0;
 
         header {
             position: sticky;
-            display: flex;
+            display: grid;
             justify-content: space-between;
-            top: 0;
-            padding: 1em;
+            top: 5px;
+            margin: 5px 5px 0 5px;
             max-width: 100%;
             z-index: 10;
-            backdrop-filter: blur(10px) brightness(0.95);
-            border-bottom: 1px solid
-                color-mix(in srgb, var(--inverse) 70%, transparent);
-            background-color: var(--wiki-header-bg);
-
+            gap: 5px;
+            grid-template-columns: 40px minmax(0, 1fr) auto;
             .info-playing,
             .info-wiki {
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                padding: 0 1em;
-                flex-grow: 1;
-                width: fit-content;
+                padding: 0.2em 1em;
+                p {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    width: 100%;
+                }
+            }
+            > :global(:first-child) {
+                width: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                &:hover {
+                    cursor: pointer;
+                    filter: brightness(0.9);
+                }
+            }
+            > :global(*) {
+                background-color: var(--overlay);
+                backdrop-filter: blur(5px) brightness(0.95);
+                border-radius: 5px;
+                border: 1px solid var(--border);
             }
             .info-playing {
                 align-items: flex-end;
+                padding: 0.2em 0.7em;
+                overflow: hidden;
+                max-width: 190px;
+                :global(.button-container) {
+                    max-width: 100%;
+                    overflow: hidden;
+                    :global(.button) {
+                        max-width: 100%;
+                    }
+                }
+                :global(.button p) {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
             }
             .info-wiki {
                 align-items: flex-start;
+                max-width: 100%;
+                overflow: hidden;
+                width: 100%;
+                text-align: start;
             }
             small {
                 line-height: initial;
-                margin-bottom: 5px;
+                margin-bottom: 3px;
                 width: fit-content;
+                color: var(--secondary);
             }
             p {
                 background-color: var(--wiki-pill-bg);
                 color: var(--wiki-pill-text);
                 margin: 0;
                 width: fit-content;
-                padding: 0 5px;
                 border-radius: 5px;
             }
         }
@@ -554,12 +605,15 @@
             user-select: none;
             display: grid;
             grid-template-rows: auto 1fr;
+            position: relative;
         }
 
         .in-article {
-            background-color: var(--wiki-inarticle-bg);
-            border-bottom: 1px solid var(--panel-primary-border-main);
+            background-color: var(--muted);
+            border-bottom: 1px solid var(--border);
             padding: 1em;
+            margin: 5px;
+            border-radius: 5px;
 
             > p {
                 font-weight: normal;
@@ -581,7 +635,7 @@
                 p {
                     margin: 5px 0 0 0;
                     font-size: 14px;
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                 }
                 ul {
                     padding: 0;
@@ -595,17 +649,17 @@
                     li {
                         margin: 5px 5px 0px 0;
                         padding: 2px 5px;
-                        background-color: var(--wiki-pill-bg);
-                        border: 1px solid var(--wiki-pill-border);
+                        background-color: var(--accent-softest);
+                        border: 1px solid var(--border);
                         border-radius: 5px;
                         display: flex;
                         flex-direction: column;
                         cursor: pointer;
                         &:hover {
-                            background-color: var(--wiki-pill-hover-bg);
+                            background-color: var(--accent-softer);
 
                             p {
-                                color: var(--wiki-pill-hover-text);
+                                color: var(--primary);
                             }
                         }
                         p {
@@ -613,7 +667,7 @@
                             margin: 0;
                             width: max-content;
                             line-height: initial;
-                            color: var(--wiki-pill-text);
+                            color: var(--primary);
                         }
                         small {
                             font-size: 12px;
@@ -629,8 +683,8 @@
         .content {
             padding: 1em;
             text-align: start;
-            background-color: var(--wiki-bg);
-            color: var(--text);
+            // background-color: var(--wiki-bg);
+            color: var(--primary);
             max-width: 100%;
 
             :global(.hatnote),
@@ -649,25 +703,25 @@
                 font-weight: bold;
                 border-radius: 5px;
                 font-style: normal;
-                background-color: var(--wiki-mention-bg);
-                border: 1px solid var(--wiki-mention-border);
-                color: var(--wiki-mention-text);
+                background-color: var(--accent-softer);
+                border: 1px solid var(--border);
+                color: var(--primary);
                 padding: 0 5px;
 
                 &:before {
                     content: "▶ ";
-                    color: var(--wiki-mention-text);
+                    color: var(--primary);
                 }
             }
 
             :global([data-album].playing),
             :global([data-artist].playing),
             :global([data-song].playing) {
-                background-color: var(--library-playing-bg);
-                color: var(--library-playing-text);
+                background-color: var(--accent);
+                color: var(--accent-text);
                 &:before {
                     content: "⏸ ";
-                    color: var(--library-playing-text);
+                    color: var(--accent-text);
                 }
             }
 
@@ -740,7 +794,7 @@
         padding: 1em;
         text-align: start;
         background-color: var(--wiki-bg);
-        color: var(--text);
+        color: var(--primary);
         max-width: 100%;
 
         ul {
