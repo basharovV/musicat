@@ -62,6 +62,10 @@ export function startMenuListener() {
                 uiView.set("prune");
                 break;
             // DevTools
+            case "reload":
+                // Reload URL
+                window.location.reload();
+                break;
             case "clear-data":
                 console.log("clear-data");
                 await deleteDatabase();

@@ -643,6 +643,9 @@ fn main() {
             if cfg!(dev) {
                 let devtools_submenu = SubmenuBuilder::new(app, "DevTools")
                     .items(&[
+                        &MenuItemBuilder::with_id("reload", "Reload")
+                            .accelerator("CommandOrControl+R")
+                            .build(app)?,
                         &MenuItemBuilder::with_id("clear-data", "Clear data").build(app)?,
                         &MenuItemBuilder::with_id("import-db", "Import DB").build(app)?,
                         &MenuItemBuilder::with_id("export-db", "Export DB").build(app)?,
