@@ -47,7 +47,7 @@ async function log(level: Level, args: any[]): Promise<void> {
         .map((line) => line.split("@"))
         .filter(
             ([name, location]) =>
-                location !== "[native code]" && !location.includes("Logger.ts"),
+                location !== "[native code]" && !location?.includes("Logger.ts"),
         );
 
     let file = null;

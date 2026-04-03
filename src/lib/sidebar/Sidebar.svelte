@@ -386,8 +386,10 @@
         showClickCurtain = false;
     }
     function onMiniPlayerMouseOut() {
-        isMiniPlayerHovered = false;
-        showClickCurtain = true;
+        if ($isMiniPlayer) {
+            isMiniPlayerHovered = false;
+            showClickCurtain = true;
+        }
     }
 
     async function toggleMiniPlayer() {
@@ -1162,7 +1164,7 @@
     on:mouseleave={onMiniPlayerMouseOut}
     data-tauri-drag-region
 >
-    {#if showClickCurtain}
+    {#if showClickCurtain && $isMiniPlayer}
         <div
             class="click-curtain"
             on:click={() => {

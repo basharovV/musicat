@@ -202,6 +202,14 @@
      * - Artist's toolkit view: Add to scrapbook or song project
      */
     onMount(() => {
+        window.addEventListener(
+            "contextmenu",
+            (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            },
+            { capture: true },
+        );
         initLocale();
         appWindow.emit("opened");
         // File associations: check for opened urls on the window
