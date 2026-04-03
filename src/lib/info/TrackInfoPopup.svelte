@@ -729,33 +729,6 @@
             section.boxed {
                 position: relative;
             }
-
-            .section-title {
-                position: absolute;
-                border-radius: 4px;
-                max-height: 2em;
-                display: flex;
-                flex-direction: row;
-                gap: 5px;
-                align-items: center;
-                background-color: var(--popup-section-title-bg);
-                z-index: 11;
-                border: 1px solid rgb(from var(--inverse) r g b / 0.08);
-                top: -15px;
-                padding: 0 10px 0 0;
-                letter-spacing: 1px;
-                font-weight: 400;
-                left: 1.2em;
-                right: 0;
-                width: fit-content;
-                margin: 0.5em 0;
-                text-align: start;
-                color: var(--popup-section-title-text);
-                text-transform: uppercase;
-                > :first-child {
-                    margin-left: -4px;
-                }
-            }
         }
     }
     :global([data-tippy-root]) {
@@ -808,8 +781,6 @@
             display: flex;
             align-items: center;
             width: 100%;
-            background-color: var(--popup-header-bg-many);
-            border-bottom: 1px solid var(--popup-header-border);
             padding: 0.6em 1em;
         }
 
@@ -875,7 +846,7 @@
             width: 100%;
             grid-row: 2;
             grid-column: 1 / 4;
-            background: var(--popup-header-bg-lone);
+            border-bottom: 0.75px solid var(--border);
         }
     }
 

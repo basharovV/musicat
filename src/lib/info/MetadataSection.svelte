@@ -501,7 +501,7 @@
                         <p
                             class="label"
                             class:unmapped={tag.id === undefined}
-                            data-tag-id={tag.id || tag.id}
+                            data-tag-id={tag.id}
                             on:click={() => onTagLabelClick(tag)}
                             use:optionalTippy={{
                                 content:
@@ -552,9 +552,8 @@
         border-radius: 5px;
         position: relative;
         padding: 1em 2em 1em;
-        color: var(--text);
+        color: var(--primary);
         position: relative;
-        border: 1px solid var(--popup-track-section-border);
 
         font-family:
             system-ui,
@@ -563,12 +562,6 @@
             Helvetica,
             Arial,
             sans-serif;
-
-        .section-title {
-            color: var(--popup-track-metadata-title);
-            border: 1px solid
-                rgb(from var(--popup-track-metadata-title) r g b / 0.08);
-        }
 
         > p {
             opacity: 0.5;
@@ -622,7 +615,7 @@
                 margin: 0;
                 font-size: 13px;
                 font-weight: 500;
-                color: var(--text);
+                color: var(--primary);
                 font-family: monospace;
                 user-select: none;
                 cursor: default;
@@ -632,14 +625,9 @@
                 &.unmapped {
                     opacity: 0.5;
                 }
-                &[data-tag-id="title"] {
+                &[data-tag-id="TrackTitle"] {
                     &:hover {
-                        border: 1px solid
-                            color-mix(
-                                in srgb,
-                                var(--background) 60%,
-                                var(--inverse)
-                            );
+                        border: 1px solid var(--border);
                         cursor: pointer;
                     }
                 }
@@ -655,7 +643,7 @@
                     height: 100%;
                     background-color: color-mix(
                         in srgb,
-                        var(--inverse) 60%,
+                        var(--soft) 60%,
                         transparent
                     );
                     position: absolute;
@@ -669,12 +657,12 @@
                     flex: 1;
                     gap: 5px;
                     font-weight: 500;
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                     cursor: default;
                     &:hover {
                         background-color: color-mix(
                             in srgb,
-                            var(--inverse) 40%,
+                            var(--soft) 40%,
                             transparent
                         );
                     }
@@ -685,62 +673,18 @@
                 height: 1px;
                 background-color: color-mix(
                     in srgb,
-                    var(--input-bg) 80%,
-                    var(--inverse)
+                    var(--border) 80%,
+                    transparent
                 );
                 width: 40px;
             }
 
             &.validation-error {
-                border: 1px solid var(--popup-track-metadata-validation-error);
+                border: 1px solid var(--error);
             }
 
             &.validation-warning {
-                border: 1px solid var(--popup-track-metadata-validation-warning);
-            }
-        }
-    }
-
-    .tools {
-        border: 1px solid rgb(from var(--inverse) r g b / 0.08);
-        padding: 2em;
-        margin: 2em;
-        position: relative;
-
-        .section-title {
-            color: rgb(from var(--popup-track-section-title-text) r g b / 0.85);
-            border: transparent;
-        }
-
-        .tool {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 5px;
-            color: var(--text);
-            * {
-                color: var(--text);
-            }
-
-            .description {
-                text-align: left;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                gap: 5px;
-                flex: 1;
-                p {
-                    margin: 0;
-                }
-                small {
-                    opacity: 0.7;
-                    line-height: 0.5em;
-                }
-            }
-
-            select {
-                font-size: 20px;
-                padding: 0.2em 1em 0.3em 1em;
+                border: 1px solid var(--error);
             }
         }
     }
@@ -749,7 +693,7 @@
         padding: 0.2em;
         border-radius: 8px;
         margin: 1em;
-        background-color: var(--popup-track-metadata-prompt-error);
+        background-color: var(--error);
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;

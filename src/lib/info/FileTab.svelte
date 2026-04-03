@@ -120,11 +120,6 @@
     .file-section {
         padding: 0 1em;
 
-        .section-title {
-            top: -10px;
-            margin: 0;
-        }
-
         .top-shadow {
             font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
             pointer-events: none;
@@ -228,7 +223,7 @@
                         padding: 0.2em 0.5em;
                         width: fit-content;
                         border-radius: 4px;
-                        color: var(--text);
+                        color: var(--primary);
                         user-select: none;
                         cursor: default;
                         margin: 0;
@@ -267,7 +262,7 @@
 
                 .file-audio-info {
                     p {
-                        color: var(--text-secondary);
+                        color: var(--secondary);
                     }
                 }
             }

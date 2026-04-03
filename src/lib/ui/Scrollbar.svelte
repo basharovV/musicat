@@ -69,9 +69,7 @@
                     height: scrollbarHeight,
                     width: 8,
                     fill: $currentThemeObject[
-                        isHovering
-                            ? "library-scrollbar-hover-bg"
-                            : "library-scrollbar-bg"
+                        isHovering ? "accent-soft" : "accent-softer"
                     ],
                     draggable: true,
                     cornerRadius: 6,

@@ -165,7 +165,7 @@
 
 <style lang="scss">
     .container {
-        background-color: var(--smart-playlist-builder-block-bg);
+        background-color: var(--accent-softer);
         border-radius: 4px;
         display: flex;
         flex-direction: row;
@@ -176,7 +176,7 @@
         /* transition: all 0.2s cubic-bezier(0.075, 0.82, 0.165, 1); */
 
         &.focused {
-            background-color: var(--smart-playlist-builder-block-focused-bg);
+            background-color: var(--accent-soft);
             border: 1px solid rgba(255, 255, 255, 0.089);
             transform: scale(1.04);
         }
@@ -190,13 +190,13 @@
         margin: 0;
         font-weight: 400;
         line-height: 14px;
-        color: var(--smart-playlist-builder-block-text);
+        color: var(--primary);
     }
 
     input {
-        background-color: var(--smart-playlist-builder-block-input-bg);
+        background-color: var(--accent-softest);
         /* background-color: #45306A; */
-        border: 1px solid #d4ccdd6c;
+        border: 1px solid var(--accent-soft);
         /* box-shadow: 0px 0px 1px 4px #3e286420 inset; */
         border-radius: 4px;
         padding: 0.2em;
@@ -204,7 +204,7 @@
         margin: 0;
         outline: none;
         transition: min-width 0.2s ease-in;
-        color: var(--smart-playlist-builder-block-input-text);
+        color: var(--primary);
 
         &.is-number {
             min-width: 30px;
@@ -218,7 +218,7 @@
         }
 
         &:focus {
-            border: 1px solid white;
+            border: 1px solid var(--primary);
         }
     }
 </style>

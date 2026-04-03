@@ -222,9 +222,9 @@
 
 <style lang="scss">
     top-bar {
-        color: var(--text);
+        color: var(--primary);
         display: grid;
-        grid-template-columns: 170px 1fr 170px;
+        grid-template-columns: 200px 1fr 160px;
         grid-template-rows: auto auto;
         align-items: center;
         justify-content: flex-end;
@@ -287,23 +287,16 @@
             width: 100%;
             overflow: hidden;
             border-radius: 5px;
-            border-top: 0.7px solid var(--panel-primary-border-accent2);
-            border-bottom: 0.7px solid var(--panel-primary-border-main);
-            border-right: 0.7px solid var(--panel-primary-border-main);
-            border-left: 0.7px solid var(--panel-primary-border-main);
+            border: 0.7px solid var(--border);
 
-            background-color: color-mix(
-                in srgb,
-                var(--library-playing-bg) 4%,
-                transparent
-            );
+            background-color: var(--muted);
             // Inset box shadow
             box-shadow: inset 0 0 30px 2px
-                color-mix(in srgb, var(--type-bw-inverse) 6%, transparent);
+                color-mix(in srgb, var(--shadow) 6%, transparent);
 
             &:hover {
                 box-shadow: inset 0 0 30px 2px
-                    color-mix(in srgb, var(--type-bw-inverse) 17%, transparent);
+                    color-mix(in srgb, var(--shadow) 17%, transparent);
             }
 
             .artwork {
@@ -328,9 +321,9 @@
 
                 small {
                     font-size: 12.5px;
-                    color: var(--text);
+                    color: var(--primary);
                     span {
-                        color: var(--text-secondary);
+                        color: var(--secondary);
                     }
                 }
             }

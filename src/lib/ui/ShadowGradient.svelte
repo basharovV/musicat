@@ -2,9 +2,13 @@
     import { currentThemeObject } from "../../theming/store";
 
     export let type: "top" | "bottom" = "top";
+    export let color: string = "var(--panel)";
 </script>
 
-<div class={`${type} ${$currentThemeObject.type}`}></div>
+<div
+    class={`${type} ${$currentThemeObject.variant}`}
+    style="--dynamic-color: {color};"
+></div>
 
 <style lang="scss">
     .top {
@@ -20,8 +24,9 @@
         background: linear-gradient(
             to top,
             transparent,
-            color-mix(in srgb, var(--shadow-gradient-bg) 10%, transparent) 70%,
-            var(--shadow-gradient-bg)
+            /* Use the dynamic variable here */
+                color-mix(in srgb, var(--dynamic-color) 10%, transparent) 70%,
+            var(--dynamic-color)
         );
     }
 
@@ -38,8 +43,9 @@
         background: linear-gradient(
             to bottom,
             transparent,
-            color-mix(in srgb, var(--shadow-gradient-bg) 10%, transparent) 70%,
-            var(--shadow-gradient-bg)
+            /* Use the dynamic variable here */
+                color-mix(in srgb, var(--dynamic-color) 60%, transparent) 70%,
+            var(--dynamic-color)
         );
     }
 </style>

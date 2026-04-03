@@ -133,7 +133,7 @@
 
     function updateQueryPartsAutocompletePos() {
         inputX = queryInput.offsetLeft;
-        inputY = queryInput.offsetTop + 20;
+        inputY = queryInput.offsetTop + 40;
     }
 
     let hoveredItemIdx = 0;
@@ -203,11 +203,12 @@
         border-radius: 5px;
         margin-right: 5px;
         flex-direction: column;
-        background-color: var(--smart-playlist-builder-bg);
-        color: var(--smart-playlist-builder-text);
+        background-color: var(--accent-softest);
+        border: 1.5px solid var(--accent-soft);
+        color: var(--primary);
 
         * {
-            color: var(--smart-playlist-builder-text);
+            color: var(--primary);
         }
     }
     .builder {
@@ -246,9 +247,9 @@
         line-height: 1.8rem;
         width: fit-content;
         min-width: 100px;
-        color: var(--smart-playlist-builder-text);
+        color: var(--primary);
         &::placeholder {
-            color: var(--smart-playlist-builder-text);
+            color: var(--secondary);
         }
     }
 

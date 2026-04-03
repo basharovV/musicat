@@ -211,13 +211,13 @@
         display: flex;
         flex-direction: column;
         flex-wrap: wrap;
-        border: 1px solid var(--menu-border);
+        border: 1px solid var(--border);
         border-radius: 8px;
-        background-color: var(--menu-bg);
+        background-color: var(--menu);
         backdrop-filter: blur(8px);
         padding: 3px;
         font-weight: 400;
-        box-shadow: 10px 10px 10px 0px var(--menu-shadow);
+        box-shadow: 10px 10px 20px 20px var(--shadow-soft);
         z-index: 9999;
         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
         &.fixed {

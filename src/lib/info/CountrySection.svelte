@@ -128,7 +128,7 @@
 
             h4 {
                 margin: 0;
-                color: var(--text);
+                color: var(--primary);
                 text-align: left;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
@@ -137,7 +137,7 @@
 
             p {
                 margin: 0;
-                color: rgb(from var(--text) r g b / 0.768);
+                color: rgb(from var(--primary) r g b / 0.768);
             }
         }
         .country {

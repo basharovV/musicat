@@ -58,19 +58,18 @@
 {/if}
 
 <style lang="scss">
+    @import "../../styles/mixins";
+
     .tooltip {
+        @include popup;
         position: relative;
-        background-color: var(--mapview-tooltip-bg);
-        border: 0.5px solid var(--mapview-tooltip-border);
-        border-radius: 9px;
-        backdrop-filter: blur(8px);
         padding: 0.5em 1em;
         text-overflow: ellipsis;
         display: flex;
         align-items: flex-start;
         justify-content: flex-start;
         flex-direction: column;
-        color: var(--mapview-tooltip-text);
+        color: var(--primary);
 
         p {
             display: inline-block;
@@ -87,12 +86,12 @@
         .description {
             font-size: smaller;
             line-height: 1.3em;
-            color: var(--mapview-tooltip-text);
+            color: var(--secondary);
             max-width: 200px;
 
             .artists {
                 font-style: italic;
-                color: var(--mapview-tooltip-artist);
+                color: var(--secondary);
             }
         }
 

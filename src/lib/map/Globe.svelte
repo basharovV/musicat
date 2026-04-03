@@ -16,10 +16,8 @@
         triangulatePolygon,
         xyzToLatLng,
     } from "../../utils/GeoUtils";
-    import FakeGlowMaterial from "./FakeGlowMaterial";
-    import Dropdown from "../ui/Dropdown.svelte";
-    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import { countries } from "../data/CountryCodes";
+    import FakeGlowMaterial from "./FakeGlowMaterial";
 
     let globeContainer: HTMLDivElement;
     let scene: THREE.Scene;
@@ -102,9 +100,7 @@
             depthWrite: false,
             uniforms: {
                 color: {
-                    value: new THREE.Color(
-                        $currentThemeObject["mapview-globe-outline"],
-                    ),
+                    value: new THREE.Color($currentThemeObject["secondary"]),
                 },
                 fadeStrength: { value: 1.5 },
             },
@@ -155,8 +151,8 @@
                 const color = getCountryColor(
                     countryCode,
                     songData,
-                    $currentThemeObject["mapview-scale-1"],
-                    $currentThemeObject["mapview-scale-2"],
+                    $currentThemeObject["accent-softest"],
+                    $currentThemeObject["accent"],
                 );
 
                 if (color) {
@@ -419,7 +415,7 @@
                 console.log("Setting selected country", countryCode);
                 mat.visible = true;
                 mat.uniforms.color.value = new THREE.Color(
-                    $currentThemeObject["mapview-region-selected-bg"],
+                    $currentThemeObject["accent-play"],
                 );
             } else if (child.userData.nOfSongs === undefined) {
                 mat.visible = false;
@@ -427,8 +423,8 @@
                 const color = getCountryColor(
                     child.userData.countryCode,
                     songData,
-                    $currentThemeObject["mapview-scale-1"],
-                    $currentThemeObject["mapview-scale-2"],
+                    $currentThemeObject["accent-softest"],
+                    $currentThemeObject["accent"],
                 );
                 mat.visible = true;
                 mat.uniforms.color.value = new THREE.Color(color);
@@ -628,7 +624,7 @@
             globeGeometry,
             new FakeGlowMaterial({
                 glowColor: new THREE.Color(
-                    $currentThemeObject["mapview-globe-glow"],
+                    $currentThemeObject["accent-softer"],
                 ),
                 glowInternalRadius: 0.01,
                 falloff: 2,
@@ -814,7 +810,7 @@
                 points[0],
                 points[1].multiplyScalar(0.99),
                 0.03,
-                new THREE.Color($currentThemeObject["mapview-globe-outline"]),
+                new THREE.Color($currentThemeObject["secondary"]),
             );
 
             line.renderOrder = 4;

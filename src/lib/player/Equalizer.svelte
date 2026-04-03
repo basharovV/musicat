@@ -16,14 +16,14 @@
         EQ_PRESET_OPTIONS,
         EQ_PRESETS,
     } from "./EqualizerPresets";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 
     // Winamp-style standard bands
     let bands = [...$equalizerSettings.settings.bands];
 
     function resetAllBands() {
-        bands.forEach((b) => (b.gain = 0));
-        bands = [...bands];
         equalizerSettings.reset();
+        bands = [...$equalizerSettings.settings.bands];
     }
 
     $: currentPresetOption = {
@@ -83,9 +83,12 @@
                     selected={currentPresetOption}
                     onSelect={selectPreset}
                 />
-                <button class="reset-all" on:click={resetAllBands}>
-                    RESET
-                </button>
+                <ButtonWithIcon
+                    size="xsmall"
+                    theme="transparent"
+                    onClick={resetAllBands}
+                    text="RESET"
+                ></ButtonWithIcon>
             </div>
             <div class="sliders-wrapper">
                 {#each bands as band, i}
@@ -101,8 +104,8 @@
         <svg class="arrow" width="28" height="12" viewBox="0 0 28 12">
             <path
                 d="M 2 12 C 8 12, 10 0, 14 0 C 18 0, 20 12, 26 12"
-                fill="var(--popup-body-bg)"
-                stroke="var(--panel-primary-border-accent1)"
+                fill="var(--overlay)"
+                stroke="var(--border)"
                 stroke-width="1.2"
             />
         </svg>
@@ -135,7 +138,7 @@
                 font-size: 0.75rem;
                 letter-spacing: 1px;
                 text-transform: uppercase;
-                color: var(--text);
+                color: var(--primary);
             }
             .reset-all {
                 background: transparent;
@@ -174,11 +177,18 @@
 
             // horizontal lines every 15px
             background-image: linear-gradient(
-                var(--panel-primary-border-main) 1px,
+                var(--border) 1px,
                 transparent 1px
             );
-            background-size: 100% 14px;
-            opacity: 0.1;
+            background-size: 100% 14px; // The mask fades the left and right 10% of the container
+            mask-image: linear-gradient(
+                to right,
+                transparent 0%,
+                black 20%,
+                black 80%,
+                transparent 100%
+            );
+            opacity: 0.9;
             pointer-events: none;
         }
 
@@ -189,8 +199,7 @@
             left: 0;
             right: 0;
             height: 1px;
-            background: var(--inverse);
-            opacity: 0.4;
+            background: var(--border);
 
             /* ADJUST THIS PERCENTAGE:
                If your slider goes from +12 to -12, 50% is correct.
@@ -199,7 +208,14 @@
             top: 43.5%;
 
             pointer-events: none;
-            box-shadow: 0 0 8px var(--panel-primary-border-accent1);
+            mask-image: linear-gradient(
+                to right,
+                transparent 0%,
+                black 20%,
+                black 80%,
+                transparent 100%
+            );
+            box-shadow: 0 0 8px var(--shadow);
         }
     }
 
@@ -256,7 +272,7 @@
 
     .arrow {
         position: absolute;
-        bottom: 26px;
+        bottom: 25.3px;
         left: 0;
         right: 0;
         margin: auto;

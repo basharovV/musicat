@@ -104,8 +104,8 @@
     // ── Palette ────────────────────────────────────────────────────────────────
 
     $: PALETTE = [
-        $currentThemeObject["mapview-scale-1"], // Purple
-        $currentThemeObject["mapview-scale-2"], // Purple
+        $currentThemeObject["accent-softest"],
+        $currentThemeObject["accent"],
     ];
 
     // ── Similarity (Jaccard on tokens) ────────────────────────────────────────

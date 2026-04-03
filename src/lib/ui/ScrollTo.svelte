@@ -35,10 +35,10 @@
         right: 0;
         padding: 0.5em 1em;
         border-radius: 10px;
-        background-color: var(--scrollto-bg);
-        border: 1px solid var(--scrollto-border);
-        box-shadow: 10px 10px 10px var(--scrollto-shadow);
-        color: var(--scrollto-text);
+        background-color: var(--solid);
+        border: 1px solid var(--border);
+        box-shadow: 10px 10px 10px var(--shadow);
+        color: var(--primary);
         margin: auto;
         width: fit-content;
         z-index: 11;
@@ -52,14 +52,8 @@
             display: none;
         }
         &:hover {
-            background-color: var(--scrollto-hover-bg);
-            border: 1px solid var(--scrollto-hover-border);
-            box-shadow: 10px 10px 10px var(--scrollto-hover-shadow);
         }
         &:active {
-            background-color: var(--scrollto-active-bg);
-            border: 2px solid var(--scrollto-active-border);
-            box-shadow: 10px 10px 10px var(--scrollto-active-shadow);
         }
 
         .eq {
@@ -70,7 +64,7 @@
             span {
                 display: inline-block;
                 width: 3px;
-                background-color: var(--scrollto-eq);
+                background-color: var(--soft);
                 position: absolute;
                 bottom: 0;
             }
@@ -79,7 +73,7 @@
                 height: 13px;
                 left: 0;
                 animation-name: shorteq;
-                animation-duration: 0.5s;
+                animation-duration: 1s;
                 animation-iteration-count: infinite;
                 animation-delay: 0s;
             }
@@ -88,7 +82,7 @@
                 height: 15px;
                 left: 6px;
                 animation-name: talleq;
-                animation-duration: 0.5s;
+                animation-duration: 1s;
                 animation-iteration-count: infinite;
                 animation-delay: 0.17s;
             }
@@ -97,7 +91,7 @@
                 height: 13px;
                 left: 12px;
                 animation-name: shorteq;
-                animation-duration: 0.5s;
+                animation-duration: 1s;
                 animation-iteration-count: infinite;
                 animation-delay: 0.34s;
             }

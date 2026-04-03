@@ -54,6 +54,7 @@ const en = {
     bottomBar: {
         queue: "Queue",
         lyrics: "Lyrics",
+        wiki: "Wiki",
         lossySelector: {
             lossy: "lossy",
             lossless: "lossless",

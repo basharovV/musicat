@@ -96,7 +96,7 @@
 
     // CONSTANTS
     const HEADER_HEIGHT = 22;
-    const ROW_HEIGHT = 48;
+    const ROW_HEIGHT = 42;
     const DROP_HINT_HEIGHT = 2;
     const DUMMY_COUNT = 5;
     const DUMMY_PADDING = DUMMY_COUNT * ROW_HEIGHT;
@@ -104,6 +104,7 @@
     // COLORS
     let BG_COLOR: string;
     let HEADER_BG_COLOR: string;
+    let HEADER_BORDER_COLOR: string;
     let OFFSCREEN_BG_COLOR: string;
     let TEXT_COLOR: string;
     let TITLE_COLOR: string;
@@ -113,7 +114,6 @@
     let PLAYING_BG_COLOR: string;
     let PLAYING_TEXT_COLOR: string;
     let PLAYING_TITLE_COLOR: string;
-    let COLUMN_INSERT_HINT_COLOR: string;
     let DRAGGING_SOURCE_COLOR: string;
 
     export let fields = {
@@ -128,7 +128,7 @@
         artist: {
             viewProps: {
                 x: 10,
-                y: HEADER_HEIGHT + 1,
+                y: 19,
                 width: 0,
                 height: HEADER_HEIGHT,
             },
@@ -214,19 +214,19 @@
 
     $: if ($currentThemeObject) {
         // COLORS
-        BG_COLOR = $currentThemeObject["panel-background"];
-        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
-        DRAGGING_SOURCE_COLOR = "#8a69683e";
-        HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
-        HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
+        BG_COLOR = $currentThemeObject["panel"];
+        DRAGGING_SOURCE_COLOR = $currentThemeObject["accent-softer"];
+        HEADER_BG_COLOR = $currentThemeObject["accent-softest"];
+        HEADER_BORDER_COLOR = $currentThemeObject["border"];
+        HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight"];
         OFFSCREEN_BG_COLOR = "#71658e3b";
-        PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
-        PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
-        PLAYING_TITLE_COLOR = $currentThemeObject["library-playing-title"];
+        PLAYING_BG_COLOR = $currentThemeObject["accent"];
+        PLAYING_TEXT_COLOR = $currentThemeObject["accent-text"];
+        PLAYING_TITLE_COLOR = $currentThemeObject["accent-text"];
         ROW_BG_COLOR = "transparent";
-        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
-        TEXT_COLOR = $currentThemeObject["library-text"];
-        TITLE_COLOR = $currentThemeObject["library-title"];
+        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover"];
+        TEXT_COLOR = $currentThemeObject["secondary"];
+        TITLE_COLOR = $currentThemeObject["primary"];
     }
 
     // Restore scroll position if any
@@ -1247,19 +1247,6 @@
                                 />
                             {/if}
 
-                            {#if columnToInsertIdx !== null}
-                                <Rect
-                                    config={{
-                                        x: columnToInsertXPos,
-                                        y: sandwichTopHeight + HEADER_HEIGHT,
-                                        height: viewportHeight,
-                                        width: 2,
-                                        fill: COLUMN_INSERT_HINT_COLOR,
-                                        listening: false,
-                                    }}
-                                />
-                            {/if}
-
                             {#if !$isCompactView}
                                 <!-- HEADER -->
                                 <Group
@@ -1290,7 +1277,7 @@
                                             y: HEADER_HEIGHT,
                                             width: width,
                                             height: 0.5,
-                                            fill: "#544e55",
+                                            fill: HEADER_BORDER_COLOR,
                                         }}
                                     />
                                     <Text
@@ -1349,20 +1336,18 @@
         align-items: center;
         justify-content: center;
         border-radius: 5px;
-        border-top: 1px solid var(--panel-primary-border-main);
-        border-left: 1px solid var(--panel-secondary-border-main);
-        border-bottom: 1px solid var(--panel-secondary-border-main);
+        border: 1px solid var(--border);
         overflow: hidden;
         margin: 0 0 0;
         &.dragover {
-            border-color: var(--accent-secondary);
+            border-color: var(--accent);
         }
         &.auto-width {
             width: 100%;
             max-width: initial;
         }
         &.compact {
-            border-top: 1px solid var(--panel-secondary-border-main);
+            border-top: 1px solid var(--border);
         }
     }
     .container {

@@ -125,7 +125,7 @@
         margin: 0;
         font-family: "Snake";
         font-size: 3em;
-        color: var(--text);
+        color: var(--primary);
     }
 
     .title {

@@ -136,7 +136,7 @@
             background: linear-gradient(
                 to right,
                 transparent,
-                var(--seekbar-line-bg) 50%,
+                var(--secondary) 50%,
                 transparent
             );
         }
@@ -164,7 +164,7 @@
     }
 
     .seekbar {
-        background-color: var(--seekbar-line-bg);
+        background-color: var(--muted);
         height: 2px;
         width: 100%;
         overflow: visible;
@@ -216,7 +216,7 @@
                 top: -25px;
                 left: -10px;
                 font-size: 0.7em;
-                background: var(--seekbar-tooltip-bg);
+                background: var(--panel);
                 color: var(--seekbar-tooltip-text);
                 padding: 0 0.3em;
                 border-radius: 3px;
@@ -226,7 +226,7 @@
         svg {
             height: 10px;
             width: 10px;
-            fill: var(--seekbar-thumb);
+            fill: var(--accent-play);
             position: absolute;
             overflow: visible;
             pointer-events: none;

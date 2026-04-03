@@ -561,7 +561,7 @@
                     margin: 0;
                     text-align: left;
                     flex: 50%;
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
@@ -715,9 +715,9 @@
             }
 
             .date {
-                color: var(--text-secondary);
+                color: var(--secondary);
                 span {
-                    color: var(--text);
+                    color: var(--primary);
                 }
             }
 

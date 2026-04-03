@@ -1,17 +1,10 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import {
-        isCompactView,
-        isQueueOpen,
-        isSidebarOpen,
-        os,
-        uiPreferences,
-    } from "../../data/store";
+    import { uiPreferences } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import Divider from "../ui/Divider.svelte";
     import Dropdown from "../ui/Dropdown.svelte";
     import Icon from "../ui/Icon.svelte";
-    import { throttle } from "lodash-es";
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
 
@@ -70,7 +63,7 @@
             <div class="order-by">
                 <Icon
                     icon="heroicons-solid:sort-descending"
-                    color="var(--icon-primary)"
+                    color="var(--primary)"
                     boxed
                 />
                 <Dropdown
@@ -87,9 +80,7 @@
                     icon={showSingles
                         ? "mynaui:one-circle-solid"
                         : "mynaui:one-circle-solid-off"}
-                    color={showSingles
-                        ? "var(--icon-primary)"
-                        : "var(--icon-secondary)"}
+                    color={showSingles ? "var(--primary)" : "var(--secondary)"}
                     boxed
                     onClick={() => {
                         $uiPreferences.albumsViewShowSingles = !showSingles;
@@ -99,9 +90,7 @@
             <div class="toggle">
                 <Icon
                     icon={showInfo ? "mdi:information" : "mdi:information-off"}
-                    color={showInfo
-                        ? "var(--icon-primary)"
-                        : "var(--icon-secondary)"}
+                    color={showInfo ? "var(--primary)" : "var(--secondary)"}
                     boxed
                     onClick={() => {
                         $uiPreferences.albumsViewShowInfo = !showInfo;
@@ -112,7 +101,7 @@
             <label>
                 <Icon
                     icon="material-symbols:grid-view-rounded"
-                    color="var(--icon-primary)"
+                    color="var(--primary)"
                     boxed
                 />
                 <input
@@ -130,7 +119,7 @@
         {:else}
             <Icon
                 icon="iconamoon:settings-fill"
-                color="var(--icon-primary)"
+                color="var(--primary)"
                 boxed
                 onClick={toogleOptionsPanel}
             />
@@ -143,7 +132,7 @@
                 <div class="order-by">
                     <Icon
                         icon="heroicons-solid:sort-descending"
-                        color="var(--icon-primary)"
+                        color="var(--primary)"
                         boxed
                     />
                     <Dropdown
@@ -162,8 +151,8 @@
                                 ? "mynaui:one-circle-solid"
                                 : "mynaui:one-circle-solid-off"}
                             color={showSingles
-                                ? "var(--icon-primary)"
-                                : "var(--icon-secondary)"}
+                                ? "var(--primary)"
+                                : "var(--secondary)"}
                             boxed
                             onClick={() => {
                                 $uiPreferences.albumsViewShowSingles =
@@ -177,8 +166,8 @@
                                 ? "mdi:information"
                                 : "mdi:information-off"}
                             color={showInfo
-                                ? "var(--icon-primary)"
-                                : "var(--icon-secondary)"}
+                                ? "var(--primary)"
+                                : "var(--secondary)"}
                             boxed
                             onClick={() => {
                                 $uiPreferences.albumsViewShowInfo = !showInfo;
@@ -201,7 +190,7 @@
                     />
                     <Icon
                         icon="material-symbols:grid-view-rounded"
-                        color="var(--icon-primary)"
+                        color="var(--primary)"
                         boxed
                     />
                 </label>
@@ -227,8 +216,7 @@
             font-size: 3em;
             opacity: 0.3;
             margin-left: 0.1em;
-            color: var(--header-text);
-            opacity: var(--header-opacity);
+            color: var(--primary);
 
             &.window-controls-offset {
                 margin-left: 70px;
@@ -249,12 +237,12 @@
             .order-by {
                 display: flex;
                 gap: 3px;
-                color: var(--text-secondary);
+                color: var(--secondary);
             }
             .toggle {
                 display: flex;
                 align-items: center;
-                color: var(--text-secondary);
+                color: var(--secondary);
                 cursor: default;
                 :global(svg) {
                     opacity: 0.7;
@@ -267,7 +255,7 @@
             flex-direction: row-reverse;
             gap: 4px;
             align-items: center;
-            color: var(--text-secondary);
+            color: var(--secondary);
         }
         input[type="checkbox"] {
             padding: 0;
@@ -282,7 +270,7 @@
             background-color: transparent;
             &::-webkit-slider-thumb {
                 appearance: none;
-                background: var(--album-gridsize-thumb);
+                background: var(--secondary);
                 border-radius: 4px;
                 width: 10px;
                 height: 10px;
@@ -291,14 +279,14 @@
                 position: relative;
             }
             &::-webkit-slider-runnable-track {
-                background-color: var(--album-gridsize-line-bg);
+                background-color: var(--muted);
                 appearance: none;
                 border-radius: 10px;
                 outline: none;
                 height: 4px;
             }
             ::-moz-range-track {
-                background: var(--album-gridsize-thumb);
+                background: var(--muted);
                 height: 4px;
             }
         }
@@ -308,7 +296,7 @@
         .order-by {
             display: flex;
             gap: 3px;
-            color: var(--text-secondary);
+            color: var(--secondary);
         }
         .controls {
             display: flex;
@@ -317,7 +305,7 @@
         .toggle {
             display: flex;
             align-items: center;
-            color: var(--text-secondary);
+            color: var(--secondary);
             cursor: default;
             :global(svg) {
                 opacity: 0.7;

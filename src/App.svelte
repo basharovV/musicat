@@ -84,6 +84,7 @@
         startErrorListener,
         startMenuListener,
     } from "./window/EventListener";
+    import Waveform from "./lib/player/Waveform.svelte";
 
     const appWindow = getCurrentWebviewWindow();
 
@@ -148,6 +149,7 @@
         unlistenThemeChange = await getCurrentWindow().listen(
             "tauri://theme-changed",
             ({ payload }) => {
+                console.log("theme changed", payload);
                 $userSettings = $userSettings;
             },
         );
@@ -304,6 +306,7 @@
                     ((!showQueue && innerWidth >= 880) ||
                         (showQueue && innerWidth >= 1000)))));
     $: showWiki =
+        $uiView !== "wiki" &&
         $isWikiOpen &&
         ((!showQueue && innerWidth >= 500) || (showQueue && innerWidth >= 690));
     $: isQueueAutoWidth = !showMiniPlayer && innerWidth < 520;
@@ -563,14 +566,14 @@
                 </div>
             {/if}
             <div class="waveform">
-                <div transition:fly={{ duration: 200, y: 50 }}>
-                    {#if $isWaveformOpen}
-                        <NotesView />
-                    {/if}
-                </div>
+                {#if $isWaveformOpen}
+                    <div transition:fly={{ duration: 200, delay: 50, y: 50 }}>
+                        <Waveform />
+                    </div>
+                {/if}
             </div>
 
-            <div class="wiki">
+            <div class="wiki" class:wiki-shown={showWiki}>
                 {#if showWiki}
                     <div
                         class="wiki-container"
@@ -623,8 +626,8 @@
 
 <style lang="scss">
     :global(html) {
-        background-color: var(--background, initial);
-        color: var(--text, initial);
+        background-color: var(--window, initial);
+        color: var(--primary, initial);
         font-family: -apple-system, Avenir, Helvetica, Arial, sans-serif;
         font-size: 14px;
         line-height: 24px;
@@ -653,7 +656,7 @@
         height: 100vh;
         opacity: 1;
         position: relative;
-        background-color: var(--background, initial);
+        background-color: var(--window, initial);
 
         @media screen and (max-width: 210px) and (max-height: 210px) {
             grid-template-columns: auto; // Sidebar, queue, panel, resizer, wiki
@@ -765,14 +768,15 @@
             grid-column: 3;
             display: grid;
             overflow: hidden;
-            box-shadow: -4px 3px 20px 5px var(--panel-shadow-bg);
-            border: 1px solid var(--panel-primary-border-accent1);
+            box-shadow: -4px 3px 20px 5px var(--shadow-soft);
+            border: 1px solid var(--border);
             border-bottom-left-radius: 5px;
             border-bottom-right-radius: 5px;
-            border-bottom: 0.7px solid var(--panel-secondary-border-main);
+            border-bottom: 0.7px solid var(--border);
             margin: 3.5px 5px 0 0;
             border-radius: 5px;
             box-sizing: border-box;
+            background-color: var(--panel);
 
             &.internet-archive,
             &.your-music {
@@ -780,7 +784,7 @@
             }
 
             &.compact {
-                box-shadow: -4px 8px 20px 5px var(--panel-shadow-bg);
+                box-shadow: -4px 8px 20px 5px var(--shadow);
             }
         }
 
@@ -826,10 +830,9 @@
             grid-row: 2/5;
             grid-column: 2;
             overflow: hidden;
-            height: 100%;
-
             &.visible {
                 box-shadow: -10px 3px 30px 5px var(--panel-shadow-bg);
+                margin: 3.5px 5px 0 0;
             }
 
             .queue-container {
@@ -837,26 +840,24 @@
                 box-sizing: border-box;
                 overflow: hidden;
                 border-radius: 5px;
-                margin: 4px 8px 0 0;
                 display: grid;
-                grid-template-rows: 1fr auto;
-                gap: 5px;
+                grid-template-rows: 1fr;
             }
         }
 
         .wiki:not(.panel.wiki) {
             grid-row: 2/5;
-            grid-column: 5;
-            overflow-y: hidden;
-            height: 100%;
+            grid-column: 4;
             position: relative;
+
+            &.wiki-shown {
+                margin: 3.5px 8px 0 0;
+            }
             .wiki-container {
                 height: 100%;
                 box-sizing: border-box;
                 overflow: hidden;
-                border-bottom: 0.7px solid #ffffff36;
                 border-radius: 5px;
-                margin: 0px 8px 0 0;
             }
 
             .close-wiki-prompt {
@@ -877,7 +878,7 @@
 
         resize-handle {
             grid-column: 4;
-            grid-row: 3 / 6;
+            grid-row: 2 / 5;
             display: block;
             position: relative;
             height: 100%;
@@ -885,6 +886,7 @@
             left: -2.5px;
             z-index: 100;
             cursor: ew-resize;
+            border-radius: 5px;
             @media screen and (max-width: 210px) {
                 display: none;
             }
@@ -903,10 +905,14 @@
                 background: url("/images/resize-handle.svg") no-repeat center;
                 opacity: 0.3;
                 z-index: 10;
+                // If the parent or root has a data-attribute or class
+                [data-variant="light"] & {
+                    filter: brightness(0);
+                }
             }
             &:hover,
             &.resizing {
-                background-color: var(--accent-secondary);
+                background-color: var(--accent);
             }
         }
 
@@ -927,16 +933,9 @@
                 grid-column: 3;
             }
 
-            .wiki {
-                grid-column: 4;
-            }
-
             .waveform {
-                grid-column: 1 / 4;
+                grid-column: 1 / 5;
                 margin-left: 5px;
-            }
-            .top-nav {
-                grid-column: 1 / 4;
             }
             .bottom-bar {
                 :global(.bottom) {

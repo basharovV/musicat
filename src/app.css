@@ -106,5 +106,5 @@ button:disabled {
     background-color: var(--overlay-bg);
     backdrop-filter: blur(10px);
     border: 1px solid color-mix(in srgb, var(--inverse) 70%, transparent);
-    color: var(--text);
+    color: var(--primary);
 }
