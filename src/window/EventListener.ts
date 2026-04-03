@@ -25,7 +25,6 @@ const appWindow = getCurrentWebviewWindow();
 
 export function startMenuListener() {
     appWindow.listen("menu", async ({ event, payload }) => {
-        console.log("menu", event);
         switch (payload) {
             case "about":
                 console.log("about");

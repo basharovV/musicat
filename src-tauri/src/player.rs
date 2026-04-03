@@ -690,6 +690,8 @@ fn decode_loop(
                     }
                     PlayerControlEvent::ChangeAnalyzer(request) => {
                         info!("audio: change analyzer! {:?}", request);
+
+                        while let Ok(_) = analyzer_receiver.try_lock().unwrap().try_recv() {}
                         if let Some(request_type) = &request.analyzer_type {
                             let new_state = AnalyzerState {
                                 is_enabled: request.is_enabled.unwrap_or(true),
@@ -1213,6 +1215,11 @@ fn decode_loop(
                                     }
                                     PlayerControlEvent::ChangeAnalyzer(request) => {
                                         info!("audio: change analyzer! {:?}", request);
+
+                                        while let Ok(_) =
+                                            analyzer_receiver.try_lock().unwrap().try_recv()
+                                        {
+                                        }
                                         if let Some(request_type) = &request.analyzer_type {
                                             let new_state = AnalyzerState {
                                                 is_enabled: request.is_enabled.unwrap_or(true),
@@ -1352,6 +1359,11 @@ fn decode_loop(
                                         }
                                         PlayerControlEvent::ChangeAnalyzer(request) => {
                                             info!("audio: change analyzer! {:?}", request);
+
+                                            while let Ok(_) =
+                                                analyzer_receiver.try_lock().unwrap().try_recv()
+                                            {
+                                            }
                                             if let Some(request_type) = &request.analyzer_type {
                                                 let new_state = AnalyzerState {
                                                     is_enabled: request.is_enabled.unwrap_or(true),
@@ -1821,29 +1833,29 @@ pub struct AudioDevices {
 }
 
 #[tauri::command]
-pub fn get_devices(_app_handle: tauri::AppHandle) -> Option<AudioDevices> {
-    // Get default host.
+pub async fn get_devices(_app_handle: tauri::AppHandle) -> Result<AudioDevices, String> {
     let host = cpal::default_host();
 
+    // Fetch output devices and map using the new description() API
     let cpal_devices: Vec<AudioDevice> = host
         .output_devices()
-        .unwrap()
-        .map(|device| AudioDevice {
-            name: device.name().unwrap(),
+        .map_err(|e| format!("Failed to get output devices: {}", e))?
+        .filter_map(|device| {
+            // description() returns a Result<DeviceDescription, DevicePropertyError>
+            device.description().ok().map(|desc| AudioDevice {
+                name: desc.name().to_string(), // Accessing the name field from DeviceDescription
+            })
         })
         .collect();
 
-    let cpal_default = host.default_output_device();
-
-    let default = if cpal_default.is_none() {
-        None
-    } else {
-        Some(AudioDevice {
-            name: cpal_default.unwrap().name().unwrap(),
+    // Fetch default device and map its description
+    let default = host.default_output_device().and_then(|device| {
+        device.description().ok().map(|desc| AudioDevice {
+            name: desc.name().to_string(),
         })
-    };
+    });
 
-    Some(AudioDevices {
+    Ok(AudioDevices {
         devices: cpal_devices,
         default,
     })
