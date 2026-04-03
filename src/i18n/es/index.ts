@@ -43,6 +43,14 @@ const es = {
             duration: "Duración",
             tags: "Etiquetas",
         },
+        empty: {
+            title: 'Haz clic en "Importar biblioteca" o arrastra y suelta una carpeta aquí',
+            subtitle: "Siempre puedes añadir más música después",
+            import: "Importar biblioteca +",
+            formats: "Soporta MP3, FLAC, OGG, AAC y WAV",
+            addFoldersToWatch: "o añade carpetas para supervisar",
+            importing: "🥁Importando...",
+        },
         resetToFileOrder: "Restablecer al orden de archivos",
         orderHint: "Mostrando orden de archivos",
         orderHintTemp: "Mostrando orden temporal",
@@ -54,6 +62,7 @@ const es = {
     bottomBar: {
         queue: "Cola",
         lyrics: "Letras",
+        wiki: "Wiki",
         lossySelector: {
             lossy: "con pérdida",
             lossless: "sin pérdida",

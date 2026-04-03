@@ -1,20 +1,17 @@
 <script lang="ts">
-    import {
-        importStatus,
-        popupOpen,
-        selectedPlaylistFile,
-    } from "../../data/store";
+    import { importStatus, popupOpen } from "../../data/store";
 
     import { openTauriImportDialog } from "../../data/LibraryUtils";
-    import ProgressBar from "../ui/ProgressBar.svelte";
-    import LoadingSpinner from "../ui/LoadingSpinner.svelte";
-    import CassetteLoading from "./CassetteLoading.svelte";
+    import LL from "../../i18n/i18n-svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
+    import LoadingSpinner from "../ui/LoadingSpinner.svelte";
+    import ProgressBar from "../ui/ProgressBar.svelte";
+    import CassetteLoading from "./CassetteLoading.svelte";
 </script>
 
 <div class="container">
     {#if $importStatus.isImporting}
-        <h1>🥁Importing...</h1>
+        <h1>{$LL.library.empty.importing()}</h1>
         {#if $importStatus.currentFolder}
             <small>{$importStatus.currentFolder}</small>
         {/if}
@@ -29,18 +26,17 @@
             </div>
         {/if}
     {:else}
-        <h3>Click "Import library" or just drag + drop a folder here</h3>
-        <p>You can always add more music later</p>
+        <h3>{$LL.library.empty.title()}</h3>
+        <p>{$LL.library.empty.subtitle()}</p>
         <ButtonWithIcon
             onClick={openTauriImportDialog}
-            text="Import library +"
+            text={$LL.library.empty.import()}
         />
-        <small>Supports MP3, FLAC, OGG, AAC and WAV</small>
-        <small>or</small>
-        <p>add folders to watch</p>
+        <small>{$LL.library.empty.formats()}</small>
+        <p>{$LL.library.empty.addFoldersToWatch()}</p>
         <ButtonWithIcon
             onClick={() => ($popupOpen = "settings")}
-            text="Settings"
+            text={$LL.settings.title()}
         ></ButtonWithIcon>
     {/if}
 </div>

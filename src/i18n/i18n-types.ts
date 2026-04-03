@@ -158,6 +158,32 @@ type RootTranslation = {
 			 */
 			tags: string
 		}
+		empty: {
+			/**
+			 * C​l​i​c​k​ ​"​I​m​p​o​r​t​ ​l​i​b​r​a​r​y​"​ ​o​r​ ​j​u​s​t​ ​d​r​a​g​ ​+​ ​d​r​o​p​ ​a​ ​f​o​l​d​e​r​ ​h​e​r​e
+			 */
+			title: string
+			/**
+			 * Y​o​u​ ​c​a​n​ ​a​l​w​a​y​s​ ​a​d​d​ ​m​o​r​e​ ​m​u​s​i​c​ ​l​a​t​e​r
+			 */
+			subtitle: string
+			/**
+			 * I​m​p​o​r​t​ ​l​i​b​r​a​r​y​ ​+
+			 */
+			'import': string
+			/**
+			 * S​u​p​p​o​r​t​s​ ​M​P​3​,​ ​F​L​A​C​,​ ​O​G​G​,​ ​A​A​C​ ​a​n​d​ ​W​A​V
+			 */
+			formats: string
+			/**
+			 * o​r​ ​a​d​d​ ​f​o​l​d​e​r​s​ ​t​o​ ​w​a​t​c​h
+			 */
+			addFoldersToWatch: string
+			/**
+			 * �​�​I​m​p​o​r​t​i​n​g​.​.​.
+			 */
+			importing: string
+		}
 		/**
 		 * R​e​s​e​t​ ​t​o​ ​f​i​l​e​ ​o​r​d​e​r
 		 */
@@ -1420,6 +1446,32 @@ export type TranslationFunctions = {
 			 * Tags
 			 */
 			tags: () => LocalizedString
+		}
+		empty: {
+			/**
+			 * Click "Import library" or just drag + drop a folder here
+			 */
+			title: () => LocalizedString
+			/**
+			 * You can always add more music later
+			 */
+			subtitle: () => LocalizedString
+			/**
+			 * Import library +
+			 */
+			'import': () => LocalizedString
+			/**
+			 * Supports MP3, FLAC, OGG, AAC and WAV
+			 */
+			formats: () => LocalizedString
+			/**
+			 * or add folders to watch
+			 */
+			addFoldersToWatch: () => LocalizedString
+			/**
+			 * 🥁Importing...
+			 */
+			importing: () => LocalizedString
 		}
 		/**
 		 * Reset to file order

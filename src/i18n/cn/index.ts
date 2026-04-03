@@ -43,6 +43,14 @@ const cn = {
             duration: "时长",
             tags: "标签",
         },
+        empty: {
+            title: "点击“导入音乐库”或直接将文件夹拖放到此处",
+            subtitle: "以后您可以随时添加更多音乐",
+            import: "导入音乐库 +",
+            formats: "支持 MP3, FLAC, OGG, AAC 和 WAV 格式",
+            addFoldersToWatch: "或添加监控文件夹",
+            importing: "🥁正在导入...",
+        },
         resetToFileOrder: "重置文件顺序",
         orderHint: "展示文件顺序",
         orderHintTemp: "显示临时顺序",
@@ -54,6 +62,7 @@ const cn = {
     bottomBar: {
         queue: "队列",
         lyrics: "歌词",
+        wiki: "维基",
         lossySelector: {
             lossy: "lossy",
             lossless: "lossless",

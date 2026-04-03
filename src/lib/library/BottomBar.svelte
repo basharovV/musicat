@@ -279,19 +279,16 @@
             right: -6px;
             top: 0;
             bottom: 0;
-            padding: 0 1em 0 5em;
+            padding: 0 1em;
             margin: 0;
             height: 100%;
             border-radius: 7px;
-            background: linear-gradient(
-                to right,
-                transparent 0%,
-                #242026e5 14%,
-                #242026fb 100%
-            );
+            background-color: var(--overlay);
+            backdrop-filter: blur(9px);
             display: flex;
             align-items: center;
-            width: max-content;
+            justify-content: flex-end;
+            min-width: 140px;
             p {
                 color: var(--primary);
                 font-size: 13px;

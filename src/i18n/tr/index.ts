@@ -43,6 +43,14 @@ const tr = {
             duration: "Süre",
             tags: "Etiketler",
         },
+        empty: {
+            title: '"Kitaplığı içe aktar"a tıkla veya bir klasörü buraya sürükleyip bırak',
+            subtitle: "Daha sonra her zaman daha fazla müzik ekleyebilirsin",
+            import: "Kitaplığı içe aktar +",
+            formats: "MP3, FLAC, OGG, AAC ve WAV formatlarını destekler",
+            addFoldersToWatch: "veya izlenecek klasörler ekle",
+            importing: "🥁İçe aktarılıyor...",
+        },
         resetToFileOrder: "Dosya sırasına sıfırla",
         orderHint: "Dosya sırası gösteriliyor",
         orderHintTemp: "Geçici sıra gösteriliyor",
@@ -55,6 +63,7 @@ const tr = {
     bottomBar: {
         queue: "Sıra",
         lyrics: "Şarkı Sözleri",
+        wiki: "Wiki",
         lossySelector: {
             lossy: "kayıplı",
             lossless: "kayıpsız",
