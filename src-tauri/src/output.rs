@@ -347,19 +347,12 @@ pub mod cpal {
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
             // Output audio stream config.
-            let config = if cfg!(not(target_os = "windows")) {
+            let config = 
                 cpal::StreamConfig {
                     channels: num_channels as cpal::ChannelCount,
                     sample_rate: spec.rate,
                     buffer_size: cpal::BufferSize::Default,
-                }
-            } else {
-                // Use the default config for Windows.
-                device
-                    .default_output_config()
-                    .expect("Failed to get the default output config.")
-                    .config()
-            };
+                };
 
             let time_base = TimeBase {
                 numer: 1,

@@ -991,11 +991,14 @@ fn decode_loop(
                     || supports_sample_rate && spec.rate != previous_sample_rate
                     || spec.channels.count() != previous_channels
                     || max_frames_changed;
+
+                if should_reset_audio {
+                    previous_sample_rate = spec.rate;
+                    previous_channels = spec.channels.count();
+                    previous_audio_device_id = device_id.clone();
+                }
             }
 
-            previous_sample_rate = spec.rate;
-            previous_channels = spec.channels.count();
-            previous_audio_device_id = device_id.clone();
 
             let song = crate::metadata::extract_metadata(
                 &Path::new(&p.clone().as_str()),
