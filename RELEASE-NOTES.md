@@ -1,3 +1,23 @@
+### 📦 0.17.1
+
+#### New
+
+- **Theme updates**. Themes have been significantly simplified, reducing the number of colors to manage from 200+ to just 30. Although some granularity is lost (ie. we can no longer specify the library column border since all borders are now the same), it is much easier to have a mental model of a theme and will hopefully inspire more people to contribute their own themes, or even support user-made custom themes in the future!
+- **3 new themes**. New themes have been added: Aqua (macOS Finder-like), Mission Control (light and dark), based on Ableton. Also, the fruitOS themes have been renamed to Apple Music.
+
+#### Improvements
+
+- Library columns now have minimum width
+- Wiki panel can now be toggled from the bottom bar. The UI of the wiki panel is improved, with a header that matches the theme more closely.
+- The reliability of Wiki panel artist searches is improved.
+
+#### Fixed
+
+- Fixed seek hoverhead covered by artwork (0.17.0 regression)
+- Windows: fixed an issue that was causing tracks to end early. This was due to the default audio device settings being applied instead of track-specific audio settings. So for 44.1khz tracks, this would cause the app to confuse the sample rate as 48khz instead of initializing the audio device with 44.1khz natively, which would in turn kick in the resampler, and cause the wrong timestamp to be reported.
+- Windows: fixed right-click showing both Webview context menu as well as in-app right click menu.
+- Windows: no longer showing app border radius
+
 ### 📦 0.17.0
 
 #### New
