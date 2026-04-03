@@ -821,17 +821,17 @@
     let marqueeConfig = {
         title: {
             size: 36,
-            color: $currentThemeObject["text-active"],
+            color: $currentThemeObject["primary"],
             weight: "bold",
         },
         artist: {
             size: 36,
-            color: $currentThemeObject["text-active"] || "#888", // Example: Grayer
+            color: $currentThemeObject["primary"] || "#888", // Example: Grayer
             weight: "normal",
         },
         album: {
             size: 34,
-            color: $currentThemeObject["text-secondary"] || "#666", // Example: Smaller/Dimmer
+            color: $currentThemeObject["secondary"] || "#666", // Example: Smaller/Dimmer
             weight: "normal",
         },
         lineSpacing: 20,
@@ -841,9 +841,9 @@
     };
 
     $: if (currentThemeObject) {
-        marqueeConfig.title.color = $currentThemeObject["text-active"];
-        marqueeConfig.artist.color = $currentThemeObject["text-active"];
-        marqueeConfig.album.color = $currentThemeObject["text-secondary"];
+        marqueeConfig.title.color = $currentThemeObject["primary"];
+        marqueeConfig.artist.color = $currentThemeObject["primary"];
+        marqueeConfig.album.color = $currentThemeObject["secondary"];
     }
 
     // 1. Reactive trigger when song changes
@@ -1248,7 +1248,9 @@
                                 size={15}
                                 color={$uiView === "library" &&
                                 !$selectedPlaylistFile
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.library()}</item
                         >
@@ -1265,7 +1267,9 @@
                                 icon="ic:round-album"
                                 size={15}
                                 color={$uiView === "albums"
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.albums()}</item
                         >
@@ -1285,7 +1289,9 @@
                                 icon="clarity:heart-solid"
                                 size={15}
                                 color={$uiView === "favourites"
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.favorites()}</item
                         >
@@ -1305,7 +1311,9 @@
                                     icon="ant-design:delete-outlined"
                                     size={15}
                                     color={$uiView === "to-delete"
-                                        ? $currentThemeObject["accent"]
+                                        ? $currentThemeObject[
+                                              "sidebar-active-nav-icon"
+                                          ]
                                         : "currentColor"}
                                 />{$LL.sidebar.toDelete()}</item
                             >
@@ -1328,7 +1336,9 @@
                                 size={15}
                                 color={$uiView === "library" &&
                                 $selectedPlaylistFile
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.playlists()}
                             <div
@@ -1433,7 +1443,9 @@
                                 icon="ic:round-star-outline"
                                 size={15}
                                 color={$uiView === "smart-query"
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.smartPlaylists()}
                             <div
@@ -1610,7 +1622,9 @@
                                     icon="mdi:music-clef-treble"
                                     size={15}
                                     color={$uiView === "your-music"
-                                        ? $currentThemeObject["accent"]
+                                        ? $currentThemeObject[
+                                              "sidebar-active-nav-icon"
+                                          ]
                                         : "currentColor"}
                                 />{$LL.sidebar.artistsToolkit()}</item
                             >
@@ -1628,7 +1642,9 @@
                                 icon="fe:music"
                                 size={15}
                                 color={$uiView === "internet-archive"
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.internetArchive()}</item
                         >
@@ -1645,7 +1661,9 @@
                                 icon="mdi:map"
                                 size={15}
                                 color={$uiView === "map"
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.map()}</item
                         >
@@ -1662,7 +1680,9 @@
                                 icon="gridicons:line-graph"
                                 size={15}
                                 color={$uiView === "analytics"
-                                    ? $currentThemeObject["accent"]
+                                    ? $currentThemeObject[
+                                          "sidebar-active-nav-icon"
+                                      ]
                                     : "currentColor"}
                             />{$LL.sidebar.stats()}</item
                         >
@@ -1996,8 +2016,6 @@
 <style lang="scss">
     $mini_y_breakpoint: 460px;
     $xsmall_y_breakpoint: 320px;
-    $sidebar_primary_color: transparent;
-    $sidebar_secondary_color: transparent;
     $track_info_artwork_margin: 5px;
     $artwork_bottom: 143px;
     $bottom_height: 340px;
@@ -2015,7 +2033,7 @@
 
             .transport-side {
                 &.favourite.active {
-                    color: var(--transport-favorite);
+                    color: var(--accent-love);
 
                     // &:hover {
                     //     color: var(--transport-favorite-hover);
@@ -2023,14 +2041,14 @@
                 }
 
                 &.shuffle.active {
-                    color: var(--transport-shuffle);
+                    color: var(--shuffle);
 
                     // &:hover {
                     //     color: var(--transport-shuffle-hover);
                     // }
                 }
                 &.repeat.active {
-                    color: var(--transport-repeat);
+                    color: var(--repeat);
 
                     // &:hover {
                     //     color: var(--transport-shuffle-hover);
@@ -2060,7 +2078,6 @@
         height: 100%;
         max-width: 210px;
         min-width: 210px;
-        background-color: $sidebar_primary_color;
         transition: grid-template-rows 0.3s cubic-bezier(0.075, 0.82, 0.165, 1);
 
         .click-curtain {
@@ -2162,7 +2179,6 @@
         /* hide scrollbar */
         -ms-overflow-style: none;
         scrollbar-width: none;
-        background-color: $sidebar_secondary_color;
         &::-webkit-scrollbar {
             /* hide scrollbar */
             display: none;
@@ -2218,7 +2234,7 @@
             font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.4px;
-            color: var(--text-inactive, initial);
+            color: var(--secondary, initial);
             width: 100%;
             border-radius: 3px;
             box-sizing: border-box;
@@ -2226,7 +2242,7 @@
 
             cursor: default;
             &.selected {
-                color: var(--text-active, initial);
+                color: var(--primary, initial);
                 font-weight: bold;
                 .chevron {
                     visibility: visible;
@@ -2234,9 +2250,8 @@
             }
 
             &:hover:not(.selected) {
-                background-color: var(--sidebar-node-inactive-hover-bg);
-                color: var(--sidebar-node-inactive-hover-text);
-                opacity: var(--sidebar-node-inactive-hover-opacity);
+                background-color: var(--muted);
+                color: var(--secondary);
 
                 .chevron {
                     visibility: visible;
@@ -2245,7 +2260,7 @@
 
             &:not(.selected) {
                 &:active {
-                    color: var(--text-secondary, initial);
+                    color: var(--secondary, initial);
                 }
             }
 
@@ -2268,8 +2283,6 @@
         /* border-bottom-right-radius: 5px; */
         display: flex;
         flex-direction: column;
-        /* background-color: $sidebar_secondary_color; */
-        background-color: $sidebar_secondary_color;
         top: 0;
         z-index: 3;
         transition: height 1s ease-in-out;
@@ -2291,8 +2304,7 @@
             user-select: none;
             margin: 0.3em 0;
             /* transition: height 1s ease-in-out; */
-            color: var(--header-text);
-            opacity: var(--header-opacity);
+            color: var(--secondary);
             cursor: default;
             &:hover {
                 opacity: 0.5;
@@ -2304,7 +2316,6 @@
         padding: 1em;
         width: 100%;
         position: relative;
-        background-color: $sidebar_secondary_color;
         user-select: none;
 
         .search {
@@ -2314,18 +2325,18 @@
             border-radius: 3px;
             padding-left: 5px;
             font-size: 13px;
-            color: var(--text-active, initial);
-            border: 1px solid var(--sidebar-search-border);
+            color: var(--primary, initial);
+            border: 1px solid var(--border);
             z-index: 10;
             background-color: transparent;
             &::placeholder {
-                color: var(--text-inactive, initial);
+                color: var(--secondary, initial);
             }
             &:focus {
-                outline: var(--input-focus-outline);
-                background-color: var(--sidebar-search-focus-bg);
+                outline: var(--primary);
+                border: 1px solid var(--secondary);
                 &::placeholder {
-                    color: var(--text-inactive, initial);
+                    color: var(--secondary, initial);
                 }
             }
         }
@@ -2421,8 +2432,7 @@
         }
     }
     .info {
-        background-color: $sidebar_primary_color;
-        color: var(--text, initial);
+        color: var(--primary, initial);
         width: 100%;
         padding: 0 0.5em 0.3em 0.5em;
 
@@ -2477,45 +2487,6 @@
             z-index: -1;
             pointer-events: all;
         }
-
-        .artist {
-            white-space: nowrap;
-            font-weight: 500;
-            font-size: 0.9em;
-            opacity: 0.9;
-            width: fit-content;
-            margin: auto;
-            padding: 0 5px;
-            z-index: 1;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            pointer-events: all;
-            @media screen and (min-width: 211px) and (min-height: 211px) {
-                &:hover {
-                    background-color: var(--sidebar-info-artist-hover-bg);
-                    border-radius: 5px;
-                }
-                &:active {
-                    background-color: var(--sidebar-info-artist-active-bg);
-                }
-            }
-        }
-        .title {
-            white-space: nowrap;
-            font-weight: bold;
-            visibility: hidden;
-
-            mask-image: linear-gradient(
-                to right,
-                transparent 0%,
-                $sidebar_secondary_color 10%,
-                $sidebar_secondary_color 90%,
-                transparent 100%
-            );
-            &.show {
-                visibility: visible;
-            }
-        }
         small {
             white-space: nowrap;
             opacity: 0.7;
@@ -2542,10 +2513,7 @@
     }
 
     .file {
-        /* position: absolute; */
         bottom: 0px;
-        /* background-color: $sidebar_secondary_color; */
-
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2554,7 +2522,7 @@
         user-select: none;
         pointer-events: none;
         width: 100%;
-        color: var(--text-secondary);
+        color: var(--secondary);
 
         p {
             background-color: color-mix(
@@ -2569,8 +2537,7 @@
             line-height: 1.5em;
             max-height: 15px;
             font-weight: 600;
-            border: 1px solid
-                color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
+            border: 1px solid var(--border);
 
             /* border-bottom: 1px dashed rgb(49, 49, 49); */
             font-family: monospace;
@@ -2737,7 +2704,7 @@
             letter-spacing: 0.4px;
             .elapsed {
                 font-weight: 500;
-                color: var(--text-active);
+                color: var(--primary,);
             }
         }
     }
@@ -2809,7 +2776,7 @@
 
             &.selected {
                 p {
-                    color: var(--text-active);
+                    color: var(--primary,);
                     font-weight: bold;
                 }
 
@@ -2848,7 +2815,7 @@
             white-space: nowrap;
             text-overflow: ellipsis;
             letter-spacing: 0.2px;
-            color: var(--text-inactive);
+            color: var(--secondary);
             margin: 0;
             cursor: default;
             pointer-events: none;
@@ -2904,7 +2871,7 @@
                 z-index: 4;
                 padding-bottom: 5px;
                 border-bottom: 0.7px solid var(--panel-separator);
-                box-shadow: 0px -16px 20px 0px rgba(0, 0, 0, 0.15);
+                box-shadow: 0px -16px 20px 0px var(--shadow-soft);
                 .noise {
                     backdrop-filter: blur(4px);
                     background-color: color-mix(

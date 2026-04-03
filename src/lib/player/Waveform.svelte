@@ -45,9 +45,9 @@
     // Update colors when theme changes
     $: if ($currentThemeObject && wavesurfer) {
         wavesurfer.setOptions({
-            waveColor: $currentThemeObject["waveform-wave"],
+            waveColor: $currentThemeObject["waveform"],
             progressColor: $currentThemeObject["waveform-progress"],
-            cursorColor: $currentThemeObject["waveform-cursor"],
+            cursorColor: $currentThemeObject["accent-play"],
         });
     }
 
@@ -56,10 +56,10 @@
 
         wavesurfer = WaveSurfer.create({
             container,
-            waveColor: $currentThemeObject["waveform-wave"],
+            waveColor: $currentThemeObject["waveform"],
             progressColor: $currentThemeObject["waveform-progress"],
             cursorWidth: 1,
-            cursorColor: $currentThemeObject["waveform-cursor"],
+            cursorColor: $currentThemeObject["accent-play"],
             // backend: 'MediaElement',
             barWidth: 1.5,
             barHeight: 2,
@@ -72,10 +72,10 @@
         });
         wavesurfer.registerPlugin(
             Hover.create({
-                lineColor: $currentThemeObject["waveform-hover-line"],
+                lineColor: $currentThemeObject["primary"],
                 lineWidth: 1,
-                labelBackground: $currentThemeObject["waveform-hover-label-bg"],
-                labelColor: $currentThemeObject["waveform-hover-label-text"],
+                labelBackground: $currentThemeObject["surface"],
+                labelColor: $currentThemeObject["primary"],
                 labelSize: "11px",
             }),
         );
@@ -359,9 +359,14 @@
 
 <style lang="scss">
     .container {
-        margin: auto 0;
+        margin: 5px 5px 0 0;
         height: 100%;
         position: relative;
+        border: 1px solid var(--border);
+        background-color: var(--panel);
+        box-shadow: 0px 5px 40px var(--shadow-soft);
+        border-radius: 5px;
+
         .waveform {
             margin: auto;
             max-height: 50px;
@@ -397,7 +402,7 @@
                 position: absolute;
                 top: 0;
                 bottom: 0;
-                background-color: var(--waveform-hoverhead-line-bg);
+                background-color: var(--primary);
             }
         }
     }

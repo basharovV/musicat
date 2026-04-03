@@ -494,7 +494,7 @@
             align-items: center;
         }
         label {
-            color: var(--text-secondary);
+            color: var(--secondary);
         }
     }
 
@@ -568,7 +568,7 @@
         font-family: monospace;
         line-height: 1.8em;
         resize: none;
-        color: var(--text);
+        color: var(--primary);
     }
 
     .lyrics-viewer {
@@ -612,7 +612,7 @@
                 display: inline;
                 margin-bottom: 1em;
                 position: relative;
-                color: var(--text-secondary);
+                color: var(--secondary);
 
                 &:not(:first-of-type) {
                     margin-top: 1em;

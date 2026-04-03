@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import processConfig from "./processConfig";
 import { currentFont, currentThemeObject } from "./store";
+import { resolveDerived } from "./ColorUtils";
 
 /**
  * CSS Variable Name
@@ -70,11 +71,14 @@ export function createCSSVariableCollection(config, { prefix } = {}) {
 }
 
 /**
- * Create CSS template
- * @name createCSSTemplate
- * @param {string} prefix - CSS variable prefix
- * @param {Object[]} themes - themes array
- * @returns {string} CSS template
+ * Creates a `<style>` block with all theme variables resolved to static hex values.
+ * Derived values using `rgb(from var(--x) …)` or `color-mix(…)` are resolved
+ * against the core hex values in the theme, ensuring compatibility with contexts
+ * that require static colors such as Konva canvas fills.
+ *
+ * @param prefix - Optional CSS custom property prefix e.g. `"my-app"` → `--my-app-accent`.
+ * @param base - Optional base overrides merged into the theme before resolution.
+ * @returns A trimmed `<style>` string with resolved CSS custom properties on `:root`.
  */
 export function createCSSTemplate(prefix, base = {}) {
     const variablePrefix = prefix ? `--${prefix}` : "-";
@@ -88,14 +92,11 @@ export function createCSSTemplate(prefix, base = {}) {
         themeCSS += `${key}: ${value};\n`;
     }
 
-    const template = `
+    return `
     <style>
       :root {
         ${themeCSS}
-        // font-family: var(--font);
       }
     </style>
-  `;
-
-    return template.trim();
+  `.trim();
 }

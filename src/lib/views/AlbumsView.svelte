@@ -1,8 +1,15 @@
 <script lang="ts">
+    import { path } from "@tauri-apps/api";
+    import { invoke } from "@tauri-apps/api/core";
     import { liveQuery } from "dexie";
+    import { debounce } from "lodash-es";
     import md5 from "md5";
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
+    import VirtualList from "svelte-tiny-virtual-list";
+    import { cubicInOut, cubicOut } from "svelte/easing";
+    import { fade } from "svelte/transition";
     import type { Album, AlbumsSortBy, Song } from "../../App";
+    import { beetsAlbumSearch, beetsAlbumsOnly } from "../../data/beets";
     import { db, getAlbumTracks } from "../../data/db";
     import {
         compressionSelected,
@@ -18,31 +25,8 @@
     import AlbumDetails from "../albums/AlbumDetails.svelte";
     import AlbumItem from "../albums/AlbumItem.svelte";
     import AlbumMenu from "../albums/AlbumMenu.svelte";
-    import ShadowGradient from "../ui/ShadowGradient.svelte";
-    import { path } from "@tauri-apps/api";
-    import VirtualList from "svelte-tiny-virtual-list";
-    import { debounce } from "lodash-es";
-    import { getAlbumDetailsHeight } from "../albums/util";
     import ScrollTo from "../ui/ScrollTo.svelte";
-    import { fade, fly, scale } from "svelte/transition";
-    import {
-        cubicIn,
-        cubicInOut,
-        cubicOut,
-        quadInOut,
-        quartIn,
-        quartInOut,
-        quintIn,
-        sineInOut,
-    } from "svelte/easing";
-    import {
-        beetsAlbumSearch,
-        beetsAlbumsOnly,
-        beetsSearch,
-        createBeetsSearch,
-    } from "../../data/beets";
-    import { derived } from "svelte/store";
-    import { invoke } from "@tauri-apps/api/core";
+    import ShadowGradient from "../ui/ShadowGradient.svelte";
 
     const PADDING = 14;
 
@@ -347,7 +331,6 @@
         if (detailsAlbum == album) {
             unselectAlbum(index);
         } else {
-            detailsAlbum = album;
             const rect = e.currentTarget.getBoundingClientRect();
             console.log("RECT", rect);
             const x = rect.left;
@@ -367,6 +350,8 @@
             );
             detailsAlbumTracks = await getAlbumTracks(album);
             detailsAlbumIndex = index;
+            await tick();
+            detailsAlbum = album;
         }
     }
 
@@ -546,7 +531,6 @@
         grid-template-columns: 1fr;
         border-bottom-left-radius: 5px;
         border-bottom-right-radius: 5px;
-        background-color: var(--panel-background);
 
         > .details-bg {
             position: absolute;
@@ -555,7 +539,7 @@
             right: 0;
             bottom: 0;
             z-index: 1;
-            background-color: var(--popup-backdrop);
+            background-color: var(--panel);
             backdrop-filter: blur(1px);
 
             /* Two layers:

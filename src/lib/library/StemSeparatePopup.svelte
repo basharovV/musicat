@@ -218,7 +218,7 @@
                 text-overflow: ellipsis;
                 text-align: start;
                 user-select: none;
-                color: var(--text);
+                color: var(--primary);
                 display: inline-flex;
                 align-items: center;
                 justify-content: space-between;

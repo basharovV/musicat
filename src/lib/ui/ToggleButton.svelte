@@ -26,32 +26,26 @@
         gap: 5px;
         cursor: default;
 
-        border: 1px solid rgba(128, 128, 128, 0.159);
+        border: 1px solid var(--border);
         border-radius: 4px;
         padding: 0 4px;
         margin-right: 8px;
         position: relative;
         &:hover {
-            background-color: rgba(128, 128, 128, 0.191);
+            background-color: color-mix(
+                in srgb,
+                var(--secondary) 20%,
+                transparent
+            );
         }
         &:active {
             background-color: rgba(128, 128, 128, 0.391);
         }
         &.selected {
-            border: 1px solid rgb(from var(--type-bw-inverse) r g b / 0.5);
-            ::before {
-                position: absolute;
-                top: -11px;
-                left: 0;
-                right: 0;
-                margin: 0 auto;
-                height: 10px;
-                width: 1.5px;
-                background-color: rgb(from var(--type-bw-inverse) r g b / 0.5);
-            }
+            border: 1px solid var(--primary);
         }
         p {
-            color: var(--text-secondary);
+            color: var(--primary);
             margin: 0 0 1px 0;
             line-height: normal;
         }

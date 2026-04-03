@@ -105,7 +105,7 @@
             background-color: rgba(128, 128, 128, 0.391);
         }
         p {
-            color: var(--text-secondary);
+            color: var(--secondary);
             margin: 0 0 1px 0;
             line-height: normal;
             font-size: 0.85em;

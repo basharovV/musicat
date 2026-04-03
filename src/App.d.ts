@@ -510,6 +510,7 @@ interface ColumnViewModel {
         x?: number;
         width: number;
         autoWidth: boolean;
+        minWidth?: number;
     };
 }
 

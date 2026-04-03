@@ -824,7 +824,7 @@
             .member {
                 p {
                     padding: 0.3em;
-                    color: var(--text);
+                    color: var(--primary);
                     margin: 0;
                 }
             }
@@ -919,7 +919,7 @@
                 align-self: center;
                 justify-content: flex-end;
                 flex: 1;
-                color: var(--text-secondary);
+                color: var(--secondary);
                 p {
                     margin: 0;
                     opacity: 0.6;
@@ -939,7 +939,7 @@
         outline: none;
         background: none;
         border: none;
-        color: var(--text);
+        color: var(--primary);
 
         &::placeholder {
             color: rgb(105, 105, 105);
@@ -955,7 +955,7 @@
         padding-top: 2em;
         font-family: "Snake";
         h1 {
-            color: var(--text);
+            color: var(--primary);
             margin-bottom: 0.5em;
         }
         p,
@@ -967,7 +967,7 @@
         h2 {
             font-size: 3em;
             margin: 0.3em;
-            color: var(--text-secondary);
+            color: var(--secondary);
         }
         img {
             width: 30%;

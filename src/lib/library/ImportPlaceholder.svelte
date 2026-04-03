@@ -9,6 +9,7 @@
     import ProgressBar from "../ui/ProgressBar.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
     import CassetteLoading from "./CassetteLoading.svelte";
+    import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
 </script>
 
 <div class="container">
@@ -30,11 +31,17 @@
     {:else}
         <h3>Click "Import library" or just drag + drop a folder here</h3>
         <p>You can always add more music later</p>
-        <button on:click={openTauriImportDialog}>Import library +</button>
+        <ButtonWithIcon
+            onClick={openTauriImportDialog}
+            text="Import library +"
+        />
         <small>Supports MP3, FLAC, OGG, AAC and WAV</small>
         <small>or</small>
         <p>add folders to watch</p>
-        <button on:click={() => ($popupOpen = "settings")}>Add folders</button>
+        <ButtonWithIcon
+            onClick={() => ($popupOpen = "settings")}
+            text="Settings"
+        ></ButtonWithIcon>
     {/if}
 </div>
 

@@ -1,24 +1,41 @@
 <script lang="ts">
     import { currentThemeObject } from "../../theming/store";
     import { createEventDispatcher } from "svelte";
+    import { tweened } from "svelte/motion";
+    import { cubicOut } from "svelte/easing";
 
     export let value: number;
     export let min = -12;
     export let max = 12;
-    export let step = 0.1; // Smaller step for smoother real-time sliding
+    export let step = 0.1;
     export let label: string;
 
     const dispatch = createEventDispatcher();
 
+    // 1. Initialize the tweened store
+    const displayValue = tweened(value, {
+        duration: 400,
+        easing: cubicOut,
+    });
+
+    // 2. Reactively update the tween when the 'value' prop changes from outside
+    $: displayValue.set(value);
+
     function handleInput(e: Event) {
         const target = e.target as HTMLInputElement;
-        value = parseFloat(target.value);
-        // Dispatch custom event to parent immediately
-        dispatch("update", value);
-    }
+        const newValue = parseFloat(target.value);
 
+        // Update the prop directly so the parent knows
+        value = newValue;
+
+        // We set the tween with 0 duration on manual drag
+        // to prevent "fighting" the user's mouse
+        displayValue.set(newValue, { duration: 0 });
+
+        dispatch("update", newValue);
+    }
     $: {
-        const thumbColor = $currentThemeObject["inverse"] || "#444";
+        const thumbColor = $currentThemeObject["secondary"] || "#444";
         const thumbActiveColor = $currentThemeObject["accent"] || "#444";
         const thumbSvg = btoa(`
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -45,7 +62,9 @@
 </script>
 
 <div class="eq-band">
-    <span class="gain-value">{value > 0 ? "+" : ""}{value.toFixed(1)}</span>
+    <span class="gain-value">
+        {$displayValue > 0 ? "+" : ""}{$displayValue.toFixed(1)}
+    </span>
 
     <div class="slider-container">
         <input
@@ -53,7 +72,7 @@
             {min}
             {max}
             {step}
-            {value}
+            value={$displayValue}
             on:input={handleInput}
             class="vertical-slider"
         />
@@ -76,7 +95,7 @@
     .gain-value {
         font-size: 0.65rem;
         font-family: monospace;
-        color: var(--text-secondary);
+        color: var(--secondary);
         margin-bottom: 10px;
         height: 12px;
     }
@@ -93,7 +112,7 @@
             position: absolute;
             width: 2px;
             height: 100%;
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--muted);
             border-radius: 1px;
             pointer-events: none;
         }

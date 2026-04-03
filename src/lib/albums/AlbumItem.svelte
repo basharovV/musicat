@@ -166,16 +166,16 @@
             z-index: 8;
             /* box-shadow: 2px 2px 30px 20px rgba(39, 0, 178, 0.181) !important; */
             box-shadow: 2px 2px 50px 40px
-                color-mix(in srgb, var(--album-playing-shadow) 50%, transparent) !important;
+                color-mix(in srgb, var(--accent) 50%, transparent) !important;
             .hinge {
                 background-color: color-mix(
                     in srgb,
-                    var(--inverse) 10.32%,
+                    var(--soft) 10.32%,
                     transparent
                 );
                 backdrop-filter: blur(8px);
                 border-left: 1px solid
-                    color-mix(in srgb, var(--inverse), transparent 50%);
+                    color-mix(in srgb, var(--border), transparent 50%);
                 box-shadow:
                     inset - 0.75px - 0.5px rgba(255, 255, 255, 0.1),
                     inset + 0.75px + 0.5px rgba(255, 255, 255, 0.025),
@@ -205,11 +205,11 @@
             transform: translate(15%, -10px) rotate(140deg) !important;
         }
         .title {
-            background-color: var(--album-playing-title-bg);
+            background-color: var(--accent);
             border-radius: 0 0 8px 8px;
-            color: var(--album-playing-title-text);
+            color: var(--accent-text);
             z-index: 20;
-            margin-top: 3px !important;
+            margin-top: 0px !important;
         }
         .artist,
         .info {
@@ -309,7 +309,7 @@
         p {
             margin: 0;
             line-height: 1em;
-            color: var(--text);
+            color: var(--primary);
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
@@ -370,11 +370,11 @@
         box-sizing: border-box;
         .hinge {
             border-left: 1px solid
-                color-mix(in srgb, var(--inverse) 20.32%, transparent);
+                color-mix(in srgb, var(--border) 20.32%, transparent);
             width: 5%;
             background-color: color-mix(
                 in srgb,
-                var(--inverse) 9.32%,
+                var(--soft) 9.32%,
                 transparent
             );
         }
@@ -409,7 +409,6 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 3px 2px 4px 1px rgba(0, 0, 0, 0.093) inset;
 
                 .play-button-container {
                     position: absolute;
@@ -422,12 +421,8 @@
 
                     &.play-button {
                         border: 1px solid
-                            color-mix(
-                                in srgb,
-                                var(--album-playing-play-border) 60%,
-                                transparent
-                            );
-                        background-color: var(--album-playing-play-bg);
+                            color-mix(in srgb, var(--border) 60%, transparent);
+                        background-color: var(--solid);
 
                         .button {
                             position: relative;
@@ -439,39 +434,31 @@
                         }
 
                         &:hover {
-                            background-color: var(
-                                --album-playing-play-hover-bg
-                            );
+                            background-color: var(--accent);
 
                             .button {
-                                color: var(--album-playing-play-hover-icon);
+                                color: var(--primary);
                             }
                         }
                     }
 
                     &.pause-button {
                         border: 1px solid
-                            color-mix(
-                                in srgb,
-                                var(--album-playing-pause-border) 60%,
-                                transparent
-                            );
-                        background-color: var(--album-playing-pause-bg);
+                            color-mix(in srgb, var(--primary) 60%, transparent);
+                        background-color: var(--solid);
 
                         .button {
                             font-size: 2.2em;
                             margin: auto;
                             align-self: center;
-                            color: var(--album-playing-pause-icon);
+                            color: var(--primary);
                         }
 
                         &:hover {
-                            background-color: var(
-                                --album-playing-pause-hover-bg
-                            );
+                            background-color: var(--accent);
 
                             .button {
-                                color: var(--album-playing-pause-hover-icon);
+                                color: var(--primary);
                             }
                         }
                     }
@@ -511,8 +498,8 @@
                         width: 100%;
                         margin: 0;
                         padding: 0.5em;
-                        background-color: var(--album-hover-info-bg);
-                        color: var(--album-hover-info-text);
+                        background-color: var(--solid);
+                        color: var(--primary);
                         border-radius: 0;
                         opacity: 1;
                     }

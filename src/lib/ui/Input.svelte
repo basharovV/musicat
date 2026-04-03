@@ -90,16 +90,15 @@
     input {
         line-height: inherit;
         padding: 0;
-        background-color: var(--input-bg);
-        border: 1px solid
-            color-mix(in srgb, var(--input-bg) 80%, var(--inverse));
+        background-color: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 2px;
         font-size: 14px;
         z-index: 1;
-        color: var(--text);
+        color: var(--primary);
         &:focus {
-            outline: var(--input-focus-outline);
-            background-color: var(--input-focus-bg);
+            outline: var(--primary);
+            border: 1px solid var(--secondary);
         }
 
         &.padding {
@@ -110,7 +109,7 @@
             border-radius: 5px;
             padding: 0.1em 0.3em;
             &:focus {
-                outline: var(--input-alt-focus-outline);
+                outline: var(--secondary);
                 outline-offset: 0.5px;
             }
         }
@@ -127,7 +126,7 @@
             line-height: 0.9em;
         }
         &::placeholder {
-            color: var(--input-placeholder-text);
+            color: var(--secondary);
         }
     }
 

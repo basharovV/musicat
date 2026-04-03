@@ -197,6 +197,10 @@ type RootTranslation = {
 		 * L​y​r​i​c​s
 		 */
 		lyrics: string
+		/**
+		 * W​i​k​i
+		 */
+		wiki: string
 		lossySelector: {
 			/**
 			 * l​o​s​s​y
@@ -1455,6 +1459,10 @@ export type TranslationFunctions = {
 		 * Lyrics
 		 */
 		lyrics: () => LocalizedString
+		/**
+		 * Wiki
+		 */
+		wiki: () => LocalizedString
 		lossySelector: {
 			/**
 			 * lossy

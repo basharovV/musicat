@@ -503,7 +503,7 @@
         margin: 0;
         font-family: "Snake";
         font-size: 3em;
-        color: var(--text);
+        color: var(--primary);
         line-height: initial;
     }
 
@@ -545,13 +545,13 @@
             gap: 5px;
             &:hover {
                 p {
-                    color: var(--text);
+                    color: var(--primary);
                     border-bottom: 1px solid rgb(154, 149, 149);
                 }
             }
             &.selected {
                 p {
-                    color: var(--text);
+                    color: var(--primary);
                     border-bottom: 1px solid white;
                 }
             }
@@ -561,7 +561,7 @@
                 border-bottom: 1px solid transparent;
                 font-size: 13px;
                 margin: 0;
-                color: var(--text);
+                color: var(--primary);
                 cursor: default;
                 user-select: none;
                 text-transform: capitalize;

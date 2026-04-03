@@ -5,7 +5,7 @@
 
     // --- ADJUST THESE CONSTANTS ---
     const NOISE_OPACITY = 0.04; // Base transparency (0.0 to 1.0)
-    const NOISE_DENSITY = 0.06; // Contrast/Graininess (0.0 to 1.0)
+    const NOISE_DENSITY = 0.05; // Contrast/Graininess (0.0 to 1.0)
     const SAMPLE_SIZE = 512; // Size of the tile (higher = less repeating)
     // ------------------------------
 

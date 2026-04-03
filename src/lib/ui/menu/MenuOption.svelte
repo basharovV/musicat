@@ -65,10 +65,10 @@
                 icon="charm:tick"
                 size={12}
                 color={checked
-                    ? $currentThemeObject["menu-checkbox-on"]
+                    ? $currentThemeObject["primary"]
                     : singleSelection
                       ? "transparent"
-                      : $currentThemeObject["menu-checkbox-off"]}
+                      : $currentThemeObject["muted"]}
             />
         {/if}
 
@@ -99,7 +99,7 @@
         display: flex;
         align-items: center;
         grid-gap: 5px;
-        color: var(--menu-item-text);
+        color: var(--primary);
         border-radius: 2.5px;
         user-select: none;
 
@@ -107,8 +107,8 @@
         &.highlighted.with-bg {
             background: transparent;
             transform: scale(1.1);
-            border: 1px solid var(--menu-item-text);
-            color: var(--menu-item-text);
+            border: 1px solid var(--border);
+            color: var(--primary);
         }
         &:not(.with-bg) {
             transform: scale(1);
@@ -116,31 +116,37 @@
 
         &:hover,
         &.highlighted {
-            color: var(--menu-item-highlight-text);
-            background-color: var(--menu-item-highlight-bg);
-            border: 1px solid var(--menu-item-highlight-border);
+            color: var(--primary);
+            background-color: var(--accent-softest);
             &.border-highlight {
-                color: var(--menu-item-highlight-secondary-text);
-                background-color: var(--menu-item-highlight-secondary-bg);
-                border: 1px solid var(--menu-item-highlight-secondary-border);
+                color: var(--primary);
+                background-color: var(--menu-hover);
+                border: 1px solid var(--border);
             }
         }
         &.disabled {
-            color: var(--menu-item-disabled);
+            color: var(--secondary);
             &:hover {
                 background: transparent;
+                border: 1px solid transparent;
             }
         }
         &.confirming {
-            background: var(--menu-item-confirm-bg);
+            background: var(--warning);
+            color: color-mix(in srgb, var(--warning) 30%, var(--primary));
+
             &:hover {
-                background: var(--menu-item-confirm-bg) !important;
+                background: var(--warning) !important;
             }
         }
         &.destructive {
             &:hover:not(.disabled) {
-                background: var(--menu-item-destructive-hover-bg);
-                color: var(--menu-item-destructive-hover-text);
+                background: var(--destructive);
+                color: color-mix(
+                    in srgb,
+                    var(--destructive) 30%,
+                    var(--primary)
+                );
             }
         }
 

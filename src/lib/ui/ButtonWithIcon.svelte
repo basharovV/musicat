@@ -10,7 +10,7 @@
     export let text = "";
     export let theme: "active" | "solid" | "translucent" | "transparent" =
         "solid";
-    export let size: "small" | "medium" = "medium";
+    export let size: "xsmall" | "small" | "medium" = "medium";
     export let isLoading = false;
     export let disabled = false;
     export let confirmText = null;
@@ -158,15 +158,14 @@
             font-size: 1em;
             font-weight: 500;
             font-family: inherit;
-            background-color: var(--button-active-bg);
-            color: var(--button-text);
+            background-color: var(--accent);
+            color: white;
             white-space: nowrap;
             border-color: transparent;
-
             &:hover:not(.disabled) {
                 background-color: color-mix(
                     in srgb,
-                    var(--button-active-bg) 80%,
+                    var(--accent) 80%,
                     transparent
                 );
             }
@@ -186,12 +185,12 @@
             font-size: 1em;
             font-weight: 500;
             font-family: inherit;
-            background-color: var(--button-solid-bg);
-            color: var(--button-text);
+            background-color: var(--solid);
+            color: var(--primary);
             white-space: nowrap;
 
             &:hover:not(.disabled) {
-                border-color: var(--accent);
+                border-color: var(--accent-soft);
                 background-color: color-mix(
                     in srgb,
                     var(--button-solid-bg) 80%,
@@ -203,12 +202,11 @@
         &.theme-translucent {
             background-color: color-mix(
                 in srgb,
-                var(--inverse) 30%,
+                var(--secondary) 30%,
                 transparent
             );
-            border: 1px solid
-                color-mix(in srgb, var(--inverse) 10%, transparent);
-            color: var(--button-text);
+            border: 1px solid var(--border);
+            color: var(--primary);
 
             &:hover:not(.disabled) {
                 border-color: var(--accent);
@@ -221,20 +219,28 @@
         }
 
         &.theme-transparent {
-            border: 1px solid
-                color-mix(in srgb, var(--inverse) 20%, transparent);
-            color: var(--text);
+            border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+            color: var(--primary);
 
             &:hover:not(.disabled) {
                 background-color: color-mix(
                     in srgb,
-                    var(--inverse) 15%,
+                    var(--secondary) 15%,
                     transparent
                 );
             }
         }
 
         // Sizes
+        &.xsmall {
+            color: var(--secondary);
+            font-size: 0.85em;
+            padding: 0.2em 0.5em;
+            &.icon-only {
+                padding: 0.2em 0.4em;
+            }
+        }
+
         &.small {
             padding: 0.3em 0.75em;
             &.icon-only {

@@ -39,7 +39,7 @@ export interface IAnimation {
 
         this.timeDomain = new Uint8Array(256).fill(128);
         this.freqDomain = new Uint8Array(256).fill(1);
-        this.color = get(currentThemeObject).oscilloscope;
+        this.color = get(currentThemeObject)["accent-play"];
 
         // 1. Store the unsubscribe function for isPlaying
         const unsubPlaying = isPlaying.subscribe((playing) => {
@@ -53,7 +53,7 @@ export interface IAnimation {
 
         // 2. Store the unsubscribe function for currentThemeObject
         const unsubTheme = currentThemeObject.subscribe((theme) => {
-            this.color = theme.oscilloscope;
+            this.color = theme["accent-play"];
         });
 
         // 3. Store the unsubscribe function for uiPreferences
@@ -193,6 +193,7 @@ export interface IAnimation {
      * Call this when the component unmounts
      */
     tearDown() {
+        console.log("teardown analyzer");
         // 1. Stop any pending animation frames
         if (this._animationFrameId !== null) {
             cancelAnimationFrame(this._animationFrameId);
@@ -209,5 +210,6 @@ export interface IAnimation {
 
         // 4. Clean up visual state
         this.clearCanvas();
+        console.log("subscriptions cleared", this._subscriptions);
     }
 }

@@ -57,10 +57,10 @@
     const C_LABEL = "rgba(255,255,255,0.4)";
     const C_LABEL_EDGE = "rgba(255,255,255,0.85)";
 
-    $: C_DOT_FILL = $currentThemeObject["accent-secondary"];
-    $: C_DOT_STROKE = $currentThemeObject["panel-separator"];
-    $: C_ACTIVE_FILL = $currentThemeObject["accent"];
-    $: C_ACTIVE_STROKE = $currentThemeObject["accent"];
+    $: C_DOT_FILL = $currentThemeObject["accent-softer"];
+    $: C_DOT_STROKE = $currentThemeObject["accent-softest"];
+    $: C_ACTIVE_FILL = $currentThemeObject["accent-play"];
+    $: C_ACTIVE_STROKE = $currentThemeObject["accent-softest"];
 
     // ── Canvas refs ───────────────────────────────────────────────────────────
     let canvas: HTMLCanvasElement;
@@ -314,11 +314,11 @@
         h2 {
             margin: 0 0 0.1em;
             font-weight: 400;
-            color: var(--text-secondary);
+            color: var(--secondary);
             font-size: 1.3rem;
             text-align: left;
             :global(span) {
-                color: var(--text);
+                color: var(--primary);
                 font-weight: 600;
             }
         }

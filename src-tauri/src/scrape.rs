@@ -118,7 +118,6 @@ async fn fetch_wikipedia(url: &str) -> Result<String, Box<dyn Error>> {
 
     // Get the HTML content from the response
     let body = response.text().await?;
-    info!("{:?}", body);
 
     // Parse the HTML content using the scraper crate
     let document = Html::parse_document(&body);
@@ -127,7 +126,6 @@ async fn fetch_wikipedia(url: &str) -> Result<String, Box<dyn Error>> {
     let lyrics_selector = Selector::parse("#mw-content-text").unwrap();
 
     let lyrics_element = document.select(&lyrics_selector).next();
-    info!("{:?}", lyrics_element);
 
     // Extract and return the lyrics
     match lyrics_element {

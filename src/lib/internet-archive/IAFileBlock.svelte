@@ -99,7 +99,7 @@
                 .title {
                 }
                 .format {
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                 }
             }
 
@@ -149,7 +149,7 @@
             }
         }
         .size {
-            color: var(--text-secondary);
+            color: var(--secondary);
             white-space: nowrap;
             font-size: 12px;
         }

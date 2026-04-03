@@ -178,7 +178,7 @@
     let columnPickerIndex;
     let columnPickerPos;
 
-    let displayFields = [];
+    let displayFields: ColumnViewModel[] = [];
 
     let songsSlice: Song[];
     let songsIdxSlice: number[];
@@ -340,33 +340,29 @@
     $: if (songs && libraryContainer && prevSongCount !== songs.length) {
         drawSongDataGrid();
     }
-
     $: if ($currentThemeObject) {
         // COLORS
-        BG_COLOR = $currentThemeObject["panel-background"];
-        HEADER_BG_COLOR = $currentThemeObject["library-header-bg"];
-        HEADER_BG_COLOR_ACCENT = $currentThemeObject["accent-secondary"];
-        HEADER_TEXT_COLOR = $currentThemeObject["library-header-text"];
-        OFFSCREEN_BG_COLOR = "#71658e3b";
-        HEADER_BG_COLOR_HOVERED =
-            $currentThemeObject["library-header-active-bg"];
-        TEXT_COLOR = $currentThemeObject["library-text"];
-        TEXT_COLOR_SECONDARY = $currentThemeObject["text-secondary"];
-        HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight-bg"];
+        BG_COLOR = $currentThemeObject["bg"];
+        HEADER_BG_COLOR = $currentThemeObject["accent-softest"];
+        HEADER_BG_COLOR_ACCENT = $currentThemeObject["accent"];
+        HEADER_TEXT_COLOR = $currentThemeObject["primary"];
+        OFFSCREEN_BG_COLOR = $currentThemeObject["accent-softer"];
+        HEADER_BG_COLOR_HOVERED = $currentThemeObject["accent-softer"];
+        TEXT_COLOR = $currentThemeObject["primary"];
+        TEXT_COLOR_SECONDARY = $currentThemeObject["secondary"];
+        HIGHLIGHT_BG_COLOR = $currentThemeObject["library-highlight"];
         ROW_BG_COLOR = "transparent";
-        ROW_ODD_BG_COLOR = $currentThemeObject["library-odd-row-bg"];
-        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover-bg"];
-        PLAYING_BG_COLOR = $currentThemeObject["library-playing-bg"];
-        PLAYING_TEXT_COLOR = $currentThemeObject["library-playing-text"];
-        COLUMN_INSERT_HINT_COLOR = "#b399ffca";
-        DROP_HIGHLIGHT_BG_COLOR = "#b399ffca";
-        CLICKABLE_CELL_BG_COLOR =
-            $currentThemeObject["library-clickable-cell-bg"];
-        CLICKABLE_CELL_BG_COLOR_HOVERED =
-            $currentThemeObject["library-clickable-cell-hover-bg"];
-        DRAGGING_SOURCE_COLOR = "#8a69683e";
-        COLUMN_DIVIDER_COLOR = $currentThemeObject["library-column-divider"];
-        COLUMN_RESIZE_DIVIDER_COLOR = $currentThemeObject["accent-secondary"];
+        ROW_ODD_BG_COLOR = "transparent";
+        ROW_BG_COLOR_HOVERED = $currentThemeObject["library-hover"];
+        PLAYING_BG_COLOR = $currentThemeObject["accent"];
+        PLAYING_TEXT_COLOR = $currentThemeObject["accent-text"];
+        COLUMN_INSERT_HINT_COLOR = $currentThemeObject["accent-softer"];
+        DROP_HIGHLIGHT_BG_COLOR = $currentThemeObject["accent-softer"];
+        CLICKABLE_CELL_BG_COLOR = $currentThemeObject["accent-softest"];
+        CLICKABLE_CELL_BG_COLOR_HOVERED = $currentThemeObject["accent-tint"];
+        DRAGGING_SOURCE_COLOR = $currentThemeObject["accent-softer"];
+        COLUMN_DIVIDER_COLOR = $currentThemeObject["border"];
+        COLUMN_RESIZE_DIVIDER_COLOR = $currentThemeObject["accent"];
     }
 
     let isRestoringScrollPos = false;
@@ -481,21 +477,18 @@
             });
         }
     }
-
     function calculateColumns(isResize: boolean = false) {
         if (width === 0) return;
 
         let runningX = 0;
         let previousWidth = 0;
 
-        const allFields = cloneDeep(getAllColumns());
+        const allFields: ColumnViewModel[] = cloneDeep(getAllColumns());
 
         if (displayFields?.length === 0) {
             displayFields = allFields;
         }
 
-        // If we're resizing, use the current display fields
-        // Otherwise use all fields to filter again, this might have been triggered by a column order/visibility change
         const fields = isResize ? displayFields : allFields;
 
         const sortedFields = $columnOrder
@@ -503,7 +496,6 @@
                 const field = fields.find((f) => f.value === c.fieldName);
                 if (field === undefined) return null;
                 const cloned = { ...field };
-                // Restore user saved width
                 if (isInit && cloned && c.width) {
                     cloned.viewProps.autoWidth = false;
                     cloned.viewProps.width = c.width;
@@ -512,12 +504,8 @@
             })
             .filter(Boolean);
 
-        // By default, the library fits the columns automatically
-        // Until you manually resize, in which case we ignore the default sizes going forward
-        // and save the new widths to the column config
         let shouldUseAutoWidth = $columnOrder.every((c) => !c.width);
 
-        /* Playlists show an additional file order column */
         if ($uiView === "playlists") {
             sortedFields.unshift({
                 name: "none",
@@ -532,10 +520,8 @@
             });
         }
 
-        let autoWidth = null;
+        let calculatedAutoWidth = 0;
         if (shouldUseAutoWidth) {
-            // Calculate total width of fixed-width rectangles
-
             const fixedWidths = sortedFields
                 .filter((f) => !f.viewProps?.autoWidth)
                 .map((f) => f.viewProps?.width);
@@ -544,29 +530,41 @@
                 (total, width) => total + width,
                 0,
             );
-            // Calculate total available width for 'auto' size rectangles
+
             let availableWidth = width - totalFixedWidth;
+            const autoCount = sortedFields.length - fixedWidths.length;
+
             if (availableWidth < 0) {
                 availableWidth = 0;
                 shouldUseAutoWidth = false;
             }
-            autoWidth =
-                availableWidth / (sortedFields.length - fixedWidths.length);
+
+            calculatedAutoWidth =
+                autoCount > 0 ? availableWidth / autoCount : 0;
         }
 
-        // Final display fields
-        displayFields = [
-            ...sortedFields.map((f) => {
-                const rectWidth =
+        displayFields = sortedFields
+            .map((f) => {
+                let rectWidth =
                     shouldUseAutoWidth && f.viewProps.autoWidth
-                        ? autoWidth
+                        ? calculatedAutoWidth
                         : f.viewProps.width;
-                f.viewProps.x = runningX += previousWidth;
+
+                if (f.viewProps.autoWidth) {
+                    const minAllowed = f.viewProps.minWidth ?? 60;
+                    rectWidth = Math.max(rectWidth, minAllowed);
+                }
+                // -----------------------------------------
+
                 f.viewProps.width = rectWidth;
-                previousWidth = f.viewProps.width;
                 return f;
-            }),
-        ];
+            })
+            .map((f) => {
+                // Re-calculate X positions after filtering and width clamping
+                f.viewProps.x = runningX;
+                runningX += f.viewProps.width;
+                return f;
+            });
     }
 
     let prevRemainder = 0; // To fix choppiness when jumping from eg. 18 to 1.
@@ -1520,10 +1518,6 @@
                 on:contextmenu|preventDefault
                 on:mouseup={onMouseUpContainer}
             >
-                {#if dim}
-                    <div class="dimmer" />
-                {/if}
-
                 {#if shouldRender}
                     <Stage
                         config={{
@@ -1639,6 +1633,7 @@
                                                     width: width,
                                                     height: ROW_HEIGHT,
                                                     listening: true,
+                                                    cornerRadius: 2,
                                                     fill:
                                                         draggingSongIdx ===
                                                         song.viewModel?.index
@@ -1729,7 +1724,13 @@
                                                                 fontSize: 13.5,
                                                                 verticalAlign:
                                                                     "middle",
-                                                                fill: TEXT_COLOR,
+                                                                fill:
+                                                                    $current
+                                                                        .song
+                                                                        ?.id ===
+                                                                    song.id
+                                                                        ? PLAYING_TEXT_COLOR
+                                                                        : TEXT_COLOR,
                                                                 ellipsis:
                                                                     f.value.match(
                                                                         /^(title|artist|album|genre)/,
@@ -1961,12 +1962,14 @@
                                                                             /^(title|artist|album|track)/,
                                                                         ) !==
                                                                         null
-                                                                      ? f.value ===
+                                                                      ? (f.value ===
                                                                             "title" &&
-                                                                        $current
-                                                                            .song
-                                                                            ?.id ===
-                                                                            song.id
+                                                                            $current
+                                                                                .song
+                                                                                ?.id ===
+                                                                                song.id) ||
+                                                                        hoveredSongIdx ===
+                                                                            songIdx
                                                                           ? f
                                                                                 .viewProps
                                                                                 .width -
@@ -2051,10 +2054,10 @@
                                                                         ?.id ===
                                                                     song.id
                                                                         ? $currentThemeObject[
-                                                                              "library-playing-icon"
+                                                                              "accent-text"
                                                                           ]
                                                                         : $currentThemeObject[
-                                                                              "library-favourite-icon"
+                                                                              "accent-love"
                                                                           ],
                                                             }}
                                                         />
@@ -2082,10 +2085,10 @@
                                                                         ?.id ===
                                                                     song.id
                                                                         ? $currentThemeObject[
-                                                                              "library-playing-icon"
+                                                                              "accent-text"
                                                                           ]
                                                                         : $currentThemeObject[
-                                                                              "library-favourite-hover-icon"
+                                                                              "accent-love"
                                                                           ],
                                                             }}
                                                         />
@@ -2155,7 +2158,7 @@
                                                         <Tag
                                                             config={{
                                                                 fill: $currentThemeObject[
-                                                                    "button-solid-bg"
+                                                                    "accent-softer"
                                                                 ],
                                                                 stroke: $currentThemeObject[
                                                                     "menu-border"
@@ -2277,7 +2280,7 @@
                                                     text: song.name,
                                                     height: ROW_HEIGHT,
                                                     fill: $currentThemeObject[
-                                                        "library-text"
+                                                        "primary"
                                                     ],
                                                     fontSize: 13,
                                                     verticalAlign: "middle",
@@ -2598,20 +2601,6 @@
         user-select: none;
         align-items: center;
         justify-content: center;
-    }
-
-    .dimmer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 12;
-        pointer-events: none;
-        background-color: #1b1b1c61;
-        backdrop-filter: brightness(0.7);
     }
 
     #large-container {

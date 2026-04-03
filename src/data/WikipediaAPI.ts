@@ -1,29 +1,68 @@
 export async function getWikipediaUrlForArtist(artistName) {
     if (!artistName?.length) return null;
 
-    const validStatements = ["P27", "P495"];
+    // 'hastemplate' is a powerful hidden search keyword in MediaWiki
+    // It filters results to ONLY those containing the musical artist infobox.
+    const searchQuery = `"${artistName}" hastemplate:"Infobox musical artist"`;
+
+    const params = new URLSearchParams({
+        action: "query",
+        generator: "search",
+        gsrsearch: searchQuery,
+        gsrlimit: "5",
+        prop: "info",
+        inprop: "url",
+        format: "json",
+        origin: "*",
+    });
 
     try {
-        const dbpediaResult = await (
-            await fetch(
-                `https://dbpedia.org/sparql?default-graph-uri=http%3A%2F%2Fdbpedia.org&query=SELECT+%3Fartist+%3Flink%0D%0AWHERE+%7B%0D%0A++%7B+%3Fartist+a+dbo%3ABand+%7D%0D%0A++UNION%0D%0A++%7B+%3Fartist+a+dbo%3AMusicalArtist+%7D%0D%0A++%3Fartist+foaf%3Aname+%22${encodeURIComponent(
-                    artistName,
-                )}%22%40en+.%0D%0A++%3Fartist+foaf%3AisPrimaryTopicOf+%3Flink+.%0D%0A%7D%0D%0ALIMIT+1%0D%0A&format=application%2Fsparql-results%2Bjson&timeout=10000&signal_void=on&signal_unconnected=on`,
-            )
-        ).json();
-        console.log("dbpedia", dbpediaResult);
-        let siteLink = null;
-        for (let item of dbpediaResult?.results?.bindings) {
-            if (item?.link?.value) {
-                siteLink = item.link.value;
-            }
+        const response = await fetch(
+            `https://en.wikipedia.org/w/api.php?${params.toString()}`,
+        );
+        const data = await response.json();
+
+        if (!data.query?.pages) {
+            // FALLBACK: If "hastemplate" was too strict, try a broader search
+            // but look for "(band)" in the title.
+            return await fallbackSearch(artistName);
         }
 
-        siteLink = siteLink?.replace("http://", "https://");
-        if (!siteLink) return null;
-        return `${siteLink}?useskin=vector-2022`;
+        const pages = Object.values(data.query.pages).sort(
+            (a, b) => a.index - b.index,
+        );
+
+        // Return the first match that looks like a high-quality link
+        return `${pages[0].fullurl}?useskin=vector-2022`;
     } catch (error) {
-        console.error("Error fetching data from Wikipedia API:", error);
+        console.error("Error fetching Wikipedia artist:", error);
         return null;
     }
+}
+
+async function fallbackSearch(artistName) {
+    // Second attempt: Search for "Artist Name (band)" specifically
+    const params = new URLSearchParams({
+        action: "query",
+        generator: "search",
+        gsrsearch: `${artistName} (band)`,
+        gsrlimit: "1",
+        prop: "info",
+        inprop: "url",
+        format: "json",
+        origin: "*",
+    });
+
+    const response = await fetch(
+        `https://en.wikipedia.org/w/api.php?${params.toString()}`,
+    );
+    const data = await response.json();
+    const pages = data.query?.pages;
+
+    if (pages) {
+        const page = Object.values(pages)[0];
+        return `${page.fullurl}?useskin=vector-2022`;
+    }
+
+    return null;
 }

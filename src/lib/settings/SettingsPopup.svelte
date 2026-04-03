@@ -167,11 +167,7 @@
         }
     }
 
-    onMount(async () => {
-        hotkeys("esc", () => {
-            onClose();
-        });
-
+    async function loadAudioDevices() {
         // Init
         try {
             const response: AudioDevices = await invoke("get_devices");
@@ -186,6 +182,13 @@
         } catch (error) {
             console.error(error);
         }
+    }
+
+    onMount(async () => {
+        hotkeys("esc", () => {
+            onClose();
+        });
+        loadAudioDevices();
     });
 
     onDestroy(() => {
@@ -516,7 +519,9 @@
 </container>
 
 <style lang="scss">
+    @import "../../styles/mixins.scss";
     container {
+        @include popup;
         width: fit-content;
         max-height: 85%;
         min-width: 500px;
@@ -526,11 +531,6 @@
         flex-direction: column;
         position: relative;
         align-items: center;
-        border-radius: 5px;
-        border: 1px solid color-mix(in srgb, var(--inverse) 20%, transparent);
-        background-color: var(--popup-body-bg);
-        backdrop-filter: blur(8px);
-        box-shadow: 0px 5px 40px var(--overlay-shadow);
         overflow: auto;
 
         @media only screen and (max-width: 400px) {
@@ -653,7 +653,7 @@
                         margin: 0;
                     }
                     * {
-                        color: var(--text);
+                        color: var(--primary);
                     }
 
                     div {
@@ -705,7 +705,7 @@
         p {
             margin: 0;
             font-size: 0.9em;
-            color: var(--text);
+            color: var(--primary);
             white-space: wrap;
             max-width: 300px;
             line-height: initial;

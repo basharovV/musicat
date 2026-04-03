@@ -6,9 +6,11 @@ import {
     allThemes,
     DEFAULT_THEME_DARK,
     DEFAULT_THEME_LIGHT,
-    type Theme,
 } from "./themes";
 import type { UserSettings } from "../App";
+import { window as tauriWindow } from "@tauri-apps/api";
+import type { Theme } from "../types/theme";
+import { resolveDerived } from "./ColorUtils";
 
 export const currentMode = writable();
 
@@ -36,20 +38,52 @@ export function applyTheme(userSettings: UserSettings): Theme {
     const theme = userSettings.theme;
     const followSystemTheme = userSettings.followSystemTheme;
 
+    let themeObject: Theme;
+
     if (followSystemTheme) {
         console.log(
             "matchMedia",
             window.matchMedia("(prefers-color-scheme: dark)").matches,
         );
-        return window.matchMedia("(prefers-color-scheme: dark)").matches
+        themeObject = window.matchMedia("(prefers-color-scheme: dark)").matches
             ? DEFAULT_THEME_DARK
             : DEFAULT_THEME_LIGHT;
     } else if (theme) {
         const foundTheme = Object.entries(allThemes).find(
             (t) => t[0] === theme,
         );
-        return foundTheme ? foundTheme[1] : DEFAULT_THEME_DARK;
+        if (!foundTheme) {
+            console.error("Theme not found", theme);
+            tauriWindow.getCurrentWindow().setTheme("dark");
+            themeObject = DEFAULT_THEME_DARK;
+        }
+        tauriWindow.getCurrentWindow().setTheme(foundTheme[1].variant);
+
+        themeObject = foundTheme ? foundTheme[1] : DEFAULT_THEME_DARK;
     } else {
-        return DEFAULT_THEME_DARK;
+        themeObject = DEFAULT_THEME_DARK;
     }
+
+    // Rewrite css mix / alpha to 8-char hex
+
+    // All values not containing other variables are considered core
+    const core = Object.fromEntries(
+        Object.entries(themeObject).filter(
+            ([, value]) =>
+                typeof value === "string" && !value.includes("var(--"),
+        ),
+    );
+
+    // Resolve derived values
+    Object.entries(themeObject).forEach(([key, value]) => {
+        if (typeof value === "string" && value.includes("var(--")) {
+            console.log("resolving derived", value);
+            themeObject[key] = resolveDerived(value, core, themeObject.variant);
+        }
+    });
+
+    // Apply data-variant attribute
+    document.documentElement.setAttribute("data-variant", themeObject.variant);
+
+    return themeObject;
 }

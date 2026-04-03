@@ -164,7 +164,7 @@
         max-width: 500px;
         min-height: 350px;
         border-radius: 5px;
-        color: var(--text);
+        color: var(--primary);
         display: flex;
         flex-direction: column;
         justify-content: center;

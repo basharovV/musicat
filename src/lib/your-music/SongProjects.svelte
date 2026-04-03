@@ -91,7 +91,7 @@
                 p {
                     margin: 0;
                     line-height: 2em;
-                    color: var(--text);
+                    color: var(--primary);
                 }
 
                 &:before {
@@ -120,7 +120,7 @@
                 outline: none;
                 background: none;
                 border: none;
-                color: var(--text);
+                color: var(--primary);
 
                 &::placeholder {
                     color: var(--text-inactive);

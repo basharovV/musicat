@@ -233,8 +233,8 @@
                             autoScroll = !autoScroll;
                         }}
                         color={autoScroll
-                            ? "var(--icon-primary)"
-                            : "var(--icon-secondary"}
+                            ? "var(--primary)"
+                            : "var(--secondary"}
                         boxed
                         size={20}
                         tooltip={{
@@ -382,7 +382,7 @@
                 p {
                     margin: 0.5em 0;
                     transition: all 0.3s ease-in-out;
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                     &.current {
                         color: var(--text-active);
                         opacity: 1;

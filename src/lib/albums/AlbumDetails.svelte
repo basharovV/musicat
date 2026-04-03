@@ -84,9 +84,10 @@
 {#if album}
     <svg
         class="arrow"
+        class:visible={isLoaded}
         class:position
         style={`left: ${anchorTopLeft.x + anchorTopLeft.width / 2}px;
-            top: ${position === "below" ? y - 12 : y + height - 3};
+            top: ${position === "below" ? y - 11.5 : y + height - 3};
             transform: rotate(${position === "above" ? 180 : 0}deg);`}
         width="28"
         height="12"
@@ -99,8 +100,8 @@
             C 8 12, 10 0, 14 0
             C 18 0, 20 12, 26 12
         "
-            fill="var(--popup-body-bg)"
-            stroke="var(--panel-primary-border-accent1)"
+            fill="var(--overlay)"
+            stroke="var(--border)"
             stroke-width="1.2"
         />
     </svg>
@@ -109,6 +110,7 @@
         in:fade={{ duration: 150 }}
         class="container"
         class:hovered={isHovered && album.artwork}
+        class:visible={isLoaded}
         style={`left: ${x}px ;top: ${y}px;width: ${width}px;height: ${height}px`}
         use:clickOutside={unselect}
         bind:this={container}
@@ -148,11 +150,15 @@
         display: grid;
         grid-template-rows: auto auto;
         padding: 0.5em;
-        background-color: var(--popup-body-bg);
+        background-color: var(--overlay);
         backdrop-filter: blur(8px);
-        box-shadow: 0px 5px 40px var(--overlay-shadow);
+        box-shadow: 0px 5px 40px var(--shadow);
         border-radius: 5px;
-        border: 1px solid var(--panel-primary-border-accent1);
+        border: 1px solid var(--border);
+        visibility: hidden;
+        &.visible {
+            visibility: visible;
+        }
         .info-container {
             display: flex;
             overflow: hidden;
@@ -209,74 +215,6 @@
                     align-items: center;
                     justify-content: center;
                     box-shadow: 3px 2px 4px 1px rgba(0, 0, 0, 0.093) inset;
-
-                    .play-button-container {
-                        position: absolute;
-                        align-self: center;
-                        border-radius: 50px;
-                        width: 40px;
-                        height: 40px;
-                        display: flex;
-                        z-index: 10;
-
-                        &.play-button {
-                            border: 1px solid
-                                color-mix(
-                                    in srgb,
-                                    var(--album-playing-play-border) 60%,
-                                    transparent
-                                );
-                            background-color: var(--album-playing-play-bg);
-
-                            .button {
-                                position: relative;
-                                left: 1px;
-                                font-size: 2em;
-                                margin: auto;
-                                align-self: center;
-                                color: var(--album-playing-play-icon);
-                            }
-
-                            &:hover {
-                                background-color: var(
-                                    --album-playing-play-hover-bg
-                                );
-
-                                .button {
-                                    color: var(--album-playing-play-hover-icon);
-                                }
-                            }
-                        }
-
-                        &.pause-button {
-                            border: 1px solid
-                                color-mix(
-                                    in srgb,
-                                    var(--album-playing-pause-border) 60%,
-                                    transparent
-                                );
-                            background-color: var(--album-playing-pause-bg);
-
-                            .button {
-                                font-size: 2.2em;
-                                margin: auto;
-                                align-self: center;
-                                color: var(--album-playing-pause-icon);
-                            }
-
-                            &:hover {
-                                background-color: var(
-                                    --album-playing-pause-hover-bg
-                                );
-
-                                .button {
-                                    color: var(
-                                        --album-playing-pause-hover-icon
-                                    );
-                                }
-                            }
-                        }
-                    }
                 }
 
                 .artwork {
@@ -328,9 +266,9 @@
             border-radius: 5px;
             overflow: hidden;
             border-top: 0.7px solid
-                color-mix(in srgb, var(--inverse) 40%, transparent);
+                color-mix(in srgb, var(--border) 40%, transparent);
             border-bottom: 0.7px solid
-                color-mix(in srgb, var(--inverse) 30%, transparent);
+                color-mix(in srgb, var(--border) 30%, transparent);
         }
     }
 
@@ -338,7 +276,10 @@
         position: fixed;
         height: 15px;
         width: 20px;
-        box-shadow: 0px 5px 40px var(--overlay-shadow);
+        box-shadow: 0px 5px 40px var(--overlay);
         z-index: -1;
+        &.visible {
+            visibility: visible;
+        }
     }
 </style>

@@ -15,6 +15,7 @@
         isQueueOpen,
         isSidebarOpen,
         isWaveformOpen,
+        isWikiOpen,
         nextUpSong,
         userSettings,
     } from "../../data/store";
@@ -93,6 +94,13 @@
                 text={$LL.bottomBar.lyrics()}
             />
         {/if}
+        <ToggleButton
+            isSelected={$isWikiOpen}
+            onClick={() => ($isWikiOpen = !$isWikiOpen)}
+            icon="mdi:wikipedia"
+            iconSize={14}
+            text={$LL.bottomBar.wiki()}
+        />
         <ToggleButton
             isSelected={$isWaveformOpen}
             onClick={() => ($isWaveformOpen = !$isWaveformOpen)}
@@ -178,7 +186,7 @@
 
 <style lang="scss">
     bottom-bar {
-        color: var(--text);
+        color: var(--primary);
         display: flex;
         flex-direction: row;
         align-items: center;
@@ -193,7 +201,7 @@
         }
 
         p {
-            color: var(--text);
+            color: var(--primary);
             margin: 0;
         }
         @media only screen and (max-width: 600px) {
@@ -239,7 +247,7 @@
                     font-size: 0.9em;
                     user-select: none;
                     cursor: default;
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                 }
             }
         }
@@ -285,7 +293,7 @@
             align-items: center;
             width: max-content;
             p {
-                color: var(--text);
+                color: var(--primary);
                 font-size: 13px;
                 margin: 0;
             }
@@ -298,13 +306,11 @@
             p {
                 user-select: none;
                 cursor: default;
-                color: var(--text-secondary);
+                color: var(--secondary);
             }
 
             @media only screen and (max-width: 800px) {
-                .albums {
-                    display: none;
-                }
+                display: none;
             }
             @media only screen and (max-width: 700px) {
                 .artists {

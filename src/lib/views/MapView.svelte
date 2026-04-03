@@ -357,8 +357,8 @@
                 map.dataVisualization = new DataVisualization(
                     {
                         scale: [
-                            $currentThemeObject["mapview-scale-1"],
-                            $currentThemeObject["mapview-scale-2"],
+                            $currentThemeObject["accent-softest"],
+                            $currentThemeObject["accent"],
                         ],
                         values: dataCountMap ? dataCountMap : [],
                     },
@@ -429,8 +429,8 @@
             showTooltip: true,
             visualizeData: {
                 scale: [
-                    $currentThemeObject["mapview-scale-1"],
-                    $currentThemeObject["mapview-scale-2"],
+                    $currentThemeObject["accent-softest"],
+                    $currentThemeObject["accent"],
                 ],
                 values: dataCountMap ? dataCountMap : [],
             },
@@ -456,32 +456,26 @@
             regionsSelectableOne: true,
             regionStyle: {
                 initial: {
-                    fill: $currentThemeObject["mapview-region-bg"],
-                    stroke: $currentThemeObject["mapview-region-border"],
+                    fill: $currentThemeObject["muted"],
+                    stroke: $currentThemeObject["border"],
                     strokeWidth: 0.5,
                     fillOpacity: 1,
                 },
                 selected: {
-                    fill: $currentThemeObject["mapview-region-selected-bg"],
-                    stroke: $currentThemeObject[
-                        "mapview-region-selected-border"
-                    ],
+                    fill: $currentThemeObject["accent-play"],
+                    stroke: $currentThemeObject["border"],
                     strokeWidth: 1,
                     fillOpacity: 1,
                 },
                 selectedHover: {
-                    fill: $currentThemeObject[
-                        "mapview-region-selected-hover-bg"
-                    ],
-                    stroke: $currentThemeObject[
-                        "mapview-region-selected-hover-border"
-                    ],
+                    fill: $currentThemeObject["accent-play"],
+                    stroke: $currentThemeObject["border"],
                     strokeWidth: 1,
                     fillOpacity: 1,
                 },
                 hover: {
-                    fill: $currentThemeObject["mapview-region-hover-bg"],
-                    stroke: $currentThemeObject["mapview-region-hover-border"],
+                    fill: $currentThemeObject["secondary"],
+                    stroke: $currentThemeObject["accent"],
                     strokeWidth: 1,
                 },
             },
@@ -524,7 +518,7 @@
     $: counts = dataCountMap ? (Object.values(dataCountMap) as number[]) : [];
     $: minCount = counts.length ? Math.min(...counts) : 0;
     $: maxCount = counts.length ? Math.max(...counts) : 0;
-    $: legendGradient = `linear-gradient(to right, ${$currentThemeObject["mapview-scale-1"]}, ${$currentThemeObject["mapview-scale-2"]})`;
+    $: legendGradient = `linear-gradient(to right, ${$currentThemeObject["accent-softest"]}, ${$currentThemeObject["accent"]})`;
 
     async function addCountryData() {
         await addCountryDataAllSongs();
@@ -858,7 +852,7 @@
                 .label {
                     font-size: 0.9rem;
                     font-weight: 600;
-                    color: var(--text-secondary);
+                    color: var(--secondary);
                     white-space: nowrap;
                 }
 

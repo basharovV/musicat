@@ -78,7 +78,7 @@
 
     .label {
         flex: 0 0 35%;
-        color: var(--text-secondary);
+        color: var(--secondary);
         font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
