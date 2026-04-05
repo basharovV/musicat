@@ -210,7 +210,7 @@
                 e.preventDefault();
                 e.stopPropagation();
             },
-            { capture: true },
+            { capture: false },
         );
         initLocale();
         appWindow.emit("opened");
