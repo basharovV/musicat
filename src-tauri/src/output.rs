@@ -29,7 +29,7 @@ type LockedSender<T> = Arc<Mutex<Sender<T>>>;
 #[derive(Clone)]
 pub struct AudioControlHandles {
     pub volume_rx: LockedReceiver<crate::player::VolumeControlEvent>,
-    pub sample_offset_rx: LockedReceiver<crate::SampleOffsetEvent>,
+    pub sample_offset_rx: LockedReceiver<crate::player::SampleOffsetEvent>,
     pub playback_state_rx: LockedReceiver<PlaybackState>,
     pub timestamp_state_rx: LockedReceiver<TimestampState>,
     pub reset_control_rx: LockedReceiver<bool>,
@@ -261,7 +261,7 @@ pub mod cpal {
                         ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
                             .clamp(i16::MIN as f64, i16::MAX as f64) as i16
                     },
-                    |data, fft_type| {
+                    |data, _fft_type| {
                         let mut byte_array = Vec::with_capacity(data.len());
 
                         for d in &mut data.iter() {
@@ -282,7 +282,7 @@ pub mod cpal {
                         ((packet as f64) * 10f64.powf(volume * 2.0 - 2.0))
                             .clamp(0.0, u16::MAX as f64) as u16
                     },
-                    |data, fft_type| {
+                    |data, _fft_type| {
                         let mut byte_array = Vec::with_capacity(data.len());
 
                         for d in &mut data.iter() {
@@ -991,7 +991,6 @@ pub fn enumerate_devices() -> Vec<DeviceWithConfig> {
 
 pub struct AudioProcessor {
     num_bins: usize,
-    fft_size: usize,
     sample_rate: f32, // Added sample rate
     prev_bins: Vec<f32>,
     fft: Arc<dyn Fft<f32>>,
@@ -1012,7 +1011,6 @@ impl AudioProcessor {
 
         Self {
             num_bins,
-            fft_size,
             sample_rate: 44100.0, // just to initialize, will be set later
             prev_bins: vec![0.0; num_bins],
             fft,

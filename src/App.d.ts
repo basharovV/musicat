@@ -471,6 +471,7 @@ interface IAItem {
 }
 
 interface AudioDevice {
+    id: string;
     name: string;
 }
 

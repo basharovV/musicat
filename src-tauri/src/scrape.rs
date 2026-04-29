@@ -133,3 +133,43 @@ async fn fetch_wikipedia(url: &str) -> Result<String, Box<dyn Error>> {
         None => Err("Lyrics not found".into()),
     }
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GetLyricsEvent {
+    url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GetLyricsResponse {
+    lyrics: Option<String>,
+}
+
+#[tauri::command]
+pub async fn get_lyrics(event: GetLyricsEvent) -> GetLyricsResponse {
+    let lyrics = fetch_lyrics(event.url.as_str()).await;
+    match lyrics {
+        Ok(l) => return GetLyricsResponse { lyrics: Some(l) },
+        Err(err) => {
+            info!("Lyrics not found {:?}", err);
+            return GetLyricsResponse { lyrics: None };
+        }
+    }
+}
+
+async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
+    let response = reqwest::get(genius_url).await?;
+
+    if !response.status().is_success() {
+        return Err("Lyrics not found".into());
+    }
+
+    let body = response.text().await?;
+    let document = Html::parse_document(&body);
+    let lyrics_selector = Selector::parse("[data-lyrics-container=\"true\"]").unwrap();
+    let lyrics_element = document.select(&lyrics_selector).next();
+
+    match lyrics_element {
+        Some(element) => Ok(element.text().fold(String::new(), |s, l| s + l + "\n")),
+        None => Err("Lyrics not found".into()),
+    }
+}

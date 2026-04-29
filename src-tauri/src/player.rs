@@ -38,21 +38,51 @@ use webrtc::data_channel::RTCDataChannel;
 use webrtc::ice_transport::ice_candidate::RTCIceCandidateInit;
 use webrtc::interceptor::registry::Registry;
 use webrtc::peer_connection::configuration::RTCConfiguration;
-use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
 use crate::constants::*;
+use crate::dsp;
 use crate::dsp::calculate_peak_value;
 #[cfg(target_os = "macos")]
 use crate::mediakeys;
-use crate::metadata::Song;
+use crate::metadata::{FileInfo, Song};
 use crate::output::{
     self, get_device_by_id, AnalyzerState, AnalyzerType, AudioOutput, DeviceWithConfig,
     PlaybackState,
 };
 use crate::store::load_settings;
-use crate::{dsp, GetWaveformRequest, GetWaveformResponse, PlayFileRequest, SampleOffsetEvent};
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PlayFileRequest {
+    pub path: Option<String>,
+    pub seek: Option<f64>,
+    pub file_info: Option<FileInfo>,
+    pub volume: Option<f64>,
+    pub boot: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GetWaveformRequest {
+    pub path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GetWaveformResponse {
+    data: Option<ByteBuf>,
+}
+
+#[derive(Clone, Debug)]
+pub struct SampleOffsetEvent {
+    pub sample_offset: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct FlowControlEvent {
+    client_bitrate: Option<f64>,
+    decoding_active: Option<bool>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LoopRegionRequest {
@@ -601,7 +631,7 @@ fn decode_loop(
     let mut equalizer_settings: Option<EqualizerControlEvent> =
         Some(EqualizerControlEvent::default());
 
-    let mut audio_device_name = None;
+    let mut audio_device_id: Option<String> = None;
     let mut previous_audio_device_id: String = String::new();
     let mut previous_sample_rate = 44100;
     let mut previous_channels = 2;
@@ -675,7 +705,7 @@ fn decode_loop(
                     }
                     PlayerControlEvent::ChangeAudioDevice(request) => {
                         info!("audio: change audio device! {:?}", request);
-                        audio_device_name = request.audio_device;
+                        audio_device_id = request.audio_device;
                         if path_str_clone.is_some() && path_str.is_some() {
                             path_str.replace(path_str_clone.clone().unwrap());
                         }
@@ -889,7 +919,7 @@ fn decode_loop(
             // Check if audio device changed
             let mut follow_system_output = false;
             if let Ok(settings) = load_settings(app_handle) {
-                audio_device_name = settings.output_device;
+                audio_device_id = settings.output_device;
                 follow_system_output = settings.follow_system_output;
             }
 
@@ -901,29 +931,14 @@ fn decode_loop(
                 cached_devices.replace(dvces);
             };
 
-            let output_device = if cached_devices.as_ref().is_some()
-                && !follow_system_output
-                && audio_device_name.is_some()
-            {
-                info!(
-                    "Using cached audio device: {:?}. Cached devices: {:?}",
-                    audio_device_name,
-                    cached_devices.as_ref().unwrap().len()
-                );
-                cached_devices
-                    .as_ref()
-                    .unwrap()
-                    .iter()
-                    .map(|d| {
-                        info!("Device: {:?}", d.device.name());
-                        d.device.clone()
-                    })
-                    .find(|device| device.name().unwrap() == audio_device_name.clone().unwrap())
+            let output_device = if !follow_system_output && audio_device_id.is_some() {
+                info!("Using audio device with id: {:?}", audio_device_id);
+                output::get_device_by_id(audio_device_id.clone())
             } else {
                 let default = output::default_device();
                 info!(
                     "Using default audio device: {:?}",
-                    default.clone().unwrap().name()
+                    default.as_ref().and_then(|d| d.description().ok())
                 );
                 default
             };
@@ -1000,7 +1015,6 @@ fn decode_loop(
                     previous_audio_device_id = device_id.clone();
                 }
             }
-
 
             let song = crate::metadata::extract_metadata(
                 &Path::new(&p.clone().as_str()),
@@ -1190,7 +1204,7 @@ fn decode_loop(
                                     }
                                     PlayerControlEvent::ChangeAudioDevice(request) => {
                                         info!("audio: change audio device! {:?}", request);
-                                        audio_device_name = request.audio_device;
+                                        audio_device_id = request.audio_device;
                                         path_str.replace(path_str_clone.clone().unwrap());
                                         guard.flush();
                                         guard.pause();
@@ -1282,7 +1296,7 @@ fn decode_loop(
                                     info!(
                                         "Device disconnected, resetting to default system output"
                                     );
-                                    audio_device_name = None;
+                                    audio_device_id = None;
                                     path_str.replace(path_str_clone.clone().unwrap());
                                     guard.flush();
                                     guard.pause();
@@ -1327,7 +1341,7 @@ fn decode_loop(
                                         }
                                         PlayerControlEvent::ChangeAudioDevice(request) => {
                                             info!("audio: change audio device! {:?}", request);
-                                            audio_device_name = request.audio_device;
+                                            audio_device_id = request.audio_device;
                                             path_str.replace(path_str_clone.clone().unwrap());
                                             guard.flush();
                                             guard.pause();
@@ -1826,6 +1840,7 @@ fn peaks_to_bytes(peaks: &[f32]) -> ByteBuf {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct AudioDevice {
+    id: String,
     name: String,
 }
 
@@ -1839,27 +1854,116 @@ pub struct AudioDevices {
 pub async fn get_devices(_app_handle: tauri::AppHandle) -> Result<AudioDevices, String> {
     let host = cpal::default_host();
 
-    // Fetch output devices and map using the new description() API
     let cpal_devices: Vec<AudioDevice> = host
         .output_devices()
         .map_err(|e| format!("Failed to get output devices: {}", e))?
         .filter_map(|device| {
-            // description() returns a Result<DeviceDescription, DevicePropertyError>
-            device.description().ok().map(|desc| AudioDevice {
-                name: desc.name().to_string(), // Accessing the name field from DeviceDescription
-            })
+            let id = device.id().ok()?.to_string();
+            let name = device.description().ok()?.name().to_string();
+            Some(AudioDevice { id, name })
         })
         .collect();
 
-    // Fetch default device and map its description
     let default = host.default_output_device().and_then(|device| {
-        device.description().ok().map(|desc| AudioDevice {
-            name: desc.name().to_string(),
-        })
+        let id = device.id().ok()?.to_string();
+        let name = device.description().ok()?.name().to_string();
+        Some(AudioDevice { id, name })
     });
 
     Ok(AudioDevices {
         devices: cpal_devices,
         default,
     })
+}
+
+#[tauri::command]
+pub fn play_file(event: PlayFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
+    info!("Play file {:?}", event);
+
+    let fl = File::open(event.path.clone().unwrap());
+
+    if fl.is_err() {
+        error!("Error opening file: {}", fl.err().unwrap());
+        _app_handle.emit("error", "file-not-found").unwrap();
+        return;
+    }
+
+    let boot = event.boot.clone();
+    let waiting_for_boot = state
+        .waiting_for_boot
+        .load(std::sync::atomic::Ordering::Relaxed);
+
+    info!("Waiting for boot: {}", waiting_for_boot);
+    if !(boot.is_some() && !waiting_for_boot) {
+        info!("Sending stream file event");
+        let _ = state
+            .player_control_sender
+            .send(PlayerControlEvent::StreamFile(event));
+    }
+    match boot {
+        Some(true) => {
+            if waiting_for_boot {
+                #[cfg(target_os = "macos")]
+                mediakeys::boot();
+
+                state.pause();
+                state
+                    .waiting_for_boot
+                    .swap(false, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+        _ => {
+            state.resume();
+        }
+    }
+}
+
+#[tauri::command]
+pub fn queue_next(
+    event: PlayFileRequest,
+    state: State<AudioPlayer>,
+    _app_handle: tauri::AppHandle,
+) {
+    info!("Queue next file {:?}", event);
+    let _ = state.next_track_sender.send(event);
+}
+
+#[tauri::command]
+pub fn get_waveform(
+    event: GetWaveformRequest,
+    state: State<AudioPlayer>,
+    _app_handle: tauri::AppHandle,
+) {
+    info!("Get waveform {:?}", event);
+
+    let evt = event.clone();
+    let token = CancellationToken::new();
+    let token_clone = token.clone();
+    if let Ok(mut tokens) = state.cancel_tokens.try_lock() {
+        tokens
+            .iter()
+            .filter(|t| t.0 != &event.clone().path.unwrap())
+            .for_each(|t| {
+                t.1.cancel();
+            });
+        tokens.insert(event.path.unwrap(), token);
+    }
+
+    std::thread::spawn(move || {
+        let _ = get_peaks(evt, &_app_handle, token_clone);
+    });
+}
+
+#[tauri::command]
+pub fn decode_control(event: FlowControlEvent, state: State<AudioPlayer>) {
+    info!("Received decode control event: {:?}", event);
+    match event.decoding_active {
+        Some(true) => {
+            state.resume();
+        }
+        Some(false) => {
+            state.pause();
+        }
+        None => {}
+    }
 }

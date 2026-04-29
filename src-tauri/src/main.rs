@@ -2,44 +2,21 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-use futures_util::StreamExt;
-use log::{error, info};
+
+use log::info;
 #[cfg(target_os = "macos")]
 use mediakeys::RemoteCommandCenter;
-use metadata::FileInfo;
-use player::AudioPlayer;
-
-use reqwest;
-use reqwest::Client;
-use scraper::{Html, Selector};
-use serde::{Deserialize, Serialize};
-use serde_bytes::ByteBuf;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fs::File;
+use std::env;
 use std::sync::Mutex;
-use std::{env, fs};
-use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Emitter, Listener, LogicalPosition};
-use tauri::{Manager, State};
-use tauri_plugin_updater::UpdaterExt;
-use tempfile::Builder;
-use tokio_util::sync::CancellationToken;
+use tauri::{Emitter, Listener, LogicalPosition, Manager, State};
 
 use crate::stem_separator::StemProcessState;
+use crate::updater::PendingUpdate;
+use crate::window::{handle_decorations, OpenedUrls, Payload};
 
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct UpdateStatus {
-    status: String,
-    version: Option<String>,
-    notes: Option<String>,
-    error: Option<String>,
-}
-
-struct PendingUpdate(Mutex<Option<tauri_plugin_updater::Update>>);
-
+mod artwork;
 mod beets;
 mod constants;
 mod dsp;
@@ -55,472 +32,16 @@ mod resampler;
 mod scrape;
 mod stem_separator;
 mod store;
+mod updater;
+mod window;
 
 #[cfg(test)]
 mod tests;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct FixEncodingEvent {
-    file_path: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct GetLyricsEvent {
-    url: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct GetLyricsResponse {
-    lyrics: Option<String>,
-}
-
-#[tauri::command]
-async fn get_lyrics(event: GetLyricsEvent) -> GetLyricsResponse {
-    let lyrics = fetch_lyrics(event.url.as_str()).await;
-    match lyrics {
-        Ok(l) => return GetLyricsResponse { lyrics: Some(l) },
-        Err(err) => {
-            info!("Lyrics not found {:?}", err);
-            return GetLyricsResponse { lyrics: None };
-        }
-    }
-}
-
-async fn fetch_lyrics(genius_url: &str) -> Result<String, Box<dyn Error>> {
-    // Make an HTTP GET request to the Genius URL
-    let response = reqwest::get(genius_url).await?;
-
-    // Check if the request was successful (status code 200)
-    if !response.status().is_success() {
-        return Err("Lyrics not found".into());
-    }
-
-    // Get the HTML content from the response
-    let body = response.text().await?;
-    // info!("{:?}", body);
-
-    // Parse the HTML content using the scraper crate
-    let document = Html::parse_document(&body);
-
-    // Use a CSS selector to find the lyrics
-    let lyrics_selector = Selector::parse("[data-lyrics-container=\"true\"]").unwrap();
-
-    let lyrics_element = document.select(&lyrics_selector).next();
-    // info!("{:?}", lyrics_element);
-
-    // Extract and return the lyrics
-    match lyrics_element {
-        Some(element) => Ok(element.text().fold(String::new(), |s, l| s + l + "\n")),
-        None => Err("Lyrics not found".into()),
-    }
-}
-
-// fn build_menu(app: &AppHandle) -> Result<(), tauri::Error> {
-
-// #[cfg(dev)]
-// return newMenu;
-
-// return menu;
-// }
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-struct GetFileSizeRequest {
-    path: Option<String>,
-}
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct GetFileSizeResponse {
-    file_size: Option<u64>,
-}
-
-#[tauri::command]
-fn get_file_size(event: GetFileSizeRequest) -> GetFileSizeResponse {
-    if let Ok(metadata) = fs::metadata(event.path.unwrap()) {
-        return GetFileSizeResponse {
-            file_size: Some(metadata.len()),
-        };
-    }
-    return GetFileSizeResponse { file_size: None };
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct PlayFileRequest {
-    path: Option<String>,
-    seek: Option<f64>,
-    file_info: Option<FileInfo>,
-    volume: Option<f64>, // 0 to 1
-    boot: Option<bool>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct GetWaveformRequest {
-    path: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-struct GetWaveformResponse {
-    data: Option<ByteBuf>,
-}
-
-#[tauri::command]
-fn play_file(event: PlayFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
-    info!("Play file {:?}", event);
-
-    // First check if the file exists
-    let fl = File::open(event.path.clone().unwrap());
-
-    if fl.is_err() {
-        error!("Error opening file: {}", fl.err().unwrap());
-        _app_handle.emit("error", "file-not-found").unwrap();
-        return;
-    }
-
-    let boot = event.boot.clone();
-    let waiting_for_boot = state
-        .waiting_for_boot
-        .load(std::sync::atomic::Ordering::Relaxed);
-
-    // Developer experience niceness
-    // Make sure this is an actual boot / app cold start,
-    // not a hot reload / manual reload of the UI (playback continues)
-    info!("Waiting for boot: {}", waiting_for_boot);
-    if !(boot.is_some() && !waiting_for_boot) {
-        info!("Sending stream file event");
-        let _ = state
-            .player_control_sender
-            .send(player::PlayerControlEvent::StreamFile(event));
-    }
-    match boot {
-        Some(true) => {
-            if waiting_for_boot {
-                #[cfg(target_os = "macos")]
-                mediakeys::boot();
-
-                state.pause();
-                state
-                    .waiting_for_boot
-                    .swap(false, std::sync::atomic::Ordering::Relaxed);
-            }
-        }
-        _ => {
-            state.resume();
-        }
-    }
-}
-
-#[tauri::command]
-fn queue_next(event: PlayFileRequest, state: State<AudioPlayer>, _app_handle: tauri::AppHandle) {
-    info!("Queue next file {:?}", event);
-    // If we receive a null path - the queue will be cleared
-    let _ = state.next_track_sender.send(event);
-}
-
-#[tauri::command]
-fn get_waveform(
-    event: GetWaveformRequest,
-    state: State<AudioPlayer>,
-    _app_handle: tauri::AppHandle,
-) -> () {
-    info!("Get waveform {:?}", event);
-
-    let evt = event.clone();
-    let token = CancellationToken::new();
-    let token_clone = token.clone();
-    if let Ok(mut tokens) = state.cancel_tokens.try_lock() {
-        // Cancel all existing waveform threads
-        tokens
-            .iter()
-            .filter(|t| t.0 != &event.clone().path.unwrap())
-            .for_each(|t| {
-                t.1.cancel();
-            });
-        tokens.insert(event.path.unwrap(), token);
-    }
-
-    std::thread::spawn(move || {
-        // Handle client's offer
-        let _ = player::get_peaks(evt, &_app_handle, token_clone);
-        // info!("Waveform: {:?}", result);
-    });
-}
-
-#[derive(Clone, Debug)]
-pub struct SampleOffsetEvent {
-    pub sample_offset: Option<u64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct FlowControlEvent {
-    client_bitrate: Option<f64>,
-    decoding_active: Option<bool>,
-}
-
-#[tauri::command]
-fn decode_control(event: FlowControlEvent, state: State<AudioPlayer>) {
-    info!("Received decode control event: {:?}", event);
-    match event.decoding_active {
-        Some(true) => {
-            state.resume();
-        }
-        Some(false) => {
-            state.pause();
-        }
-        None => {}
-    }
-}
-
-#[tauri::command]
-async fn download_file(
-    url: String,
-    path: String,
-    _app_handle: tauri::AppHandle,
-) -> Result<(), String> {
-    let client = Client::new();
-
-    // Start the request
-    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
-    let total_size = response
-        .content_length()
-        .ok_or("Failed to get content length")?;
-
-    // Create a temporary file
-    let mut temp_file = Builder::new()
-        .prefix("download_")
-        .tempfile()
-        .map_err(|e| e.to_string())?;
-
-    let mut downloaded = 0;
-    let mut stream = response.bytes_stream();
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        temp_file.write_all(&chunk).map_err(|e| e.to_string())?;
-        downloaded += chunk.len() as u64;
-
-        // Emit progress to the frontend
-        let progress = (downloaded as f64 / total_size as f64) * 100.0;
-        _app_handle
-            .emit("download-progress", progress)
-            .map_err(|e| e.to_string())?;
-    }
-
-    // Flush and sync the file
-    temp_file.flush().map_err(|e| e.to_string())?;
-    temp_file
-        .as_file_mut()
-        .sync_all()
-        .map_err(|e| e.to_string())?;
-
-    let temp_dev = get_device_id(temp_file.path());
-    let temp_path = temp_file.into_temp_path();
-    let final_path = Path::new(&path);
-    let final_dev = get_device_id(&final_path);
-
-    if temp_dev == final_dev {
-        // Move the temporary file to the final destination
-        temp_path.persist(&final_path).map_err(|e| e.to_string())?;
-    } else {
-        // Copy the temporary file to the final destination since files aren't on the same device
-        fs::copy(temp_path, final_path).expect("Failed to copy file");
-    }
-
-    Ok(())
-}
-
-fn get_device_id(path: &Path) -> u64 {
-    let parent_path = path.parent().expect("Failed to get parent directory");
-
-    match file_id::get_file_id(parent_path).unwrap() {
-        file_id::FileId::Inode { device_id, .. } => device_id,
-        file_id::FileId::HighRes {
-            volume_serial_number,
-            ..
-        } => volume_serial_number,
-        file_id::FileId::LowRes {
-            volume_serial_number,
-            ..
-        } => volume_serial_number.into(),
-    }
-}
-
-struct OpenedUrls(Mutex<Option<Vec<url::Url>>>);
-
-#[derive(Clone, serde::Serialize)]
-struct Payload {
-    args: Vec<String>,
-    cwd: String,
-}
-
-fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<u32>) {
-    let width_scaled = (size.width as f64 / window.scale_factor().unwrap()).round() as u32;
-    let height_scaled = (size.height as f64 / window.scale_factor().unwrap()).round() as u32;
-    let is_decorated = window.is_decorated().unwrap();
-    // Decorations off when width and height are 210px
-    if width_scaled == 210 && height_scaled == 210 && is_decorated {
-        window.set_decorations(false).unwrap();
-        let _ = window.set_visible_on_all_workspaces(true);
-        let _ = window.set_always_on_top(true);
-    } else if width_scaled != 210 && height_scaled != 210 && !is_decorated {
-        let _ = window.set_decorations(true).unwrap();
-        let _ = window.set_always_on_top(false);
-        let _ = window.set_visible_on_all_workspaces(false);
-    }
-}
-
-async fn check_for_updates_on_startup(app: tauri::AppHandle) {
-    let updater = match app.updater() {
-        Ok(u) => u,
-        Err(e) => {
-            info!("Updater not available: {e}");
-            return;
-        }
-    };
-    match updater.check().await {
-        Ok(Some(update)) => {
-            let version = update.version.clone();
-            let notes = update.body.clone();
-            if let Some(pending) = app.try_state::<PendingUpdate>() {
-                *pending.0.lock().unwrap() = Some(update);
-            }
-            let _ = app.emit(
-                "update-status",
-                UpdateStatus {
-                    status: "available".into(),
-                    version: Some(version),
-                    notes,
-                    error: None,
-                },
-            );
-        }
-        Ok(None) => {
-            info!("App is up to date");
-        }
-        Err(e) => {
-            info!("Update check failed: {e}");
-        }
-    }
-}
-
-#[tauri::command]
-async fn check_for_updates(
-    app: tauri::AppHandle,
-    state: State<'_, PendingUpdate>,
-) -> Result<(), String> {
-    let _ = app.emit(
-        "update-status",
-        UpdateStatus {
-            status: "checking".into(),
-            version: None,
-            notes: None,
-            error: None,
-        },
-    );
-
-    let updater = app.updater().map_err(|e| e.to_string())?;
-    match updater.check().await {
-        Ok(Some(update)) => {
-            let version = update.version.clone();
-            let notes = update.body.clone();
-            *state.0.lock().unwrap() = Some(update);
-            let _ = app.emit(
-                "update-status",
-                UpdateStatus {
-                    status: "available".into(),
-                    version: Some(version),
-                    notes,
-                    error: None,
-                },
-            );
-        }
-        Ok(None) => {
-            let _ = app.emit(
-                "update-status",
-                UpdateStatus {
-                    status: "up-to-date".into(),
-                    version: None,
-                    notes: None,
-                    error: None,
-                },
-            );
-        }
-        Err(e) => {
-            let _ = app.emit(
-                "update-status",
-                UpdateStatus {
-                    status: "error".into(),
-                    version: None,
-                    notes: None,
-                    error: Some(e.to_string()),
-                },
-            );
-        }
-    }
-    Ok(())
-}
-
-#[tauri::command]
-async fn install_update(
-    app: tauri::AppHandle,
-    state: State<'_, PendingUpdate>,
-) -> Result<(), String> {
-    let update = state.0.lock().unwrap().take();
-
-    if let Some(update) = update {
-        let app_handle = app.clone();
-        let app_handle2 = app.clone();
-        let mut downloaded: u64 = 0;
-        let mut total_size: u64 = 0;
-
-        update
-            .download_and_install(
-                move |chunk_length, content_length| {
-                    if let Some(t) = content_length {
-                        total_size = t;
-                    }
-                    downloaded += chunk_length as u64;
-                    if total_size > 0 {
-                        let percent = (downloaded as f64 / total_size as f64) * 100.0;
-                        let _ = app_handle.emit("update-progress", percent);
-                    }
-                },
-                move || {
-                    let _ = app_handle2.emit(
-                        "update-status",
-                        UpdateStatus {
-                            status: "installing".into(),
-                            version: None,
-                            notes: None,
-                            error: None,
-                        },
-                    );
-                },
-            )
-            .await
-            .map_err(|e| e.to_string())?;
-
-        app.restart();
-    }
-
-    Ok(())
-}
-
 fn main() {
     info!("Starting Musicat");
-    // std::env::set_var("RUST_LOG", "debug");
-    // env_logger::init();
-
-    // #[cfg(dev)]
-    // let devtools = devtools::init(); // initialize the plugin as early as possible
 
     let streamer = player::AudioPlayer::create().unwrap();
-
-    // let mut builder = tauri::Builder::default().plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
-
-    // #[cfg(dev)]
-    // {
-    //     builder = builder.plugin(devtools);
-    // }
 
     // Workaround for https://github.com/tauri-apps/tauri/issues/5143
     std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
@@ -537,7 +58,7 @@ fn main() {
             let app2_ = app_.clone();
 
             tauri::async_runtime::spawn(async move {
-                check_for_updates_on_startup(app2_).await;
+                updater::check_for_updates_on_startup(app2_).await;
             });
 
             let state: State<player::AudioPlayer<'static>> = app.state();
@@ -567,18 +88,10 @@ fn main() {
                     .expect("failed to resolve resource");
                 log4rs::init_file(resource_path, Default::default()).unwrap();
             }
-            // ONLY WHEN RUNNING PVR in LIB mode (TODO: Remove)
-            // pvr::init_tracing(Level::INFO);
-
-            // let subscriber = FmtSubscriber::builder()
-            //     .with_max_level(tracing::Level::INFO) // or INFO
-            //     .finish();
-            // tracing::subscriber::set_global_default(subscriber).unwrap();
 
             info!("Goes to stderr and file");
 
             // File associations
-
             let opened_urls: State<OpenedUrls> = app.state();
             let file_urls = opened_urls.inner().to_owned();
 
@@ -827,25 +340,25 @@ fn main() {
             metadata::get_artwork_file,
             metadata::get_artwork_metadata,
             player::get_devices,
-            get_lyrics,
-            get_file_size,
-            play_file,
-            queue_next,
-            decode_control,
+            scrape::get_lyrics,
+            files::get_file_size,
+            player::play_file,
+            player::queue_next,
+            player::decode_control,
             player::init_webrtc,
             player::handle_answer,
             player::volume_control,
             player::playback_speed_control,
             player::analyzer_control,
             player::equalizer_control,
-            get_waveform,
+            player::get_waveform,
             stem_separator::separate_stems,
             stem_separator::get_stems,
             stem_separator::get_all_stems,
             stem_separator::cancel_separation,
             player::loop_region,
             player::change_audio_device,
-            download_file,
+            files::download_file,
             scrape::get_wikipedia,
             files::delete_files,
             logger::max_log_level,
@@ -854,8 +367,8 @@ fn main() {
             beets::search_beets_albums,
             beets::get_beets_album_tracks,
             beets::get_albums_by_id,
-            check_for_updates,
-            install_update
+            updater::check_for_updates,
+            updater::install_update
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

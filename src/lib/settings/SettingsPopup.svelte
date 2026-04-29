@@ -158,7 +158,7 @@
     function onFollowSystemOutputChange(event) {
         console.log("onFollowSystemOutputChange", event.target.checked);
         if (event.target.checked) {
-            $userSettings.outputDevice = fallbackAudioDevice.name;
+            $userSettings.outputDevice = fallbackAudioDevice.id;
             invoke("change_audio_device", {
                 event: {
                     audioDevice: $userSettings.outputDevice,
@@ -176,7 +176,7 @@
             audioDevices.devices.push(...response.devices);
             fallbackAudioDevice = response.default;
             if ($userSettings.followSystemOutput) {
-                $userSettings.outputDevice = fallbackAudioDevice.name;
+                $userSettings.outputDevice = fallbackAudioDevice.id;
             }
             devicesLoaded = true;
         } catch (error) {
@@ -338,7 +338,7 @@
                                 on:change={onAudioDeviceSelected}
                             >
                                 {#each audioDevices?.devices as device}
-                                    <option value={device.name}
+                                    <option value={device.id}
                                         >{device.name}</option
                                     >
                                 {/each}

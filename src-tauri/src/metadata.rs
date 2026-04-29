@@ -1,4 +1,3 @@
-use artwork_cacher::look_for_art;
 use chksum_md5::MD5;
 use lofty::config::{ParseOptions, WriteOptions};
 use lofty::file::{AudioFile, FileType, TaggedFileExt};
@@ -22,9 +21,8 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::{thread, time};
 use tauri::{AppHandle, Emitter};
 
+use crate::artwork::{cache_artwork, look_for_art};
 use crate::store::{load_settings, UserSettings};
-
-pub mod artwork_cacher;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MetadataEntry {
@@ -593,7 +591,7 @@ pub async fn get_artwork_metadata(event: GetArtworkEvent, _app: AppHandle) -> Op
             Ok(tagged_file) => {
                 if tagged_file.primary_tag().is_some() {
                     if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first() {
-                        let mut format = String::new();
+                        let format: String;
 
                         if let Some(mime) = pic.mime_type() {
                             format = mime.to_string();
@@ -680,8 +678,7 @@ fn process_new_album(
         if let Some(art) = &song.artwork {
             // info!("Caching artwork for: {}", song.album);
             // Cache artwork using artwork_cacher
-            let cached_art_path =
-                artwork_cacher::cache_artwork(&art.data, &album_id, &art.format, app);
+            let cached_art_path = cache_artwork(&art.data, &album_id, &art.format, app);
             if let Ok(p) = cached_art_path {
                 artwork_src = p.to_str().unwrap().to_string();
                 artwork_format = art.format.clone();
@@ -1193,7 +1190,7 @@ pub fn extract_metadata(
                         let mut track_total = -1;
                         let mut disc_number = -1;
                         let mut disc_total = -1;
-                        let mut duration = String::new();
+                        let duration;
                         let file_info;
                         let mut artwork = None;
                         let mut artwork_origin = None;
@@ -1334,7 +1331,7 @@ pub fn extract_metadata(
                             if let Some(pic) = tagged_file.primary_tag().unwrap().pictures().first()
                             {
                                 let mut decoded = false;
-                                let mut format = String::new();
+                                let format: String;
 
                                 if let Some(mime) = pic.mime_type() {
                                     format = mime.to_string();
@@ -1473,7 +1470,7 @@ fn write_metadata_track(v: &WriteMetatadaEvent) -> Result<(), anyhow::Error> {
         info!("tag fileType: {:?}", &tag_type);
         let options = ParseOptions::new().max_junk_bytes(2048);
 
-        let mut file = File::options().read(true).write(true).open(&v.file_path)?;
+        let file = File::options().read(true).write(true).open(&v.file_path)?;
 
         let reader = BufReader::new(&file);
         let probe = Probe::new(reader).options(options);

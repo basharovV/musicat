@@ -5,13 +5,11 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
 };
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 use crate::{
-    metadata::{
-        artwork_cacher::get_image_format, convert_file_src, country_name, Album, AlbumArtwork,
-        FileInfo, Song,
-    },
+    artwork::get_image_format,
+    metadata::{convert_file_src, country_name, Album, AlbumArtwork, FileInfo, Song},
     store::load_settings,
 };
 
@@ -222,7 +220,7 @@ pub fn query_beets_albums(
         let compilation: i32 = row.get::<_, i64>(3).unwrap_or(0) as i32;
         let year: i32 = row.get::<_, i64>(4).unwrap_or(0) as i32;
         let genre_str: String = row.get::<_, Option<String>>(5)?.unwrap_or_default();
-        let mut art_path: String = row
+        let art_path: String = row
             .get::<_, Option<Vec<u8>>>(6)?
             .and_then(|bytes| {
                 let s = String::from_utf8_lossy(&bytes).into_owned();
