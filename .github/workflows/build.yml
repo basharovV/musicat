@@ -48,6 +48,12 @@ jobs:
               # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
               # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
+            - name: Install pnpm
+              uses: pnpm/action-setup@v6
+              with:
+                  version: 10
+                  cache: true
+
             - name: install frontend dependencies
               run: pnpm install --frozen-lockfile
 
