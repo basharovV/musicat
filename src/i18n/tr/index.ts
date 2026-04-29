@@ -411,6 +411,22 @@ const tr = {
         cancel: "İptal",
         close: "Kapat",
     },
+    updater: {
+        checking: "Güncellemeler kontrol ediliyor…",
+        available: "Güncelleme mevcut",
+        downloading: "İndiriliyor… {percent}%",
+        installing: "Güncelleme yükleniyor…",
+        upToDate: "Musicat güncel.",
+        checkFailed: "Güncellemeler kontrol edilemedi.",
+        install: "Yükle",
+        later: "Sonra",
+        ok: "Tamam",
+        titleAvailable: "Güncelleme mevcut",
+        titleDownloading: "Güncelleme indiriliyor…",
+        titleInstalling: "Güncelleme yükleniyor…",
+        titleUpToDate: "Güncel",
+        titleError: "Güncelleme başarısız",
+    },
     analytics: {
         summary: {
             title: "Özet",

@@ -132,9 +132,11 @@
         cursor: pointer;
         transition: background 0.1s ease;
         user-select: none;
+        border: 1px solid transparent;
+        box-sizing: border-box;
 
         p {
-            margin: 0;
+            margin: 0 auto;
             line-height: normal;
         }
 

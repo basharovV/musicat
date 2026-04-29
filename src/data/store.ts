@@ -433,6 +433,27 @@ export const equalizerSettings = persistentWritable(
     { ...defaultEqualizerSettings },
     "equalizerSettings",
 );
+
+export type UpdaterStatusKind =
+    | "idle"
+    | "checking"
+    | "available"
+    | "downloading"
+    | "installing"
+    | "up-to-date"
+    | "error";
+
+export interface UpdaterStatus {
+    status: UpdaterStatusKind;
+    version?: string;
+    notes?: string;
+    progress?: number;
+    error?: string;
+}
+
+export const updaterStatus: Writable<UpdaterStatus> = writable({
+    status: "idle",
+});
 equalizerSettings.subscribe((eq) => {
     invoke("equalizer_control", {
         event: {

@@ -107,3 +107,4 @@ strip = true      # Remove debug symbols
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2.3.2"
+tauri-plugin-updater = "2"

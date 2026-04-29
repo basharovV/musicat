@@ -16,8 +16,10 @@ import {
     queue,
     shouldFocusFind,
     uiView,
+    updaterStatus,
 } from "../data/store";
 
+import { invoke } from "@tauri-apps/api/core";
 import toast from "svelte-french-toast";
 import { openPath } from "@tauri-apps/plugin-opener";
 
@@ -29,6 +31,9 @@ export function startMenuListener() {
             case "about":
                 console.log("about");
                 popupOpen.set("info");
+                break;
+            case "check-for-updates":
+                invoke("check_for_updates").catch(console.error);
                 break;
             case "settings":
                 console.log("settings");

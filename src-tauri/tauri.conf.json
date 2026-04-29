@@ -51,7 +51,8 @@
             "deb": {
                 "depends": []
             }
-        }
+        },
+        "createUpdaterArtifacts": true
     },
     "productName": "Musicat",
     "version": "0.17.2",
@@ -80,6 +81,14 @@
                 "enable": true
             },
             "csp": "default-src 'self' https://api.iconify.design  https://api.simplesvg.com https://api.unisvg.com https://www.wikidata.org https://en.wikipedia.org https://api.openai.com https://api.genius.com *.archive.org https://archive.org https://lrclib.net https://upload.wikimedia.org asset: https://asset.localhost stream: http://stream.localhost; img-src 'self' https://archive.org https://upload.wikimedia.org asset: https://asset.localhost http://asset.localhost data:; style-src 'self' 'unsafe-inline' 'unsafe-eval';script-src 'self' 'unsafe-eval'; media-src 'self' https://*.archive.org archive.org; connect-src https://www.wikidata.org https://en.wikipedia.org https://upload.wikimedia.org https://dbpedia.org *.archive.org https://archive.org ipc: http://ipc.localhost asset: https://asset.localhost"
+        }
+    },
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE4QkNGOUZGRDY3QjFEOTgKUldTWUhYdlcvL204R0g1NDIyR1VmNzNCL2lDVUY3WENwRTZ0dElEZUxlZ2M5VlIrYVR0MnFrNHgK",
+            "endpoints": [
+                "https://github.com/basharovV/musicat/releases/latest/download/latest.json"
+            ]
         }
     }
 }

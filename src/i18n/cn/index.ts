@@ -408,6 +408,22 @@ const cn = {
         cancel: "取消",
         close: "关闭",
     },
+    updater: {
+        checking: "正在检查更新…",
+        available: "发现新版本",
+        downloading: "正在下载… {percent}%",
+        installing: "正在安装更新…",
+        upToDate: "Musicat 已是最新版本。",
+        checkFailed: "检查更新失败。",
+        install: "安装",
+        later: "稍后",
+        ok: "确定",
+        titleAvailable: "发现新版本",
+        titleDownloading: "正在下载更新…",
+        titleInstalling: "正在安装更新…",
+        titleUpToDate: "已是最新",
+        titleError: "更新失败",
+    },
     analytics: {
         summary: {
             title: "概览",

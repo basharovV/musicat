@@ -31,6 +31,7 @@
         songToSeparate,
         uiView,
         uiViewToRestore,
+        updaterStatus,
         userSettings,
     } from "./data/store";
 
@@ -64,6 +65,7 @@
     import audioPlayer from "./lib/player/AudioPlayer";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
+    import UpdaterOverlay from "./lib/settings/UpdaterOverlay.svelte";
     import Sidebar from "./lib/sidebar/Sidebar.svelte";
     import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
     import CursorInfo from "./lib/ui/CursorInfo.svelte";
@@ -194,6 +196,20 @@
         foldersToWatch.subscribe(async (_) => {
             unlistenFolderWatch && unlistenFolderWatch();
             unlistenFolderWatch = await startWatchingLibraryFolders();
+        });
+
+        await appWindow.listen("update-status", ({ payload }: { payload: { status: string; version?: string; notes?: string; error?: string } }) => {
+            $updaterStatus = {
+                ...$updaterStatus,
+                status: payload.status as any,
+                version: payload.version,
+                notes: payload.notes,
+                error: payload.error,
+            };
+        });
+
+        await appWindow.listen("update-progress", ({ payload }: { payload: number }) => {
+            $updaterStatus = { ...$updaterStatus, status: "downloading", progress: payload };
         });
     }
     /**
@@ -386,6 +402,8 @@
         <Toaster />
 
         <CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
+
+        <UpdaterOverlay />
 
         {#if $popupOpen === "settings"}
             <div class="info">

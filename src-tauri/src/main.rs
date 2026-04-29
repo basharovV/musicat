@@ -23,10 +23,22 @@ use std::{io::Write, path::Path};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Listener, LogicalPosition};
 use tauri::{Manager, State};
+use tauri_plugin_updater::UpdaterExt;
 use tempfile::Builder;
 use tokio_util::sync::CancellationToken;
 
 use crate::stem_separator::StemProcessState;
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateStatus {
+    status: String,
+    version: Option<String>,
+    notes: Option<String>,
+    error: Option<String>,
+}
+
+struct PendingUpdate(Mutex<Option<tauri_plugin_updater::Update>>);
 
 mod beets;
 mod constants;
@@ -356,6 +368,143 @@ fn handle_decorations(window: &tauri::WebviewWindow, size: &tauri::PhysicalSize<
     }
 }
 
+async fn check_for_updates_on_startup(app: tauri::AppHandle) {
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => {
+            info!("Updater not available: {e}");
+            return;
+        }
+    };
+    match updater.check().await {
+        Ok(Some(update)) => {
+            let version = update.version.clone();
+            let notes = update.body.clone();
+            if let Some(pending) = app.try_state::<PendingUpdate>() {
+                *pending.0.lock().unwrap() = Some(update);
+            }
+            let _ = app.emit(
+                "update-status",
+                UpdateStatus {
+                    status: "available".into(),
+                    version: Some(version),
+                    notes,
+                    error: None,
+                },
+            );
+        }
+        Ok(None) => {
+            info!("App is up to date");
+        }
+        Err(e) => {
+            info!("Update check failed: {e}");
+        }
+    }
+}
+
+#[tauri::command]
+async fn check_for_updates(
+    app: tauri::AppHandle,
+    state: State<'_, PendingUpdate>,
+) -> Result<(), String> {
+    let _ = app.emit(
+        "update-status",
+        UpdateStatus {
+            status: "checking".into(),
+            version: None,
+            notes: None,
+            error: None,
+        },
+    );
+
+    let updater = app.updater().map_err(|e| e.to_string())?;
+    match updater.check().await {
+        Ok(Some(update)) => {
+            let version = update.version.clone();
+            let notes = update.body.clone();
+            *state.0.lock().unwrap() = Some(update);
+            let _ = app.emit(
+                "update-status",
+                UpdateStatus {
+                    status: "available".into(),
+                    version: Some(version),
+                    notes,
+                    error: None,
+                },
+            );
+        }
+        Ok(None) => {
+            let _ = app.emit(
+                "update-status",
+                UpdateStatus {
+                    status: "up-to-date".into(),
+                    version: None,
+                    notes: None,
+                    error: None,
+                },
+            );
+        }
+        Err(e) => {
+            let _ = app.emit(
+                "update-status",
+                UpdateStatus {
+                    status: "error".into(),
+                    version: None,
+                    notes: None,
+                    error: Some(e.to_string()),
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn install_update(
+    app: tauri::AppHandle,
+    state: State<'_, PendingUpdate>,
+) -> Result<(), String> {
+    let update = state.0.lock().unwrap().take();
+
+    if let Some(update) = update {
+        let app_handle = app.clone();
+        let app_handle2 = app.clone();
+        let mut downloaded: u64 = 0;
+        let mut total_size: u64 = 0;
+
+        update
+            .download_and_install(
+                move |chunk_length, content_length| {
+                    if let Some(t) = content_length {
+                        total_size = t;
+                    }
+                    downloaded += chunk_length as u64;
+                    if total_size > 0 {
+                        let percent = (downloaded as f64 / total_size as f64) * 100.0;
+                        let _ = app_handle.emit("update-progress", percent);
+                    }
+                },
+                move || {
+                    let _ = app_handle2.emit(
+                        "update-status",
+                        UpdateStatus {
+                            status: "installing".into(),
+                            version: None,
+                            notes: None,
+                            error: None,
+                        },
+                    );
+                },
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+
+        app.restart();
+    }
+
+    Ok(())
+}
+
 fn main() {
     info!("Starting Musicat");
     // std::env::set_var("RUST_LOG", "debug");
@@ -366,7 +515,7 @@ fn main() {
 
     let streamer = player::AudioPlayer::create().unwrap();
 
-    // let mut builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
+    // let mut builder = tauri::Builder::default().plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_single_instance::init()).plugin(tauri_plugin_window::init());
 
     // #[cfg(dev)]
     // {
@@ -382,9 +531,15 @@ fn main() {
         .manage(StemProcessState {
             processes: Mutex::new(HashMap::new()),
         })
+        .manage(PendingUpdate(Mutex::new(None)))
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app_.clone();
+
+            tauri::async_runtime::spawn(async move {
+                check_for_updates_on_startup(app2_).await;
+            });
+
             let state: State<player::AudioPlayer<'static>> = app.state();
 
             env::set_var("MUSICAT_LOG_DIR", app.path().app_log_dir().unwrap());
@@ -581,6 +736,8 @@ fn main() {
             let app_submenu = SubmenuBuilder::new(app, "Musicat")
                 .items(&[
                     &MenuItemBuilder::with_id("about", "About Musicat").build(app)?,
+                    &MenuItemBuilder::with_id("check-for-updates", "Check for Updates…")
+                        .build(app)?,
                     &MenuItemBuilder::with_id("settings", "Settings")
                         .accelerator("CommandOrControl+,")
                         .build(app)?,
@@ -696,8 +853,11 @@ fn main() {
             beets::search_beets,
             beets::search_beets_albums,
             beets::get_beets_album_tracks,
-            beets::get_albums_by_id
+            beets::get_albums_by_id,
+            check_for_updates,
+            install_update
         ])
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             info!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit("single-instance", Payload { args: argv, cwd })

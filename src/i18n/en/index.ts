@@ -411,6 +411,22 @@ const en = {
         cancel: "Cancel",
         close: "Close",
     },
+    updater: {
+        checking: "Checking for updates…",
+        available: "Update available",
+        downloading: "Downloading… {percent}%",
+        installing: "Installing update…",
+        upToDate: "Musicat is up to date.",
+        checkFailed: "Update check failed.",
+        install: "Install",
+        later: "Later",
+        ok: "OK",
+        titleAvailable: "Update available",
+        titleDownloading: "Downloading update…",
+        titleInstalling: "Installing update…",
+        titleUpToDate: "Up to date",
+        titleError: "Update failed",
+    },
     analytics: {
         summary: {
             title: "Summary",

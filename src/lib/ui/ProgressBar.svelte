@@ -59,7 +59,7 @@
     }
 
     .bg {
-        background: var(--progressbar-track-bg);
+        background: var(--muted);
         height: 2px;
         width: 100%;
         overflow: visible;
@@ -84,7 +84,7 @@
     }
 
     .progress {
-        background: var(--progressbar-value-bg);
+        background: var(--accent-soft);
         height: 2px;
         width: 100%;
         overflow: visible;

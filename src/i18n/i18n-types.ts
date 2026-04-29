@@ -1244,6 +1244,65 @@ type RootTranslation = {
 		 */
 		close: string
 	}
+	updater: {
+		/**
+		 * C​h​e​c​k​i​n​g​ ​f​o​r​ ​u​p​d​a​t​e​s​…
+		 */
+		checking: string
+		/**
+		 * U​p​d​a​t​e​ ​a​v​a​i​l​a​b​l​e
+		 */
+		available: string
+		/**
+		 * D​o​w​n​l​o​a​d​i​n​g​…​ ​{​p​e​r​c​e​n​t​}​%
+		 * @param {unknown} percent
+		 */
+		downloading: RequiredParams<'percent'>
+		/**
+		 * I​n​s​t​a​l​l​i​n​g​ ​u​p​d​a​t​e​…
+		 */
+		installing: string
+		/**
+		 * M​u​s​i​c​a​t​ ​i​s​ ​u​p​ ​t​o​ ​d​a​t​e​.
+		 */
+		upToDate: string
+		/**
+		 * U​p​d​a​t​e​ ​c​h​e​c​k​ ​f​a​i​l​e​d​.
+		 */
+		checkFailed: string
+		/**
+		 * I​n​s​t​a​l​l
+		 */
+		install: string
+		/**
+		 * L​a​t​e​r
+		 */
+		later: string
+		/**
+		 * O​K
+		 */
+		ok: string
+		/**
+		 * U​p​d​a​t​e​ ​a​v​a​i​l​a​b​l​e
+		 */
+		titleAvailable: string
+		/**
+		 * D​o​w​n​l​o​a​d​i​n​g​ ​u​p​d​a​t​e​…
+		 */
+		titleDownloading: string
+		/**
+		 * I​n​s​t​a​l​l​i​n​g​ ​u​p​d​a​t​e​…
+		 */
+		titleInstalling: string
+		/**
+		 * U​p​ ​t​o​ ​d​a​t​e
+		 */
+		titleUpToDate: string
+		/**
+		 * U​p​d​a​t​e​ ​f​a​i​l​e​d
+		 */
+		titleError: string
+	}
 	analytics: {
 		summary: {
 			/**
@@ -2525,6 +2584,64 @@ export type TranslationFunctions = {
 		 * Close
 		 */
 		close: () => LocalizedString
+	}
+	updater: {
+		/**
+		 * Checking for updates…
+		 */
+		checking: () => LocalizedString
+		/**
+		 * Update available
+		 */
+		available: () => LocalizedString
+		/**
+		 * Downloading… {percent}%
+		 */
+		downloading: (arg: { percent: unknown }) => LocalizedString
+		/**
+		 * Installing update…
+		 */
+		installing: () => LocalizedString
+		/**
+		 * Musicat is up to date.
+		 */
+		upToDate: () => LocalizedString
+		/**
+		 * Update check failed.
+		 */
+		checkFailed: () => LocalizedString
+		/**
+		 * Install
+		 */
+		install: () => LocalizedString
+		/**
+		 * Later
+		 */
+		later: () => LocalizedString
+		/**
+		 * OK
+		 */
+		ok: () => LocalizedString
+		/**
+		 * Update available
+		 */
+		titleAvailable: () => LocalizedString
+		/**
+		 * Downloading update…
+		 */
+		titleDownloading: () => LocalizedString
+		/**
+		 * Installing update…
+		 */
+		titleInstalling: () => LocalizedString
+		/**
+		 * Up to date
+		 */
+		titleUpToDate: () => LocalizedString
+		/**
+		 * Update failed
+		 */
+		titleError: () => LocalizedString
 	}
 	analytics: {
 		summary: {
