@@ -24,7 +24,7 @@
     import {
         type FetchArtworkResult,
         fetchAlbumArt,
-    } from "../data/LibraryEnrichers";
+    } from "../../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
 

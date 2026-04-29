@@ -4,11 +4,11 @@
     import { db } from "../../data/db";
     import { rightClickedTracks, userSettings } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
-    import { findCountryByArtist } from "../data/LibraryEnrichers";
+    import { findCountryByArtist } from "../../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
     import InputDropdown from "../ui/InputDropdown.svelte";
-    import { countries, getFlagEmoji } from "../data/CountryCodes";
+    import { countries, getFlagEmoji } from "../../data/CountryCodes";
 
     let isFetchingOriginCountry = false;
     let originCountry = $rightClickedTracks[0]?.originCountry || null;

@@ -16,7 +16,7 @@
         triangulatePolygon,
         xyzToLatLng,
     } from "../../utils/GeoUtils";
-    import { countries } from "../data/CountryCodes";
+    import { countries } from "../../data/CountryCodes";
     import FakeGlowMaterial from "./FakeGlowMaterial";
 
     let globeContainer: HTMLDivElement;

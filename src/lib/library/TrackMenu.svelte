@@ -26,7 +26,7 @@
     import { removeQueuedSongs } from "../../data/storeHelper";
     import LL from "../../i18n/i18n-svelte";
     import { dedupe } from "../../utils/ArrayUtils";
-    import { enrichSongCountry } from "../data/LibraryEnrichers";
+    import { enrichSongCountry } from "../../data/LibraryEnrichers";
     import { openInFinder } from "../menu/file";
     import { searchArtistOnWikiPanel } from "../menu/search";
     import audioPlayer from "../player/AudioPlayer";

@@ -19,7 +19,7 @@
         enrichSongCountry,
         fetchAlbumArt,
         rescanAlbumArtwork,
-    } from "../data/LibraryEnrichers";
+    } from "../../data/LibraryEnrichers";
     import { openInFinder } from "../menu/file";
     import {
         searchArtistOnWikiPanel,

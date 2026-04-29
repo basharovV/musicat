@@ -3,7 +3,7 @@ import { Color } from "three";
 import type { Song, SongsByCountry } from "../App";
 import { get } from "svelte/store";
 import { userSettings } from "../data/store";
-import { countries } from "../lib/data/CountryCodes";
+import { countries } from "../data/CountryCodes";
 
 // Convert XYZ coordinates to latitude and longitude
 export function xyzToLatLng(point: THREE.Vector3): {

@@ -49,8 +49,8 @@
     } from "../../data/store";
     import { currentThemeObject } from "../../theming/store";
     import { groupBy } from "../../utils/ArrayUtils";
-    import { codes, countries, getFlagEmoji } from "../data/CountryCodes";
-    import { addCountryDataAllSongs } from "../data/LibraryEnrichers";
+    import { codes, countries, getFlagEmoji } from "../../data/CountryCodes";
+    import { addCountryDataAllSongs } from "../../data/LibraryEnrichers";
     import MapTooltip from "../map/MapTooltip.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import ProgressBar from "../ui/ProgressBar.svelte";

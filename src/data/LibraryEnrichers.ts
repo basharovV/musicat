@@ -1,11 +1,11 @@
 import { writeFile } from "@tauri-apps/plugin-fs";
 import WBK from "wikibase-sdk";
-import { getImageFormat } from "../../utils/FileUtils";
-import { db } from "../../data/db";
-import type { Album, Song, ToImport } from "../../App";
+import { getImageFormat } from "../utils/FileUtils";
+import { db } from "./db";
+import type { Album, Song, ToImport } from "../App";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import md5 from "md5";
-import { addOriginCountryStatus, userSettings } from "../../data/store";
+import { addOriginCountryStatus, userSettings } from "./store";
 import { path } from "@tauri-apps/api";
 import { get, type Writable } from "svelte/store";
 import { fetch } from "@tauri-apps/plugin-http";

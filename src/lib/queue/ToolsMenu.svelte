@@ -2,7 +2,7 @@
     import Menu from "../ui/menu/Menu.svelte";
     import MenuDivider from "../ui/menu/MenuDivider.svelte";
     import MenuOption from "../ui/menu/MenuOption.svelte";
-    import { enrichSongCountry } from "../data/LibraryEnrichers";
+    import { enrichSongCountry } from "../../data/LibraryEnrichers";
     import type { Song } from "../../App";
     import {
         searchArtistOnWikiPanel,
