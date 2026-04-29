@@ -1,0 +1,8 @@
+ignoredBuiltDependencies:
+  - wtf_wikipedia
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - es5-ext
+  - esbuild
+  - svelte-preprocess

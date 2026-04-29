@@ -1855,19 +1855,13 @@
                                                                     on:click={(
                                                                         e,
                                                                     ) => {
-                                                                        // TODO: Show overflowed tags in menu
-                                                                        trackMenu.open(
-                                                                            song,
-                                                                            {
-                                                                                x: e
-                                                                                    .detail
-                                                                                    .evt
-                                                                                    .clientX,
-                                                                                y: e
-                                                                                    .detail
-                                                                                    .evt
-                                                                                    .clientY,
-                                                                            },
+                                                                        openTrackMenu(
+                                                                            e
+                                                                                .detail
+                                                                                .evt,
+                                                                            [
+                                                                                song,
+                                                                            ],
                                                                         );
                                                                     }}
                                                                 >

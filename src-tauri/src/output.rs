@@ -347,12 +347,11 @@ pub mod cpal {
         ) -> Result<Arc<Mutex<dyn AudioOutput>>> {
             let num_channels = spec.channels.count();
             // Output audio stream config.
-            let config = 
-                cpal::StreamConfig {
-                    channels: num_channels as cpal::ChannelCount,
-                    sample_rate: spec.rate,
-                    buffer_size: cpal::BufferSize::Default,
-                };
+            let config = cpal::StreamConfig {
+                channels: num_channels as cpal::ChannelCount,
+                sample_rate: spec.rate,
+                buffer_size: cpal::BufferSize::Default,
+            };
 
             let time_base = TimeBase {
                 numer: 1,

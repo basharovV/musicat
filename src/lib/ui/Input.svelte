@@ -22,7 +22,7 @@
     function onKeyDown(evt: KeyboardEvent) {
         if (evt.key === "Enter") {
             if (onEnterPressed) {
-                // evt.preventDefault();
+                evt.stopImmediatePropagation();
                 onEnterPressed(evt);
             }
         } else if (evt.code === "Space") {

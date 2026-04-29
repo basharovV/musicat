@@ -9,9 +9,9 @@
         "dev": "vite --host",
         "preview": "vite preview",
         "tauri": "tauri",
-        "tm-build": "npm run build --prefix ./base16/builder",
+        "tm-build": "pnpm run build --prefix ./base16/builder",
         "tm-schema": "npx typescript-json-schema --required --out src/theming/theme.schema.json src/types/theme.d.ts Theme",
-        "tm-watch": "chokidar \"base16/**\" -c \"npm run tm-build\"",
+        "tm-watch": "chokidar \"base16/**\" -c \"pnpm run tm-build\"",
         "typesafe-i18n": "typesafe-i18n",
         "build:pvr": "sh ./src-tauri/lib/build.sh",
         "build:pvr:linux": "sh ./src-tauri/lib/build.sh --target x86_64-unknown-linux-gnu"
@@ -74,7 +74,10 @@
         "wavefile": "11.0.0",
         "wavesurfer.js": "7.11.1",
         "wikibase-sdk": "9.2.4",
-        "wtf_wikipedia": "10.4.0",
-        "wtf-plugin-html": "1.0.0"
+        "wtf-plugin-html": "1.0.0",
+        "wtf_wikipedia": "10.4.0"
+    },
+    "dependencies": {
+        "@tauri-apps/plugin-updater": "~2.10.1"
     }
 }

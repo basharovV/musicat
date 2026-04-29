@@ -67,13 +67,10 @@
     .tag-cloud {
         border-radius: 8px;
         margin-right: 5px;
-        background-color: color-mix(in srgb, var(--type-bw) 10%, transparent);
-        border: 0.75px solid
-            color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
-        border-top: 0.75px solid
-            color-mix(in srgb, var(--type-bw-inverse) 15%, transparent);
-        border-bottom: 0.75px solid
-            color-mix(in srgb, var(--type-bw-inverse) 19%, transparent);
+
+        background-color: var(--accent-softest);
+        border: 1.5px solid var(--accent-soft);
+        color: var(--primary);
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
@@ -112,14 +109,12 @@
     .tag {
         border-radius: 20px;
         padding: 1px 10px;
-        background-color: color-mix(in srgb, var(--inverse) 20%, transparent);
+
         box-sizing: border-box;
-        border: 1px solid
-            color-mix(in srgb, var(--type-bw-inverse) 10%, transparent);
+        border: 1px solid var(--border);
 
         &:hover {
-            border: 1px solid
-                color-mix(in srgb, var(--type-bw-inverse) 80%, transparent);
+            border: 1px solid var(--accent-soft);
         }
 
         &:active {
@@ -127,12 +122,8 @@
         }
 
         &.selected {
-            border-color: var(--accent-secondary);
-            background-color: color-mix(
-                in srgb,
-                var(--accent-secondary) 20%,
-                transparent
-            );
+            border-color: var(--accent-soft);
+            background-color: var(--accent-softest);
         }
 
         p {
@@ -142,7 +133,6 @@
             line-height: 20px;
             vertical-align: middle;
             cursor: default;
-            color: var(--text-inverse);
             font-size: 13px;
             position: relative;
             bottom: 1px;
