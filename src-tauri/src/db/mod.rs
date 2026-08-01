@@ -10,6 +10,7 @@
 pub mod commands;
 pub mod migration;
 pub mod models;
+pub mod mutations;
 pub mod playlists;
 pub mod pool;
 pub mod query;

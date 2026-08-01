@@ -80,16 +80,15 @@ pub fn row_to_track(row: &Row) -> rusqlite::Result<Song> {
 
 pub const ALBUM_COLUMNS: &str = "
     id, title, display_title, artist, year, compilation, genre, path, lossless,
-    artwork_data, artwork_format, artwork_src
+    artwork_format, artwork_src
 ";
 
 pub fn row_to_album(row: &Row) -> rusqlite::Result<Album> {
-    let artwork_data: Option<Vec<u8>> = row.get("artwork_data")?;
     let artwork_format: Option<String> = row.get("artwork_format")?;
     let artwork_src: Option<String> = row.get("artwork_src")?;
 
     let artwork = artwork_format.map(|format| AlbumArtwork {
-        src: artwork_src.or(artwork_data.map(|d| format!("{} bytes", d.len()))).unwrap_or_default(),
+        src: artwork_src.unwrap_or_default(),
         format,
     });
 
@@ -101,7 +100,11 @@ pub fn row_to_album(row: &Row) -> rusqlite::Result<Album> {
         compilation: row.get("compilation")?,
         year: row.get("year")?,
         genre: json_vec(row.get("genre")?),
-        tracks_ids: Vec::new(), // hydrated separately (see db::query::album_track_ids) — kept off the hot list path
+        // Intentionally not hydrated: `tracks.album_id` is the source of
+        // truth for this relationship now (see design.md's schema-shape
+        // decision), so callers query tracks by `albumId` directly instead
+        // of reading a denormalized id list off the album.
+        tracks_ids: Vec::new(),
         path: row.get::<_, Option<String>>("path")?.unwrap_or_default(),
         artwork,
         lossless: row.get::<_, i64>("lossless")? != 0,

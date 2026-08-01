@@ -52,6 +52,34 @@ pub async fn query_playlists(spec: QuerySpec, db: State<'_, Database>) -> Result
     .map_err(|e| e.to_string())?
 }
 
+/// Insert-or-refresh freshly-scanned tracks. See `db::mutations` for what
+/// "refresh" preserves on an already-existing track.
+#[tauri::command]
+pub async fn upsert_tracks(tracks: Vec<Song>, db: State<'_, Database>) -> Result<Vec<Song>, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::upsert_tracks(conn, &tracks)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn upsert_albums(albums: Vec<Album>, db: State<'_, Database>) -> Result<Vec<Album>, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::upsert_albums(conn, &albums)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Deletes tracks and any album left with none of its tracks remaining.
+/// Returns the ids of albums that were deleted as a result.
+#[tauri::command]
+pub async fn delete_tracks(track_ids: Vec<String>, db: State<'_, Database>) -> Result<Vec<String>, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::delete_tracks(conn, &track_ids)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 pub async fn get_playlist_by_id(id: String, db: State<'_, Database>) -> Result<Option<Playlist>, String> {
     let pool = db.pool.clone();

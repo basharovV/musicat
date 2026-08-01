@@ -67,7 +67,8 @@ CREATE TABLE albums (
     genre           TEXT NOT NULL DEFAULT '[]', -- JSON array
     path            TEXT,
     lossless        INTEGER NOT NULL DEFAULT 0,
-    artwork_data    BLOB,
+    -- Artwork bytes live on disk (see artwork::cache_artwork); this is a
+    -- src/format pointer to that cache, not the image data itself.
     artwork_format  TEXT,
     artwork_src     TEXT
 ) STRICT;

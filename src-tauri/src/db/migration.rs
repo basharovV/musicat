@@ -107,7 +107,9 @@ struct DexieFileInfo {
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
 struct DexieAlbumArtwork {
-    data: Vec<u8>,
+    // Matches `ArtworkSrc` (App.d.ts) / `AlbumArtwork` (metadata.rs): artwork
+    // bytes live on disk (see artwork::cache_artwork), this is just the
+    // pointer to that cache. There is no raw byte array on this record.
     format: String,
     src: Option<String>,
 }
@@ -226,14 +228,14 @@ pub fn migrate(conn: &mut Connection, export: &DexieExport) -> Result<MigrationR
 
     for row in export.data.table("albums") {
         let album: DexieAlbum = serde_json::from_value(row.clone()).map_err(|e| e.to_string())?;
-        let (artwork_data, artwork_format, artwork_src) = match album.artwork {
-            Some(a) => (Some(a.data), Some(a.format), a.src),
-            None => (None, None, None),
+        let (artwork_format, artwork_src) = match album.artwork {
+            Some(a) => (Some(a.format), a.src),
+            None => (None, None),
         };
         tx.execute(
             "INSERT INTO albums (id, title, display_title, artist, year, compilation, genre, path,
-                lossless, artwork_data, artwork_format, artwork_src)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                lossless, artwork_format, artwork_src)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             rusqlite::params![
                 album.id,
                 album.title,
@@ -244,7 +246,6 @@ pub fn migrate(conn: &mut Connection, export: &DexieExport) -> Result<MigrationR
                 serde_json::to_string(&album.genre).unwrap(),
                 album.path,
                 album.lossless as i64,
-                artwork_data,
                 artwork_format,
                 artwork_src,
             ],

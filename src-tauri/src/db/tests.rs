@@ -1,6 +1,9 @@
 use rusqlite::Connection;
 
+use crate::metadata::{Album, AlbumArtwork, Song};
+
 use super::migration::{self, DexieExport};
+use super::mutations;
 use super::playlists;
 use super::query::{self, CmpOp, FilterNode, FilterValue, PageRequest, QuerySpec, SortKey};
 use super::queue;
@@ -354,4 +357,126 @@ fn cutover_copies_shadow_data_into_the_live_database() {
     let playlist_track_count: i64 =
         live_conn.query_row("SELECT COUNT(*) FROM playlist_tracks", [], |r| r.get(0)).unwrap();
     assert_eq!(playlist_track_count, 2);
+}
+
+fn scanned_track(id: &str, title: &str, album_id: &str) -> Song {
+    Song {
+        id: id.to_string(),
+        path: format!("/music/{id}.mp3"),
+        file: format!("{id}.mp3"),
+        title: title.to_string(),
+        artist: "Artist A".to_string(),
+        album: "Album A".to_string(),
+        album_id: Some(album_id.to_string()),
+        year: 2020,
+        ..Default::default()
+    }
+}
+
+#[test]
+fn upsert_tracks_inserts_new_tracks_with_defaults() {
+    let mut conn = open_test_db();
+    let inserted = mutations::upsert_tracks(&mut conn, &[scanned_track("a", "New Song", "album-1")]).unwrap();
+
+    assert_eq!(inserted.len(), 1);
+    assert_eq!(inserted[0].play_count, 0);
+    assert!(!inserted[0].is_favourite);
+    assert!(inserted[0].tags.is_empty());
+
+    // Referencing a not-yet-existing album must not fail the FK check — a
+    // placeholder album row is created from the track's own fields.
+    let album_title: String =
+        conn.query_row("SELECT display_title FROM albums WHERE id = 'album-1'", [], |r| r.get(0)).unwrap();
+    assert_eq!(album_title, "Album A");
+}
+
+#[test]
+fn upsert_tracks_preserves_user_owned_fields_on_refresh() {
+    let mut conn = open_test_db();
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Original Title", "album-1")]).unwrap();
+
+    // User edits this track after import: favourited, played a few times, tagged.
+    conn.execute("UPDATE tracks SET is_favourite = 1, play_count = 7 WHERE id = 'a'", []).unwrap();
+    conn.execute("INSERT INTO tags (id, name) VALUES (1, 'chill')", []).unwrap();
+    conn.execute("INSERT INTO track_tags (track_id, tag_id) VALUES ('a', 1)", []).unwrap();
+
+    // A rescan finds a corrected title, otherwise identical.
+    let rescanned = mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Corrected Title", "album-1")]).unwrap();
+
+    assert_eq!(rescanned[0].title, "Corrected Title");
+    assert_eq!(rescanned[0].play_count, 7, "play count must survive a metadata refresh");
+    assert!(rescanned[0].is_favourite, "favourite flag must survive a metadata refresh");
+    assert_eq!(rescanned[0].tags, vec!["chill".to_string()], "tags must survive a metadata refresh");
+}
+
+#[test]
+fn upsert_albums_supersedes_the_placeholder_from_upsert_tracks() {
+    let mut conn = open_test_db();
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Song", "album-1")]).unwrap();
+
+    let full_album = Album {
+        id: "album-1".to_string(),
+        title: "album a".to_string(),
+        display_title: "Album A (Deluxe)".to_string(),
+        artist: "Artist A".to_string(),
+        compilation: 0,
+        year: 2021,
+        genre: vec!["chillwave".to_string()],
+        tracks_ids: vec![],
+        path: "/music".to_string(),
+        artwork: Some(AlbumArtwork { src: "asset://cover.jpg".to_string(), format: "jpg".to_string() }),
+        lossless: true,
+    };
+    let result = mutations::upsert_albums(&mut conn, &[full_album]).unwrap();
+
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].display_title, "Album A (Deluxe)");
+    assert_eq!(result[0].artwork.as_ref().unwrap().src, "asset://cover.jpg");
+
+    let album_count: i64 = conn.query_row("SELECT COUNT(*) FROM albums", [], |r| r.get(0)).unwrap();
+    assert_eq!(album_count, 1, "upsert must update the placeholder row in place, not duplicate it");
+}
+
+#[test]
+fn upsert_tracks_deletes_the_old_album_when_it_becomes_orphaned() {
+    let mut conn = open_test_db();
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Song", "album-1")]).unwrap();
+    assert!(conn.query_row("SELECT 1 FROM albums WHERE id = 'album-1'", [], |_| Ok(())).is_ok());
+
+    // The track's tags got fixed and it now belongs to a different album.
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Song", "album-2")]).unwrap();
+
+    let old_album_gone: bool =
+        conn.query_row("SELECT 1 FROM albums WHERE id = 'album-1'", [], |_| Ok(())).optional_none();
+    assert!(old_album_gone, "album-1 has no tracks left and should have been cleaned up");
+    assert!(conn.query_row("SELECT 1 FROM albums WHERE id = 'album-2'", [], |_| Ok(())).is_ok());
+}
+
+#[test]
+fn delete_tracks_cleans_up_orphaned_albums_but_not_shared_ones() {
+    let mut conn = open_test_db();
+    mutations::upsert_tracks(
+        &mut conn,
+        &[scanned_track("a", "Song A", "album-1"), scanned_track("b", "Song B", "album-1")],
+    )
+    .unwrap();
+
+    // Deleting only one of the two tracks must not delete the still-shared album.
+    let deleted = mutations::delete_tracks(&mut conn, &["a".to_string()]).unwrap();
+    assert!(deleted.is_empty());
+    assert!(conn.query_row("SELECT 1 FROM albums WHERE id = 'album-1'", [], |_| Ok(())).is_ok());
+
+    // Deleting the last remaining track must delete the now-orphaned album.
+    let deleted = mutations::delete_tracks(&mut conn, &["b".to_string()]).unwrap();
+    assert_eq!(deleted, vec!["album-1".to_string()]);
+    assert!(conn.query_row("SELECT 1 FROM albums WHERE id = 'album-1'", [], |_| Ok(())).is_err());
+}
+
+trait OptionalNone {
+    fn optional_none(self) -> bool;
+}
+impl<T> OptionalNone for rusqlite::Result<T> {
+    fn optional_none(self) -> bool {
+        matches!(self, Err(rusqlite::Error::QueryReturnedNoRows))
+    }
 }

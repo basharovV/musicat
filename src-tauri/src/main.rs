@@ -392,7 +392,10 @@ fn main() {
             db::commands::get_playlist_by_id,
             db::commands::upsert_playlist_header,
             db::commands::set_playlist_tracks,
-            db::commands::delete_playlist
+            db::commands::delete_playlist,
+            db::commands::upsert_tracks,
+            db::commands::upsert_albums,
+            db::commands::delete_tracks
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
