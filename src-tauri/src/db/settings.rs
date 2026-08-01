@@ -48,6 +48,11 @@ pub struct Settings {
     pub discogs_api_key: Option<String>,
     #[serde(default)]
     pub beets_db_location: Option<String>,
+    /// Set once the one-time Dexie → SQLite migration (`db::migration`) has
+    /// cut over. `None` means "not yet migrated" — the frontend's signal to
+    /// still trust its Dexie data over this database.
+    #[serde(default)]
+    pub migrated_from_dexie_at: Option<i64>,
 }
 
 fn default_mini_player_location() -> String {

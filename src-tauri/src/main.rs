@@ -382,7 +382,9 @@ fn main() {
             db::commands::get_queue,
             db::commands::set_queue,
             db::commands::check_playlist_divergence,
-            db::commands::reimport_playlist_from_file
+            db::commands::reimport_playlist_from_file,
+            db::commands::run_shadow_migration_from_dexie,
+            db::commands::cutover_migrated_database
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

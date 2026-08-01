@@ -1,5 +1,6 @@
 use rusqlite::Connection;
 
+use super::migration::{self, DexieExport};
 use super::playlists;
 use super::query::{self, CmpOp, FilterNode, FilterValue, PageRequest, QuerySpec, SortKey};
 use super::queue;
@@ -179,4 +180,159 @@ fn writer_actor_serializes_writes_via_the_channel() {
     });
 
     assert_eq!(result.unwrap(), 1);
+}
+
+/// A hand-built `dexie-export-import` envelope covering every table this
+/// migration reads, with one row of realistic, hand-editable-by-a-user data
+/// per table (favourites, play counts, tags) — the fields `verify()` cares
+/// most about surviving byte-for-byte.
+fn sample_dexie_export(favourite_song_play_count: i64) -> String {
+    format!(
+        r#"{{
+        "formatName": "dexie",
+        "formatVersion": 1,
+        "data": {{
+            "databaseName": "musicatdb",
+            "databaseVersion": 21,
+            "tables": [],
+            "data": [
+                {{"tableName": "songs", "rows": [
+                    {{
+                        "id": "song-1", "path": "/music/song-1.mp3", "file": "song-1.mp3",
+                        "title": "Chill Track", "artist": "Artist A", "album": "Album A",
+                        "albumId": "album-1", "year": 2020, "genre": ["chillwave"],
+                        "composer": [], "trackNumber": 1, "trackTotal": 10,
+                        "discNumber": 1, "discTotal": 1, "duration": "3:45",
+                        "playCount": {favourite_song_play_count}, "isFavourite": true,
+                        "tags": ["chill", "favourites"], "dateAdded": 1700000000000,
+                        "fileInfo": {{"duration": 225.0, "lossless": false, "codec": "mp3"}}
+                    }},
+                    {{
+                        "id": "song-2", "path": "/music/song-2.mp3", "file": "song-2.mp3",
+                        "title": "Another Track", "artist": "Artist A", "album": "Album A",
+                        "albumId": "album-1", "year": 2020, "genre": [],
+                        "trackNumber": 2, "duration": "2:30", "playCount": 0,
+                        "isFavourite": false, "tags": [], "dateAdded": 1700000001000
+                    }}
+                ]}},
+                {{"tableName": "albums", "rows": [
+                    {{
+                        "id": "album-1", "title": "album a", "displayTitle": "Album A",
+                        "artist": "Artist A", "year": 2020, "genre": ["chillwave"],
+                        "tracksIds": ["song-1", "song-2"], "path": "/music", "lossless": false
+                    }}
+                ]}},
+                {{"tableName": "playlists", "rows": [
+                    {{"id": 1, "title": "My Mix", "path": "/playlists/my-mix.m3u",
+                      "tracks": ["song-2", "song-1"]}}
+                ]}},
+                {{"tableName": "internalPlaylists", "rows": [
+                    {{"id": "todelete", "title": "To delete", "tracks": []}}
+                ]}},
+                {{"tableName": "smartQueries", "rows": [
+                    {{"id": 1, "name": "Chill favourites", "parts": [{{"fieldKey": "isFavourite"}}]}}
+                ]}},
+                {{"tableName": "songProjects", "rows": [
+                    {{"title": "WIP Song", "artist": "Artist A", "musicComposedBy": ["Artist A"],
+                      "lyricsWrittenBy": [], "recordings": [], "otherContentItems": []}}
+                ]}},
+                {{"tableName": "artistProjects", "rows": [
+                    {{"name": "Artist A", "members": ["Solo"]}}
+                ]}},
+                {{"tableName": "scrapbook", "rows": [
+                    {{"id": "scrap-1", "type": "link", "name": "Interview", "tags": [],
+                      "url": "https://example.com/interview"}}
+                ]}}
+            ]
+        }}
+    }}"#
+    )
+}
+
+#[test]
+fn migrate_populates_every_table_and_resolves_tags() {
+    let mut conn = open_test_db();
+    let export: DexieExport = serde_json::from_str(&sample_dexie_export(42)).unwrap();
+
+    let report = migration::migrate(&mut conn, &export).unwrap();
+    assert_eq!(report.tracks, 2);
+    assert_eq!(report.albums, 1);
+    assert_eq!(report.playlists, 2); // "playlists" + "internalPlaylists"
+    assert_eq!(report.smart_queries, 1);
+    assert_eq!(report.song_projects, 1);
+    assert_eq!(report.artist_projects, 1);
+    assert_eq!(report.scrapbook_items, 1);
+    assert!(report.warnings.is_empty());
+
+    let (play_count, is_favourite): (i64, i64) = conn
+        .query_row("SELECT play_count, is_favourite FROM tracks WHERE id = 'song-1'", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert_eq!(play_count, 42);
+    assert_eq!(is_favourite, 1);
+
+    let tag_count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM track_tags tt JOIN tags t ON t.id = tt.tag_id WHERE tt.track_id = 'song-1'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(tag_count, 2);
+
+    // Playlist order must survive (source listed song-2 before song-1).
+    let ordered: Vec<String> = conn
+        .prepare("SELECT track_id FROM playlist_tracks WHERE playlist_id = '1' ORDER BY position")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(ordered, vec!["song-2".to_string(), "song-1".to_string()]);
+}
+
+#[test]
+fn verify_passes_on_a_clean_migration_and_fails_on_drift() {
+    let mut conn = open_test_db();
+    let export: DexieExport = serde_json::from_str(&sample_dexie_export(42)).unwrap();
+    migration::migrate(&mut conn, &export).unwrap();
+
+    let report = migration::verify(&export, &conn).unwrap();
+    assert!(report.ok, "expected a clean verification, got: {:?}", report.mismatches);
+
+    // A source that disagrees with what's actually in the shadow db (as if
+    // something got dropped or altered mid-migration) must be caught.
+    let drifted_export: DexieExport = serde_json::from_str(&sample_dexie_export(999)).unwrap();
+    let report = migration::verify(&drifted_export, &conn).unwrap();
+    assert!(!report.ok);
+    assert!(report.mismatches.iter().any(|m| m.contains("playCount")));
+}
+
+#[test]
+fn cutover_copies_shadow_data_into_the_live_database() {
+    // Real files, matching production: both the shadow and live databases
+    // are on-disk SQLite files, and `cutover` attaches one to the other.
+    let dir = tempfile::tempdir().unwrap();
+    let shadow_path = dir.path().join("shadow.sqlite3");
+    {
+        let mut shadow_conn = Connection::open(&shadow_path).unwrap();
+        schema::run_migrations(&mut shadow_conn).unwrap();
+        let export: DexieExport = serde_json::from_str(&sample_dexie_export(42)).unwrap();
+        migration::migrate(&mut shadow_conn, &export).unwrap();
+    } // shadow_conn dropped/closed here, before attaching it elsewhere
+
+    let live_path = dir.path().join("live.sqlite3");
+    let mut live_conn = Connection::open(&live_path).unwrap();
+    live_conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+    schema::run_migrations(&mut live_conn).unwrap();
+    migration::cutover(&mut live_conn, &shadow_path).unwrap();
+
+    let track_count: i64 = live_conn.query_row("SELECT COUNT(*) FROM tracks", [], |r| r.get(0)).unwrap();
+    assert_eq!(track_count, 2);
+    let album_count: i64 = live_conn.query_row("SELECT COUNT(*) FROM albums", [], |r| r.get(0)).unwrap();
+    assert_eq!(album_count, 1);
+    let playlist_track_count: i64 =
+        live_conn.query_row("SELECT COUNT(*) FROM playlist_tracks", [], |r| r.get(0)).unwrap();
+    assert_eq!(playlist_track_count, 2);
 }

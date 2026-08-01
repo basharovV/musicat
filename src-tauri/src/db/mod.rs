@@ -8,6 +8,7 @@
 //! from the frontend yet.
 
 pub mod commands;
+pub mod migration;
 pub mod models;
 pub mod playlists;
 pub mod pool;
@@ -60,7 +61,7 @@ impl Database {
     }
 }
 
-fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
     let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let file_name = if cfg!(debug_assertions) {
         "musicat-dev.sqlite3"
@@ -68,4 +69,12 @@ fn db_path(app: &AppHandle) -> Result<PathBuf, String> {
         "musicat.sqlite3"
     };
     Ok(data_dir.join(file_name))
+}
+
+/// Scratch file for the one-time Dexie migration (`db::migration`) — written
+/// and verified here, never opened directly by the live pool/writer, then
+/// attached-and-copied into the live database on cutover.
+pub(crate) fn shadow_db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(data_dir.join("musicat-migration-shadow.sqlite3"))
 }

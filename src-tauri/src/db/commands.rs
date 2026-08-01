@@ -13,6 +13,7 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::metadata::{Album, Song};
 
+use super::migration::{MigrationReport, VerificationReport};
 use super::models::Playlist;
 use super::query::{Page, QuerySpec};
 use super::settings::Settings;
@@ -137,4 +138,72 @@ pub async fn reimport_playlist_from_file(playlist_id: String, db: State<'_, Data
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrationOutcome {
+    pub report: MigrationReport,
+    pub verification: VerificationReport,
+}
+
+/// Parses a `dexie-export-import` export (produced headlessly by the
+/// frontend calling `exportDB(db)` — see `src/data/db.ts`) and writes it into
+/// a shadow SQLite file, separate from the live database. Does not touch the
+/// live database at all; call `cutover_migrated_database` once the caller has
+/// inspected `verification.ok`.
+#[tauri::command]
+pub async fn run_shadow_migration_from_dexie(export_json: String, app: AppHandle) -> Result<MigrationOutcome, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let export: super::migration::DexieExport =
+            serde_json::from_str(&export_json).map_err(|e| format!("invalid Dexie export: {e}"))?;
+
+        let shadow_path = super::shadow_db_path(&app)?;
+        if shadow_path.exists() {
+            std::fs::remove_file(&shadow_path).map_err(|e| e.to_string())?;
+        }
+        let mut shadow_conn = rusqlite::Connection::open(&shadow_path).map_err(|e| e.to_string())?;
+        super::schema::run_migrations(&mut shadow_conn).map_err(|e| e.to_string())?;
+
+        let report = super::migration::migrate(&mut shadow_conn, &export)?;
+        let verification = super::migration::verify(&export, &shadow_conn)?;
+
+        Ok(MigrationOutcome { report, verification })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Folds a shadow-migrated, verified database into the live one. Errors if
+/// there's no shadow file (i.e. `run_shadow_migration_from_dexie` hasn't run)
+/// — callers are expected to have checked `verification.ok` themselves before
+/// calling this, since a failed verification is not this function's problem
+/// to detect twice.
+#[tauri::command]
+pub async fn cutover_migrated_database(db: State<'_, Database>, app: AppHandle) -> Result<(), String> {
+    let shadow_path = super::shadow_db_path(&app)?;
+    if !shadow_path.exists() {
+        return Err("no pending migration: run_shadow_migration_from_dexie hasn't produced a shadow database".to_string());
+    }
+
+    let writer = db.writer.clone();
+    let cutover_path = shadow_path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::migration::cutover(conn, &cutover_path))?;
+        writer.execute(move |conn| {
+            let mut settings = super::settings::get_settings(conn)?;
+            settings.migrated_from_dexie_at = Some(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as i64,
+            );
+            super::settings::update_settings(conn, &settings)
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    std::fs::remove_file(&shadow_path).map_err(|e| e.to_string())?;
+    Ok(())
 }
