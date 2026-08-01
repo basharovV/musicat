@@ -81,6 +81,18 @@ pub async fn delete_tracks(track_ids: Vec<String>, db: State<'_, Database>) -> R
 }
 
 #[tauri::command]
+pub async fn add_track_stem(
+    track_id: String,
+    stem: crate::stem_separator::Stem,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::add_track_stem(conn, &track_id, &stem)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn get_playlist_by_id(id: String, db: State<'_, Database>) -> Result<Option<Playlist>, String> {
     let pool = db.pool.clone();
     tauri::async_runtime::spawn_blocking(move || {

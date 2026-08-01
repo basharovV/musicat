@@ -181,13 +181,7 @@
                 // Show error
                 toast.error(response.error);
             } else {
-                const songIdToOldAlbumId = {};
-
-                for (const song of songs) {
-                    songIdToOldAlbumId[song.id] = album.id;
-                }
-
-                reImport(response, songs, songIdToOldAlbumId);
+                reImport(response);
 
                 toast.success("Successfully re-imported album!", {
                     position: "top-right",

@@ -42,7 +42,7 @@
     import MetadataSection from "./MetadataSection.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import { get } from "svelte/store";
-    import { getAlbumId, reImport } from "../../data/LibraryUtils";
+    import { reImport } from "../../data/LibraryUtils";
     import { getImageExtension } from "../../utils/FileUtils";
 
     // The artwork for this track(s)
@@ -349,7 +349,6 @@
 
         const writtenTracks = $rightClickedTracks;
         const tracks = [];
-        const songIdToOldAlbumId = {};
 
         for (const song of writtenTracks) {
             tracks.push(
@@ -363,8 +362,6 @@
                     type,
                 ),
             );
-
-            songIdToOldAlbumId[song.id] = getAlbumId(song);
         }
         console.log("Writing: ", tracks);
 
@@ -385,7 +382,7 @@
                     // Roll back to current artwork
                     rollbackArtwork();
                 } else {
-                    reImport(toImport, writtenTracks, songIdToOldAlbumId);
+                    reImport(toImport);
 
                     toast.success("Successfully written metadata!", {
                         position: "top-right",

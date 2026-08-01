@@ -273,3 +273,22 @@ pub fn delete_tracks(conn: &mut Connection, track_ids: &[String]) -> Result<Vec<
     tx.commit().map_err(|e| e.to_string())?;
     Ok(deleted_albums)
 }
+
+/// Appends `stem` to a track's stem list (a no-op if a stem with that name
+/// is already recorded) — used after stem separation finishes.
+pub fn add_track_stem(conn: &Connection, track_id: &str, stem: &crate::stem_separator::Stem) -> Result<(), String> {
+    let stems_json: Option<String> =
+        conn.query_row("SELECT stems FROM tracks WHERE id = ?1", [track_id], |r| r.get(0)).map_err(|e| e.to_string())?;
+    let mut stems: Vec<crate::stem_separator::Stem> =
+        stems_json.and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+    if stems.iter().any(|s| s.name == stem.name) {
+        return Ok(());
+    }
+    stems.push(stem.clone());
+    conn.execute(
+        "UPDATE tracks SET stems = ?1 WHERE id = ?2",
+        rusqlite::params![serde_json::to_string(&stems).unwrap(), track_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}

@@ -4,11 +4,9 @@ import { audioDir } from "@tauri-apps/api/path";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
-import { uniq } from "lodash-es";
 import md5 from "md5";
 import { get } from "svelte/store";
 import type {
-    Album,
     LookForArtResult,
     MetadataEntry,
     Song,
@@ -17,9 +15,7 @@ import type {
     ToImport,
     ToImportAlbums,
 } from "../App";
-import ImportWorker from "../ImportWorker?worker";
 import { getImageFormat, isImageFile } from "../utils/FileUtils";
-import { db } from "./db";
 import { bottomBarNotification, importStatus, userSettings } from "./store";
 const appWindow = getCurrentWebviewWindow();
 
@@ -99,152 +95,48 @@ export async function importPaths(
     }
 }
 
+/**
+ * Rust streams scanned songs/albums as separate, independently-timed chunks
+ * (`import_chunk` / `import_albums` events) as it walks the filesystem, so
+ * albums for a batch of songs can arrive before or after the songs
+ * themselves. `upsert_tracks` copes with that ordering on its own (see
+ * `db::mutations`), so this just needs to write each chunk as it arrives and
+ * track when both streams are done to flip `importStatus` to "Done".
+ *
+ * This used to hand every chunk to a Web Worker running Dexie, since
+ * IndexedDB writes could block the main thread. `invoke()` calls don't --
+ * the write itself happens on Rust's writer thread -- so that indirection is
+ * gone; chunks are written directly here.
+ */
 export async function startImportListener() {
     let songCount = 0;
     let albumCount = 0;
-    let chunksToProcess: ToImport[] = []; // progress numbers
-    let gotAllChunks = false;
-    var albumChunksToProcess: ToImportAlbums[] = [];
-    let currentAlbumChunk = null;
-    let gotAllAlbums = false;
-    let isWaitingForAlbumChunk = false;
-    let worker: Worker;
+    let songChunksInFlight = 0;
+    let gotAllSongChunks = false;
+    let albumChunksInFlight = 0;
+    let gotAllAlbumChunks = false;
 
-    const importAlbumChunk = async (chunk: ToImportAlbums) => {
-        console.log("import new chunk", chunk);
-        currentAlbumChunk = chunk;
-        let isBackground = false;
-
-        if (chunk.albums.length) {
-            albumCount += chunk.albums.length;
-            // Import album chunk
-            importStatus.update((importStatus) => {
-                isBackground = importStatus.backgroundImport;
-                return {
-                    ...importStatus,
-                    status: "Processing albums",
-                    percent: chunk.progress,
-                };
-            });
-            if (isBackground && albumCount) {
-                bottomBarNotification.set({
-                    text: `Updating library (${albumCount} albums imported)`,
-                });
-            }
-            console.log("importing album chunk", chunk);
-            worker.postMessage({
-                function: "bulkAlbumPut",
-                toImport: chunk,
-            });
-        }
-    };
-
-    const onBulkAlbumPutDone = async (ev) => {
-        console.log("bulkAlbumPutDone", ev.data, albumChunksToProcess);
-        // Import chunk completed
-        let idx = albumChunksToProcess.findIndex(
-            (c) => c.progress === ev.data.progress,
-        );
-        console.log("idx", idx);
-        if (idx !== -1) {
-            albumChunksToProcess.splice(idx, 1);
-        }
-
-        console.log("albumChunksToProcess", albumChunksToProcess);
-        if (!ev.data.done && albumChunksToProcess.length === 0) {
-            // Wait for chunk
-            isWaitingForAlbumChunk = true;
-            return;
-        } else if (!ev.data.done && albumChunksToProcess.length) {
-            isWaitingForAlbumChunk = false;
-            await importAlbumChunk(albumChunksToProcess[0]);
-        } else if (
-            ev.data.done &&
-            gotAllAlbums &&
-            albumChunksToProcess.length === 0
+    const maybeFinish = () => {
+        if (
+            songChunksInFlight === 0 &&
+            gotAllSongChunks &&
+            albumChunksInFlight === 0 &&
+            gotAllAlbumChunks
         ) {
-            console.log("ALL ALBUMS IMPORTED., TERMINATING");
-            worker.terminate();
-            gotAllAlbums = false;
-            worker = null;
-            currentAlbumChunk = null;
-        }
-
-        if (ev.data.done) {
             importStatus.update((importStatus) => ({
                 ...importStatus,
                 status: "Done",
                 isImporting: false,
                 backgroundImport: false,
             }));
+            scanExistingStems();
             bottomBarNotification.set(null);
         }
     };
 
     await appWindow.listen<ToImport>("import_chunk", async (event) => {
-        if (!worker) {
-            worker = new ImportWorker();
-        }
-
-        worker.onmessage = async (ev) => {
-            switch (ev.data.event) {
-                case "handleImportDone":
-                    // Import chunk completed
-                    chunksToProcess.splice(
-                        chunksToProcess.findIndex(
-                            (c) => c.progress === ev.data.progress,
-                        ),
-                        1,
-                    );
-
-                    console.log("handleImportDone");
-                    console.log("chunksToProcess", chunksToProcess);
-                    console.log("albumChunksToProcess", albumChunksToProcess);
-                    console.log("gotAllChunks", gotAllChunks);
-                    if (
-                        chunksToProcess.length === 0 &&
-                        !ev.data.done &&
-                        albumChunksToProcess.length &&
-                        !currentAlbumChunk
-                    ) {
-                        console.log("STARTING ALBUM IMPORT");
-                        // We have more stuff to import?
-                        await importAlbumChunk(albumChunksToProcess[0]);
-                        return;
-                    }
-                    // Terminate if last one
-                    else if (
-                        chunksToProcess.length === 0 &&
-                        gotAllChunks &&
-                        albumChunksToProcess.length === 0 &&
-                        toImport.done
-                    ) {
-                        console.log("Terminating");
-                        worker.terminate();
-                        chunksToProcess = [];
-                        gotAllChunks = false;
-                        worker = null;
-                    }
-
-                    // Import is complete (no albums)
-                    if (toImport.done) {
-                        importStatus.update((importStatus) => ({
-                            ...importStatus,
-                            status: "Done",
-                            isImporting: false,
-                            backgroundImport: false,
-                        }));
-
-                        scanExistingStems();
-                        bottomBarNotification.set(null);
-                    }
-                    break;
-                case "bulkAlbumPutDone":
-                    await onBulkAlbumPutDone(ev);
-                    scanExistingStems();
-                    break;
-            }
-        };
+        const toImport = event.payload;
+        gotAllSongChunks = toImport.progress === 100;
 
         let isBackground = false;
         importStatus.update((importStatus) => {
@@ -252,7 +144,7 @@ export async function startImportListener() {
             return {
                 ...importStatus,
                 status: "Writing to library",
-                percent: event.payload.progress,
+                percent: toImport.progress,
             };
         });
         if (isBackground && songCount) {
@@ -260,30 +152,53 @@ export async function startImportListener() {
                 text: `Updating library (${songCount} imported)`,
             });
         }
-        const toImport = event.payload;
-        gotAllChunks = event.payload.progress === 100;
+
+        if (!toImport.songs.length) {
+            maybeFinish();
+            return;
+        }
+
         songCount += toImport.songs.length;
-        if (toImport.songs.length) {
-            chunksToProcess.push(toImport);
-            worker.postMessage({
-                function: "handleImport",
-                toImport: toImport,
-            });
+        songChunksInFlight++;
+        try {
+            await invoke("upsert_tracks", { tracks: toImport.songs });
+        } finally {
+            songChunksInFlight--;
+            maybeFinish();
         }
     });
 
     await appWindow.listen<ToImportAlbums>("import_albums", async (event) => {
-        console.log("import_albums", event, albumChunksToProcess.length);
-        gotAllAlbums = event.payload.progress === 100;
-        albumChunksToProcess.push(event.payload);
-        console.log("worker", worker);
-        console.log("chunksToProcess", chunksToProcess);
-        console.log("gotAllChunks", gotAllChunks);
-        console.log("currentAlbumChunk", currentAlbumChunk);
-        if (worker && chunksToProcess.length === 0 && gotAllChunks) {
-            console.log("STARTING ALBUM IMPORT");
-            // Start putting albums
-            await importAlbumChunk(albumChunksToProcess[0]);
+        const chunk = event.payload;
+        gotAllAlbumChunks = chunk.progress === 100;
+
+        if (!chunk.albums.length) {
+            maybeFinish();
+            return;
+        }
+
+        albumCount += chunk.albums.length;
+        let isBackground = false;
+        importStatus.update((importStatus) => {
+            isBackground = importStatus.backgroundImport;
+            return {
+                ...importStatus,
+                status: "Processing albums",
+                percent: chunk.progress,
+            };
+        });
+        if (isBackground && albumCount) {
+            bottomBarNotification.set({
+                text: `Updating library (${albumCount} albums imported)`,
+            });
+        }
+
+        albumChunksInFlight++;
+        try {
+            await invoke("upsert_albums", { albums: chunk.albums });
+        } finally {
+            albumChunksInFlight--;
+            maybeFinish();
         }
     });
 }
@@ -353,41 +268,13 @@ export async function getArtistProfileImage(
 }
 
 /**
- * Deletes tracks and associated albums from the library
+ * Deletes tracks and any album left with none of its tracks remaining as a
+ * result -- the orphan check now happens against the database's own state
+ * (see `db::mutations::delete_tracks`) rather than being computed here.
  * @param tracks list of tracks
  */
 export async function deleteFromLibrary(tracks: Song[]) {
-    const albumsToDelete = [];
-    const checkedAlbums = {};
-
-    for (const track of tracks) {
-        const albumId = getAlbumId(track);
-
-        if (!checkedAlbums[albumId]) {
-            console.log("checking album", albumId);
-
-            const album = await db.albums.get(albumId);
-
-            if (
-                album &&
-                album.tracksIds.every((id) =>
-                    tracks.map((t) => t.id).includes(id),
-                )
-            ) {
-                albumsToDelete.push(album.id);
-            }
-
-            checkedAlbums[albumId] = true;
-        }
-    }
-    console.log("albumsToDelete", albumsToDelete);
-
-    await db.transaction("rw", db.songs, db.albums, async () => {
-        await db.songs.bulkDelete(tracks.map((t) => t.id));
-        if (albumsToDelete.length) {
-            await db.albums.bulkDelete(albumsToDelete);
-        }
-    });
+    await invoke("delete_tracks", { trackIds: tracks.map((t) => t.id) });
 }
 
 export function getAlbumId(track: Song): string {
@@ -410,71 +297,18 @@ export function songMatchesQuery(song: Song, query: string) {
     );
 }
 
-export async function reImport(
-    response: ToImport,
-    oldSongs: Song[],
-    songIdToOldAlbumId: { [key: string]: string },
-) {
-    await db.transaction("rw", db.songs, db.albums, async () => {
-        await reImportTracks(response.songs, oldSongs);
-
-        for (const album of response.albums) {
-            await reImportAlbum(album, songIdToOldAlbumId);
-        }
-    });
-}
-
-async function reImportAlbum(
-    newAlbum: Album,
-    songIdToOldAlbumId: { [key: string]: string },
-) {
-    const existingAlbum = await db.albums.get(newAlbum.id);
-
-    // remove duplicate
-    const oldAlbums = [existingAlbum?.id];
-
-    for await (const trackId of newAlbum.tracksIds) {
-        const albumId = songIdToOldAlbumId[trackId];
-
-        if (albumId && !oldAlbums.includes(albumId)) {
-            oldAlbums.push(albumId);
-
-            await db.albums.delete(albumId);
-        }
+/**
+ * Rescans one or more existing tracks (e.g. after writing new tags to the
+ * file) and refreshes their metadata in place. User-owned fields (favourite,
+ * play count, tags, ...) and stale-album cleanup are both handled server-side
+ * now -- see `db::mutations::upsert_tracks` -- so this is just a straight
+ * write of what the rescan produced, no client-side merge bookkeeping needed.
+ */
+export async function reImport(response: ToImport) {
+    await invoke("upsert_tracks", { tracks: response.songs });
+    if (response.albums.length) {
+        await invoke("upsert_albums", { albums: response.albums });
     }
-
-    if (existingAlbum) {
-        existingAlbum.artist = newAlbum.artist;
-        existingAlbum.artwork = newAlbum.artwork;
-        existingAlbum.displayTitle = newAlbum.displayTitle;
-        existingAlbum.genre = newAlbum.genre;
-        existingAlbum.title = newAlbum.title;
-        existingAlbum.year = newAlbum.year;
-        existingAlbum.tracksIds = uniq([
-            ...existingAlbum.tracksIds,
-            ...newAlbum.tracksIds,
-        ]);
-
-        await db.albums.put(existingAlbum);
-    } else {
-        await db.albums.put(newAlbum);
-    }
-}
-
-async function reImportTracks(newSongs: Song[], oldSongs: Song[]) {
-    // Map user-specific fields
-    for (const oldSong of oldSongs) {
-        const newSong = newSongs.find((s) => s.id === oldSong.id);
-        if (newSong) {
-            newSong.isFavourite = oldSong.isFavourite;
-            newSong.playCount = oldSong.playCount;
-            newSong.originCountry = oldSong.originCountry;
-            newSong.tags = oldSong.tags;
-            newSong.markers = oldSong.markers;
-        }
-    }
-
-    await db.songs.bulkPut(newSongs);
 }
 
 async function scanExistingStems() {
@@ -482,23 +316,16 @@ async function scanExistingStems() {
 
     console.log("Got stems", stems);
 
-    // For each stem, check if song exists that has 'stems',
-    // if it doesn,t add it
-
+    // For each stem, check if a track exists that doesn't have it recorded yet.
     for (const stem of stems) {
-        const song = await db.songs.get(stem.id);
-        if (song) {
-            if (!song.stems) {
-                song.stems = [];
-            }
-            if (song.stems.find((s) => s.name === stem.name)) {
-                continue;
-            }
-            song.stems.push({
-                name: stem.name,
-                path: stem.path,
+        try {
+            await invoke("add_track_stem", {
+                trackId: stem.id,
+                stem: { name: stem.name, path: stem.path },
             });
-            await db.songs.put(song);
+        } catch (e) {
+            // Track may not exist (yet) -- not fatal, next scan will retry.
+            console.error("Error recording stem for track", stem.id, e);
         }
     }
 }

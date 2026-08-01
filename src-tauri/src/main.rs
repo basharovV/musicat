@@ -395,7 +395,8 @@ fn main() {
             db::commands::delete_playlist,
             db::commands::upsert_tracks,
             db::commands::upsert_albums,
-            db::commands::delete_tracks
+            db::commands::delete_tracks,
+            db::commands::add_track_stem
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

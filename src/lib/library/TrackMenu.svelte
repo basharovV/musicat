@@ -251,7 +251,7 @@
                 // Show error
                 toast.error(response.error);
             } else {
-                reImport(response, song ? [song] : songs, {});
+                reImport(response);
 
                 toast.success(
                     `Successfully re-imported track${song ? "" : "s"}!`,
