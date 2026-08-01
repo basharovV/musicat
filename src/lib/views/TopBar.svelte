@@ -2,13 +2,13 @@
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { Buffer } from "buffer";
     import type { Song } from "../../App";
-    import { db } from "../../data/db";
     import {
         current,
         isPlaying,
         isShuffleEnabled,
         isSidebarOpen,
         lastWrittenSongs,
+        libraryUpdater,
         playerTime,
         popupOpen,
         queriedSongs,
@@ -93,7 +93,11 @@
     async function favouriteCurrentSong() {
         if (!$current.song) return;
         $current.song.isFavourite = !$current.song.isFavourite;
-        await db.songs.put($current.song);
+        await invoke("update_track_favourite", {
+            trackId: $current.song.id,
+            isFavourite: $current.song.isFavourite,
+        });
+        libraryUpdater.update((n) => n + 1);
         $current = $current;
     }
 </script>

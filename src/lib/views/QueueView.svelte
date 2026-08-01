@@ -1,6 +1,7 @@
 <!-- SongDataGrid.svelte -->
 
 <script lang="ts">
+    import { invoke } from "@tauri-apps/api/core";
     import { onMount } from "svelte";
     import { Group, Layer, Path, Rect, Stage, Text } from "svelte-konva";
 
@@ -10,7 +11,6 @@
     import { onDestroy } from "svelte";
     import { cubicInOut } from "svelte/easing";
     import { fade } from "svelte/transition";
-    import { db } from "../../data/db";
 
     import Konva from "konva";
     import {
@@ -23,6 +23,7 @@
         isShuffleEnabled,
         isSmartQueryBuilderOpen,
         libraryScrollPos,
+        libraryUpdater,
         os,
         popupOpen,
         queriedSongs,
@@ -793,9 +794,8 @@
     // Favourite
 
     async function favouriteSong(song: Song) {
-        await db.songs.update(song, {
-            isFavourite: true,
-        });
+        await invoke("update_track_favourite", { trackId: song.id, isFavourite: true });
+        libraryUpdater.update((n) => n + 1);
 
         song.isFavourite = true;
 
@@ -807,9 +807,8 @@
     }
 
     async function unfavouriteSong(song: Song) {
-        await db.songs.update(song, {
-            isFavourite: false,
-        });
+        await invoke("update_track_favourite", { trackId: song.id, isFavourite: false });
+        libraryUpdater.update((n) => n + 1);
 
         song.isFavourite = false;
 

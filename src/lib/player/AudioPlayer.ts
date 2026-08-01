@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { get } from "svelte/store";
 import type { ArtworkSrc, Song, ToImport } from "../../App";
-import { db, getAlbum, getAlbumTracks } from "../../data/db";
+import { getAlbum, getAlbumTracks } from "../../data/db";
 import {
     current,
     currentSongArtworkSrc,
@@ -602,9 +602,7 @@ class AudioPlayer {
     }
 
     async incrementPlayCounter(song: Song) {
-        await db.songs.update(song, {
-            playCount: song.playCount ? song.playCount + 1 : 1,
-        });
+        await invoke("increment_track_play_count", { trackId: song.id });
     }
 
     // MEDIA

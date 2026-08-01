@@ -1,7 +1,7 @@
 <!-- SongDataGrid.svelte -->
 
 <script lang="ts">
-    import { type Observable } from "dexie";
+    import { invoke } from "@tauri-apps/api/core";
     import hotkeys from "hotkeys-js";
     import { Layer as Lyr } from "konva/lib/Layer";
     import { Stage as Stg } from "konva/lib/Stage";
@@ -28,7 +28,6 @@
         type KonvaMouseEvent,
         type KonvaWheelEvent,
     } from "svelte-konva";
-    import { db } from "../../data/db";
 
     import Konva from "konva";
     import { Context } from "konva/lib/Context";
@@ -56,6 +55,7 @@
         isSmartQuerySaveUiOpen,
         isTagCloudOpen,
         libraryScrollPos,
+        libraryUpdater,
         os,
         popupOpen,
         queriedSongs,
@@ -104,7 +104,7 @@
     import StemsDropdown from "./StemsDropdown.svelte";
     import TrackMenu from "./TrackMenu.svelte";
 
-    export let songsReadable: Readable<Song[]> | Observable<Song[]> = null;
+    export let songsReadable: Readable<Song[]> = null;
     export let songsArray: Song[] = [];
     export let columnOrder: PersistentWritable<LibraryColumn[]>;
     export let dim = false;
@@ -1292,9 +1292,8 @@
     // Favourite
 
     async function favouriteSong(song: Song) {
-        await db.songs.update(song, {
-            isFavourite: true,
-        });
+        await invoke("update_track_favourite", { trackId: song.id, isFavourite: true });
+        libraryUpdater.update((n) => n + 1);
 
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = true;
@@ -1302,9 +1301,8 @@
     }
 
     async function unfavouriteSong(song: Song) {
-        await db.songs.update(song, {
-            isFavourite: false,
-        });
+        await invoke("update_track_favourite", { trackId: song.id, isFavourite: false });
+        libraryUpdater.update((n) => n + 1);
         if ($current.song?.id === song.id) {
             $current.song.isFavourite = false;
         }
