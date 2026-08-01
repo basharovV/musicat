@@ -1,11 +1,11 @@
 import { writeFile } from "@tauri-apps/plugin-fs";
 import WBK from "wikibase-sdk";
 import { getImageFormat } from "../utils/FileUtils";
-import { db } from "./db";
+import { queryAllTracks } from "./query";
 import type { Album, Song, ToImport } from "../App";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import md5 from "md5";
-import { addOriginCountryStatus, userSettings } from "./store";
+import { addOriginCountryStatus, libraryUpdater, userSettings } from "./store";
 import { path } from "@tauri-apps/api";
 import { get, type Writable } from "svelte/store";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -74,9 +74,9 @@ export async function fetchAlbumArt(
             });
         } else {
             const albumPath = song.path.replace(`/${song.file}`, "");
-            album = await db.albums.get(
-                md5(`${albumPath} - ${song.album}`.toLowerCase()),
-            );
+            album = await invoke<Album | null>("get_album_by_id", {
+                id: md5(`${albumPath} - ${song.album}`.toLowerCase()),
+            });
         }
     }
 
@@ -394,7 +394,9 @@ async function fetchImage(imageUrl?: string): Promise<ArrayBuffer | null> {
 }
 
 export async function addCountryDataAllSongs() {
-    const allArtists = await db.songs.orderBy("artist").uniqueKeys();
+    const allArtists = await invoke<string[]>("get_distinct_track_values", {
+        field: "artist",
+    });
     let count = 1;
     let delay = 0;
     const delayIncrement = 1000;
@@ -418,22 +420,29 @@ export async function addCountryDataAllSongs() {
     });
 }
 
+async function setOriginCountryForArtist(
+    artist: string,
+    country: string,
+): Promise<void> {
+    const artistSongs = await queryAllTracks({
+        filter: { kind: "cmp", field: "artist", op: "eq", value: artist },
+    });
+    await Promise.all(
+        artistSongs.map((s) =>
+            invoke("update_track_origin_country", {
+                trackId: s.id,
+                originCountry: country,
+            }),
+        ),
+    );
+    libraryUpdater.update((n) => n + 1);
+}
+
 export async function enrichArtistCountry(artist: string): Promise<void> {
     const country = await findCountryByArtist(artist);
     console.log("country", country);
     if (country) {
-        // Find all songs with this artist
-        const artistSongs = await db.songs
-            .where("artist")
-            .equals(artist)
-            .toArray();
-
-        db.songs.bulkPut(
-            artistSongs.map((s) => {
-                s.originCountry = country;
-                return s;
-            }),
-        );
+        await setOriginCountryForArtist(artist, country);
     }
 }
 
@@ -442,19 +451,7 @@ export async function enrichSongCountry(song: Song): Promise<void> {
     console.log("country", country);
     if (country) {
         song.originCountry = country;
-
-        // Find all songs with this artist
-        const artistSongs = await db.songs
-            .where("artist")
-            .equals(song.artist)
-            .toArray();
-
-        db.songs.bulkPut(
-            artistSongs.map((s) => {
-                s.originCountry = country;
-                return s;
-            }),
-        );
+        await setOriginCountryForArtist(song.artist, country);
     }
 }
 
@@ -475,7 +472,8 @@ export async function rescanAlbumArtwork(
     if (response?.albums?.length === 1 && response.albums[0].artwork) {
         album.artwork = response.albums[0].artwork;
 
-        await db.albums.put(album, album.id);
+        await invoke("upsert_albums", { albums: [album] });
+        libraryUpdater.update((n) => n + 1);
 
         return {
             success: "Artwork saved!",

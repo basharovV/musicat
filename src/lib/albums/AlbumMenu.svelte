@@ -4,9 +4,9 @@
     import { onMount } from "svelte";
     import toast from "svelte-french-toast";
     import type { Album, Song, ToImport } from "../../App";
-    import { db } from "../../data/db";
     import { reImport } from "../../data/LibraryUtils";
     import {
+        libraryUpdater,
         popupOpen,
         rightClickedAlbum,
         rightClickedTracks,
@@ -113,9 +113,11 @@
         if (album) {
             loadingType = "delete";
 
-            await db.songs.bulkDelete(album.tracksIds);
-            await db.albums.delete(album.id);
+            // delete_tracks also removes the album itself once it has no
+            // tracks left, so there's no separate "delete the album" call.
+            await invoke("delete_tracks", { trackIds: album.tracksIds });
             await removeQueuedSongs(album.tracksIds);
+            libraryUpdater.update((n) => n + 1);
 
             loadingType = null;
 
