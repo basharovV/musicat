@@ -521,6 +521,7 @@ fn row_to_song(row: &rusqlite::Row) -> rusqlite::Result<Song> {
             .and_then(|c| country_name(c.as_str()))
             .map(|c| c.to_string()),
         date_added: Some((row.get::<_, f64>(20).unwrap_or(0.0) * 1000.0) as u128),
+        ..Default::default()
     })
 }
 

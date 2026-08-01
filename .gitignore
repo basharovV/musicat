@@ -25,3 +25,6 @@ dist-ssr
 *.sw?
 
 test-files/
+
+# Local OpenSpec planning artifacts — not part of the shipped app, never committed
+openspec/

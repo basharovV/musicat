@@ -80,7 +80,7 @@ pub struct ScanPlaylistEvent {
     playlist: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FileInfo {
     pub duration: Option<f64>, //s
@@ -118,6 +118,13 @@ pub struct AlbumArtwork {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct Marker {
+    pub pos: f64, // seconds
+    pub title: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct Song {
     pub id: String,
     pub path: String,
@@ -153,6 +160,15 @@ pub struct Song {
     pub origin_country: Option<String>,
     pub origin_country_name: Option<String>,
     pub date_added: Option<u128>,
+
+    // User-specific, persisted alongside the extracted tag data once a track
+    // is in the library (see `db::models::row_to_track`).
+    pub play_count: i32,
+    pub is_favourite: bool,
+    pub tags: Vec<String>,
+    pub markers: Vec<Marker>,
+    pub stems: Vec<crate::stem_separator::Stem>,
+    pub song_project_id: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1434,6 +1450,7 @@ pub fn extract_metadata(
                             } else {
                                 None
                             },
+                            ..Default::default()
                         });
                     }
                     Err(e) => {

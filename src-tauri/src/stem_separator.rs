@@ -19,9 +19,9 @@ pub struct SeparateStemsResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Stem {
-    name: String,
-    path: String,
-    id: Option<String>,
+    pub name: String,
+    pub path: String,
+    pub id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

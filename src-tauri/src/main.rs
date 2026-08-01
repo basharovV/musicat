@@ -19,6 +19,7 @@ use crate::window::{handle_decorations, OpenedUrls, Payload};
 mod artwork;
 mod beets;
 mod constants;
+mod db;
 mod dsp;
 mod equalizer;
 mod files;
@@ -56,6 +57,10 @@ fn main() {
         .setup(|app| {
             let app_ = app.handle();
             let app2_ = app_.clone();
+
+            let database = db::Database::init(app_)
+                .expect("failed to initialize the SQLite storage foundation");
+            app.manage(database);
 
             tauri::async_runtime::spawn(async move {
                 updater::check_for_updates_on_startup(app2_).await;
@@ -368,7 +373,16 @@ fn main() {
             beets::get_beets_album_tracks,
             beets::get_albums_by_id,
             updater::check_for_updates,
-            updater::install_update
+            updater::install_update,
+            db::commands::query_tracks,
+            db::commands::query_albums,
+            db::commands::query_playlists,
+            db::commands::get_settings,
+            db::commands::update_settings,
+            db::commands::get_queue,
+            db::commands::set_queue,
+            db::commands::check_playlist_divergence,
+            db::commands::reimport_playlist_from_file
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
