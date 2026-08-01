@@ -611,3 +611,191 @@ fn distinct_track_values_and_library_counts() {
     assert_eq!(counts.tracks, 2);
     assert_eq!(counts.artists, 1);
 }
+
+#[test]
+fn query_tracks_treats_filter_values_as_bound_parameters_not_sql() {
+    let conn = open_test_db();
+    insert_track(&conn, "a", "Normal Song", 2000, false);
+
+    // The interpreter builds SQL structure (columns, `?` placeholders) via
+    // `format!`, but every filter *value* must go through `params.push(...)`
+    // and get bound, never spliced into the query text. Prove it: this value
+    // would drop the table if it were concatenated in instead.
+    let malicious = "x'; DROP TABLE tracks; --";
+    let spec = QuerySpec {
+        filter: Some(FilterNode::Cmp {
+            field: "title".into(),
+            op: CmpOp::Eq,
+            value: FilterValue::Text(malicious.to_string()),
+        }),
+        sort: None,
+        page: PageRequest::default(),
+    };
+
+    let page = query::query_tracks(&conn, &spec).unwrap();
+    assert!(page.items.is_empty(), "no track has that literal title");
+
+    let still_there: i64 = conn.query_row("SELECT COUNT(*) FROM tracks", [], |r| r.get(0)).unwrap();
+    assert_eq!(still_there, 1, "the tracks table must be untouched");
+}
+
+#[test]
+fn keyset_pagination_stable_when_rows_are_inserted_mid_pagination() {
+    let conn = open_test_db();
+    for i in 0..4 {
+        insert_track(&conn, &format!("t{i}"), &format!("Track {i}"), 2000 + i, false);
+    }
+
+    let spec_for = |cursor: Option<String>| QuerySpec {
+        filter: None,
+        sort: Some(SortKey { field: "year".into(), descending: false }),
+        page: PageRequest { cursor, offset: None, limit: 2 },
+    };
+
+    let page1 = query::query_tracks(&conn, &spec_for(None)).unwrap();
+    let first_ids: Vec<_> = page1.items.iter().map(|s| s.id.clone()).collect();
+    assert_eq!(first_ids, vec!["t0", "t1"]);
+    assert!(page1.has_more);
+
+    // A concurrent import lands between the two page fetches: one row that
+    // sorts before the cursor's position and one that sorts after it.
+    insert_track(&conn, "early", "Early", 1990, false);
+    insert_track(&conn, "late", "Late", 2999, false);
+
+    // Resuming from page 1's cursor must not re-show t0/t1 (no duplicates)
+    // and must not skip t2/t3 just because rows were inserted underneath it.
+    let page2 = query::query_tracks(&conn, &spec_for(page1.next_cursor)).unwrap();
+    let second_ids: Vec<_> = page2.items.iter().map(|s| s.id.clone()).collect();
+    assert_eq!(second_ids, vec!["t2", "t3"]);
+    assert!(page2.has_more, "the newly inserted 'late' row is still ahead of the cursor");
+
+    let page3 = query::query_tracks(&conn, &spec_for(page2.next_cursor)).unwrap();
+    let third_ids: Vec<_> = page3.items.iter().map(|s| s.id.clone()).collect();
+    assert_eq!(third_ids, vec!["late"]);
+    assert!(!page3.has_more);
+}
+
+#[test]
+fn writer_actor_never_interleaves_concurrent_read_modify_write_transactions() {
+    let conn = open_test_db();
+    conn.execute("CREATE TABLE counter (id INTEGER PRIMARY KEY, n INTEGER NOT NULL)", []).unwrap();
+    conn.execute("INSERT INTO counter (id, n) VALUES (1, 0)", []).unwrap();
+    let writer = WriterHandle::spawn(conn);
+
+    // Each thread does a classic read-then-write race on the same row. If the
+    // writer actor let these interleave instead of fully serializing each
+    // `execute` call, some increments would be lost and the final count
+    // would come out below the thread count.
+    let threads: Vec<_> = (0..25)
+        .map(|_| {
+            let writer = writer.clone();
+            std::thread::spawn(move || {
+                writer
+                    .execute(|conn| -> rusqlite::Result<()> {
+                        let n: i64 = conn.query_row("SELECT n FROM counter WHERE id = 1", [], |r| r.get(0))?;
+                        std::thread::sleep(std::time::Duration::from_micros(200));
+                        conn.execute("UPDATE counter SET n = ?1 WHERE id = 1", [n + 1])?;
+                        Ok(())
+                    })
+                    .unwrap();
+            })
+        })
+        .collect();
+
+    for t in threads {
+        t.join().unwrap();
+    }
+
+    let final_n: i64 = writer
+        .execute(|conn| conn.query_row("SELECT n FROM counter WHERE id = 1", [], |r| r.get(0)))
+        .unwrap();
+    assert_eq!(final_n, 25, "every increment must have applied, in some serial order, with none lost");
+}
+
+#[test]
+fn full_import_pipeline_produces_a_coherent_queryable_library() {
+    let mut conn = open_test_db();
+
+    // Mirrors the real import path (`LibraryUtils.ts`): tracks land first
+    // (creating placeholder albums), then the album batch supersedes those
+    // placeholders with full metadata -- two albums' worth of tracks in one
+    // realistic import batch.
+    let tracks = vec![
+        Song { artist: "Band A".into(), album: "First".into(), year: 2010, ..scanned_track("a1", "Intro", "album-1") },
+        Song { artist: "Band A".into(), album: "First".into(), year: 2010, ..scanned_track("a2", "Verse", "album-1") },
+        Song { artist: "Band A".into(), album: "First".into(), year: 2010, ..scanned_track("a3", "Outro", "album-1") },
+        Song { artist: "Band B".into(), album: "Second".into(), year: 2015, ..scanned_track("b1", "Opener", "album-2") },
+        Song { artist: "Band B".into(), album: "Second".into(), year: 2015, ..scanned_track("b2", "Closer", "album-2") },
+    ];
+    mutations::upsert_tracks(&mut conn, &tracks).unwrap();
+
+    let albums = vec![
+        Album {
+            id: "album-1".into(),
+            title: "first".into(),
+            display_title: "First".into(),
+            artist: "Band A".into(),
+            compilation: 0,
+            year: 2010,
+            genre: vec!["rock".into()],
+            tracks_ids: vec![],
+            path: "/music/first".into(),
+            artwork: None,
+            lossless: true,
+        },
+        Album {
+            id: "album-2".into(),
+            title: "second".into(),
+            display_title: "Second".into(),
+            artist: "Band B".into(),
+            compilation: 0,
+            year: 2015,
+            genre: vec!["jazz".into()],
+            tracks_ids: vec![],
+            path: "/music/second".into(),
+            artwork: None,
+            lossless: false,
+        },
+    ];
+    mutations::upsert_albums(&mut conn, &albums).unwrap();
+
+    // User-driven edits after import, same as any post-scan session.
+    mutations::update_track_favourite(&conn, "a1", true).unwrap();
+    mutations::update_track_tags(&conn, "a1", &["chill".to_string()]).unwrap();
+    mutations::update_track_tags(&conn, "b1", &["chill".to_string()]).unwrap();
+
+    let counts = query::get_library_counts(&conn).unwrap();
+    assert_eq!(counts.tracks, 5);
+    assert_eq!(counts.albums, 2);
+    assert_eq!(counts.artists, 2);
+
+    let album1 = query::get_album_by_id(&conn, "album-1").unwrap().unwrap();
+    assert_eq!(album1.display_title, "First");
+    let mut ids = album1.tracks_ids.clone();
+    ids.sort();
+    assert_eq!(ids, vec!["a1".to_string(), "a2".to_string(), "a3".to_string()]);
+
+    let album2 = query::get_album_by_id(&conn, "album-2").unwrap().unwrap();
+    assert_eq!(album2.tracks_ids.len(), 2);
+
+    // Tag filter spans both albums correctly.
+    let tagged = query::query_tracks(
+        &conn,
+        &QuerySpec {
+            filter: Some(FilterNode::Contains { field: "tags".into(), value: "chill".into() }),
+            sort: Some(SortKey { field: "id".into(), descending: false }),
+            page: PageRequest::default(),
+        },
+    )
+    .unwrap();
+    let tagged_ids: Vec<_> = tagged.items.iter().map(|s| s.id.clone()).collect();
+    assert_eq!(tagged_ids, vec!["a1".to_string(), "b1".to_string()]);
+
+    // Removing the rest of album-2's tracks cleans it up but leaves album-1
+    // (still populated) alone -- the pipeline's cleanup path, not just import.
+    let deleted_albums = mutations::delete_tracks(&mut conn, &["b1".to_string(), "b2".to_string()]).unwrap();
+    assert_eq!(deleted_albums, vec!["album-2".to_string()]);
+    assert!(query::get_album_by_id(&conn, "album-1").unwrap().is_some());
+    assert!(query::get_album_by_id(&conn, "album-2").unwrap().is_none());
+    assert_eq!(query::get_library_counts(&conn).unwrap().tracks, 3);
+}
