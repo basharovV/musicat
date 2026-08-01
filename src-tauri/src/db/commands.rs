@@ -93,6 +93,51 @@ pub async fn add_track_stem(
 }
 
 #[tauri::command]
+pub async fn list_smart_queries(db: State<'_, Database>) -> Result<Vec<super::smart_queries::SmartQuerySummary>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::smart_queries::list_smart_queries(&conn)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_smart_query(id: i64, db: State<'_, Database>) -> Result<Option<super::smart_queries::SmartQueryRow>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::smart_queries::get_smart_query(&conn, id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn save_smart_query(
+    id: Option<i64>,
+    name: String,
+    query_parts: serde_json::Value,
+    db: State<'_, Database>,
+) -> Result<i64, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::smart_queries::save_smart_query(conn, id, &name, &query_parts))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn delete_smart_query(id: i64, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::smart_queries::delete_smart_query(conn, id)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn get_playlist_by_id(id: String, db: State<'_, Database>) -> Result<Option<Playlist>, String> {
     let pool = db.pool.clone();
     tauri::async_runtime::spawn_blocking(move || {

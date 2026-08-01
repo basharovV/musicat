@@ -1,20 +1,15 @@
 <script lang="ts">
-    import { liveQuery } from "dexie";
     import SmartQuery from "../../data/SmartQueries";
-    import { db } from "../../data/db";
     import Icon from "../ui/Icon.svelte";
 
     import {
         isSmartQueryBuilderOpen,
         isSmartQuerySaveUiOpen,
+        savedSmartQueries,
         selectedSmartQuery,
         smartQueryInitiator,
         uiView,
     } from "../../data/store";
-
-    $: savedSmartQueries = liveQuery(async () => {
-        return db.smartQueries.toArray();
-    });
 
     function hideSmartQuery() {
         $uiView = "library";
@@ -51,7 +46,7 @@
 
             {#if $savedSmartQueries}
                 {#each $savedSmartQueries as query}
-                    <option value={`~usq:${query.name}`}>{query.name}</option>
+                    <option value={`~usq:${query.id}`}>{query.name}</option>
                 {/each}
             {/if}
         </select>

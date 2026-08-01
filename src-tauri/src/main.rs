@@ -396,7 +396,11 @@ fn main() {
             db::commands::upsert_tracks,
             db::commands::upsert_albums,
             db::commands::delete_tracks,
-            db::commands::add_track_stem
+            db::commands::add_track_stem,
+            db::commands::list_smart_queries,
+            db::commands::get_smart_query,
+            db::commands::save_smart_query,
+            db::commands::delete_smart_query
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

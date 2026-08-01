@@ -1,64 +1,20 @@
-import type { Collection, IndexableType } from "dexie";
-import type { Song } from "src/App";
+import { invoke } from "@tauri-apps/api/core";
 import { get } from "svelte/store";
-import { db } from "./db";
-import { query } from "./store";
+import { queryAllTracks } from "./query";
 import { LL } from "../i18n/i18n-svelte";
 
-function allTracks(): Collection<Song, IndexableType> {
-    // Not including title, because title is always populated with filename,
-    // even if metadata is missing
-    return db.songs.orderBy(get(query).orderBy);
-}
-function tracksWithEmptyMetadata(): Collection<Song, IndexableType> {
-    // Not including title, because title is always populated with filename,
-    // even if metadata is missing
-    return db.songs.where({ artist: "", album: "" });
-}
-
-async function artistsWithMultipleAlbums() {
-    const artistsWithMultipleAlbums = [];
-    const uniqueKeys = await db.songs.orderBy("artist").uniqueKeys();
-    for (const artist of uniqueKeys) {
-        // Perform a album query check
-        const albums = await db.songs
-            .orderBy("album")
-            .and((s) => s.artist === artist)
-            .uniqueKeys();
-        if (albums.length > 1) {
-            artistsWithMultipleAlbums.push(artist);
-        }
-    }
-    return db.songs.where("artist").anyOf(artistsWithMultipleAlbums);
-}
-
-function tracksLongerThan6Minutes() {
-    return db.songs.where("duration").above("06:00");
-}
-
-async function jazzFromThe50s() {
-    const keys = await db.songs.orderBy("genre").uniqueKeys();
-    console.log("genres", keys);
-    return db.songs
-        .where("genre")
-        .equals(["Jazz"])
-        .and((song) => song.year < 1960 && song.year > 1949);
-}
-
 async function favourites() {
-    return db.songs.filter((s) => s.isFavourite);
+    return queryAllTracks({
+        filter: { kind: "cmp", field: "isFavourite", op: "eq", value: true },
+    });
 }
 
 async function recentlyAdded() {
-    return db.songs.orderBy("dateAdded").reverse();
-}
-
-async function whereGenreIs(genre: string) {
-    return db.songs.where("genre").equals(genre);
+    return queryAllTracks({ sort: { field: "dateAdded", descending: true } });
 }
 
 async function withStems() {
-    return db.songs.filter((s) => s.stems?.length > 0);
+    return queryAllTracks({ filter: { kind: "notEmpty", field: "stems" } });
 }
 
 export async function findQuery(queryId: string) {
@@ -67,7 +23,7 @@ export async function findQuery(queryId: string) {
     if (!found) {
         let id = Number(queryId?.substring(5));
         if (id !== undefined && id !== null && !isNaN(id)) {
-            found = (await db.smartQueries.get(id)) ?? null;
+            found = (await invoke("get_smart_query", { id })) ?? null;
         }
     }
 

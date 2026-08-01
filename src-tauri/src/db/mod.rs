@@ -17,6 +17,7 @@ pub mod query;
 pub mod queue;
 pub mod schema;
 pub mod settings;
+pub mod smart_queries;
 #[cfg(test)]
 mod tests;
 mod writer;

@@ -107,8 +107,11 @@
                       isIndexed = false;
                   } else {
                       /**
-                       * Built-in smart queries support indexing, so they return a
-                       * Collection instead of an array.
+                       * Both saved and built-in smart queries run as a
+                       * QuerySpec against SQLite now (see SmartQuery.run() /
+                       * SmartQueries.ts), so both return a plain array --
+                       * neither needs the `isIndexed`/Collection handling
+                       * below anymore.
                        */
                       console.log("selected query: ", $selectedSmartQuery);
                       if ($selectedSmartQuery.startsWith("~usq:")) {
@@ -117,13 +120,12 @@
                               await SmartQuery.loadWithUQI($selectedSmartQuery);
                           results = await query.run();
                           console.log("results query: ", results);
-                          isIndexed = false;
                       } else {
                           // Run the query from built-in functions
                           results =
                               await BuiltInQueries[$selectedSmartQuery].run();
-                          isIndexed = true;
                       }
+                      isIndexed = false;
                       isSmartQueryResults = true;
                   }
               } else if ($query.length) {

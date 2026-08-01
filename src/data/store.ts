@@ -229,6 +229,27 @@ export async function refreshToDeletePlaylist() {
     }
 }
 
+export interface SavedSmartQuerySummary {
+    id: number;
+    name: string;
+}
+
+/**
+ * The saved-smart-query list shown in both `SmartQueryMainHeader.svelte`'s
+ * dropdown and the sidebar. Same "no change events yet, so callers refresh
+ * explicitly" situation as `toDeletePlaylist` above.
+ */
+export const savedSmartQueries: Writable<SavedSmartQuerySummary[]> = writable([]);
+
+export async function refreshSavedSmartQueries() {
+    try {
+        savedSmartQueries.set(await invoke<SavedSmartQuerySummary[]>("list_smart_queries"));
+    } catch (e) {
+        console.error("Error fetching saved smart queries", e);
+        savedSmartQueries.set([]);
+    }
+}
+
 export const popupOpen: Writable<PopupType> = writable(null);
 
 // The ui view for the main panel (also applies in compact view)
@@ -544,6 +565,7 @@ async function init() {
     });
 
     await refreshToDeletePlaylist();
+    await refreshSavedSmartQueries();
 
     if (!get(artworkDirectory)) {
         artworkDirectory.set(await pictureDir());

@@ -1,5 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { Song } from "src/App";
-import { db } from "../../data/db";
+import { queryAllTracks, type FilterNode } from "../../data/query";
 import { isSmartQueryValid, smartQueryUpdater } from "../../data/store";
 import type { SavedSmartQuery } from "./QueryPart";
 import { UserQueryPart } from "./UserQueryPart";
@@ -13,8 +14,14 @@ export default class SmartQuery {
     static async loadWithUQI(queryId: `~usq:${string}`): Promise<SmartQuery> {
         // Run the query from the user-built blocks
         const queryName = Number(queryId.substring(5));
-        const savedQuery = await db.smartQueries.get(queryName);
-        return new SmartQuery(savedQuery);
+        const saved = await invoke<{
+            id: number;
+            name: string;
+            queryParts: SavedSmartQuery["queryParts"];
+        } | null>("get_smart_query", { id: queryName });
+        return new SmartQuery(
+            saved ? { id: saved.id, name: saved.name, queryParts: saved.queryParts } : undefined,
+        );
     }
 
     constructor(savedQuery?: SavedSmartQuery) {
@@ -66,61 +73,39 @@ export default class SmartQuery {
     }
 
     async run(): Promise<Song[]> {
-        return this.parts.reduce(async (resultChain, currentPart) => {
-            return resultChain.then((results) => {
-                console.log("results", results);
-                console.log("checking part", currentPart);
-                if (currentPart.isValid) {
-                    const filtered = results.filter((song) => {
-                        try {
-                            const result = currentPart.run(song);
-                            return result;
-                        } catch (err) {
-                            console.error(err);
-                        }
-                    });
-                    console.log("filtered", filtered);
+        const nodes: FilterNode[] = this.parts
+            .filter((p) => p.isValid)
+            .map((p) => p.toFilterNode())
+            .filter((n): n is FilterNode => n !== null);
 
-                    return filtered;
-                } else {
-                    console.log("part " + currentPart.fieldKey + " is invalid");
-                }
-                return results;
-            });
-        }, Promise.resolve(db.songs.toArray()));
+        if (nodes.length === 0) {
+            return [];
+        }
+
+        return queryAllTracks({
+            filter: nodes.length === 1 ? nodes[0] : { kind: "and", nodes },
+        });
+    }
+
+    private serializedQueryParts(): SavedSmartQuery["queryParts"] {
+        return this.parts.map((p) => ({
+            ...p.queryPart,
+            values: Object.entries(p.userInputs).reduce(
+                (obj, current) => {
+                    obj[current[0]] = current[1].value;
+                    return obj;
+                },
+                {},
+            ),
+        }));
     }
 
     async save() {
-        if (this.id) {
-            await db.smartQueries.update(this.id, {
-                name: this.name,
-                queryParts: this.parts.map((p) => ({
-                    ...p.queryPart,
-                    values: Object.entries(p.userInputs).reduce(
-                        (obj, current) => {
-                            obj[current[0]] = current[1].value;
-                            return obj;
-                        },
-                        {},
-                    ),
-                })),
-            });
-
-            return this.id;
-        } else {
-            return await db.smartQueries.put({
-                name: this.name,
-                queryParts: this.parts.map((p) => ({
-                    ...p.queryPart,
-                    values: Object.entries(p.userInputs).reduce(
-                        (obj, current) => {
-                            obj[current[0]] = current[1].value;
-                            return obj;
-                        },
-                        {},
-                    ),
-                })),
-            });
-        }
+        this.id = await invoke<number>("save_smart_query", {
+            id: this.id ?? null,
+            name: this.name,
+            queryParts: this.serializedQueryParts(),
+        });
+        return this.id;
     }
 }

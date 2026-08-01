@@ -5,7 +5,7 @@ import type {
     QueryPartStructWithValues,
 } from "./QueryPart";
 import "../string.extensions";
-import type { Song } from "src/App";
+import { TRACK_FIELD_KIND, type FilterNode } from "../../data/query";
 
 function instanceOfQueryPartStructWithValues(
     object: any,
@@ -63,57 +63,72 @@ export class UserQueryPart {
         }
     }
 
-    run(song: Song): boolean {
+    /**
+     * Coerces a raw input value to what the field's SQL column actually
+     * holds (see `TRACK_FIELD_KIND`) rather than trusting the query part's
+     * declared `type`, which is inconsistent in `QueryParts.ts` (e.g.
+     * RELEASED_IN declares its year input as `type: "string"`).
+     */
+    private coerceValue(raw: InputType): string | number | boolean {
+        const kind = TRACK_FIELD_KIND[this.fieldKey] ?? "text";
+        if (kind === "int") {
+            return Math.trunc(Number(raw));
+        }
+        if (kind === "real") {
+            // "duration" is the only real-valued field. The UI collects it
+            // in minutes (see QueryParts.ts's LONGER_THAN) but the column is
+            // seconds -- convert here rather than at every call site.
+            return this.fieldKey === "duration" ? Number(raw) * 60 : Number(raw);
+        }
+        return String(raw);
+    }
+
+    /**
+     * Converts this part into a `QuerySpec` filter node, evaluated by the
+     * database instead of per-song in JS.
+     */
+    toFilterNode(): FilterNode | null {
         const comparison = this.queryPartWithValues
             ? this.queryPartWithValues.comparison
             : this.queryPart.comparison;
 
-        // Array handling eg. stems[]
-        const value = song[this.fieldKey];
-        if (Array.isArray(value) && comparison === "not-empty") {
-            return value.length > 0;
+        if (comparison === "not-empty") {
+            return { kind: "notEmpty", field: this.fieldKey };
         }
 
-        if (Object.values(this.userInputs).length === 0) return false;
+        if (Object.values(this.userInputs).length === 0) return null;
 
-        // String value handling
-        const lhs = String(song[this.fieldKey]).trim().toLowerCase();
-        const rhs1 = String(
-            this.queryPartWithValues
-                ? this.queryPartWithValues.values[
-                      Object.keys(this.queryPartWithValues.inputRequired)[0]
-                  ]
-                : Object.values(this.userInputs)[0].value,
-        ).toLowerCase();
-        const rhs2 = String(
-            this.queryPartWithValues
-                ? this.queryPartWithValues.values[
-                      Object.keys(this.queryPartWithValues.inputRequired)[1]
-                  ]
-                : Object.values(this.userInputs).length > 1
-                  ? Object.values(this.userInputs)[1].value
-                  : null,
-        ).toLowerCase();
+        const rhs1 = this.queryPartWithValues
+            ? this.queryPartWithValues.values[
+                  Object.keys(this.queryPartWithValues.inputRequired)[0]
+              ]
+            : Object.values(this.userInputs)[0].value;
+        const rhs2 = this.queryPartWithValues
+            ? this.queryPartWithValues.values[
+                  Object.keys(this.queryPartWithValues.inputRequired)[1]
+              ]
+            : Object.values(this.userInputs).length > 1
+              ? Object.values(this.userInputs)[1].value
+              : null;
 
         switch (comparison) {
             case "is-equal":
-                return lhs === rhs1;
+                return { kind: "cmp", field: this.fieldKey, op: "eq", value: this.coerceValue(rhs1) };
             case "contains":
-                return lhs.includes(rhs1);
+                return { kind: "contains", field: this.fieldKey, value: String(rhs1) };
             case "is-greater-than":
-                return lhs.localeCompare(rhs1) === 1;
+                return { kind: "cmp", field: this.fieldKey, op: "gt", value: this.coerceValue(rhs1) };
             case "is-less-than":
-                return lhs.localeCompare(rhs1) === -1;
+                return { kind: "cmp", field: this.fieldKey, op: "lt", value: this.coerceValue(rhs1) };
             case "is-between":
-                try {
-                    return (
-                        lhs.localeCompare(rhs1) === 1 &&
-                        lhs.localeCompare(rhs2) === -1
-                    );
-                } catch (err) {
-                    console.error("Unable to parse as number: ", rhs1, rhs2);
-                    return false;
-                }
+                return {
+                    kind: "between",
+                    field: this.fieldKey,
+                    min: this.coerceValue(rhs1),
+                    max: this.coerceValue(rhs2),
+                };
+            default:
+                return null;
         }
     }
 }

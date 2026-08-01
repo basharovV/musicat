@@ -9,6 +9,7 @@ use super::query::{self, CmpOp, FilterNode, FilterValue, PageRequest, QuerySpec,
 use super::queue;
 use super::schema;
 use super::settings::{self, Settings};
+use super::smart_queries;
 use super::writer::WriterHandle;
 
 fn open_test_db() -> Connection {
@@ -479,4 +480,27 @@ impl<T> OptionalNone for rusqlite::Result<T> {
     fn optional_none(self) -> bool {
         matches!(self, Err(rusqlite::Error::QueryReturnedNoRows))
     }
+}
+
+#[test]
+fn smart_query_save_update_delete_round_trip() {
+    let conn = open_test_db();
+    let parts = serde_json::json!([{"fieldKey": "isFavourite", "comparison": "is-equal"}]);
+
+    let id = smart_queries::save_smart_query(&conn, None, "Chill favourites", &parts).unwrap();
+    let loaded = smart_queries::get_smart_query(&conn, id).unwrap().unwrap();
+    assert_eq!(loaded.name, "Chill favourites");
+    assert_eq!(loaded.query_parts, parts);
+
+    let list = smart_queries::list_smart_queries(&conn).unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].name, "Chill favourites");
+
+    // Saving again with the same id updates in place, not a second row.
+    smart_queries::save_smart_query(&conn, Some(id), "Renamed", &parts).unwrap();
+    assert_eq!(smart_queries::list_smart_queries(&conn).unwrap().len(), 1);
+    assert_eq!(smart_queries::get_smart_query(&conn, id).unwrap().unwrap().name, "Renamed");
+
+    smart_queries::delete_smart_query(&conn, id).unwrap();
+    assert!(smart_queries::get_smart_query(&conn, id).unwrap().is_none());
 }
