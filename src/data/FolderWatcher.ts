@@ -1,13 +1,17 @@
+import { invoke } from "@tauri-apps/api/core";
 import { exists, watchImmediate } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
+import type { Song } from "../App";
 import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
 import { importPaths } from "./LibraryUtils";
 import { db } from "./db";
+import { queryAllTracks } from "./query";
 import {
     bottomBarNotification,
     currentSongProjects,
     isFolderWatchUpdate,
+    libraryUpdater,
     songbookArtists,
     songbookSelectedArtist,
     userSettings,
@@ -50,7 +54,10 @@ export async function startWatchingLibraryFolders() {
                                 console.error("err in fileexists");
                             }
                             const filehash = md5(path);
-                            const song = await db.songs.get(filehash);
+                            const song = await invoke<Song | null>(
+                                "get_track_by_id",
+                                { id: filehash },
+                            );
 
                             console.log(
                                 "[Folder watcher] File exists",
@@ -73,7 +80,10 @@ export async function startWatchingLibraryFolders() {
                                     text: "Folder watcher: File deleted - updating library...",
                                     timeout: 2000,
                                 });
-                                await db.songs.delete(filehash);
+                                await invoke("delete_tracks", {
+                                    trackIds: [filehash],
+                                });
+                                libraryUpdater.update((n) => n + 1);
                             }
                         }
                     } else if (result === "directory") {
@@ -85,29 +95,17 @@ export async function startWatchingLibraryFolders() {
                                 timeout: 2000,
                             });
                             // Deleted folder - delete all songs from db
-                            const songsToDelete = await db.songs
-                                .where("path")
-                                .startsWith(path);
-                            // Check if album needs to be deleted too
-                            const songsToCheck = await songsToDelete.toArray();
-                            const keys = await songsToDelete.primaryKeys();
-                            await db.songs.bulkDelete(keys);
-                            if (
-                                songsToCheck.every(
-                                    (s) => s.album === songsToCheck[0].album,
-                                )
-                            ) {
-                                const song = songsToCheck[0];
-                                const albumPath = song.path.replace(
-                                    `/${song.file}`,
-                                    "",
-                                );
-
-                                let id = md5(
-                                    `${albumPath} - ${song.album}`.toLowerCase(),
-                                );
-                                await db.albums.delete(id);
-                            }
+                            // (delete_tracks also removes any album left with
+                            // no tracks as a result, so no separate album
+                            // deletion step is needed here)
+                            const allTracks = await queryAllTracks({});
+                            const songsToDelete = allTracks.filter((s) =>
+                                s.path.startsWith(path),
+                            );
+                            await invoke("delete_tracks", {
+                                trackIds: songsToDelete.map((s) => s.id),
+                            });
+                            libraryUpdater.update((n) => n + 1);
                         } else {
                             console.log("[Folder watcher] Folder added");
                             bottomBarNotification.set({
