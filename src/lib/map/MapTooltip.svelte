@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { Album, MapTooltipData } from "../../App";
-    import { db } from "../../data/db";
     import md5 from "md5";
     import { userSettings } from "../../data/store";
     import { invoke } from "@tauri-apps/api/core";
@@ -14,11 +13,11 @@
                 albumIds: data?.albums.map((a) => a.id),
             });
         } else {
-            albums = await db.albums.bulkGet(
-                data?.albums.map((a) =>
+            albums = await invoke<(Album | null)[]>("get_albums_by_ids", {
+                ids: data?.albums.map((a) =>
                     md5(`${a.path} - ${a.album}`.toLowerCase()),
                 ),
-            );
+            });
             console.log("albums", albums);
             albums = albums.filter((a) => a?.artwork).slice(0, 5);
         }

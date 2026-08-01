@@ -5,8 +5,7 @@
     import { fly } from "svelte/transition";
     import { runScan } from "../../data/LibraryUtils";
 
-    import { liveQuery } from "dexie";
-    import { db } from "../../data/db";
+    import { invoke } from "@tauri-apps/api/core";
     import {
         bottomBarNotification,
         importStatus,
@@ -16,6 +15,7 @@
         isSidebarOpen,
         isWaveformOpen,
         isWikiOpen,
+        libraryUpdater,
         nextUpSong,
         userSettings,
     } from "../../data/store";
@@ -35,19 +35,17 @@
     let showVisualiser = true;
     let visualiserWidth = 0;
 
-    $: counts = liveQuery(async () => {
+    let counts: { tracks: number; artists: number; albums: number } | undefined;
+    $: {
+        $libraryUpdater;
         if ($importStatus.isImporting) {
-            return undefined;
+            counts = undefined;
+        } else {
+            invoke<{ tracks: number; artists: number; albums: number }>(
+                "get_library_counts",
+            ).then((c) => (counts = c));
         }
-        const artists = await (
-            await db.songs.orderBy("artist").uniqueKeys()
-        ).length;
-        const albums = await (
-            await db.songs.orderBy("album").uniqueKeys()
-        ).length;
-        const songs = await db.songs.count();
-        return { songs, artists, albums };
-    });
+    }
 
     nextUpSong.subscribe((nextUp) => {
         setTimeout(() => {
@@ -140,7 +138,7 @@
                 />
             </div>
         {/if}
-        {#if $counts !== undefined}
+        {#if counts !== undefined}
             <div
                 class="stats"
                 in:fly={{
@@ -150,15 +148,15 @@
                 }}
             >
                 <p class="songs">
-                    {$counts.songs}
+                    {counts.tracks}
                     {$LL.bottomBar.stats.songs()}
                 </p>
                 <!-- <p class="artists">
-                    {$counts.artists}
+                    {counts.artists}
                     {$LL.bottomBar.stats.artists()}
                 </p>
                 <p class="albums">
-                    {$counts.albums}
+                    {counts.albums}
                     {$LL.bottomBar.stats.albums()}
                 </p> -->
             </div>

@@ -1,27 +1,27 @@
 <script lang="ts">
+    import { invoke } from "@tauri-apps/api/core";
     import { onMount } from "svelte";
-    import { db } from "../../data/db";
     import {
         forceRefreshLibrary,
         isTagCloudOpen,
         isTagOrCondition,
+        libraryUpdater,
         selectedTags,
         uiView,
     } from "../../data/store";
-    import { liveQuery } from "dexie";
     import Toggle from "../ui/Toggle.svelte";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import LL from "../../i18n/i18n-svelte";
 
-    $: allTags = liveQuery(
-        async () => await db.songs.orderBy("tags").uniqueKeys(),
-    );
-
-    function dedupe(array: string[]) {
-        return [...new Set(array)];
+    let splitTags: string[] = [];
+    $: {
+        // Re-fetch whenever the library changes -- already distinct (the
+        // normalized tags table), no client-side dedupe needed.
+        $libraryUpdater;
+        invoke<string[]>("get_distinct_track_values", { field: "tags" }).then(
+            (tags) => (splitTags = tags),
+        );
     }
-
-    $: splitTags = dedupe($allTags?.flatMap((t) => t));
 
     function selectTag(tag: string) {
         if ($selectedTags?.has(tag)) {
