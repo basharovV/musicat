@@ -9,7 +9,6 @@ import {
 import md5 from "md5";
 import { get } from "svelte/store";
 import type { PlaylistFile, Song } from "../App";
-import { db } from "./db";
 import { selectedPlaylistFile, userPlaylists, userSettings } from "./store";
 import { moveArrayElement } from "../utils/ArrayUtils";
 import { invoke } from "@tauri-apps/api/core";
@@ -111,7 +110,9 @@ export async function parsePlaylist(
     // Do a db query to get all those songs
     const songIds = playlist.tracks.map((c) => md5(c.path));
     try {
-        const songs = await db.songs.bulkGet(songIds);
+        const songs = await invoke<(Song | null)[]>("get_tracks_by_ids", {
+            ids: songIds,
+        });
         console.log("M3U: got songs", songs);
         return songs;
     } catch (e) {
