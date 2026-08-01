@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { exists, watchImmediate } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
@@ -262,7 +263,7 @@ export async function startWatchingPlaylistsFolder() {
                     // expected structure: playlistsLocation/playlistName.m3u
 
                     // Check for file
-                    if (result === "file") {
+                    if (result === "file" && path.endsWith(".m3u")) {
                         const playlistFileName = path.split("/").pop();
                         console.log(
                             "[watcher] playlistName: ",
@@ -270,8 +271,30 @@ export async function startWatchingPlaylistsFolder() {
                         );
 
                         // We can't quite rely on the WatchEventKind to distinguish access/modify/remove,
-                        // so let's just re-scan the folder
+                        // so let's just re-scan the folder. This also tracks
+                        // any playlist we've never seen before, establishing
+                        // its baseline hash before the divergence check below
+                        // can run against it.
                         await scanPlaylists();
+
+                        // Deletes leave nothing to hash -- check_playlist_divergence
+                        // reads the file itself and would just error, and
+                        // scanPlaylists()/delete_playlist already handles
+                        // deletions via the folder rescan.
+                        const fileStillExists = await exists(path);
+                        if (fileStillExists) {
+                            try {
+                                await invoke("check_playlist_divergence", {
+                                    playlistId: md5(path),
+                                    filePath: path,
+                                });
+                            } catch (e) {
+                                console.error(
+                                    "[watcher] Error checking playlist divergence",
+                                    e,
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -280,4 +303,43 @@ export async function startWatchingPlaylistsFolder() {
     );
 
     return startWatching;
+}
+
+/**
+ * Listens for the Rust-side `playlist_diverged` event (emitted by
+ * `check_playlist_divergence` above) and prompts the user to reimport via
+ * the bottom bar. Call once at startup, alongside `startWatchingPlaylistsFolder`.
+ */
+export async function listenForPlaylistDivergence() {
+    return listen<{ playlistId: string }>(
+        "playlist_diverged",
+        ({ payload: { playlistId } }) => {
+            bottomBarNotification.set({
+                text: "A playlist file changed outside Musicat.",
+                action: {
+                    label: "Reimport",
+                    onClick: async () => {
+                        try {
+                            await invoke("reimport_playlist_from_file", {
+                                playlistId,
+                            });
+                            bottomBarNotification.set({
+                                text: "Playlist reimported",
+                                timeout: 2000,
+                            });
+                        } catch (e) {
+                            console.error(
+                                "[watcher] Error reimporting playlist",
+                                e,
+                            );
+                            bottomBarNotification.set({
+                                text: "Couldn't reimport playlist",
+                                timeout: 2000,
+                            });
+                        }
+                    },
+                },
+            });
+        },
+    );
 }

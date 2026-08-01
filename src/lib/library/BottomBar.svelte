@@ -177,6 +177,14 @@
                     <!-- Folder updated blab alb alfkbafadfoijadsofi -->
                     {$bottomBarNotification.text}
                 </p>
+                {#if $bottomBarNotification.action}
+                    <button
+                        class="notification-action"
+                        on:click={$bottomBarNotification.action.onClick}
+                    >
+                        {$bottomBarNotification.action.label}
+                    </button>
+                {/if}
             </div>
         {/if}
     </div>
@@ -287,10 +295,24 @@
             align-items: center;
             justify-content: flex-end;
             min-width: 140px;
+            gap: 0.75em;
             p {
                 color: var(--primary);
                 font-size: 13px;
                 margin: 0;
+                white-space: nowrap;
+            }
+            .notification-action {
+                flex-shrink: 0;
+                border: none;
+                border-radius: 5px;
+                padding: 0.3em 0.7em;
+                font-size: 12px;
+                font-weight: 600;
+                color: white;
+                background-color: var(--accent);
+                cursor: pointer;
+                white-space: nowrap;
             }
         }
 

@@ -349,6 +349,41 @@ pub async fn set_queue(track_ids: Vec<String>, db: State<'_, Database>) -> Resul
     .map_err(|e| e.to_string())?
 }
 
+/// Called by `M3UUtils.ts`'s `scanPlaylists()` for every `.m3u` file it
+/// finds, so a `playlists` row (and baseline content hash) exists before
+/// anything ever calls `check_playlist_divergence` on it.
+#[tauri::command]
+pub async fn ensure_playlist_tracked(
+    id: String,
+    title: String,
+    file_path: String,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::playlists::ensure_playlist_tracked(conn, &id, &title, &file_path))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Called by `M3UUtils.ts`'s `writePlaylist()` right after the app writes an
+/// `.m3u` file itself, so that write's hash becomes the new baseline instead
+/// of looking like external drift on the next divergence check.
+#[tauri::command]
+pub async fn record_playlist_own_write(
+    playlist_id: String,
+    content: String,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::playlists::record_own_write(conn, &playlist_id, content.as_bytes()))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistDivergedEvent {

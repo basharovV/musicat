@@ -26,6 +26,10 @@ interface ImportStatus {
 interface BottomBarNotification {
     text?: string;
     timeout?: number;
+    action?: {
+        label: string;
+        onClick: () => void;
+    };
 }
 
 interface FileInfo {

@@ -67,6 +67,35 @@ function write(m3u: M3U): string {
     return lines.join("\n");
 }
 
+/**
+ * Derives a stable id for a playlist from its file path, matching the
+ * md5(path) convention already used for track ids elsewhere (see
+ * `parsePlaylist` below and `FolderWatcher.ts`). Identity is the path, since
+ * that's the only thing `PlaylistFile` has -- renaming a playlist means a
+ * new id, handled explicitly in `renamePlaylist`.
+ */
+function playlistId(filePath: string): string {
+    return md5(filePath);
+}
+
+/**
+ * Makes sure the SQLite `playlists` row backing this file exists, so the
+ * playlists-folder watcher has something to diverge-check against. Errors
+ * are logged, not thrown -- divergence tracking is best-effort and shouldn't
+ * block the playlist actually being usable.
+ */
+async function ensurePlaylistTracked(playlistFile: PlaylistFile) {
+    try {
+        await invoke("ensure_playlist_tracked", {
+            id: playlistId(playlistFile.path),
+            title: playlistFile.title,
+            filePath: playlistFile.path,
+        });
+    } catch (e) {
+        console.error("[M3U] Error tracking playlist for divergence", e);
+    }
+}
+
 export async function scanPlaylists() {
     console.log("[M3U] Scanning playlists...");
     const playlistsLocation = get(userSettings).playlistsLocation;
@@ -91,6 +120,10 @@ export async function scanPlaylists() {
         }),
     );
     console.log("[M3U]: Playlists: ", m3uFiles);
+
+    // Cheap after the first scan (no-op once a baseline hash exists) -- see
+    // ensurePlaylistTracked.
+    await Promise.all(m3uFiles.map(ensurePlaylistTracked));
 }
 
 export async function parsePlaylist(
@@ -162,6 +195,17 @@ export async function renamePlaylist(
     const newPath = playlistFile.path.replace(playlistFile.title, newTitle);
     console.log(`Renaming ${playlistFile.path} to ${newPath}`);
     await rename(playlistFile.path, newPath);
+
+    // The playlist's tracked id is derived from its path, so a rename is a
+    // new row, not an update -- drop the old one and track the new path
+    // fresh (establishing a new baseline from its, unchanged, contents).
+    try {
+        await invoke("delete_playlist", { id: playlistId(playlistFile.path) });
+    } catch (e) {
+        console.error("[M3U] Error untracking renamed playlist", e);
+    }
+    await ensurePlaylistTracked({ path: newPath, title: newTitle });
+
     await scanPlaylists();
     selectedPlaylistFile.set({
         path: newPath,
@@ -175,6 +219,13 @@ export async function deletePlaylistFile(playlistFile: PlaylistFile) {
             files: [playlistFile.path],
         },
     });
+    try {
+        await invoke("delete_playlist", {
+            id: playlistId(playlistFile.path),
+        });
+    } catch (e) {
+        console.error("[M3U] Error untracking deleted playlist", e);
+    }
     await scanPlaylists();
 }
 
@@ -215,4 +266,22 @@ export async function writePlaylist(playlistFile: PlaylistFile, songs: Song[]) {
 
     // Write to file using fs, overwrite
     await writeTextFile(playlistFile.path, m3u);
+
+    // Record this as the app's own write so the folder watcher's next
+    // divergence check compares against it, not against a stale/missing
+    // baseline -- otherwise our own write would look like external drift.
+    try {
+        const id = playlistId(playlistFile.path);
+        await invoke("ensure_playlist_tracked", {
+            id,
+            title: playlistFile.title,
+            filePath: playlistFile.path,
+        });
+        await invoke("record_playlist_own_write", {
+            playlistId: id,
+            content: m3u,
+        });
+    } catch (e) {
+        console.error("[M3U] Error recording playlist write", e);
+    }
 }

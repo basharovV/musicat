@@ -79,6 +79,29 @@ pub fn record_own_write(conn: &Connection, playlist_id: &str, content: &[u8]) ->
     Ok(())
 }
 
+/// Ensures a playlists row exists for a discovered `.m3u` file, establishing
+/// a baseline content hash the first time we see it. Without this, a file
+/// that's never had a row (every pre-existing user playlist, the first time
+/// this ships, or one dropped into the folder externally) would read as
+/// "diverged" the moment anything checks it, since there'd be no stored hash
+/// to match. Called on every folder scan; idempotent after the first call --
+/// title/file_path stay in sync, but an existing hash/diverged state is left
+/// alone so this can't clobber a real pending divergence.
+pub fn ensure_playlist_tracked(conn: &Connection, id: &str, title: &str, file_path: &str) -> rusqlite::Result<()> {
+    upsert_playlist_header(conn, id, title, Some(file_path))?;
+    let has_baseline: bool = conn.query_row(
+        "SELECT content_hash IS NOT NULL FROM playlists WHERE id = ?1",
+        [id],
+        |row| row.get(0),
+    )?;
+    if !has_baseline {
+        if let Ok(content) = std::fs::read(file_path) {
+            record_own_write(conn, id, &content)?;
+        }
+    }
+    Ok(())
+}
+
 /// Called by the playlists-folder watcher on every change event for a linked
 /// file. Returns `true` if this is external drift the frontend should prompt
 /// about (i.e. the file's hash no longer matches what the app last wrote).

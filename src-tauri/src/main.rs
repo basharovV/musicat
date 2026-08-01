@@ -383,6 +383,8 @@ fn main() {
             db::commands::set_queue,
             db::commands::check_playlist_divergence,
             db::commands::reimport_playlist_from_file,
+            db::commands::ensure_playlist_tracked,
+            db::commands::record_playlist_own_write,
             db::commands::run_shadow_migration_from_dexie,
             db::commands::cutover_migrated_database,
             db::commands::get_track_by_id,

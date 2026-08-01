@@ -43,7 +43,11 @@
     import { cubicInOut, cubicOut } from "svelte/easing";
     import { get } from "svelte/store";
     import { blur, fade, fly } from "svelte/transition";
-    import { startWatchingLibraryFolders } from "./data/FolderWatcher";
+    import {
+        listenForPlaylistDivergence,
+        startWatchingLibraryFolders,
+        startWatchingPlaylistsFolder,
+    } from "./data/FolderWatcher";
     import { importPaths, startImportListener } from "./data/LibraryUtils";
     import { findQuery } from "./data/SmartQueries";
     import { resetDraggedSongs } from "./data/storeHelper";
@@ -142,6 +146,8 @@
     let unlistenThemeChange: UnlistenFn;
     let unlistenFileDrop: UnlistenFn;
     let unlistenFolderWatch: UnlistenFn;
+    let unlistenPlaylistsWatch: UnlistenFn;
+    let unlistenPlaylistDiverged: UnlistenFn;
 
     async function setupAppListeners() {
         window["onFileOpen"] = (urls) => {
@@ -199,6 +205,9 @@
             unlistenFolderWatch = await startWatchingLibraryFolders();
         });
 
+        unlistenPlaylistsWatch = await startWatchingPlaylistsFolder();
+        unlistenPlaylistDiverged = await listenForPlaylistDivergence();
+
         await appWindow.listen("update-status", ({ payload }: { payload: { status: string; version?: string; notes?: string; error?: string } }) => {
             $updaterStatus = {
                 ...$updaterStatus,
@@ -241,6 +250,8 @@
             unlistenThemeChange && unlistenThemeChange();
             unlistenFileDrop && unlistenFileDrop();
             unlistenFolderWatch && unlistenFolderWatch();
+            unlistenPlaylistsWatch && unlistenPlaylistsWatch();
+            unlistenPlaylistDiverged && unlistenPlaylistDiverged();
         };
     });
 

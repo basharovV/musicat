@@ -189,6 +189,37 @@ fn playlist_divergence_detects_external_edits_but_not_our_own() {
 }
 
 #[test]
+fn ensure_playlist_tracked_baselines_once_then_leaves_divergence_state_alone() {
+    let conn = open_test_db();
+    let dir = tempfile::tempdir().unwrap();
+    let file_path = dir.path().join("p1.m3u");
+    std::fs::write(&file_path, b"#EXTM3U\n/music/a.mp3\n").unwrap();
+    let file_path = file_path.to_str().unwrap();
+
+    // First call: no row yet, so it must read the file and establish a
+    // baseline hash -- otherwise the very first divergence check on a
+    // pre-existing playlist would always report drift.
+    playlists::ensure_playlist_tracked(&conn, "p1", "My Playlist", file_path).unwrap();
+    let diverged = playlists::check_for_divergence(&conn, "p1", b"#EXTM3U\n/music/a.mp3\n").unwrap();
+    assert!(!diverged);
+
+    // Someone hand-edits the file externally, flagging the row.
+    playlists::check_for_divergence(&conn, "p1", b"#EXTM3U\n/music/a.mp3\n/music/b.mp3\n").unwrap();
+    let is_diverged: i64 = conn
+        .query_row("SELECT is_diverged FROM playlists WHERE id = 'p1'", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(is_diverged, 1);
+
+    // A later rescan (e.g. the folder watcher re-running scanPlaylists) must
+    // not clobber that pending divergence -- it already has a baseline.
+    playlists::ensure_playlist_tracked(&conn, "p1", "My Playlist", file_path).unwrap();
+    let is_diverged: i64 = conn
+        .query_row("SELECT is_diverged FROM playlists WHERE id = 'p1'", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(is_diverged, 1);
+}
+
+#[test]
 fn writer_actor_serializes_writes_via_the_channel() {
     let conn = open_test_db();
     let writer = WriterHandle::spawn(conn);
