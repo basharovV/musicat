@@ -1,19 +1,19 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import { type } from "@tauri-apps/plugin-os";
-    import { liveQuery } from "dexie";
     import { onMount } from "svelte";
     import toast from "svelte-french-toast";
     import { get } from "svelte/store";
-    import type { Album, Song, Stem, ToImport } from "../../App";
-    import { db } from "../../data/db";
+    import type { Song, Stem, ToImport } from "../../App";
     import { deleteFromLibrary, reImport } from "../../data/LibraryUtils";
     import { deleteSongsFromPlaylist } from "../../data/M3UUtils";
     import {
         canShowInfoPopup,
         isSmartQueryBuilderOpen,
         isTagCloudOpen,
+        libraryUpdater,
         popupOpen,
+        refreshToDeletePlaylist,
         rightClickedAlbum,
         rightClickedTracks,
         selectedPlaylistFile,
@@ -119,14 +119,14 @@
             $selectedPlaylistFile = $selectedPlaylistFile; // Trigger re-render
         } else if ($uiView === "to-delete") {
             // Delete from internal playlist (currently only used for the "to-delete" playlist)
-            const toDelete = await db.internalPlaylists.get(
-                $toDeletePlaylist.id,
+            const remainingTrackIds = $toDeletePlaylist.tracks.filter(
+                (id) => !tracks.some((t) => t.id === id),
             );
-            tracks.forEach((t) => {
-                const trackIdx = toDelete.tracks.findIndex((pt) => pt === t.id);
-                toDelete.tracks.splice(trackIdx, 1);
+            await invoke("set_playlist_tracks", {
+                playlistId: $toDeletePlaylist.id,
+                trackIds: remainingTrackIds,
             });
-            await db.internalPlaylists.put(toDelete);
+            await refreshToDeletePlaylist();
         }
     }
 
@@ -218,18 +218,6 @@
     }
 
     let isReimporting = false;
-    async function reImportAlbum(album: Album) {
-        const existingAlbum = await db.albums.get(album.id);
-        if (existingAlbum) {
-            existingAlbum.tracksIds = [
-                ...existingAlbum.tracksIds,
-                ...album.tracksIds,
-            ];
-            await db.albums.put(existingAlbum);
-        } else {
-            await db.albums.add(album);
-        }
-    }
 
     async function reImportTracks() {
         isReimporting = true;
@@ -267,11 +255,10 @@
 
     let tagUserInput = "";
 
-    let allTags = liveQuery(() => {
-        return db.songs.orderBy("tags").uniqueKeys();
-    }); // Used for autocomplete
-
-    $: splitTags = dedupe($allTags?.flatMap((t) => t as string));
+    let splitTags: string[] = [];
+    invoke<string[]>("get_distinct_track_values", { field: "tags" }).then(
+        (tags) => (splitTags = tags),
+    ); // Used for autocomplete, already distinct
 
     $: tagAutoCompleteValue =
         tagUserInput.length &&
@@ -281,26 +268,22 @@
         if (tagAutoCompleteValue?.length) {
             tagUserInput = tagAutoCompleteValue;
         }
+        const newTag = tagUserInput.toLowerCase().trim();
         if (songs.length > 1) {
             await Promise.all(
                 songs.map(async (t) => {
-                    t.tags = t.tags
-                        ? [...t.tags, tagUserInput.toLowerCase().trim()]
-                        : [tagUserInput.toLowerCase().trim()];
-                    await db.songs.put(t);
+                    t.tags = t.tags ? [...t.tags, newTag] : [newTag];
+                    await invoke("update_track_tags", { trackId: t.id, tags: t.tags });
                 }),
             );
 
             songs = songs;
         } else {
-            await db.songs.update(song.id, {
-                tags: song.tags
-                    ? [...song.tags, tagUserInput.toLowerCase().trim()]
-                    : [tagUserInput.toLowerCase().trim()],
-            });
-
-            song = await db.songs.get(song.id);
+            const tags = song.tags ? [...song.tags, newTag] : [newTag];
+            await invoke("update_track_tags", { trackId: song.id, tags });
+            song = await invoke<Song>("get_track_by_id", { id: song.id });
         }
+        libraryUpdater.update((n) => n + 1);
         tagUserInput = "";
     }
 
@@ -310,7 +293,7 @@
             await Promise.all(
                 songs.map(async (t) => {
                     t.tags = t.tags.filter((t) => t !== tag);
-                    await db.songs.put(t);
+                    await invoke("update_track_tags", { trackId: t.id, tags: t.tags });
                 }),
             );
 
@@ -321,12 +304,11 @@
                 1,
             );
 
-            db.songs.update(song.id, {
-                tags: song.tags,
-            });
+            await invoke("update_track_tags", { trackId: song.id, tags: song.tags });
 
-            song = await db.songs.get(song.id);
+            song = await invoke<Song>("get_track_by_id", { id: song.id });
         }
+        libraryUpdater.update((n) => n + 1);
     }
 
     async function commonTagsBetweenTracks(tracks: Song[]) {
