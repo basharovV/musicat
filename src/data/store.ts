@@ -35,6 +35,7 @@ import { derived, get, writable, type Writable } from "svelte/store";
 import { locale, setLocale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
+import { migrateFromDexieIfNeeded } from "./migration";
 import { scanPlaylists } from "./M3UUtils";
 import { storage, persistentWritable } from "./storeUtils";
 import { loadLocale } from "../i18n/i18n-util.sync";
@@ -559,6 +560,11 @@ async function init() {
         updatedSettings.foldersToWatch = [updatedSettings.foldersToWatch];
     }
     userSettings.set(updatedSettings);
+
+    // One-time migration from Dexie, if not already done. Must happen before
+    // anything below reads library/queue data, since every read path is
+    // SQLite-only now -- there's no Dexie fallback left if this doesn't run.
+    await migrateFromDexieIfNeeded(updatedSettings);
 
     // Auto-persist settings
     userSettings.subscribe(async (val) => {

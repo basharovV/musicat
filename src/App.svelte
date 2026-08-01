@@ -64,6 +64,7 @@
     import TopNav from "./lib/nav/TopNav.svelte";
     import audioPlayer from "./lib/player/AudioPlayer";
     import InfoPopup from "./lib/settings/InfoPopup.svelte";
+    import MigrationOverlay from "./lib/settings/MigrationOverlay.svelte";
     import SettingsPopup from "./lib/settings/SettingsPopup.svelte";
     import UpdaterOverlay from "./lib/settings/UpdaterOverlay.svelte";
     import Sidebar from "./lib/sidebar/Sidebar.svelte";
@@ -404,6 +405,7 @@
         <CursorInfo show={showCursorInfo} x={mouseX} y={mouseY} />
 
         <UpdaterOverlay />
+        <MigrationOverlay />
 
         {#if $popupOpen === "settings"}
             <div class="info">
