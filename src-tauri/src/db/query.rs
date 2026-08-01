@@ -496,3 +496,100 @@ pub fn query_playlists(conn: &Connection, spec: &QuerySpec) -> Result<Page<Playl
 
     Ok(Page { items, next_cursor: None, has_more })
 }
+
+// ---------------------------------------------------------------------------
+// Direct id lookups. Not filtered/paginated — every screen in the frontend
+// survey needs "resolve this id (or these ids) to a full record" at some
+// point (queue/now-playing hydration, menus, to-delete list, playlist
+// tracks...), so these mirror Dexie's `get`/`bulkGet` shape rather than
+// going through `QuerySpec` for what's fundamentally a primary-key lookup.
+// ---------------------------------------------------------------------------
+
+pub fn get_track_by_id(conn: &Connection, id: &str) -> Result<Option<Song>, String> {
+    let sql = format!("SELECT {TRACK_COLUMNS} FROM tracks WHERE id = ?1");
+    conn.query_row(&sql, [id], row_to_track).optional_string_err()
+}
+
+pub fn get_playlist_by_id(conn: &Connection, id: &str) -> Result<Option<Playlist>, String> {
+    let mut playlist = match conn
+        .query_row(
+            "SELECT id, title, file_path, is_diverged FROM playlists WHERE id = ?1",
+            [id],
+            row_to_playlist_header,
+        )
+        .optional_string_err()?
+    {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    let mut stmt = conn
+        .prepare("SELECT track_id FROM playlist_tracks WHERE playlist_id = ?1 ORDER BY position")
+        .map_err(|e| e.to_string())?;
+    playlist.tracks = stmt
+        .query_map([id], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(Some(playlist))
+}
+
+/// Same order and length as `ids` — a missing id becomes `None` at its
+/// position, matching Dexie's `Table.bulkGet` contract that callers already
+/// rely on (e.g. resolving a saved queue where a track may have since been
+/// deleted).
+pub fn get_tracks_by_ids(conn: &Connection, ids: &[String]) -> Result<Vec<Option<Song>>, String> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let placeholders = std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(",");
+    let sql = format!("SELECT {TRACK_COLUMNS} FROM tracks WHERE id IN ({placeholders})");
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let params: Vec<&dyn ToSql> = ids.iter().map(|id| id as &dyn ToSql).collect();
+    let found: std::collections::HashMap<String, Song> = stmt
+        .query_map(params.as_slice(), row_to_track)
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|s| (s.id.clone(), s))
+        .collect();
+    Ok(ids.iter().map(|id| found.get(id).cloned()).collect())
+}
+
+pub fn get_album_by_id(conn: &Connection, id: &str) -> Result<Option<Album>, String> {
+    let sql = format!("SELECT {ALBUM_COLUMNS} FROM albums WHERE id = ?1");
+    conn.query_row(&sql, [id], row_to_album).optional_string_err()
+}
+
+pub fn get_albums_by_ids(conn: &Connection, ids: &[String]) -> Result<Vec<Option<Album>>, String> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let placeholders = std::iter::repeat("?").take(ids.len()).collect::<Vec<_>>().join(",");
+    let sql = format!("SELECT {ALBUM_COLUMNS} FROM albums WHERE id IN ({placeholders})");
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let params: Vec<&dyn ToSql> = ids.iter().map(|id| id as &dyn ToSql).collect();
+    let found: std::collections::HashMap<String, Album> = stmt
+        .query_map(params.as_slice(), row_to_album)
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|a| (a.id.clone(), a))
+        .collect();
+    Ok(ids.iter().map(|id| found.get(id).cloned()).collect())
+}
+
+trait OptionalStringErr<T> {
+    fn optional_string_err(self) -> Result<Option<T>, String>;
+}
+
+impl<T> OptionalStringErr<T> for rusqlite::Result<T> {
+    fn optional_string_err(self) -> Result<Option<T>, String> {
+        match self {
+            Ok(v) => Ok(Some(v)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}

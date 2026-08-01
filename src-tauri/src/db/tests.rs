@@ -60,6 +60,25 @@ fn query_tracks_filters_and_sorts() {
 }
 
 #[test]
+fn get_tracks_by_ids_preserves_order_and_length_with_missing_entries() {
+    let conn = open_test_db();
+    insert_track(&conn, "a", "Alpha", 2000, false);
+    insert_track(&conn, "c", "Gamma", 2002, false);
+
+    let result = query::get_tracks_by_ids(&conn, &["c".into(), "missing".into(), "a".into()]).unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0].as_ref().unwrap().title, "Gamma");
+    assert!(result[1].is_none());
+    assert_eq!(result[2].as_ref().unwrap().title, "Alpha");
+}
+
+#[test]
+fn get_track_by_id_returns_none_when_missing() {
+    let conn = open_test_db();
+    assert!(query::get_track_by_id(&conn, "nope").unwrap().is_none());
+}
+
+#[test]
 fn query_tracks_rejects_unknown_field() {
     let conn = open_test_db();
     let spec = QuerySpec {
@@ -149,7 +168,7 @@ fn queue_round_trip_preserves_order() {
 #[test]
 fn playlist_divergence_detects_external_edits_but_not_our_own() {
     let mut conn = open_test_db();
-    playlists::create_playlist(&mut conn, "p1", "My Playlist", Some("/playlists/p1.m3u")).unwrap();
+    playlists::upsert_playlist_header(&conn, "p1", "My Playlist", Some("/playlists/p1.m3u")).unwrap();
 
     // App writes the file itself: recording the write must not count as divergence.
     playlists::record_own_write(&conn, "p1", b"#EXTM3U\n/music/a.mp3\n").unwrap();

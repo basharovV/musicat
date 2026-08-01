@@ -189,6 +189,8 @@ interface UserSettings {
     geniusApiKey?: string;
     discogsApiKey?: string;
     beetsDbLocation?: string;
+    /** Set once the one-time Dexie -> SQLite migration has cut over; unix ms. */
+    migratedFromDexieAt?: number;
 }
 
 type AnalyzerType = "time" | "frequency";

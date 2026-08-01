@@ -6,6 +6,7 @@
         isSmartQueryBuilderOpen,
         query,
         queue,
+        refreshToDeletePlaylist,
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
@@ -14,7 +15,7 @@
     import hotkeys from "hotkeys-js";
     import audioPlayer from "../player/AudioPlayer";
     import LL from "../../i18n/i18n-svelte";
-    import { db } from "../../data/db";
+    import { invoke } from "@tauri-apps/api/core";
 
     /**
      * In prune mode, the user is presented songs in the library,
@@ -31,13 +32,12 @@
     async function getOrCreatePlaylist() {
         let toDelete = $toDeletePlaylist;
         if (!toDelete) {
-            await db.internalPlaylists.put({
+            await invoke("upsert_playlist_header", {
                 id: "todelete",
                 title: $LL.toDelete.title(),
-                tracks: [],
-                path: null,
             });
-            toDelete = await db.internalPlaylists.get("todelete");
+            await refreshToDeletePlaylist();
+            toDelete = $toDeletePlaylist;
         }
         return toDelete;
     }
@@ -46,8 +46,11 @@
         const toDelete = await getOrCreatePlaylist();
 
         if (!atEnd || !toDelete.tracks.includes($current.song.id)) {
-            toDelete.tracks.push($current.song.id);
-            db.internalPlaylists.put(toDelete);
+            await invoke("set_playlist_tracks", {
+                playlistId: toDelete.id,
+                trackIds: [...toDelete.tracks, $current.song.id],
+            });
+            await refreshToDeletePlaylist();
         }
 
         if ($queue.length !== 0 && !atEnd) {
@@ -62,7 +65,8 @@
 
         if (!toDelete || toDelete.tracks.length === 0) {
             if ($toDeletePlaylist) {
-                db.internalPlaylists.delete($toDeletePlaylist.id);
+                await invoke("delete_playlist", { id: $toDeletePlaylist.id });
+                await refreshToDeletePlaylist();
             }
 
             $uiView = "library";

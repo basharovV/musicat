@@ -1,11 +1,5 @@
 import { path } from "@tauri-apps/api";
-import {
-    appConfigDir,
-    audioDir,
-    downloadDir,
-    pictureDir,
-} from "@tauri-apps/api/path";
-import * as fs from "@tauri-apps/plugin-fs";
+import { audioDir, downloadDir, pictureDir } from "@tauri-apps/api/path";
 import { type, type OsType } from "@tauri-apps/plugin-os";
 import type {
     ActionEvent,
@@ -42,8 +36,6 @@ import { locale, setLocale } from "../i18n/i18n-svelte";
 import { i18nString } from "../i18n/i18n-util";
 import SmartQuery from "../lib/smart-query/Query";
 import { scanPlaylists } from "./M3UUtils";
-import { liveQuery } from "dexie";
-import { db } from "./db";
 import { storage, persistentWritable } from "./storeUtils";
 import { loadLocale } from "../i18n/i18n-util.sync";
 import { DEFAULT_EQ } from "../lib/player/EqualizerPresets";
@@ -119,7 +111,9 @@ async function restoreCurrentSong() {
         const data = JSON.parse(item);
 
         if (data.song) {
-            const song = await db.songs.get(data.song);
+            const song = await invoke<Song | null>("get_track_by_id", {
+                id: data.song,
+            });
 
             current.set({
                 song,
@@ -150,24 +144,19 @@ current.subscribe(({ song, index, position }) => {
     storage.setItem("current", JSON.stringify(data));
 });
 
-async function readQueueFromFile() {
-    const queuePath = await path.join(await appConfigDir(), "queue.txt");
-    if (!(await fs.exists(queuePath))) {
+async function readQueueFromDb() {
+    const trackIds = await invoke<string[]>("get_queue");
+    if (!trackIds.length) {
         return;
     }
-    let persistedQueue = await fs.readTextFile(queuePath);
-    if (!persistedQueue) {
-        return;
-    }
-    let songs = (await db.songs.bulkGet(persistedQueue.split(","))).filter(
-        (song) => song,
-    );
+    const songs = (
+        await invoke<(Song | null)[]>("get_tracks_by_ids", { ids: trackIds })
+    ).filter((song) => song);
     queue.set(songs);
 }
 
-async function writeQueueToFile(queue: Song[]) {
-    const queuePath = await path.join(await appConfigDir(), "queue.txt");
-    await fs.writeTextFile(queuePath, queue.map((song) => song.id).join(","));
+async function writeQueueToDb(queue: Song[]) {
+    await invoke("set_queue", { trackIds: queue.map((song) => song.id) });
 }
 
 export const queue: Writable<Song[]> = writable([]);
@@ -208,18 +197,37 @@ export const isFullScreenVisualiser = writable(false);
 
 // Playlists (populated from folder)
 export const userPlaylists: Writable<PlaylistFile[]> = writable([]);
-export const toDeletePlaylist = liveQuery(async () => {
+
+export interface DbPlaylist {
+    id: string;
+    title: string;
+    filePath?: string;
+    isDiverged: boolean;
+    tracks: string[];
+}
+
+/**
+ * The "to-delete" pseudo-playlist row (id `"todelete"`), used to stage tracks
+ * for the Prune flow. This used to be a Dexie `liveQuery` that updated itself
+ * on every write; there's no push-based change-event for playlist mutations
+ * yet (see `db::commands` — that lands with track/album change events), so
+ * this is a plain store that callers must explicitly `refreshToDeletePlaylist()`
+ * after they mutate the row (see `PrunePopup.svelte`/`ToDeleteHeader.svelte`/
+ * `TrackMenu.svelte`).
+ */
+export const toDeletePlaylist: Writable<DbPlaylist | null> = writable(null);
+
+export async function refreshToDeletePlaylist() {
     try {
-        if (!db.hasBeenClosed()) {
-            const toDeletePlaylist = await db.internalPlaylists.get("todelete");
-            return toDeletePlaylist;
-        }
-        return null;
+        const playlist = await invoke<DbPlaylist | null>("get_playlist_by_id", {
+            id: "todelete",
+        });
+        toDeletePlaylist.set(playlist);
     } catch (e) {
         console.error("Error fetching todelete playlist", e);
+        toDeletePlaylist.set(null);
     }
-    return null;
-});
+}
 
 export const popupOpen: Writable<PopupType> = writable(null);
 
@@ -314,27 +322,21 @@ const defaultSettings: UserSettings = {
 };
 
 /**
- * Retrieve settings from app config dir
+ * Retrieve settings from the SQLite-backed single settings schema (Rust owns
+ * the shape — see `db::settings::Settings` — so this is a thin read, no
+ * client-side defaulting/parsing of a settings file anymore).
  */
-async function getSettings() {
-    // use fs to read stetings file
+async function getSettings(): Promise<UserSettings> {
     try {
-        const configDir = await appConfigDir();
-        const settingsPath = await path.join(configDir, "settings.json");
-        // Read contents
-        const contents = await fs.readTextFile(settingsPath);
-        return JSON.parse(contents);
+        return await invoke<UserSettings>("get_settings");
     } catch (e) {
-        console.error("Error reading settings file", e);
+        console.error("Error reading settings", e);
         return get(userSettings);
     }
 }
 
 async function setSettings(settings: UserSettings) {
-    // use fs to write settings file
-    const configDir = await appConfigDir();
-    const settingsPath = await path.join(configDir, "settings.json");
-    await fs.writeTextFile(settingsPath, JSON.stringify(settings));
+    await invoke("update_settings", { settings });
 }
 
 export const userSettings: Writable<UserSettings> = writable(defaultSettings);
@@ -530,17 +532,18 @@ async function init() {
     // Auto-persist settings
     userSettings.subscribe(async (val) => {
         console.log("[store] userSettings", val);
-        // Write settings to file
         await setSettings(val);
     });
 
     // Get queue
-    await readQueueFromFile();
+    await readQueueFromDb();
 
     // Auto-persist queue
     queue.subscribe(async (songs) => {
-        await writeQueueToFile(songs);
+        await writeQueueToDb(songs);
     });
+
+    await refreshToDeletePlaylist();
 
     if (!get(artworkDirectory)) {
         artworkDirectory.set(await pictureDir());

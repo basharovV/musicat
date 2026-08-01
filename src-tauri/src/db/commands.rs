@@ -53,6 +53,98 @@ pub async fn query_playlists(spec: QuerySpec, db: State<'_, Database>) -> Result
 }
 
 #[tauri::command]
+pub async fn get_playlist_by_id(id: String, db: State<'_, Database>) -> Result<Option<Playlist>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_playlist_by_id(&conn, &id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn upsert_playlist_header(
+    id: String,
+    title: String,
+    file_path: Option<String>,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::playlists::upsert_playlist_header(conn, &id, &title, file_path.as_deref()))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn set_playlist_tracks(
+    playlist_id: String,
+    track_ids: Vec<String>,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::playlists::set_playlist_tracks(conn, &playlist_id, &track_ids))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn delete_playlist(id: String, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::playlists::delete_playlist(conn, &id)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_track_by_id(id: String, db: State<'_, Database>) -> Result<Option<Song>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_track_by_id(&conn, &id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_tracks_by_ids(ids: Vec<String>, db: State<'_, Database>) -> Result<Vec<Option<Song>>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_tracks_by_ids(&conn, &ids)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_album_by_id(id: String, db: State<'_, Database>) -> Result<Option<Album>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_album_by_id(&conn, &id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_albums_by_ids(ids: Vec<String>, db: State<'_, Database>) -> Result<Vec<Option<Album>>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_albums_by_ids(&conn, &ids)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn get_settings(db: State<'_, Database>) -> Result<Settings, String> {
     let pool = db.pool.clone();
     tauri::async_runtime::spawn_blocking(move || {

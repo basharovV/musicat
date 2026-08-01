@@ -22,21 +22,27 @@ fn now_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
-// No command wraps this yet — playlist creation lands with the
-// Dexie-migration/mutation commands (tasks.md groups 5-6). Kept here since
-// `set_playlist_tracks`/`reimport_playlist_from_file` already depend on rows
-// this inserts.
-#[allow(dead_code)]
-pub fn create_playlist(
-    conn: &mut Connection,
+/// Insert-or-replace a playlist's header row (title/linked file), leaving its
+/// tracks and divergence state untouched — mirrors Dexie's `.put()` on the
+/// old `internalPlaylists`/`playlists` tables, which several call sites (e.g.
+/// the "to-delete" pseudo-playlist) rely on for "create if missing, else
+/// just update the title" semantics.
+pub fn upsert_playlist_header(
+    conn: &Connection,
     id: &str,
     title: &str,
     file_path: Option<&str>,
 ) -> rusqlite::Result<()> {
     conn.execute(
-        "INSERT INTO playlists (id, title, file_path) VALUES (?1, ?2, ?3)",
+        "INSERT INTO playlists (id, title, file_path) VALUES (?1, ?2, ?3)
+         ON CONFLICT(id) DO UPDATE SET title = excluded.title, file_path = excluded.file_path",
         rusqlite::params![id, title, file_path],
     )?;
+    Ok(())
+}
+
+pub fn delete_playlist(conn: &Connection, id: &str) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM playlists WHERE id = ?1", [id])?;
     Ok(())
 }
 
