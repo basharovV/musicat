@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
     import type { Album } from "../../App";
-    import { db, getAlbumTracks } from "../../data/db";
+    import { getAlbumTracks } from "../../data/db";
     import { current, isPlaying, userSettings } from "../../data/store";
     import audioPlayer from "../player/AudioPlayer";
     import Icon from "../ui/Icon.svelte";

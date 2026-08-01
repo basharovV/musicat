@@ -3,7 +3,6 @@
     import { audioDir } from "@tauri-apps/api/path";
     import type { Song, SongProject, SongProjectRecording } from "src/App";
     import { current, songDetailsUpdater } from "../../data/store";
-    import { db } from "../../data/db";
     import AudioPlayer from "../player/AudioPlayer";
     import { fly } from "svelte/transition";
     import { quadInOut, quadOut } from "svelte/easing";

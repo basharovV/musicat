@@ -4,7 +4,6 @@
     import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
     import { currentMonitor } from "@tauri-apps/api/window";
     import { Buffer } from "buffer";
-    import { liveQuery } from "dexie";
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
     import { onMount } from "svelte";

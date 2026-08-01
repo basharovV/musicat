@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { liveQuery } from "dexie";
     import type { ArtistProject, Song, SongProject } from "src/App";
-    import { db } from "../../data/db";
     import {
         isDraggingExternalFiles,
         isFullScreenLyrics,
