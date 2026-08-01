@@ -6,7 +6,8 @@
     import wtf from "wtf_wikipedia";
     import type { Album, GetHTMLResponse, Song } from "../../App";
     import { getWikipediaUrlForArtist } from "../../data/WikipediaAPI";
-    import { db, getAlbum, getAlbumTracks } from "../../data/db";
+    import { getAlbum, getAlbumTracks } from "../../data/db";
+    import { queryAllAlbums, queryAllTracks } from "../../data/query";
     import {
         current,
         isPlaying,
@@ -166,10 +167,12 @@
         let artists: Mention<string>[] = [];
 
         console.log("Enrich links processing...");
-        const allArtists = await db.songs.orderBy("artist").uniqueKeys();
-        const allAlbums = await db.albums.toArray();
+        const allArtists = await invoke<string[]>("get_distinct_track_values", {
+            field: "artist",
+        });
+        const allAlbums = await queryAllAlbums({});
         const allAlbumTitles = allAlbums.map((album) => album.displayTitle);
-        const allSongs = await db.songs.toArray();
+        const allSongs = await queryAllTracks({});
         const allSongTitles = allSongs.map((song) => song.title);
 
         // We only want to enrich the links in the actual article text
@@ -201,15 +204,13 @@
                 if (album) {
                     link.setAttribute("data-album", album.id);
                     link.closest("p")?.classList?.add("has-mention");
-                    const currentSongAlbum = await db.albums
-                        .where("artist")
-                        .equalsIgnoreCase($current.song.artist)
-                        .and(
-                            (a) =>
-                                a.displayTitle.toLowerCase() ===
+                    const currentSongAlbum = allAlbums.find(
+                        (a) =>
+                            a.artist.toLowerCase() ===
+                                $current.song.artist.toLowerCase() &&
+                            a.displayTitle.toLowerCase() ===
                                 $current.song.album.toLowerCase(),
-                        )
-                        .first();
+                    );
                     // Add playing class or remove it
                     link.classList.toggle(
                         "playing",
@@ -278,17 +279,16 @@
                 audioPlayer.play(true);
             }
         } else {
-            const tracks = await db.songs
-                .where("artist")
-                .equals(artist)
-                .toArray();
+            const tracks = await queryAllTracks({
+                filter: { kind: "cmp", field: "artist", op: "eq", value: artist },
+            });
 
             setQueue(tracks, 0);
         }
     }
 
     async function playSong(songId: string) {
-        const song = await db.songs.get(songId);
+        const song = await invoke<Song | null>("get_track_by_id", { id: songId });
         if ($current.song?.title.toLowerCase() === song?.title.toLowerCase()) {
             if ($isPlaying) {
                 audioPlayer.pause();
