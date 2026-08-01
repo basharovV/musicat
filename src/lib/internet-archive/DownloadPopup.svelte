@@ -1,9 +1,9 @@
 <script lang="ts">
     import type { Event } from "@tauri-apps/api/event";
+    import { invoke } from "@tauri-apps/api/core";
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import { onDestroy, onMount } from "svelte";
     import md5 from "md5";
-    import { db } from "../../data/db";
     import type { Song } from "../../App";
     import {
         fileToDownload,
@@ -26,7 +26,9 @@
         let downloadLocation = $fileToDownload.downloadLocation;
         setTimeout(async () => {
             const filehash = md5(downloadLocation);
-            const song = await db.songs.get(filehash);
+            const song = await invoke<Song | null>("get_track_by_id", {
+                id: filehash,
+            });
             if (song) {
                 songAdded = song;
             }

@@ -1,7 +1,6 @@
 <script lang="ts">
-    import { liveQuery } from "dexie";
-    import { db } from "../../data/db";
-    import { uiView } from "../../data/store";
+    import { queryAllAlbums, queryAllTracks } from "../../data/query";
+    import { libraryUpdater, uiView } from "../../data/store";
     import type { Album, Song, SongOrder } from "../../App";
     import ProgressBar from "../ui/ProgressBar.svelte";
     import { groupBy } from "../../utils/ArrayUtils";
@@ -18,62 +17,53 @@
     // Including play metrics, GPT summaries
     let isLoading = false;
 
-    $: songs = liveQuery(async () => {
-        let results;
-        let isSmartQueryResults = false;
-        let isIndexed = true;
-        results = db.songs.orderBy(
-            songOrder.orderBy === "artist"
-                ? "[artist+year+album+trackNumber]"
-                : songOrder.orderBy === "album"
-                  ? "[album+trackNumber]"
-                  : songOrder.orderBy,
-        );
-
-        let resultsArray: Song[] = [];
-
-        // Depending whether this is a smart query or not
-        if (isIndexed) {
-            if (songOrder.reverse) {
-                results = results.reverse();
-            }
-            resultsArray = await results.toArray();
-        } else {
-            resultsArray = results;
+    function compareSongs(a: Song, b: Song, order: SongOrder): number {
+        const dir = order.reverse ? -1 : 1;
+        let result = 0;
+        switch (order.orderBy) {
+            case "artist":
+                result =
+                    a.artist.localeCompare(b.artist) ||
+                    (a.year ?? 0) - (b.year ?? 0) ||
+                    a.album.localeCompare(b.album) ||
+                    (a.trackNumber ?? 0) - (b.trackNumber ?? 0);
+                break;
+            case "album":
+                result =
+                    a.album.localeCompare(b.album) ||
+                    (a.trackNumber ?? 0) - (b.trackNumber ?? 0);
+                break;
+            case "title":
+            case "year":
+            case "duration":
+            case "genre":
+                result = String(a[order.orderBy]).localeCompare(
+                    String(b[order.orderBy]),
+                );
+                break;
+            default:
+                result = 0;
         }
+        return result * dir;
+    }
 
-        // Do sorting for non-indexed results
-        if (!isIndexed) {
-            resultsArray = resultsArray.sort((a, b) => {
-                switch (songOrder.orderBy) {
-                    case "title":
-                    case "album":
-                    case "track":
-                    case "year":
-                    case "duration":
-                    case "genre":
-                        return a[songOrder.orderBy].localeCompare(
-                            b[songOrder.orderBy],
-                        );
-                    case "artist":
-                        // TODO this one needs to match the multiple indexes sorting from Dexie
-                        // i.e Artist -> Album -> Track N.
-                        return a.artist.localeCompare(b.artist);
-                }
-            });
-        }
+    let songs: Song[] = [];
+    $: {
+        $libraryUpdater;
+        queryAllTracks({}).then((results) => {
+            songs = results.sort((a, b) => compareSongs(a, b, songOrder));
+            isLoading = false;
+        });
+    }
 
-        isLoading = false;
-        return resultsArray;
-    });
-
-    $: albums = liveQuery(async () => {
-        let resultsArray: Album[] = [];
-        resultsArray = await db.albums.toArray();
-
-        isLoading = false;
-        return resultsArray;
-    });
+    let albums: Album[] = [];
+    $: {
+        $libraryUpdater;
+        queryAllAlbums({}).then((results) => {
+            albums = results;
+            isLoading = false;
+        });
+    }
 
     let stats = {
         totalSongs: 0,
@@ -100,8 +90,8 @@
             .reduce((r, k) => ((r[k] = o[k]), r), {});
 
     $: {
-        if ($albums) {
-            albumsByYear = groupBy($albums, "year");
+        if (albums) {
+            albumsByYear = groupBy(albums, "year");
             albumsByYear = sortObject(albumsByYear);
         }
     }
@@ -109,8 +99,8 @@
     let statsLoaded = false;
 
     $: {
-        if ($songs) {
-            stats = $songs.reduce(
+        if (songs) {
+            stats = songs.reduce(
                 (stats, song: Song) => {
                     stats.totalPlays = !song.playCount
                         ? stats.totalPlays
@@ -124,7 +114,7 @@
                     return stats;
                 },
                 {
-                    totalSongs: $songs.length,
+                    totalSongs: songs.length,
                     totalPlays: 0,
                     distinctPlays: 0,
                     percentageListened: 0,
@@ -143,7 +133,7 @@
             );
 
             // Genre
-            let groupedByGenre = groupBy($songs, "genre");
+            let groupedByGenre = groupBy(songs, "genre");
             let mostPlayedGenreTitle = null;
             let mostPlayedGenre = null;
             Object.entries(groupedByGenre).forEach((g: [string, any]) => {
@@ -160,7 +150,7 @@
             stats.genres.count = Object.keys(groupedByGenre).length;
 
             // Country
-            let groupedByCountry = groupBy($songs, "originCountry");
+            let groupedByCountry = groupBy(songs, "originCountry");
             let mostPlayedCountryTitle = null;
             let mostPlayedCountry = null;
             Object.entries(groupedByCountry)
@@ -180,7 +170,7 @@
 
             // Derived stats
             stats.percentageListened =
-                (stats.distinctPlays / $songs.length) * 100;
+                (stats.distinctPlays / songs.length) * 100;
 
             console.log("in here");
             statsLoaded = true;
@@ -196,10 +186,10 @@
     {:else}
         <div class="analytics" in:fade={{ duration: 500 }}>
             <section class="summary">
-                <LibrarySummary songs={$songs} />
+                <LibrarySummary songs={songs} />
             </section>
             <section class="genres">
-                <GenreMap songs={$songs} />
+                <GenreMap songs={songs} />
             </section>
             <section class="timeline">
                 <AlbumsTimeline {albumsByYear} />

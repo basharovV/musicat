@@ -1,12 +1,11 @@
 <svelte:options accessors={true} />
 
 <script lang="ts">
-    import { type IndexableTypeArray } from "dexie";
+    import { invoke } from "@tauri-apps/api/core";
     import { cloneDeep, isEqual, uniqBy } from "lodash-es";
     import type { MetadataEntry, TagType } from "src/App";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
-    import { db } from "../../data/db";
     import { readMappedMetadataFromSong } from "../../data/LibraryUtils";
     import { rightClickedTracks } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
@@ -269,7 +268,7 @@
         (m) => m.id === autoCompleteFieldId,
     )?.value;
 
-    let autoCompleteDistinctMatches: IndexableTypeArray | null = null;
+    let autoCompleteDistinctMatches: string[] | null = null;
     let firstMatch: string = null;
 
     $: firstMatchRemainder = firstMatch?.startsWith(autoCompleteFieldValue)
@@ -326,9 +325,10 @@
             let matched = [];
             if (value && value.trim().length > 0) {
                 if (autoCompleteDistinctMatches === null) {
-                    autoCompleteDistinctMatches = await db.songs
-                        .orderBy(autoCompleteConfigForField.songField)
-                        .uniqueKeys();
+                    autoCompleteDistinctMatches = await invoke<string[]>(
+                        "get_distinct_track_values",
+                        { field: autoCompleteConfigForField.songField },
+                    );
                 }
                 console.log(
                     "found distinct matches",
