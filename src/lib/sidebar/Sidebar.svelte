@@ -8,6 +8,7 @@
     import hotkeys from "hotkeys-js";
     import { throttle } from "lodash-es";
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
     import toast from "svelte-french-toast";
     import tippy from "svelte-tippy";
     import { flip } from "svelte/animate";
@@ -25,7 +26,6 @@
         default as BuiltInQueries,
         default as SmartQueries,
     } from "../../data/SmartQueries";
-    import { db } from "../../data/db";
     import {
         current,
         currentIAFile,
@@ -47,14 +47,18 @@
         isTagCloudOpen,
         isWikiOpen,
         lastWrittenSongs,
+        libraryUpdater,
         os,
         playerTime,
         popupOpen,
         query,
         queue,
+        refreshSavedSmartQueries,
         repeatMode,
         rightClickedAlbum,
         rightClickedTracks,
+        savedSmartQueries,
+        type SavedSmartQuerySummary,
         seekTime,
         selectedPlaylistFile,
         selectedSmartQuery,
@@ -80,7 +84,6 @@
     import audioPlayer from "../player/AudioPlayer";
     import { isIAPlaying } from "../player/WebAudioPlayer";
     import SmartQuery from "../smart-query/Query";
-    import type { SavedSmartQuery } from "../smart-query/QueryPart";
     import "../tippy.css";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import Icon from "../ui/Icon.svelte";
@@ -247,11 +250,6 @@
                     artworkFormat = null;
                     artworkSrc = null;
                 }
-
-                // don't wait for the update
-                db.songs.update(song, {
-                    artworkOrigin: songWithArtwork.artworkOrigin,
-                });
             }
 
             title = song.title;
@@ -548,7 +546,7 @@
     let isSmartPlaylistsExpanded = false;
     let showSmartPlaylistMenu = false;
     let isConfirmingSmartPlaylistDelete = false;
-    let smartPlaylistToEdit: SavedSmartQuery = null;
+    let smartPlaylistToEdit: SavedSmartQuerySummary = null;
     let updatedSmartPlaylistName = "";
     let isRenamingSmartPlaylist = false;
     let hoveringOverSmartPlaylistId: number | string = null;
@@ -660,11 +658,6 @@
         showPlaylistMenu = !showPlaylistMenu;
     }
 
-    $: savedSmartQueries = liveQuery(async () => {
-        const queries = await db.smartQueries.toArray();
-        return queries.sort((a, b) => a.name.localeCompare(b.name));
-    });
-
     function onClickSmartPlaylist(e, smartQuery, reset) {
         $selectedPlaylistFile = null;
         $uiView = "smart-query";
@@ -676,7 +669,7 @@
         $isSidebarFloating = false;
     }
 
-    function onClickSmartPlaylistOptions(e, query: SavedSmartQuery) {
+    function onClickSmartPlaylistOptions(e, query: SavedSmartQuerySummary) {
         menuX = e.clientX;
         menuY = e.clientY;
         smartPlaylistToEdit = query;
@@ -692,9 +685,18 @@
         setQueue(songs, 0);
     }
 
-    async function onRenameSmartPlaylist(query: SavedSmartQuery) {
-        query.name = updatedSmartPlaylistName;
-        await db.smartQueries.put(query);
+    async function onRenameSmartPlaylist(query: SavedSmartQuerySummary) {
+        // Renaming still needs the query's existing predicate data, since
+        // save_smart_query overwrites the whole row.
+        const full = await invoke<{ queryParts: unknown }>("get_smart_query", {
+            id: query.id,
+        });
+        await invoke("save_smart_query", {
+            id: query.id,
+            name: updatedSmartPlaylistName,
+            queryParts: full.queryParts,
+        });
+        await refreshSavedSmartQueries();
         updatedSmartPlaylistName = "";
         isRenamingSmartPlaylist = false;
     }
@@ -704,12 +706,13 @@
             isConfirmingSmartPlaylistDelete = true;
             return;
         }
-        await db.smartQueries.delete(smartPlaylistToEdit.id);
+        await invoke("delete_smart_query", { id: smartPlaylistToEdit.id });
         showSmartPlaylistMenu = false;
         isConfirmingSmartPlaylistDelete = false;
 
         // Re-select a smart playlist automatically
-        const userQueries = await db.smartQueries.toArray();
+        await refreshSavedSmartQueries();
+        const userQueries = get(savedSmartQueries);
         if (userQueries.length === 0) {
             $selectedSmartQuery = Object.values(SmartQueries)[0].value;
         } else {
@@ -754,7 +757,11 @@
     async function favouriteCurrentSong() {
         if (!$current.song) return;
         $current.song.isFavourite = !$current.song.isFavourite;
-        await db.songs.put($current.song);
+        await invoke("update_track_favourite", {
+            trackId: $current.song.id,
+            isFavourite: $current.song.isFavourite,
+        });
+        libraryUpdater.update((n) => n + 1);
         $current = $current;
     }
     let sidebarElement;

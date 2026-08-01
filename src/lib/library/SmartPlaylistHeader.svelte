@@ -9,6 +9,7 @@
         isSmartQuerySaveUiOpen,
         isSmartQueryValid,
         queueDuration,
+        refreshSavedSmartQueries,
         selectedPlaylistFile,
         selectedSmartQuery,
         smartQuery,
@@ -109,6 +110,7 @@
 
     async function save() {
         let id = await $smartQuery.save();
+        await refreshSavedSmartQueries();
         // Close the builder UI and set the current selected query to the one we just saved
         $isSmartQueryBuilderOpen = false;
         $selectedSmartQuery = `~usq:${id}`;
