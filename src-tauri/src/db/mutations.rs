@@ -292,3 +292,59 @@ pub fn add_track_stem(conn: &Connection, track_id: &str, stem: &crate::stem_sepa
     .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+/// Collapses the several near-duplicate "toggle favourite" implementations
+/// that used to exist across the frontend (some did `db.songs.update(song,
+/// {isFavourite})`, others read-modified-wrote the whole `$current.song`
+/// object via `.put()`) into one canonical partial update.
+pub fn update_track_favourite(conn: &Connection, track_id: &str, is_favourite: bool) -> Result<(), String> {
+    conn.execute(
+        "UPDATE tracks SET is_favourite = ?1 WHERE id = ?2",
+        rusqlite::params![is_favourite as i64, track_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Atomic increment — avoids the old frontend's read-then-write race
+/// (`db.songs.update(song, {playCount: song.playCount + 1})` using a
+/// possibly-stale in-memory `song.playCount`).
+pub fn increment_track_play_count(conn: &Connection, track_id: &str) -> Result<i64, String> {
+    conn.execute("UPDATE tracks SET play_count = play_count + 1 WHERE id = ?1", [track_id])
+        .map_err(|e| e.to_string())?;
+    conn.query_row("SELECT play_count FROM tracks WHERE id = ?1", [track_id], |r| r.get(0)).map_err(|e| e.to_string())
+}
+
+/// Replaces a track's tag set.
+pub fn update_track_tags(conn: &Connection, track_id: &str, tags: &[String]) -> Result<(), String> {
+    conn.execute("DELETE FROM track_tags WHERE track_id = ?1", [track_id]).map_err(|e| e.to_string())?;
+    for tag in tags {
+        conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?1)", [tag]).map_err(|e| e.to_string())?;
+        let tag_id: i64 =
+            conn.query_row("SELECT id FROM tags WHERE name = ?1", [tag], |r| r.get(0)).map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT OR IGNORE INTO track_tags (track_id, tag_id) VALUES (?1, ?2)",
+            rusqlite::params![track_id, tag_id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+pub fn update_track_origin_country(conn: &Connection, track_id: &str, origin_country: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE tracks SET origin_country = ?1 WHERE id = ?2",
+        rusqlite::params![origin_country, track_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn update_track_markers(conn: &Connection, track_id: &str, markers: &[crate::metadata::Marker]) -> Result<(), String> {
+    conn.execute(
+        "UPDATE tracks SET markers = ?1 WHERE id = ?2",
+        rusqlite::params![serde_json::to_string(markers).unwrap(), track_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}

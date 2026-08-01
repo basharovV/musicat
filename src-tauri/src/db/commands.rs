@@ -138,6 +138,72 @@ pub async fn delete_smart_query(id: i64, db: State<'_, Database>) -> Result<(), 
 }
 
 #[tauri::command]
+pub async fn update_track_favourite(track_id: String, is_favourite: bool, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::mutations::update_track_favourite(conn, &track_id, is_favourite))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn increment_track_play_count(track_id: String, db: State<'_, Database>) -> Result<i64, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::increment_track_play_count(conn, &track_id)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn update_track_tags(track_id: String, tags: Vec<String>, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::update_track_tags(conn, &track_id, &tags)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn update_track_origin_country(track_id: String, origin_country: String, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| super::mutations::update_track_origin_country(conn, &track_id, &origin_country))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn update_track_markers(track_id: String, markers: Vec<crate::metadata::Marker>, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::update_track_markers(conn, &track_id, &markers)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_distinct_track_values(field: String, db: State<'_, Database>) -> Result<Vec<String>, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_distinct_track_values(&conn, &field)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn get_library_counts(db: State<'_, Database>) -> Result<super::query::LibraryCounts, String> {
+    let pool = db.pool.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        super::query::get_library_counts(&conn)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn get_playlist_by_id(id: String, db: State<'_, Database>) -> Result<Option<Playlist>, String> {
     let pool = db.pool.clone();
     tauri::async_runtime::spawn_blocking(move || {

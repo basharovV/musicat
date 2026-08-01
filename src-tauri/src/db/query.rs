@@ -580,6 +580,60 @@ pub fn get_albums_by_ids(conn: &Connection, ids: &[String]) -> Result<Vec<Option
     Ok(ids.iter().map(|id| found.get(id).cloned()).collect())
 }
 
+/// Distinct values for one field — the "uniqueKeys()" autocomplete/tag-cloud
+/// use case. `tags` is special-cased (the normalized `tags` table is the
+/// real distinct set); every other allowed field is a plain scalar text
+/// column, so `DISTINCT` on it is sufficient. Multi-value JSON-array columns
+/// (`genre`, `composer`) aren't supported here — unlike `tags`, they were
+/// never normalized into a join table (see schema.rs), so a per-row DISTINCT
+/// would return whole JSON arrays as strings, not individual values.
+const DISTINCT_TEXT_FIELDS: &[&str] = &["title", "artist", "album", "albumArtist", "originCountry"];
+
+pub fn get_distinct_track_values(conn: &Connection, field: &str) -> Result<Vec<String>, String> {
+    if field == "tags" {
+        let mut stmt = conn.prepare("SELECT name FROM tags ORDER BY name").map_err(|e| e.to_string())?;
+        return stmt
+            .query_map([], |r| r.get(0))
+            .map_err(|e| e.to_string())?
+            .collect::<Result<_, _>>()
+            .map_err(|e| e.to_string());
+    }
+
+    let spec = find_field(TRACK_FIELDS, field)?;
+    if !DISTINCT_TEXT_FIELDS.contains(&field) {
+        return Err(format!("field '{field}' does not support distinct-value listing"));
+    }
+    let sql = format!(
+        "SELECT DISTINCT {col} FROM tracks WHERE {col} IS NOT NULL AND {col} != '' ORDER BY {col}",
+        col = spec.column
+    );
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let values = stmt
+        .query_map([], |r| r.get(0))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<String>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(values)
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryCounts {
+    pub tracks: i64,
+    pub artists: i64,
+    pub albums: i64,
+}
+
+pub fn get_library_counts(conn: &Connection) -> Result<LibraryCounts, String> {
+    Ok(LibraryCounts {
+        tracks: conn.query_row("SELECT COUNT(*) FROM tracks", [], |r| r.get(0)).map_err(|e| e.to_string())?,
+        artists: conn
+            .query_row("SELECT COUNT(DISTINCT artist) FROM tracks", [], |r| r.get(0))
+            .map_err(|e| e.to_string())?,
+        albums: conn.query_row("SELECT COUNT(*) FROM albums", [], |r| r.get(0)).map_err(|e| e.to_string())?,
+    })
+}
+
 trait OptionalStringErr<T> {
     fn optional_string_err(self) -> Result<Option<T>, String>;
 }

@@ -400,7 +400,14 @@ fn main() {
             db::commands::list_smart_queries,
             db::commands::get_smart_query,
             db::commands::save_smart_query,
-            db::commands::delete_smart_query
+            db::commands::delete_smart_query,
+            db::commands::update_track_favourite,
+            db::commands::increment_track_play_count,
+            db::commands::update_track_tags,
+            db::commands::update_track_origin_country,
+            db::commands::update_track_markers,
+            db::commands::get_distinct_track_values,
+            db::commands::get_library_counts
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

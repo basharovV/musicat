@@ -525,3 +525,58 @@ fn smart_query_save_update_delete_round_trip() {
     smart_queries::delete_smart_query(&conn, id).unwrap();
     assert!(smart_queries::get_smart_query(&conn, id).unwrap().is_none());
 }
+
+#[test]
+fn granular_track_field_updates() {
+    let conn = open_test_db();
+    insert_track(&conn, "a", "Song", 2000, false);
+
+    mutations::update_track_favourite(&conn, "a", true).unwrap();
+    assert_eq!(
+        conn.query_row("SELECT is_favourite FROM tracks WHERE id='a'", [], |r| r.get::<_, i64>(0)).unwrap(),
+        1
+    );
+
+    assert_eq!(mutations::increment_track_play_count(&conn, "a").unwrap(), 1);
+    assert_eq!(mutations::increment_track_play_count(&conn, "a").unwrap(), 2);
+
+    mutations::update_track_tags(&conn, "a", &["chill".to_string(), "focus".to_string()]).unwrap();
+    let track = query::get_track_by_id(&conn, "a").unwrap().unwrap();
+    let mut tags = track.tags.clone();
+    tags.sort();
+    assert_eq!(tags, vec!["chill".to_string(), "focus".to_string()]);
+
+    // Replacing tags again must not leave the old set behind (not additive).
+    mutations::update_track_tags(&conn, "a", &["focus".to_string()]).unwrap();
+    assert_eq!(query::get_track_by_id(&conn, "a").unwrap().unwrap().tags, vec!["focus".to_string()]);
+
+    mutations::update_track_origin_country(&conn, "a", "US").unwrap();
+    assert_eq!(query::get_track_by_id(&conn, "a").unwrap().unwrap().origin_country, Some("US".to_string()));
+
+    let markers = vec![crate::metadata::Marker { pos: 12.5, title: "Drop".to_string() }];
+    mutations::update_track_markers(&conn, "a", &markers).unwrap();
+    let reloaded = query::get_track_by_id(&conn, "a").unwrap().unwrap();
+    assert_eq!(reloaded.markers.len(), 1);
+    assert_eq!(reloaded.markers[0].title, "Drop");
+}
+
+#[test]
+fn distinct_track_values_and_library_counts() {
+    let conn = open_test_db();
+    insert_track(&conn, "a", "Alpha", 2000, false);
+    insert_track(&conn, "b", "Beta", 2001, false);
+    conn.execute("UPDATE tracks SET artist = 'Same Artist' WHERE id IN ('a','b')", []).unwrap();
+    mutations::update_track_tags(&conn, "a", &["chill".to_string()]).unwrap();
+    mutations::update_track_tags(&conn, "b", &["chill".to_string(), "focus".to_string()]).unwrap();
+
+    assert_eq!(query::get_distinct_track_values(&conn, "artist").unwrap(), vec!["Same Artist".to_string()]);
+    assert_eq!(
+        query::get_distinct_track_values(&conn, "tags").unwrap(),
+        vec!["chill".to_string(), "focus".to_string()]
+    );
+    assert!(query::get_distinct_track_values(&conn, "genre").is_err(), "genre is a JSON array column, not distinct-listable");
+
+    let counts = query::get_library_counts(&conn).unwrap();
+    assert_eq!(counts.tracks, 2);
+    assert_eq!(counts.artists, 1);
+}
