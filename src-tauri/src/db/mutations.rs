@@ -348,3 +348,15 @@ pub fn update_track_markers(conn: &Connection, track_id: &str, markers: &[crate:
     .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+/// Replaces a track's whole stem list — distinct from `add_track_stem`,
+/// which appends one. Used when the stem-separation backend already knows
+/// the full current list and just needs it persisted.
+pub fn set_track_stems(conn: &Connection, track_id: &str, stems: &[crate::stem_separator::Stem]) -> Result<(), String> {
+    conn.execute(
+        "UPDATE tracks SET stems = ?1 WHERE id = ?2",
+        rusqlite::params![serde_json::to_string(stems).unwrap(), track_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}

@@ -1,8 +1,9 @@
 <script lang="ts">
+    import { invoke } from "@tauri-apps/api/core";
     import tippy from "svelte-tippy";
     import list from "../../data/countries.json";
-    import { db } from "../../data/db";
-    import { rightClickedTracks, userSettings } from "../../data/store";
+    import { queryAllTracks } from "../../data/query";
+    import { libraryUpdater, rightClickedTracks, userSettings } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import { findCountryByArtist } from "../../data/LibraryEnrichers";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
@@ -37,15 +38,25 @@
         $rightClickedTracks[0].originCountry = originCountryEdited.value;
 
         // Find all songs with this artist
-        const artistSongs = await db.songs
-            .where("artist")
-            .equals($rightClickedTracks[0].artist)
-            .toArray();
+        const artistSongs = await queryAllTracks({
+            filter: {
+                kind: "cmp",
+                field: "artist",
+                op: "eq",
+                value: $rightClickedTracks[0].artist,
+            },
+        });
 
         console.log("artistSongs", artistSongs);
-        artistSongs.forEach((s) => {
-            db.songs.update(s.id, { originCountry: originCountryEdited.value });
-        });
+        await Promise.all(
+            artistSongs.map((s) =>
+                invoke("update_track_origin_country", {
+                    trackId: s.id,
+                    originCountry: originCountryEdited.value,
+                }),
+            ),
+        );
+        libraryUpdater.update((n) => n + 1);
 
         originCountry = originCountryEdited.value;
     }

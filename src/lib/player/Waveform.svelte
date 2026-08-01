@@ -19,7 +19,6 @@
     import { fade } from "svelte/transition";
     import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
     import type { Marker, Waveform } from "../../App";
-    import { db } from "../../data/db";
     import { currentThemeObject } from "../../theming/store";
     import { optionalTippy } from "../ui/TippyAction";
     import RegionsPlugin from "./RegionsPlugin";
@@ -140,7 +139,10 @@
                 $current.song.markers.findIndex((m) => m.pos === region.start),
                 1,
             );
-            db.songs.put($current.song);
+            invoke("update_track_markers", {
+                trackId: $current.song.id,
+                markers: $current.song.markers ?? [],
+            });
             if (region.start !== region.end) {
                 $waveformPeaks.loopStartPos = null;
                 $waveformPeaks.loopEndPos = null;
@@ -195,7 +197,10 @@
                     } else {
                         $current.song.markers = [marker];
                     }
-                    db.songs.put($current.song);
+                    invoke("update_track_markers", {
+                        trackId: $current.song.id,
+                        markers: $current.song.markers,
+                    });
                     wsRegions.addRegion({
                         start: posSeconds,
                         content: marker.title,

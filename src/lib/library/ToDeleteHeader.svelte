@@ -1,11 +1,11 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import { db } from "../../data/db";
     import {
         bottomBarNotification,
         isSmartQueryBuilderOpen,
         query,
         queueDuration,
+        refreshToDeletePlaylist,
         selectedPlaylistFile,
         selectedSmartQuery,
         toDeletePlaylist,
@@ -49,12 +49,13 @@
      */
     async function deleteTracksFromPlaylist(tracks: Song[]) {
         // Delete from internal playlist (currently only used for the "to-delete" playlist)
-        const toDelete = await db.internalPlaylists.get($toDeletePlaylist.id);
-        tracks.forEach((t) => {
-            const trackIdx = toDelete.tracks.findIndex((pt) => pt === t.id);
-            toDelete.tracks.splice(trackIdx, 1);
+        const remainingTrackIds = $toDeletePlaylist.tracks.filter(
+            (id) => !tracks.some((t) => t.id === id),
+        );
+        await invoke("set_playlist_tracks", {
+            playlistId: $toDeletePlaylist.id,
+            trackIds: remainingTrackIds,
         });
-        await db.internalPlaylists.put(toDelete);
     }
 
     async function deleteTracksFromFileSystem(tracks: Song[]) {
@@ -69,7 +70,11 @@
     async function deleteAll() {
         isDeleting = true;
         // Get bulk
-        const songs = await db.songs.bulkGet($toDeletePlaylist.tracks);
+        const songs = (
+            await invoke<(Song | null)[]>("get_tracks_by_ids", {
+                ids: $toDeletePlaylist.tracks,
+            })
+        ).filter((s): s is Song => s !== null);
         const count = songs.length;
 
         $bottomBarNotification = {
@@ -80,7 +85,8 @@
         await deleteTracksFromFileSystem(songs);
         await deleteTracksFromPlaylist(songs);
         await deleteFromLibrary(songs);
-        db.internalPlaylists.delete($toDeletePlaylist.id);
+        await invoke("delete_playlist", { id: $toDeletePlaylist.id });
+        await refreshToDeletePlaylist();
 
         $bottomBarNotification = {
             text: $LL.toDelete.notification.deleted(count),
@@ -96,7 +102,8 @@
     }
 
     async function keepAll() {
-        db.internalPlaylists.delete($toDeletePlaylist.id);
+        await invoke("delete_playlist", { id: $toDeletePlaylist.id });
+        await refreshToDeletePlaylist();
 
         $uiView = "library";
         $isSmartQueryBuilderOpen = false;

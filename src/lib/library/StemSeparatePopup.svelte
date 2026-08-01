@@ -6,13 +6,13 @@
     import type { Song, Stem } from "../../App";
     import {
         expandedSongWithStems,
+        libraryUpdater,
         songToSeparate,
         uiView,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
     import Icon from "../ui/Icon.svelte";
     import ProgressBar from "../ui/ProgressBar.svelte";
-    import { db } from "../../data/db";
     import ButtonWithIcon from "../ui/ButtonWithIcon.svelte";
     import LoadingSpinner from "../ui/LoadingSpinner.svelte";
     import { size } from "@tauri-apps/plugin-fs";
@@ -45,7 +45,8 @@
 
         songWithStems = { ...$songToSeparate, stems };
         // Update Song with stems
-        await db.songs.put(songWithStems);
+        await invoke("set_track_stems", { trackId: $songToSeparate.id, stems });
+        libraryUpdater.update((n) => n + 1);
     }
 
     async function cancelSeparation() {

@@ -407,7 +407,8 @@ fn main() {
             db::commands::update_track_origin_country,
             db::commands::update_track_markers,
             db::commands::get_distinct_track_values,
-            db::commands::get_library_counts
+            db::commands::get_library_counts,
+            db::commands::set_track_stems
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

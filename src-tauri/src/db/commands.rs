@@ -182,6 +182,18 @@ pub async fn update_track_markers(track_id: String, markers: Vec<crate::metadata
 }
 
 #[tauri::command]
+pub async fn set_track_stems(
+    track_id: String,
+    stems: Vec<crate::stem_separator::Stem>,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::set_track_stems(conn, &track_id, &stems)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 pub async fn get_distinct_track_values(field: String, db: State<'_, Database>) -> Result<Vec<String>, String> {
     let pool = db.pool.clone();
     tauri::async_runtime::spawn_blocking(move || {
