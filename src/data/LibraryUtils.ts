@@ -16,7 +16,12 @@ import type {
     ToImportAlbums,
 } from "../App";
 import { getImageFormat, isImageFile } from "../utils/FileUtils";
-import { bottomBarNotification, importStatus, userSettings } from "./store";
+import {
+    bottomBarNotification,
+    importStatus,
+    libraryUpdater,
+    userSettings,
+} from "./store";
 const appWindow = getCurrentWebviewWindow();
 
 /**
@@ -131,6 +136,7 @@ export async function startImportListener() {
             }));
             scanExistingStems();
             bottomBarNotification.set(null);
+            libraryUpdater.update((n) => n + 1);
         }
     };
 
@@ -275,6 +281,7 @@ export async function getArtistProfileImage(
  */
 export async function deleteFromLibrary(tracks: Song[]) {
     await invoke("delete_tracks", { trackIds: tracks.map((t) => t.id) });
+    libraryUpdater.update((n) => n + 1);
 }
 
 export function getAlbumId(track: Song): string {
@@ -309,6 +316,7 @@ export async function reImport(response: ToImport) {
     if (response.albums.length) {
         await invoke("upsert_albums", { albums: response.albums });
     }
+    libraryUpdater.update((n) => n + 1);
 }
 
 async function scanExistingStems() {

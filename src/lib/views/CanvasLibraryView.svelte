@@ -1,16 +1,17 @@
 <script lang="ts">
-    import type { Song, SongOrder } from "src/App";
+    import { invoke } from "@tauri-apps/api/core";
+    import type { PlaylistFile, Song, SongOrder } from "src/App";
     import { onMount } from "svelte";
-    import { get } from "svelte/store";
+    import { get, writable, type Writable } from "svelte/store";
     import { songMatchesQuery } from "../../data/LibraryUtils";
     import { parsePlaylist } from "../../data/M3UUtils";
+    import { queryAllTracks } from "../../data/query";
     import BuiltInQueries from "../../data/SmartQueries";
     import {
         beetsLoading,
         beetsSearch,
         beetsSongsOnly,
     } from "../../data/beets";
-    import { db } from "../../data/db";
     import {
         expandedSongWithStems,
         importStatus,
@@ -21,6 +22,7 @@
         isTagCloudOpen,
         isTagOrCondition,
         libraryColumns,
+        libraryUpdater,
         queriedSongs,
         query,
         queueMirrorsSearch,
@@ -38,239 +40,207 @@
     import CanvasLibrary from "../library/CanvasLibrary.svelte";
     import audioPlayer from "../player/AudioPlayer";
     import SmartQuery from "../smart-query/Query";
-    import { liveQuery } from "dexie";
     import ImportPlaceholder from "../library/ImportPlaceholder.svelte";
     export let songOrder: SongOrder;
 
     let isLoading = true;
+    const librarySongs: Writable<Song[]> = writable([]);
 
-    $: songs = $userSettings.beetsDbLocation
-        ? beetsSongsOnly
-        : liveQuery(async () => {
-              let results;
-              let isSmartQueryResults = false;
-              let isIndexed = true;
+    $: songs = $userSettings.beetsDbLocation ? beetsSongsOnly : librarySongs;
 
-              if ($uiView === "to-delete") {
-                  if (
-                      $toDeletePlaylist === null ||
-                      $toDeletePlaylist.tracks.length === 0
-                  ) {
-                      results = [];
-                  } else {
-                      results = await db.songs.bulkGet(
-                          $toDeletePlaylist.tracks,
-                      );
-                  }
-                  // Add display ID
-                  results = results.map((s, idx) => ({
-                      ...s,
-                      viewModel: {
-                          viewId: idx.toString(),
-                      },
-                  }));
-                  console.log("to delete songs", results);
-                  isIndexed = false;
-              } else if ($selectedPlaylistFile !== null) {
-                  results = await parsePlaylist($selectedPlaylistFile);
-                  console.log("m3uresults", results);
+    /**
+     * Orders `results` in place, including the compound tie-breaking Dexie's
+     * `[artist+year+album+trackNumber]`/`[album+trackNumber]` indexes used to
+     * provide -- every path (to-delete, m3u, smart query, default browse)
+     * returns a plain array now, so they all share this one sort instead of
+     * each needing their own (the old "artist" case here was a straight
+     * localeCompare with a "needs to match the multiple indexes sorting from
+     * Dexie" TODO; this actually does that now, for every path, not just the
+     * ones that used to go through a Dexie compound index).
+     */
+    function sortSongs(results: Song[], order: SongOrder): Song[] {
+        const dir = order.reverse ? -1 : 1;
+        return results.sort((a, b) => {
+            let result = 0;
+            switch (order.orderBy) {
+                case "artist":
+                    result =
+                        a.artist.localeCompare(b.artist) ||
+                        (a.year ?? 0) - (b.year ?? 0) ||
+                        a.album.localeCompare(b.album) ||
+                        (a.trackNumber ?? 0) - (b.trackNumber ?? 0);
+                    break;
+                case "album":
+                    result =
+                        a.album.localeCompare(b.album) ||
+                        (a.trackNumber ?? 0) - (b.trackNumber ?? 0);
+                    break;
+                case "trackNumber":
+                    result = (a.trackNumber ?? 0) - (b.trackNumber ?? 0);
+                    break;
+                case "title":
+                case "year":
+                case "duration":
+                case "genre":
+                    result = String(a[order.orderBy]).localeCompare(
+                        String(b[order.orderBy]),
+                    );
+                    break;
+                default:
+                    result = 0;
+            }
+            return result * dir;
+        });
+    }
 
-                  // Add display ID
-                  results = results.map((s, idx) => ({
-                      ...s,
-                      viewModel: {
-                          viewId: idx.toString(),
-                      },
-                  }));
-                  isIndexed = false;
-                  // Filter within playlist
-                  if ($query.length) {
-                      results = results.filter((song) =>
-                          songMatchesQuery(song, $query),
-                      );
-                  }
-              } else if (
-                  $uiView === "smart-query" ||
-                  $uiView === "favourites"
-              ) {
-                  /**
-                   * User-built smart queries don't support indexing
-                   */
-                  if ($isSmartQueryBuilderOpen) {
-                      if ($smartQuery.isEmpty) {
-                          results = [];
-                      } else if ($smartQueryUpdater) {
-                          results = await $smartQuery.run();
-                      }
+    async function fetchLibrarySongs(
+        uiView: string,
+        toDeletePlaylist: { tracks: string[] } | null,
+        selectedPlaylistFile: PlaylistFile | null,
+        query: string,
+        isSmartQueryBuilderOpen: boolean,
+        smartQuery: SmartQuery,
+        smartQueryUpdater: number,
+        selectedSmartQuery: string,
+        isTagCloudOpen: boolean,
+        selectedTags: Set<string>,
+        isTagOrCondition: boolean,
+        songOrder: SongOrder,
+        _libraryUpdater: number,
+    ) {
+        isLoading = true;
+        let results: Song[];
+        let isSmartQueryResults = false;
 
-                      isSmartQueryResults = true;
-                      isIndexed = false;
-                  } else {
-                      /**
-                       * Both saved and built-in smart queries run as a
-                       * QuerySpec against SQLite now (see SmartQuery.run() /
-                       * SmartQueries.ts), so both return a plain array --
-                       * neither needs the `isIndexed`/Collection handling
-                       * below anymore.
-                       */
-                      console.log("selected query: ", $selectedSmartQuery);
-                      if ($selectedSmartQuery.startsWith("~usq:")) {
-                          // Run the query from the user-built blocks
-                          const query =
-                              await SmartQuery.loadWithUQI($selectedSmartQuery);
-                          results = await query.run();
-                          console.log("results query: ", results);
-                      } else {
-                          // Run the query from built-in functions
-                          results =
-                              await BuiltInQueries[$selectedSmartQuery].run();
-                      }
-                      isIndexed = false;
-                      isSmartQueryResults = true;
-                  }
-              } else if ($query.length) {
-                  results = db.songs
-                      .orderBy(
-                          songOrder.orderBy === "artist"
-                              ? "[artist+year+album+trackNumber]"
-                              : songOrder.orderBy === "album"
-                                ? "[album+trackNumber]"
-                                : songOrder.orderBy,
-                      )
-                      .and((song) => songMatchesQuery(song, $query));
-              } else {
-                  results = db.songs.orderBy(
-                      songOrder.orderBy === "artist"
-                          ? "[artist+year+album+trackNumber]"
-                          : songOrder.orderBy === "album"
-                            ? "[album+trackNumber]"
-                            : songOrder.orderBy,
-                  );
-              }
-              let resultsArray: Song[] = [];
+        if (uiView === "to-delete") {
+            if (toDeletePlaylist === null || toDeletePlaylist.tracks.length === 0) {
+                results = [];
+            } else {
+                results = (
+                    await invoke<(Song | null)[]>("get_tracks_by_ids", {
+                        ids: toDeletePlaylist.tracks,
+                    })
+                ).filter((s): s is Song => s !== null);
+            }
+            results = results.map((s, idx) => ({
+                ...s,
+                viewModel: { index: idx, viewId: idx.toString() },
+            }));
+        } else if (selectedPlaylistFile !== null) {
+            results = await parsePlaylist(selectedPlaylistFile);
+            results = results.map((s, idx) => ({
+                ...s,
+                viewModel: { index: idx, viewId: idx.toString() },
+            }));
+            if (query.length) {
+                results = results.filter((song) => songMatchesQuery(song, query));
+            }
+        } else if (uiView === "smart-query" || uiView === "favourites") {
+            if (isSmartQueryBuilderOpen) {
+                if (smartQuery.isEmpty) {
+                    results = [];
+                } else if (smartQueryUpdater) {
+                    results = await smartQuery.run();
+                } else {
+                    results = [];
+                }
+            } else if (selectedSmartQuery.startsWith("~usq:")) {
+                const loaded = await SmartQuery.loadWithUQI(
+                    selectedSmartQuery as `~usq:${string}`,
+                );
+                results = await loaded.run();
+            } else {
+                results = await BuiltInQueries[selectedSmartQuery].run();
+            }
+            isSmartQueryResults = true;
+        } else {
+            results = await queryAllTracks({});
+            if (query.length) {
+                results = results.filter((song) => songMatchesQuery(song, query));
+            }
+        }
 
-              // Depending whether this is a smart query or not
-              if (isIndexed) {
-                  if (songOrder.reverse) {
-                      results = results.reverse();
-                  }
-                  if (
-                      $uiView === "smart-query" &&
-                      songOrder.orderBy !== "none"
-                  ) {
-                      resultsArray = await results.sortBy(songOrder.orderBy);
-                  } else {
-                      resultsArray = await results.toArray();
-                      // console.log("results", resultsArray);
-                  }
-              } else {
-                  resultsArray = results;
-              }
+        // Filter by tags
+        if (isTagCloudOpen && selectedTags.size) {
+            results = results.filter((song) => {
+                let matches = [];
+                if (selectedTags.size === 0) {
+                    return true;
+                } else if (song.tags?.length === 0) {
+                    return false;
+                }
+                selectedTags.forEach((t) => {
+                    song.tags?.forEach((tag) => {
+                        if (tag === t) {
+                            matches.push(t);
+                        }
+                    });
+                });
 
-              // Filter by tags
-              if ($isTagCloudOpen && $selectedTags.size) {
-                  resultsArray = resultsArray.filter((song) => {
-                      let matches = [];
-                      if ($selectedTags.size === 0) {
-                          return true;
-                      } else if (song.tags?.length === 0) {
-                          return false;
-                      }
-                      $selectedTags.forEach((t) => {
-                          song.tags?.forEach((tag) => {
-                              if (tag === t) {
-                                  matches.push(t);
-                              }
-                          });
-                      });
-                      // console.log("matches", matches);
+                return isTagOrCondition
+                    ? matches.length > 0 && matches.every((m) => selectedTags.has(m))
+                    : matches.length === selectedTags?.size &&
+                          matches.every((m) => selectedTags.has(m));
+            });
+        }
 
-                      return $isTagOrCondition
-                          ? matches.length > 0 &&
-                                matches.every((m) => $selectedTags.has(m))
-                          : matches.length === $selectedTags?.size &&
-                                matches.every((m) => $selectedTags.has(m));
-                  });
-              }
+        results = sortSongs(results, songOrder);
 
-              // Do sorting for non-indexed results
-              if (!isIndexed) {
-                  resultsArray = resultsArray.sort((a, b) => {
-                      let result = 0;
-                      switch (songOrder.orderBy) {
-                          case "title":
-                          case "album":
-                          case "track":
-                          case "year":
-                          case "duration":
-                          case "genre":
-                              result = String(
-                                  a[songOrder.orderBy],
-                              ).localeCompare(String(b[songOrder.orderBy]));
-                              break;
-                          case "artist":
-                              // TODO this one needs to match the multiple indexes sorting from Dexie
-                              // i.e Artist -> Album -> Track N.
-                              result = a.artist.localeCompare(b.artist);
-                              break;
-                      }
-                      if (songOrder.reverse) {
-                          result *= -1;
-                      }
-                      return result;
-                  });
-              }
+        if (get(expandedSongWithStems)) {
+            const idx = results.findIndex(
+                (s) => s.id === get(expandedSongWithStems).id,
+            );
+            if (idx !== -1) {
+                expandedSongWithStems.update((s) => ({
+                    ...s,
+                    viewModel: { ...s.viewModel, index: idx },
+                }));
+            } else {
+                expandedSongWithStems.set(null);
+            }
+        }
 
-              if (get(expandedSongWithStems)) {
-                  // Find the song
-                  const idx = resultsArray.findIndex(
-                      (s) => s.id === get(expandedSongWithStems).id,
-                  );
-                  if (idx !== -1) {
-                      expandedSongWithStems.update((s) => {
-                          return {
-                              ...s,
-                              viewModel: {
-                                  ...s.viewModel,
-                                  index: idx,
-                              },
-                          };
-                      });
-                  } else {
-                      expandedSongWithStems.set(null);
-                  }
-              }
+        if (isSmartQueryResults) {
+            smartQueryResults.set(results);
+        } else {
+            queriedSongs.set(results);
+        }
 
-              /**
-               * Set in store
-               */
-              if (isSmartQueryResults) {
-                  smartQueryResults.set(resultsArray);
-              } else {
-                  queriedSongs.set(resultsArray);
-              }
-              if ($uiView === "library" && get(isInit)) {
-                  console.log("init");
-                  // TESTING ONLY: Uncomment when needed
-                  // window["openedUrls"] = "file:///Users/slav/Downloads/Intrusive Thoughts 14-12-2023.mp3";
+        if (uiView === "library" && get(isInit)) {
+            if (window["openedUrls"]?.length) {
+                await audioPlayer.handleOpenedUrls(window["openedUrls"]);
+            }
+            isInit.set(false);
+        }
 
-                  if (window["openedUrls"]?.length) {
-                      await audioPlayer.handleOpenedUrls(window["openedUrls"]);
-                  }
+        if (get(queueMirrorsSearch)) {
+            setQueue(results, false);
+            if (query.length === 0) {
+                queueMirrorsSearch.set(false);
+            }
+        }
 
-                  isInit.set(false);
-              }
+        librarySongs.set(results);
+        isLoading = false;
+    }
 
-              if ($queueMirrorsSearch) {
-                  setQueue(resultsArray, false);
-                  if ($query.length === 0) {
-                      $queueMirrorsSearch = false;
-                  }
-              }
-
-              isLoading = false;
-              return resultsArray;
-          });
+    $: if (!$userSettings.beetsDbLocation) {
+        fetchLibrarySongs(
+            $uiView,
+            $toDeletePlaylist,
+            $selectedPlaylistFile,
+            $query,
+            $isSmartQueryBuilderOpen,
+            $smartQuery,
+            $smartQueryUpdater,
+            $selectedSmartQuery,
+            $isTagCloudOpen,
+            $selectedTags,
+            $isTagOrCondition,
+            songOrder,
+            $libraryUpdater,
+        );
+    }
 
     async function onQueryChanged(query: string, songOrder: SongOrder) {
         if ($uiView === "library") {

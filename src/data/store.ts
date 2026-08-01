@@ -48,6 +48,16 @@ export const L = derived(locale, (l) => {
 export const isInit = writable(true);
 export const isSongReady = writable(false);
 export const forceRefreshLibrary = writable(false);
+
+/**
+ * Bump after a write that the library view should reflect but that isn't
+ * already covered by one of its other reactive dependencies (favourite
+ * toggled, tags edited, track deleted, import finished, ...). Same pattern
+ * `smartQueryUpdater` already uses below. Dexie's `liveQuery` used to
+ * refetch automatically on any table write; without a real change-event
+ * system yet (tasks.md 3.5), call sites bump this explicitly instead.
+ */
+export const libraryUpdater = writable(0);
 export const query: Writable<Query> = writable("", (set) => {
     const item = storage.getItem("query");
 
@@ -311,7 +321,7 @@ export const smartQueryResults: Writable<Song[]> = writable([]);
 
 // Tag cloud
 export const isTagCloudOpen = writable(false);
-export const selectedTags = writable(new Set());
+export const selectedTags = writable(new Set<string>());
 export const isTagOrCondition = writable(false);
 
 // Playlists
