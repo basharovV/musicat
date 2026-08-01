@@ -108,7 +108,51 @@
         songOrder: SongOrder,
         _libraryUpdater: number,
     ) {
-        isLoading = true;
+        // Only ever true->false, once, for the initial load -- never set back
+        // to true on a later re-fetch. The template destroys and recreates
+        // <CanvasLibrary> whenever isLoading flips back to true (it's behind
+        // an {#if}/{:else}), and CanvasLibrary's own async draw/resize chain
+        // has in-flight timeouts that crash if the component is torn down
+        // out from under them mid-flight. The old Dexie liveQuery version
+        // only ever transitioned isLoading once for exactly this reason --
+        // subsequent data updates were prop changes to an already-mounted
+        // component, never a remount.
+        try {
+            await fetchLibrarySongsInner(
+                uiView,
+                toDeletePlaylist,
+                selectedPlaylistFile,
+                query,
+                isSmartQueryBuilderOpen,
+                smartQuery,
+                smartQueryUpdater,
+                selectedSmartQuery,
+                isTagCloudOpen,
+                selectedTags,
+                isTagOrCondition,
+                songOrder,
+            );
+        } catch (e) {
+            console.error("Error fetching library songs", e);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function fetchLibrarySongsInner(
+        uiView: string,
+        toDeletePlaylist: { tracks: string[] } | null,
+        selectedPlaylistFile: PlaylistFile | null,
+        query: string,
+        isSmartQueryBuilderOpen: boolean,
+        smartQuery: SmartQuery,
+        smartQueryUpdater: number,
+        selectedSmartQuery: string,
+        isTagCloudOpen: boolean,
+        selectedTags: Set<string>,
+        isTagOrCondition: boolean,
+        songOrder: SongOrder,
+    ) {
         let results: Song[];
         let isSmartQueryResults = false;
 
@@ -221,7 +265,6 @@
         }
 
         librarySongs.set(results);
-        isLoading = false;
     }
 
     $: if (!$userSettings.beetsDbLocation) {

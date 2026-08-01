@@ -444,6 +444,10 @@
     }
 
     function calculateViewport() {
+        // Called from a setTimeout callback in calculateCanvasSize(); guard
+        // the same way syncDimensions() above already does, in case the
+        // component gets torn down before that timeout fires.
+        if (!libraryContainer) return;
         viewportHeight = libraryContainer.clientHeight;
         let area = contentHeight - viewportHeight;
         width = scrollContainer?.clientWidth ?? libraryContainer.clientWidth;

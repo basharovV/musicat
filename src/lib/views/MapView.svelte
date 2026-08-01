@@ -154,7 +154,47 @@
         songOrder: SongOrder,
         _libraryUpdater: number,
     ) {
-        isLoading = true;
+        // See CanvasLibraryView.svelte's identical comment: isLoading should
+        // only ever transition true->false once. It isn't read in this
+        // file's template (so it can't cause the same remount crash
+        // CanvasLibraryView had), but keeping the two in sync avoids the
+        // same footgun if that ever changes.
+        try {
+            await fetchLibrarySongsInner(
+                uiView,
+                toDeletePlaylist,
+                selectedPlaylistFile,
+                query,
+                isSmartQueryBuilderOpen,
+                smartQuery,
+                smartQueryUpdater,
+                selectedSmartQuery,
+                isTagCloudOpen,
+                selectedTags,
+                isTagOrCondition,
+                songOrder,
+            );
+        } catch (e) {
+            console.error("Error fetching library songs", e);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function fetchLibrarySongsInner(
+        uiView: string,
+        toDeletePlaylist: { tracks: string[] } | null,
+        selectedPlaylistFile: PlaylistFile | null,
+        query: string,
+        isSmartQueryBuilderOpen: boolean,
+        smartQuery: SmartQuery,
+        smartQueryUpdater: number,
+        selectedSmartQuery: string,
+        isTagCloudOpen: boolean,
+        selectedTags: Set<string>,
+        isTagOrCondition: boolean,
+        songOrder: SongOrder,
+    ) {
         let results: Song[];
         let isSmartQueryResults = false;
 
@@ -266,7 +306,6 @@
         }
 
         librarySongs.set(results);
-        isLoading = false;
     }
 
     $: if (!$userSettings.beetsDbLocation) {
