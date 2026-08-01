@@ -14,6 +14,7 @@ import type {
 } from "src/App";
 import type { SavedSmartQuery } from "src/lib/smart-query/QueryPart";
 import { get } from "svelte/store";
+import { queryAlbumTracks } from "./query";
 import { userSettings } from "./store";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -140,7 +141,7 @@ export async function deleteDatabase() {
     await db.delete();
 }
 
-// Helper functions for querying DB (using dexie or beets)
+// Helper functions for querying DB (using SQLite or beets)
 
 export async function getAlbum(albumId: string): Promise<Album> {
     try {
@@ -150,7 +151,7 @@ export async function getAlbum(albumId: string): Promise<Album> {
             });
             return albums[0];
         } else {
-            return db.albums.get(albumId);
+            return await invoke<Album | null>("get_album_by_id", { id: albumId });
         }
     } catch (err) {
         console.error(err);
@@ -167,9 +168,7 @@ export async function getAlbumTracks(album: Album): Promise<Song[]> {
             });
             return tracks;
         } else {
-            return (await db.songs.bulkGet(album.tracksIds))
-                .filter((song) => song)
-                .sort((a, b) => a.trackNumber - b.trackNumber);
+            return await queryAlbumTracks(album.id);
         }
     } catch (err) {
         console.error(err);

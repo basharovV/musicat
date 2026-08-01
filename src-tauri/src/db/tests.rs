@@ -439,6 +439,27 @@ fn upsert_albums_supersedes_the_placeholder_from_upsert_tracks() {
 }
 
 #[test]
+fn album_tracks_ids_reflects_current_tracks_not_a_stored_list() {
+    let mut conn = open_test_db();
+    mutations::upsert_tracks(
+        &mut conn,
+        &[scanned_track("a", "Track A", "album-1"), scanned_track("b", "Track B", "album-1")],
+    )
+    .unwrap();
+
+    let album = query::get_album_by_id(&conn, "album-1").unwrap().unwrap();
+    let mut ids = album.tracks_ids.clone();
+    ids.sort();
+    assert_eq!(ids, vec!["a".to_string(), "b".to_string()]);
+
+    // Deleting a track updates the count on the next read -- it's derived,
+    // not a list that could go stale.
+    mutations::delete_tracks(&mut conn, &["a".to_string()]).unwrap();
+    let album = query::get_album_by_id(&conn, "album-1").unwrap().unwrap();
+    assert_eq!(album.tracks_ids, vec!["b".to_string()]);
+}
+
+#[test]
 fn upsert_tracks_deletes_the_old_album_when_it_becomes_orphaned() {
     let mut conn = open_test_db();
     mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Song", "album-1")]).unwrap();

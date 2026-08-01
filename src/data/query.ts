@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Song } from "../App";
+import type { Album, Song } from "../App";
 
 /**
  * TS mirror of `db::query`'s `QuerySpec`/`FilterNode`/`Page<T>` (Rust) --
@@ -90,4 +90,34 @@ export async function queryAllTracks(spec: QuerySpec): Promise<Song[]> {
         cursor = page.nextCursor;
     }
     return results;
+}
+
+/** Same idea as `queryAllTracks`, but for `query_albums` (offset-paginated). */
+export async function queryAllAlbums(spec: QuerySpec): Promise<Album[]> {
+    const results: Album[] = [];
+    let offset = spec.page?.offset ?? 0;
+    while (true) {
+        const page = await invoke<Page<Album>>("query_albums", {
+            spec: { ...spec, page: { ...spec.page, offset, limit: MAX_PAGE_SIZE } },
+        });
+        results.push(...page.items);
+        if (!page.hasMore) {
+            break;
+        }
+        offset += page.items.length;
+    }
+    return results;
+}
+
+/**
+ * Tracks belonging to an album, in track order. `Album.tracksIds` isn't
+ * populated from SQLite (see `db::models::row_to_album` -- `tracks.albumId`
+ * is the source of truth for this relationship now), so this queries by
+ * that instead of reading a denormalized id list off the album.
+ */
+export async function queryAlbumTracks(albumId: string): Promise<Song[]> {
+    return queryAllTracks({
+        filter: { kind: "cmp", field: "albumId", op: "eq", value: albumId },
+        sort: { field: "trackNumber" },
+    });
 }

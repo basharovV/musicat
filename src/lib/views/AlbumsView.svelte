@@ -1,20 +1,22 @@
 <script lang="ts">
     import { path } from "@tauri-apps/api";
     import { invoke } from "@tauri-apps/api/core";
-    import { liveQuery } from "dexie";
     import { debounce } from "lodash-es";
     import md5 from "md5";
     import { onMount, tick } from "svelte";
+    import { writable, type Writable } from "svelte/store";
     import VirtualList from "svelte-tiny-virtual-list";
     import { cubicInOut, cubicOut } from "svelte/easing";
     import { fade } from "svelte/transition";
     import type { Album, AlbumsSortBy, Song } from "../../App";
     import { beetsAlbumSearch, beetsAlbumsOnly } from "../../data/beets";
-    import { db, getAlbumTracks } from "../../data/db";
+    import { getAlbumTracks } from "../../data/db";
+    import { queryAllAlbums } from "../../data/query";
     import {
         compressionSelected,
         current,
         isPlaying,
+        libraryUpdater,
         query,
         queue,
         uiPreferences,
@@ -54,51 +56,63 @@
     let rowHeight = 0;
     let virtualList;
 
-    $: albums = $userSettings.beetsDbLocation
-        ? beetsAlbumsOnly
-        : liveQuery(async () => {
-              let albums = await db.albums.toArray();
+    const libraryAlbums: Writable<Album[]> = writable([]);
+    $: albums = $userSettings.beetsDbLocation ? beetsAlbumsOnly : libraryAlbums;
 
-              if ($compressionSelected === "lossless") {
-                  albums = albums.filter(
-                      ({ title, lossless }) => title.length && lossless,
-                  );
-              } else if ($compressionSelected === "lossy") {
-                  albums = albums.filter(
-                      ({ title, lossless }) => title.length && !lossless,
-                  );
-              } else {
-                  albums = albums.filter(({ title }) => title.length);
-              }
+    async function fetchAlbums(
+        compressionSelected: string,
+        albumsViewSortBy: AlbumsSortBy,
+        _libraryUpdater: number,
+    ) {
+        let albums = await queryAllAlbums({});
 
-              if ($uiPreferences.albumsViewSortBy === "title") {
-                  albums.sort((a, b) => {
-                      if (a.title < b.title) return -1;
-                      if (a.title > b.title) return 1;
-                      return 0;
-                  });
-              } else if ($uiPreferences.albumsViewSortBy === "artist") {
-                  albums.sort((a, b) => {
-                      if (a.artist < b.artist) return -1;
-                      if (a.artist > b.artist) return 1;
-                      if (a.title < b.title) return -1;
-                      if (a.title > b.title) return 1;
-                      return 0;
-                  });
-              } else {
-                  albums.sort((a, b) => {
-                      if (a.year < b.year) return -1;
-                      if (a.year > b.year) return 1;
-                      if (a.title < b.title) return -1;
-                      if (a.title > b.title) return 1;
-                      return 0;
-                  });
-              }
+        if (compressionSelected === "lossless") {
+            albums = albums.filter(
+                ({ title, lossless }) => title.length && lossless,
+            );
+        } else if (compressionSelected === "lossy") {
+            albums = albums.filter(
+                ({ title, lossless }) => title.length && !lossless,
+            );
+        } else {
+            albums = albums.filter(({ title }) => title.length);
+        }
 
-              isLoading = false;
+        if (albumsViewSortBy === "title") {
+            albums.sort((a, b) => {
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        } else if (albumsViewSortBy === "artist") {
+            albums.sort((a, b) => {
+                if (a.artist < b.artist) return -1;
+                if (a.artist > b.artist) return 1;
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        } else {
+            albums.sort((a, b) => {
+                if (a.year < b.year) return -1;
+                if (a.year > b.year) return 1;
+                if (a.title < b.title) return -1;
+                if (a.title > b.title) return 1;
+                return 0;
+            });
+        }
 
-              return albums;
-          });
+        isLoading = false;
+        libraryAlbums.set(albums);
+    }
+
+    $: if (!$userSettings.beetsDbLocation) {
+        fetchAlbums(
+            $compressionSelected,
+            $uiPreferences.albumsViewSortBy,
+            $libraryUpdater,
+        );
+    }
 
     $: if (isInit && $queue && $current?.song) {
         console.log("Scrolling to current album");
@@ -203,9 +217,9 @@
             // Strip the song from album path
             const albumPath = await path.dirname($current?.song?.path);
             // Find the album currently playing
-            currentAlbum = await db.albums.get(
-                md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
-            );
+            currentAlbum = await invoke<Album | null>("get_album_by_id", {
+                id: md5(`${albumPath} - ${$current?.song?.album}`.toLowerCase()),
+            });
         }
 
         if (!currentAlbum) return false;

@@ -78,9 +78,16 @@ pub fn row_to_track(row: &Row) -> rusqlite::Result<Song> {
     })
 }
 
+/// `tracks.album_id` is the source of truth for the album/track relationship
+/// now (see design.md's schema-shape decision) — `tracks_ids` here is a
+/// read-time convenience for callers that still want it (track-count checks,
+/// bulk lookups), populated via a correlated subquery the same way tags are
+/// for tracks, not a stored/denormalized column.
 pub const ALBUM_COLUMNS: &str = "
     id, title, display_title, artist, year, compilation, genre, path, lossless,
-    artwork_format, artwork_src
+    artwork_format, artwork_src,
+    (SELECT group_concat(id, char(1)) FROM tracks
+      WHERE tracks.album_id = albums.id ORDER BY track_number) AS track_ids_concat
 ";
 
 pub fn row_to_album(row: &Row) -> rusqlite::Result<Album> {
@@ -92,6 +99,9 @@ pub fn row_to_album(row: &Row) -> rusqlite::Result<Album> {
         format,
     });
 
+    let track_ids_concat: Option<String> = row.get("track_ids_concat")?;
+    let tracks_ids = track_ids_concat.map(|s| s.split('\u{1}').map(str::to_string).collect()).unwrap_or_default();
+
     Ok(Album {
         id: row.get("id")?,
         title: row.get("title")?,
@@ -100,11 +110,7 @@ pub fn row_to_album(row: &Row) -> rusqlite::Result<Album> {
         compilation: row.get("compilation")?,
         year: row.get("year")?,
         genre: json_vec(row.get("genre")?),
-        // Intentionally not hydrated: `tracks.album_id` is the source of
-        // truth for this relationship now (see design.md's schema-shape
-        // decision), so callers query tracks by `albumId` directly instead
-        // of reading a denormalized id list off the album.
-        tracks_ids: Vec::new(),
+        tracks_ids,
         path: row.get::<_, Option<String>>("path")?.unwrap_or_default(),
         artwork,
         lossless: row.get::<_, i64>("lossless")? != 0,
