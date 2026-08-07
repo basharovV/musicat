@@ -21,7 +21,7 @@
     async function loadSongbook() {
         isLoading = true;
         $currentSongProjects = await loadSongProjectsForArtist(
-            $songbookSelectedArtist.name,
+            $songbookSelectedArtist,
         );
         // Sort the $currentSongProjects alphabetically
         console.log("songbook: $currentSongProjects", $currentSongProjects);
@@ -41,7 +41,7 @@
 
     async function onSelectSong(song: string) {
         selectedSongProject = await loadSongProject(
-            $songbookSelectedArtist.name,
+            $songbookSelectedArtist,
             song,
         );
     }

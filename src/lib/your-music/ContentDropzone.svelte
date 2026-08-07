@@ -8,7 +8,7 @@
     import type { Event, UnlistenFn } from "@tauri-apps/api/event";
     import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
     import type { ArtistFileItem, Song, SongProject } from "src/App";
-    import { db } from "../../data/db";
+    import { saveSongProject } from "../../data/ArtistsToolkitData";
     import { isDraggingExternalFiles, userSettings } from "../../data/store";
     import { getContentFileType } from "../../utils/FileUtils";
     import { copyFile } from "@tauri-apps/plugin-fs";
@@ -52,7 +52,8 @@
                             },
                         });
                         if (song) {
-                            await db.songProjects.update(songProject, {
+                            await saveSongProject({
+                                ...songProject,
                                 recordings: [
                                     ...songProject.recordings,
                                     {
@@ -65,7 +66,8 @@
 
                         break;
                     case "video":
-                        await db.songProjects.update(songProject, {
+                        await saveSongProject({
+                            ...songProject,
                             otherContentItems: songProject.otherContentItems
                                 ? [
                                       ...songProject.otherContentItems,

@@ -11,7 +11,6 @@
         SongProject,
     } from "src/App";
     import { onDestroy, onMount } from "svelte";
-    import { db } from "../../data/db";
     import {
         draggedScrapbookItems,
         emptyDropEvent,
@@ -41,6 +40,7 @@
     import {
         renameSongProject,
         saveFrontmatterToSongProject,
+        saveSongProject as saveSongProjectToDb,
         writeChordMarkToSongProject,
     } from "../../data/ArtistsToolkitData";
 
@@ -98,7 +98,7 @@
     function saveSongProject() {
         console.log("saving clone to db:", songProjectClone);
         if (songProjectClone) {
-            db.songProjects.put(songProjectClone);
+            saveSongProjectToDb(songProjectClone);
         }
     }
 
@@ -120,12 +120,8 @@
     }
 
     async function onTitleUpdated(evt) {
-        // Update folder name
-        await renameSongProject(
-            songProject.artist,
-            songProjectClone.title,
-            evt.target.value,
-        );
+        // Update folder name (and the song_projects row, in place)
+        await renameSongProject(songProjectClone, evt.target.value);
         songProjectClone.title = evt.target.value;
     }
 

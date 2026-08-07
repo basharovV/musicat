@@ -6,13 +6,13 @@ import { get } from "svelte/store";
 import type { Song } from "../App";
 import { isAudioFile, isFileOrDirectory } from "../utils/FileUtils";
 import { importPaths } from "./LibraryUtils";
-import { db } from "./db";
 import { queryAllTracks } from "./query";
 import {
     bottomBarNotification,
     currentSongProjects,
     isFolderWatchUpdate,
     libraryUpdater,
+    scrapbookItems,
     songbookArtists,
     songbookSelectedArtist,
     userSettings,
@@ -145,12 +145,18 @@ export async function startWatchingScrapbookFolder() {
                         const file = path.split("/").pop();
                         let fileExists = false;
                         try {
-                            fileExists = await exists(path);
+                            // Not `exists()` from @tauri-apps/plugin-fs -- that blocks
+                            // synchronously with no spawn_blocking (see files.rs), and this
+                            // watcher fires on every fs event in a folder that may be
+                            // cloud-sync-backed.
+                            fileExists = await invoke<boolean>("path_exists_blocking", { path });
                         } catch (err) {
                             console.error("err in fileexists");
                         }
                         const filehash = md5(path);
-                        const song = await db.scrapbook.get(filehash);
+                        const song = get(scrapbookItems).find(
+                            (i) => i.id === filehash,
+                        );
 
                         // New file
                         if (fileExists && !song) {
@@ -158,7 +164,8 @@ export async function startWatchingScrapbookFolder() {
                                 text: "Folder watcher: File added - updating library...",
                                 timeout: 2000,
                             });
-                            await addScrapbookFile(path);
+                            const added = await addScrapbookFile(path);
+                            scrapbookItems.update((items) => [...items, added]);
                         }
                         // Deletion
                         else if (!fileExists && song) {
@@ -166,7 +173,10 @@ export async function startWatchingScrapbookFolder() {
                                 text: "Folder watcher: File deleted - updating library...",
                                 timeout: 2000,
                             });
-                            await db.scrapbook.delete(filehash);
+                            await invoke("delete_scrapbook_item", { id: filehash });
+                            scrapbookItems.update((items) =>
+                                items.filter((i) => i.id !== filehash),
+                            );
                         }
                     }
                 }
@@ -228,11 +238,10 @@ export async function startWatchingSongbookFolder() {
                             );
                         } else if (depth === 3) {
                             // Only update if matches currently selected artist
-                            if (
-                                artistName === get(songbookSelectedArtist).name
-                            ) {
+                            const selectedArtist = get(songbookSelectedArtist);
+                            if (artistName === selectedArtist?.name) {
                                 currentSongProjects.set(
-                                    await loadSongProjectsForArtist(artistName),
+                                    await loadSongProjectsForArtist(selectedArtist),
                                 );
                             }
                         }

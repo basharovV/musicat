@@ -172,7 +172,6 @@ struct DexieArtistProject {
     id: serde_json::Value,
     name: String,
     members: Vec<String>,
-    profile_photo: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -366,17 +365,51 @@ pub fn migrate(conn: &mut Connection, export: &DexieExport) -> Result<MigrationR
         report.smart_queries += 1;
     }
 
+    // `artist_projects.name` is UNIQUE and `song_projects` links to it via `artist_id` (see
+    // `openspec/changes/artists-toolkit-storage/design.md`) — the shadow db already has this shape
+    // by the time this runs (migration 0002 applies before any row is written). A Dexie export can
+    // still contain duplicate rows for the same artist/song (the exact dead-write bug this change
+    // fixes produced them), so both loops upsert by natural key rather than plain INSERT, same
+    // "keep the latest" resolution the schema migration itself uses for pre-existing installs.
+    let artist_id_for = |tx: &rusqlite::Transaction, name: &str| -> rusqlite::Result<i64> {
+        tx.execute(
+            "INSERT INTO artist_projects (name, members) VALUES (?1, '[]')
+             ON CONFLICT(name) DO NOTHING",
+            [name],
+        )?;
+        tx.query_row("SELECT id FROM artist_projects WHERE name = ?1", [name], |r| r.get(0))
+    };
+
+    for row in export.data.table("artistProjects") {
+        let ap: DexieArtistProject = serde_json::from_value(row.clone()).map_err(|e| e.to_string())?;
+        tx.execute(
+            "INSERT INTO artist_projects (name, members) VALUES (?1, ?2)
+             ON CONFLICT(name) DO UPDATE SET members = excluded.members",
+            rusqlite::params![ap.name, serde_json::to_string(&ap.members).unwrap()],
+        )
+        .map_err(|e| e.to_string())?;
+        report.artist_projects += 1;
+    }
+
     for row in export.data.table("songProjects") {
         let sp: DexieSongProject = serde_json::from_value(row.clone()).map_err(|e| e.to_string())?;
+        let artist_id = artist_id_for(&tx, &sp.artist).map_err(|e| e.to_string())?;
         tx.execute(
-            "INSERT INTO song_projects (song_filepath, title, artist, album, key, bpm,
+            "INSERT INTO song_projects (artist_id, title, song_filepath, album, key, bpm,
                 music_composed_by, lyrics_written_by, artwork_file_path, lyrics, recordings,
                 other_content_items, song_id)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)
+             ON CONFLICT(artist_id, title) DO UPDATE SET
+                song_filepath = excluded.song_filepath, album = excluded.album, key = excluded.key,
+                bpm = excluded.bpm, music_composed_by = excluded.music_composed_by,
+                lyrics_written_by = excluded.lyrics_written_by,
+                artwork_file_path = excluded.artwork_file_path, lyrics = excluded.lyrics,
+                recordings = excluded.recordings, other_content_items = excluded.other_content_items,
+                song_id = excluded.song_id",
             rusqlite::params![
-                sp.song_filepath,
+                artist_id,
                 sp.title,
-                sp.artist,
+                sp.song_filepath,
                 sp.album,
                 sp.key,
                 sp.bpm,
@@ -391,16 +424,6 @@ pub fn migrate(conn: &mut Connection, export: &DexieExport) -> Result<MigrationR
         )
         .map_err(|e| e.to_string())?;
         report.song_projects += 1;
-    }
-
-    for row in export.data.table("artistProjects") {
-        let ap: DexieArtistProject = serde_json::from_value(row.clone()).map_err(|e| e.to_string())?;
-        tx.execute(
-            "INSERT INTO artist_projects (name, members, profile_photo) VALUES (?1, ?2, ?3)",
-            rusqlite::params![ap.name, serde_json::to_string(&ap.members).unwrap(), ap.profile_photo],
-        )
-        .map_err(|e| e.to_string())?;
-        report.artist_projects += 1;
     }
 
     for row in export.data.table("scrapbook") {
@@ -526,8 +549,10 @@ pub fn cutover(conn: &mut Connection, shadow_db_path: &std::path::Path) -> Resul
             "playlists",
             "playlist_tracks",
             "smart_queries",
-            "song_projects",
+            // artist_projects before song_projects: song_projects.artist_id now references it
+            // (see openspec/changes/artists-toolkit-storage/design.md) and foreign_keys is ON.
             "artist_projects",
+            "song_projects",
             "scrapbook",
         ];
         for table in copy_order {

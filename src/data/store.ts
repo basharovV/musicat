@@ -7,10 +7,12 @@ import type {
     Album,
     ArrowFocus,
     ArtistContentItem,
+    ArtistFileItem,
     ArtistProject,
     ArtworkSrc,
     BottomBarNotification,
     Compression,
+    ContentItem,
     CurrentSongLyrics,
     IACollection,
     IAFile,
@@ -300,6 +302,9 @@ songbookSelectedArtist.subscribe((val) => {
 });
 export const songbookArtists = writable<ArtistProject[]>([]);
 export const currentSongProjects: Writable<string[]> = writable([]);
+export const scrapbookItems: Writable<ContentItem[]> = writable([]);
+/** Set to preview an image/video/text scrapbook file in `FilePreviewOverlay.svelte`. */
+export const scrapbookPreviewItem: Writable<ArtistFileItem | null> = writable(null);
 export const songDetailsUpdater = writable(0);
 export const isScrapbookShown = writable(true);
 export const songbookFileSavedTime = writable(0); // timestamp of last save

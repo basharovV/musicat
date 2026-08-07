@@ -364,6 +364,9 @@ fn main() {
             player::loop_region,
             player::change_audio_device,
             files::download_file,
+            files::read_dir_blocking,
+            files::path_exists_blocking,
+            files::read_text_file_blocking,
             scrape::get_wikipedia,
             files::delete_files,
             logger::max_log_level,
@@ -410,7 +413,18 @@ fn main() {
             db::commands::update_track_markers,
             db::commands::get_distinct_track_values,
             db::commands::get_library_counts,
-            db::commands::set_track_stems
+            db::commands::set_track_stems,
+            db::commands::sync_artist_projects,
+            db::commands::update_artist_members,
+            db::commands::rename_artist_project,
+            db::commands::sync_song_projects_for_artist,
+            db::commands::ensure_song_project,
+            db::commands::update_song_project,
+            db::commands::rename_song_project,
+            db::commands::sync_scrapbook_items,
+            db::commands::add_scrapbook_item,
+            db::commands::update_scrapbook_tags,
+            db::commands::delete_scrapbook_item
         ])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

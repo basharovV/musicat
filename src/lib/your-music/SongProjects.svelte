@@ -14,7 +14,7 @@
     async function onCreateSongProject() {
         await createSongProject(artist.name, newSongProjectTitle);
         const createdProject = await loadSongProject(
-            artist.name,
+            artist,
             newSongProjectTitle,
         );
         selectedSongProject = createdProject;

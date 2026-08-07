@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fly } from "svelte/transition";
     import type { ArtistProject } from "../../App";
-    import { db } from "../../data/db";
+    import { invoke } from "@tauri-apps/api/core";
     import { autoWidth } from "../../utils/AutoWidth";
     import { flip } from "svelte/animate";
     import { quadInOut } from "svelte/easing";
@@ -19,7 +19,8 @@
 
         members.push(newMember);
 
-        db.artistProjects.update(artist.id, {
+        invoke("update_artist_members", {
+            id: artist.id,
             members: [...members],
         });
         newMember = "";
@@ -30,7 +31,8 @@
             members.findIndex((m) => m === memberName),
             1,
         );
-        db.artistProjects.update(artist.id, {
+        invoke("update_artist_members", {
+            id: artist.id,
             members,
         });
     }

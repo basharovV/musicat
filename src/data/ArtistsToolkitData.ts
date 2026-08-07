@@ -6,22 +6,34 @@ import type {
 } from "../App";
 import { getContentFileType } from "../utils/FileUtils";
 import md5 from "md5";
-import { db } from "./db";
+import { invoke } from "@tauri-apps/api/core";
 import { userSettings } from "./store";
 import { get } from "svelte/store";
-import {
-    type DirEntry,
-    exists,
-    mkdir,
-    readDir,
-    readTextFile,
-    remove,
-    rename,
-    writeTextFile
-} from "@tauri-apps/plugin-fs";
+import { mkdir, remove, rename, writeTextFile } from "@tauri-apps/plugin-fs";
 import fm from "front-matter";
-import { path } from "@tauri-apps/api";
-export async function addScrapbookFile(filePath) {
+
+// `readDir`/`readTextFile`/`exists` from `@tauri-apps/plugin-fs` block synchronously inside their
+// Rust command handlers with no `spawn_blocking` (see the comment on `read_dir_blocking` et al. in
+// `src-tauri/src/files.rs`) -- for a cloud-sync/placeholder-backed songbook or scrapbook folder
+// (e.g. a ProtonDrive mount), that can stall the whole app, not just this call, since it occupies
+// a shared Tauri command-dispatch worker thread for as long as the download takes. These three
+// custom commands do the same `std::fs` calls via `spawn_blocking` instead, so a slow one can't
+// starve everything else.
+interface BlockingSafeDirEntry {
+    name: string;
+    isDirectory: boolean;
+}
+async function readDirBlocking(path: string): Promise<BlockingSafeDirEntry[]> {
+    return await invoke<BlockingSafeDirEntry[]>("read_dir_blocking", { path });
+}
+async function existsBlocking(path: string): Promise<boolean> {
+    return await invoke<boolean>("path_exists_blocking", { path });
+}
+async function readTextFileBlocking(path: string): Promise<string> {
+    return await invoke<string>("read_text_file_blocking", { path });
+}
+
+export async function addScrapbookFile(filePath): Promise<ContentItem> {
     console.log("adding item", filePath);
     const contentFileType = getContentFileType(filePath);
     console.log("type", contentFileType);
@@ -35,120 +47,105 @@ export async function addScrapbookFile(filePath) {
         path: filePath
     };
 
-    await db.scrapbook.put(toAdd);
+    return await invoke<ContentItem>("add_scrapbook_item", { item: toAdd });
 }
 
 /**
- * On mount, load the scrapbook contents using the location in settings
- *
+ * On mount (or a rescan), reconciles the scrapbook table against the files
+ * currently in `settings.scrapbookLocation`: adds newly-discovered files,
+ * drops rows for files no longer present, and preserves any tags already on
+ * an existing item — done in `sync_scrapbook_items` (Rust), mirroring what
+ * this function used to do against Dexie directly.
  */
-export async function scanScrapbook() {
-    const folderItems: ContentItem[] = [];
+export async function scanScrapbook(): Promise<ContentItem[]> {
     const settings = get(userSettings);
-    const itemsToDelete = [];
-    const dbItems = await db.scrapbook.toArray();
-    if (settings.scrapbookLocation) {
+    if (!settings.scrapbookLocation) return [];
+
+    const folderItems: ArtistFileItem[] = [];
+    try {
+        let entries: BlockingSafeDirEntry[];
         try {
-            let entries: DirEntry[];
-            try {
-                entries = await readDir(settings.scrapbookLocation);
-            } catch (err) {
-                throw new Error("Scrapbook location not found");
-            }
-            for (const entry of entries.filter(
-                (f) => !f.name.startsWith(".")
-            )) {
-                const filePath = await path.join(
-                    settings.scrapbookLocation,
-                    entry.name
-                );
-                console.log("adding item", filePath);
-                const contentFileType = getContentFileType(filePath);
-                console.log("type", contentFileType);
-                const filename = filePath.split("/")?.pop() ?? "";
-                const toAdd: ArtistFileItem = {
-                    id: md5(filePath),
-                    name: filename,
-                    tags: [],
-                    type: "file",
-                    fileType: contentFileType,
-                    path: filePath
-                };
-                folderItems.push(toAdd);
-            }
-
-            // Process items to delete
-            for (const item of dbItems) {
-                if (!folderItems.find((i) => i.id === item.id)) {
-                    itemsToDelete.push(item);
-                }
-            }
-
-            if (itemsToDelete.length > 0) {
-                await db.scrapbook.bulkDelete(itemsToDelete.map((i) => i.id));
-            }
-
-            await db
-                .transaction("rw", db.scrapbook, async () => {
-                    const itemsToRestore = await db.scrapbook.bulkGet(
-                        folderItems.map((i) => i.id)
-                    );
-                    await db.scrapbook.bulkPut(folderItems);
-                    await db.scrapbook.bulkUpdate(
-                        itemsToRestore
-                            .filter((i) => i !== undefined)
-                            .map((i) => ({
-                                key: i.id,
-                                changes: {
-                                    tags: i.tags
-                                }
-                            }))
-                    );
-                })
-                .catch("BulkError", (err) => {
-                    // Transaction Failed
-                    console.error(err.stack);
-                })
-                .then(() => {
-                    console.log("Transaction completed");
-                });
+            entries = await readDirBlocking(settings.scrapbookLocation);
         } catch (err) {
-            console.error(err);
-            throw err;
+            throw new Error("Scrapbook location not found");
         }
+        for (const entry of entries.filter((f) => !f.name.startsWith("."))) {
+            // Plain string concatenation, not path.join -- that's an IPC round-trip per call,
+            // and this runs once per file in the scrapbook folder.
+            const filePath = `${settings.scrapbookLocation}/${entry.name}`;
+            console.log("adding item", filePath);
+            const contentFileType = getContentFileType(filePath);
+            console.log("type", contentFileType);
+            const filename = filePath.split("/")?.pop() ?? "";
+            const toAdd: ArtistFileItem = {
+                id: md5(filePath),
+                name: filename,
+                tags: [],
+                type: "file",
+                fileType: contentFileType,
+                path: filePath
+            };
+            folderItems.push(toAdd);
+        }
+
+        return await invoke<ContentItem[]>("sync_scrapbook_items", { discovered: folderItems });
+    } catch (err) {
+        console.error(err);
+        throw err;
     }
 }
 
-export async function loadArtistsFromSongbook() {
+/**
+ * Reconciles `artist_projects` against the songbook's artist folders
+ * (`sync_artist_projects`, Rust) and returns the merged list -- unlike the
+ * bare folder scan this used to be, each `ArtistProject` now carries a real
+ * `id` and its `members`, since the DB row is created (if missing) as part
+ * of this call.
+ */
+export async function loadArtistsFromSongbook(): Promise<ArtistProject[] | undefined> {
     const songbookLocation = get(userSettings).songbookLocation;
     if (!songbookLocation) return;
 
     try {
-        const dirContents = await readDir(songbookLocation);
+        const dirContents = await readDirBlocking(songbookLocation);
         const artistFolders = dirContents.filter((item) => item.isDirectory);
-        const artists: ArtistProject[] = artistFolders.map((folder) => ({
-            name: folder.name,
-            members: [],
-            profilePhoto: null
-        }));
-        return artists;
+        const discoveredNames = artistFolders.map((folder) => folder.name);
+        return await invoke<ArtistProject[]>("sync_artist_projects", { discoveredNames });
     } catch (error) {
         console.error("Error loading artists from songbook location:", error);
     }
 }
 
-export async function loadSongProjectsForArtist(artistName: string) {
+/**
+ * Reconciles `song_projects` for this artist against its song folders
+ * (`sync_song_projects_for_artist`, Rust), and returns the titles -- same
+ * contract as before this change, folder scan plus DB reconciliation instead
+ * of a bare folder scan.
+ */
+export async function loadSongProjectsForArtist(
+    artist: ArtistProject
+): Promise<string[] | undefined> {
     const songbookLocation = get(userSettings).songbookLocation;
-    if (!songbookLocation) return;
+    if (!songbookLocation || artist?.id == null) return;
 
     try {
-        const dirContents = await readDir(
-            await path.join(songbookLocation, artistName)
-        );
+        const artistPath = `${songbookLocation}/${artist.name}`;
+        const dirContents = await readDirBlocking(artistPath);
         const songFolders = dirContents.filter((item) => item.isDirectory);
-        const songs: string[] = songFolders.map((folder) => folder.name);
-        songs.sort();
-        return songs;
+        // Plain string concatenation (matching the rest of this file, e.g.
+        // loadSongProject/createSongProject) rather than path.join -- that's an IPC round-trip
+        // per call, and this used to fire one per song folder concurrently via Promise.all,
+        // adding avoidable IPC load on top of the readDir above.
+        const discovered: [string, string][] = songFolders.map((folder) => [
+            folder.name,
+            `${artistPath}/${folder.name}/${folder.name}.txt`
+        ]);
+        const titles = await invoke<string[]>("sync_song_projects_for_artist", {
+            artistId: artist.id,
+            discovered
+        });
+        titles.sort();
+        return titles;
     } catch (error) {
         console.error("Error loading songs from songbook location:", error);
     }
@@ -176,7 +173,7 @@ function parseFileContent(fileContent: string): {
 
 async function readSongbookFile(songFilePath: string) {
     try {
-        let metaFileExists = await exists(songFilePath);
+        let metaFileExists = await existsBlocking(songFilePath);
 
         if (!metaFileExists) {
             // Create the file
@@ -186,7 +183,7 @@ async function readSongbookFile(songFilePath: string) {
         let songFileContents = "";
 
         try {
-            songFileContents = await readTextFile(songFilePath);
+            songFileContents = await readTextFileBlocking(songFilePath);
             console.log("songFileContents", songFileContents);
             return songFileContents;
         } catch (err) {
@@ -235,16 +232,28 @@ async function insertLyricsToSong(songFileContents: string, lyrics: string) {
     }
 }
 
-export async function loadSongProject(artistName: string, songName: string) {
+/**
+ * Loads a song project: parses the `.txt` file (frontmatter + lyrics remain
+ * file-sourced, unchanged), then find-or-creates the corresponding
+ * `song_projects` row (`ensure_song_project`, Rust) and merges in the fields
+ * only SQLite holds -- `id`, `recordings`, `otherContentItems`, `songId`.
+ * The find-or-create (rather than a plain lookup) matters right after
+ * `createSongProject`, before any list-level `loadSongProjectsForArtist`
+ * scan has had a chance to reconcile the new folder.
+ */
+export async function loadSongProject(
+    artist: ArtistProject,
+    songName: string
+): Promise<SongProject | undefined> {
     const songbookLocation = get(userSettings).songbookLocation;
-    if (!songbookLocation) return;
+    if (!songbookLocation || artist?.id == null) return;
 
     try {
-        const songFilePath = `${songbookLocation}/${artistName}/${songName}/${songName}.txt`;
+        const songFilePath = `${songbookLocation}/${artist.name}/${songName}/${songName}.txt`;
         let songProject: SongProject = {
             songFilepath: songFilePath,
             title: songName,
-            artist: artistName,
+            artist: artist.name,
             musicComposedBy: [],
             lyricsWrittenBy: [],
             recordings: [],
@@ -272,6 +281,18 @@ export async function loadSongProject(artistName: string, songName: string) {
         if (chordmark?.length) {
             songProject.lyrics = chordmark;
         }
+
+        const dbRow = await invoke<any>("ensure_song_project", {
+            artistId: artist.id,
+            title: songName,
+            songFilepath: songFilePath
+        });
+        songProject.id = dbRow.id;
+        songProject.artistId = dbRow.artistId;
+        songProject.recordings = dbRow.recordings ?? [];
+        songProject.otherContentItems = dbRow.otherContentItems ?? [];
+        songProject.songId = dbRow.songId ?? undefined;
+
         return songProject;
     } catch (error) {
         console.error("Error loading song from songbook location:", error);
@@ -293,7 +314,7 @@ export async function writeChordMarkToSongProject(
 export async function createSongProject(artistName: string, songName: string) {
     const songbookLocation = get(userSettings).songbookLocation;
     const songPath = `${songbookLocation}/${artistName}/${songName}`;
-    const songPathExists = await exists(songPath);
+    const songPathExists = await existsBlocking(songPath);
     if (!songPathExists) {
         await mkdir(songPath, { recursive: true });
     }
@@ -308,18 +329,34 @@ export async function createSongProject(artistName: string, songName: string) {
     );
 }
 
+/**
+ * Renames a song project's folder/file, then updates its `song_projects` row
+ * in place (`rename_song_project`, Rust) so its `recordings`/
+ * `otherContentItems` stay associated with the same row instead of being
+ * orphaned under a row for the old title.
+ */
 export async function renameSongProject(
-    artistName: string,
-    oldSongName: string,
+    songProject: SongProject,
     newSongName: string
 ) {
     const songbookLocation = get(userSettings).songbookLocation;
+    const artistName = songProject.artist;
+    const oldSongName = songProject.title;
     const oldSongFilePath = `${songbookLocation}/${artistName}/${oldSongName}/${oldSongName}.txt`;
     const newSongFilePath = `${songbookLocation}/${artistName}/${oldSongName}/${newSongName}.txt`;
     await rename(oldSongFilePath, newSongFilePath);
     const oldSongPath = `${songbookLocation}/${artistName}/${oldSongName}`;
     const newSongPath = `${songbookLocation}/${artistName}/${newSongName}`;
     await rename(oldSongPath, newSongPath);
+
+    if (songProject.id != null) {
+        const finalSongFilePath = `${songbookLocation}/${artistName}/${newSongName}/${newSongName}.txt`;
+        await invoke("rename_song_project", {
+            id: songProject.id,
+            newTitle: newSongName,
+            newSongFilepath: finalSongFilePath
+        });
+    }
 }
 
 export async function saveFrontmatterToSongProject(songProject: SongProject) {
@@ -347,9 +384,44 @@ export async function saveFrontmatterToSongProject(songProject: SongProject) {
     );
     const newContents = newFrontmatter + chordmark;
     await writeTextFile(songProject.songFilepath, newContents);
+
+    await saveSongProject(songProject);
 }
+
 export async function deleteSongProject(artistName: string, songName: string) {
     const songbookLocation = get(userSettings).songbookLocation;
     const songPath = `${songbookLocation}/${artistName}/${songName}`;
     await remove(songPath, { recursive: true });
+    // The song_projects row is dropped lazily, the next time
+    // loadSongProjectsForArtist reconciles this artist's folders.
+}
+
+/**
+ * Persists the DB-owned fields of a song project (`recordings`,
+ * `otherContentItems`, plus the frontmatter-mirrored fields already in
+ * `songProject`) via `update_song_project` (Rust) -- a full replace, same
+ * semantics `db.songProjects.put(songProjectClone)` used to have, just
+ * actually reaching a row that gets read back now. Requires `songProject.id`
+ * (set by `loadSongProject`/`ensure_song_project`).
+ */
+export async function saveSongProject(songProject: SongProject): Promise<void> {
+    if (songProject.id == null) {
+        console.error("saveSongProject called before the song project was tracked (no id)");
+        return;
+    }
+    await invoke("update_song_project", {
+        id: songProject.id,
+        update: {
+            album: songProject.album ?? null,
+            key: songProject.key ?? null,
+            bpm: songProject.bpm ?? null,
+            musicComposedBy: songProject.musicComposedBy ?? [],
+            lyricsWrittenBy: songProject.lyricsWrittenBy ?? [],
+            artworkFilePath: songProject.artworkFilePath ?? null,
+            lyrics: songProject.lyrics ?? null,
+            recordings: songProject.recordings ?? [],
+            otherContentItems: songProject.otherContentItems ?? [],
+            songId: songProject.songId ?? null
+        }
+    });
 }

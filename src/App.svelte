@@ -75,6 +75,7 @@
     import SmartQueryBuilder from "./lib/smart-query/SmartQueryBuilder.svelte";
     import CursorInfo from "./lib/ui/CursorInfo.svelte";
     import Icon from "./lib/ui/Icon.svelte";
+    import FilePreviewOverlay from "./lib/your-music/FilePreviewOverlay.svelte";
     import AlbumView from "./lib/views/AlbumsView.svelte";
     import AnalyticsView from "./lib/views/AnalyticsView.svelte";
     import ArtistsToolkitView from "./lib/views/ArtistsToolkitView.svelte";
@@ -417,6 +418,7 @@
 
         <UpdaterOverlay />
         <MigrationOverlay />
+        <FilePreviewOverlay />
 
         {#if $popupOpen === "settings"}
             <div class="info">

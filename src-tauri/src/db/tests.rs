@@ -2,7 +2,9 @@ use rusqlite::Connection;
 
 use crate::metadata::{Album, AlbumArtwork, Song};
 
+use super::artists_toolkit;
 use super::migration::{self, DexieExport};
+use super::models::ScrapbookItem;
 use super::mutations;
 use super::playlists;
 use super::query::{self, CmpOp, FilterNode, FilterValue, PageRequest, QuerySpec, SortKey};
@@ -19,6 +21,31 @@ fn open_test_db() -> Connection {
     conn
 }
 
+/// Opens a database with only migrations up to (and including) `version`
+/// applied — used to seed pre-migration-0002 state (the shape
+/// `sqlite-storage-foundation` originally shipped, before
+/// `artists-toolkit-storage` reshaped `song_projects`/`artist_projects`) so
+/// the dedup step in migration 0002 has something real to exercise.
+fn open_test_db_at_migration(version: i64) -> Connection {
+    let mut conn = Connection::open_in_memory().unwrap();
+    conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (
+            version     INTEGER PRIMARY KEY,
+            applied_at  INTEGER NOT NULL
+        ) STRICT;",
+    )
+    .unwrap();
+    for (v, sql) in schema::MIGRATIONS {
+        if *v > version {
+            break;
+        }
+        conn.execute_batch(sql).unwrap();
+        conn.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (?1, 0)", [v]).unwrap();
+    }
+    conn
+}
+
 fn insert_track(conn: &Connection, id: &str, title: &str, year: i64, is_favourite: bool) {
     conn.execute(
         "INSERT INTO tracks (id, path, file, title, artist, album, year, is_favourite, date_added)
@@ -32,12 +59,15 @@ fn insert_track(conn: &Connection, id: &str, title: &str, year: i64, is_favourit
 fn migrations_are_idempotent() {
     let mut conn = Connection::open_in_memory().unwrap();
     schema::run_migrations(&mut conn).unwrap();
-    // Running again must not error or re-apply migration 1.
+    // Running again must not error or re-apply already-applied migrations.
     schema::run_migrations(&mut conn).unwrap();
     let version: i64 = conn
         .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 1);
+    assert_eq!(version, 2);
+    let applied_count: i64 =
+        conn.query_row("SELECT COUNT(*) FROM schema_migrations", [], |r| r.get(0)).unwrap();
+    assert_eq!(applied_count, 2, "each migration version must be recorded exactly once");
 }
 
 #[test]
@@ -798,4 +828,452 @@ fn full_import_pipeline_produces_a_coherent_queryable_library() {
     assert!(query::get_album_by_id(&conn, "album-1").unwrap().is_some());
     assert!(query::get_album_by_id(&conn, "album-2").unwrap().is_none());
     assert_eq!(query::get_library_counts(&conn).unwrap().tracks, 3);
+}
+
+// ---------------------------------------------------------------------------
+// Artist's Toolkit — see
+// `openspec/changes/artists-toolkit-storage/design.md`.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn migration_0002_dedups_to_the_latest_row_per_natural_key_and_resolves_artist_id() {
+    let mut conn = open_test_db_at_migration(1);
+
+    // Pre-this-change shape: `artist_projects` had no uniqueness on `name`, and
+    // `song_projects.artist` was free text -- exactly what let the dead-write
+    // bug (see proposal.md) accumulate duplicate rows for the same logical
+    // artist/song. Two artist_projects rows for "Artist A" (members diverged
+    // across the two "sessions" that produced them), three song_projects rows
+    // for the same (artist, title) pair, plus one artist ("Artist B") that
+    // only ever appears via song_projects.artist, never got its own
+    // artist_projects row at all -- the common case, since that table's one
+    // write path was a no-op before this change.
+    conn.execute_batch(
+        r#"
+        INSERT INTO artist_projects (id, name, members) VALUES
+            (1, 'Artist A', '["Solo"]'),
+            (2, 'Artist A', '["Solo","Drummer"]');
+        INSERT INTO song_projects (id, title, artist, recordings, other_content_items) VALUES
+            (10, 'WIP Song', 'Artist A', '[]', '[]'),
+            (11, 'WIP Song', 'Artist A', '["recording-1"]', '[]'),
+            (12, 'WIP Song', 'Artist A', '["recording-1","recording-2"]', '[]'),
+            (13, 'Solo Demo', 'Artist B', '[]', '[]');
+        "#,
+    )
+    .unwrap();
+
+    schema::run_migrations(&mut conn).unwrap();
+
+    // artist_projects: deduped to the latest row for "Artist A" (id 2, the
+    // more complete members list), plus a new row created to resolve
+    // "Artist B" for its song.
+    let artist_count: i64 = conn.query_row("SELECT COUNT(*) FROM artist_projects", [], |r| r.get(0)).unwrap();
+    assert_eq!(artist_count, 2);
+    let artist_a: ArtistProjectRow = conn
+        .query_row("SELECT id, members FROM artist_projects WHERE name = 'Artist A'", [], |r| {
+            Ok(ArtistProjectRow { id: r.get(0)?, members: r.get(1)? })
+        })
+        .unwrap();
+    assert_eq!(artist_a.id, 2);
+    assert_eq!(artist_a.members, r#"["Solo","Drummer"]"#);
+
+    // song_projects: deduped to the latest row (id 12, most recordings),
+    // now pointing at Artist A's surviving row via artist_id.
+    let song_count: i64 = conn.query_row("SELECT COUNT(*) FROM song_projects", [], |r| r.get(0)).unwrap();
+    assert_eq!(song_count, 2); // "WIP Song" (deduped) + "Solo Demo"
+    let (song_id, artist_id, recordings): (i64, i64, String) = conn
+        .query_row("SELECT id, artist_id, recordings FROM song_projects WHERE title = 'WIP Song'", [], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })
+        .unwrap();
+    assert_eq!(song_id, 12);
+    assert_eq!(artist_id, artist_a.id);
+    assert_eq!(recordings, r#"["recording-1","recording-2"]"#);
+
+    // "Artist B" was created to resolve "Solo Demo"'s artist_id.
+    let solo_demo_artist_name: String = conn
+        .query_row(
+            "SELECT ap.name FROM song_projects sp JOIN artist_projects ap ON ap.id = sp.artist_id
+             WHERE sp.title = 'Solo Demo'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(solo_demo_artist_name, "Artist B");
+
+    // profile_photo is gone.
+    let has_profile_photo_column: bool = conn
+        .prepare("SELECT profile_photo FROM artist_projects LIMIT 1")
+        .is_ok();
+    assert!(!has_profile_photo_column, "profile_photo column should have been dropped");
+}
+
+struct ArtistProjectRow {
+    id: i64,
+    members: String,
+}
+
+#[test]
+fn sync_artist_projects_creates_missing_and_deletes_stale_rows() {
+    let mut conn = open_test_db();
+
+    let created = artists_toolkit::sync_artist_projects(
+        &mut conn,
+        &["Artist A".to_string(), "Artist B".to_string()],
+    )
+    .unwrap();
+    assert_eq!(created.len(), 2);
+    assert!(created.iter().all(|a| a.members.is_empty()));
+
+    // Add real data to one of them, then rescan with "Artist B" no longer present.
+    let artist_a_id = created.iter().find(|a| a.name == "Artist A").unwrap().id;
+    artists_toolkit::update_artist_members(&conn, artist_a_id, &["Solo".to_string()]).unwrap();
+
+    let rescanned =
+        artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap();
+    assert_eq!(rescanned.len(), 1);
+    assert_eq!(rescanned[0].id, artist_a_id, "rescanning must not recreate the still-present artist");
+    assert_eq!(rescanned[0].members, vec!["Solo".to_string()]);
+}
+
+#[test]
+fn sync_artist_projects_cascades_song_project_deletion() {
+    let mut conn = open_test_db();
+    let artists = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap();
+    let artist_id = artists[0].id;
+    artists_toolkit::sync_song_projects_for_artist(
+        &mut conn,
+        artist_id,
+        &[("Song One".to_string(), "/songbook/Artist A/Song One/Song One.txt".to_string())],
+    )
+    .unwrap();
+
+    // "Artist A"'s folder is gone from the next scan.
+    artists_toolkit::sync_artist_projects(&mut conn, &[]).unwrap();
+
+    let song_count: i64 =
+        conn.query_row("SELECT COUNT(*) FROM song_projects", [], |r| r.get(0)).unwrap();
+    assert_eq!(song_count, 0, "deleting the artist row must cascade to its song_projects");
+}
+
+#[test]
+fn rename_artist_project_preserves_id_and_members() {
+    let mut conn = open_test_db();
+    let artist_id =
+        artists_toolkit::sync_artist_projects(&mut conn, &["Old Name".to_string()]).unwrap()[0].id;
+    artists_toolkit::update_artist_members(&conn, artist_id, &["Solo".to_string()]).unwrap();
+
+    let renamed = artists_toolkit::rename_artist_project(&conn, artist_id, "New Name").unwrap();
+    assert_eq!(renamed.id, artist_id);
+    assert_eq!(renamed.name, "New Name");
+    assert_eq!(renamed.members, vec!["Solo".to_string()]);
+}
+
+#[test]
+fn rename_artist_project_rejects_name_collision() {
+    let mut conn = open_test_db();
+    artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string(), "Artist B".to_string()])
+        .unwrap();
+    let artist_a_id: i64 = conn
+        .query_row("SELECT id FROM artist_projects WHERE name = 'Artist A'", [], |r| r.get(0))
+        .unwrap();
+
+    let result = artists_toolkit::rename_artist_project(&conn, artist_a_id, "Artist B");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("already exists"));
+}
+
+#[test]
+fn sync_song_projects_for_artist_creates_missing_and_deletes_stale_rows() {
+    let mut conn = open_test_db();
+    let artist_id = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap()[0].id;
+
+    let titles = artists_toolkit::sync_song_projects_for_artist(
+        &mut conn,
+        artist_id,
+        &[
+            ("Song One".to_string(), "/songbook/Artist A/Song One/Song One.txt".to_string()),
+            ("Song Two".to_string(), "/songbook/Artist A/Song Two/Song Two.txt".to_string()),
+        ],
+    )
+    .unwrap();
+    assert_eq!(titles, vec!["Song One".to_string(), "Song Two".to_string()]);
+
+    // "Song Two"'s folder is gone from the next scan.
+    let rescanned = artists_toolkit::sync_song_projects_for_artist(
+        &mut conn,
+        artist_id,
+        &[("Song One".to_string(), "/songbook/Artist A/Song One/Song One.txt".to_string())],
+    )
+    .unwrap();
+    assert_eq!(rescanned, vec!["Song One".to_string()]);
+}
+
+#[test]
+fn ensure_song_project_is_idempotent_and_available_before_any_list_sync() {
+    let mut conn = open_test_db();
+    let artist_id = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap()[0].id;
+
+    // Mirrors SongProjects.svelte's create flow: createSongProject() writes the
+    // file, then loadSongProject() immediately looks it up, with no
+    // intervening list-level sync.
+    let first =
+        artists_toolkit::ensure_song_project(&conn, artist_id, "New Song", "/songbook/Artist A/New Song/New Song.txt")
+            .unwrap();
+    let second =
+        artists_toolkit::ensure_song_project(&conn, artist_id, "New Song", "/songbook/Artist A/New Song/New Song.txt")
+            .unwrap();
+    assert_eq!(first.id, second.id, "calling ensure_song_project again must return the same row, not create a duplicate");
+
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM song_projects", [], |r| r.get(0)).unwrap();
+    assert_eq!(count, 1);
+}
+
+#[test]
+fn update_song_project_round_trips_recordings_and_other_content_items() {
+    let mut conn = open_test_db();
+    let artist_id = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap()[0].id;
+    let project =
+        artists_toolkit::ensure_song_project(&conn, artist_id, "Song One", "/songbook/Artist A/Song One/Song One.txt")
+            .unwrap();
+
+    let update = artists_toolkit::SongProjectUpdate {
+        album: Some("Debut".to_string()),
+        key: Some("C".to_string()),
+        bpm: Some(120.0),
+        music_composed_by: vec!["Artist A".to_string()],
+        lyrics_written_by: vec![],
+        artwork_file_path: None,
+        lyrics: None,
+        recordings: serde_json::json!([{"recordingType": "master", "song": {"id": "track-1"}}]),
+        other_content_items: serde_json::json!([{"id": "item-1", "type": "link", "name": "Reference", "tags": []}]),
+        song_id: None,
+    };
+    artists_toolkit::update_song_project(&conn, project.id, &update).unwrap();
+
+    // Simulate an app restart: nothing in memory, look the row up fresh by
+    // the same natural key `loadSongProject` would use.
+    let reloaded =
+        artists_toolkit::ensure_song_project(&conn, artist_id, "Song One", "/songbook/Artist A/Song One/Song One.txt")
+            .unwrap();
+    assert_eq!(reloaded.id, project.id);
+    assert_eq!(reloaded.album, Some("Debut".to_string()));
+    assert_eq!(reloaded.recordings, update.recordings);
+    assert_eq!(reloaded.other_content_items, update.other_content_items);
+}
+
+#[test]
+fn rename_song_project_preserves_id_and_recordings() {
+    let mut conn = open_test_db();
+    let artist_id = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap()[0].id;
+    let project =
+        artists_toolkit::ensure_song_project(&conn, artist_id, "Old Title", "/songbook/Artist A/Old Title/Old Title.txt")
+            .unwrap();
+    let update = artists_toolkit::SongProjectUpdate {
+        album: None,
+        key: None,
+        bpm: None,
+        music_composed_by: vec![],
+        lyrics_written_by: vec![],
+        artwork_file_path: None,
+        lyrics: None,
+        recordings: serde_json::json!([{"recordingType": "master", "song": {"id": "track-1"}}]),
+        other_content_items: serde_json::json!([]),
+        song_id: None,
+    };
+    artists_toolkit::update_song_project(&conn, project.id, &update).unwrap();
+
+    let renamed = artists_toolkit::rename_song_project(
+        &conn,
+        project.id,
+        "New Title",
+        "/songbook/Artist A/New Title/New Title.txt",
+    )
+    .unwrap();
+    assert_eq!(renamed.id, project.id);
+    assert_eq!(renamed.title, "New Title");
+    assert_eq!(renamed.recordings, update.recordings, "renaming must not lose recordings");
+}
+
+#[test]
+fn rename_song_project_rejects_title_collision() {
+    let mut conn = open_test_db();
+    let artist_id = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap()[0].id;
+    let existing = artists_toolkit::ensure_song_project(&conn, artist_id, "Song One", "/a/one.txt").unwrap();
+    artists_toolkit::ensure_song_project(&conn, artist_id, "Song Two", "/a/two.txt").unwrap();
+
+    let result = artists_toolkit::rename_song_project(&conn, existing.id, "Song Two", "/a/two.txt");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("already exists"));
+}
+
+fn scrapbook_file_item(id: &str, name: &str, path: &str) -> ScrapbookItem {
+    ScrapbookItem {
+        id: id.to_string(),
+        kind: "file".to_string(),
+        name: name.to_string(),
+        tags: vec![],
+        song_id: None,
+        url: None,
+        image_url: None,
+        file_type: Some(super::models::ScrapbookFileType {
+            kind: "audio".to_string(),
+            extension: "mp3".to_string(),
+        }),
+        path: Some(path.to_string()),
+    }
+}
+
+#[test]
+fn sync_scrapbook_items_adds_and_removes_by_discovered_files() {
+    let mut conn = open_test_db();
+    let synced = artists_toolkit::sync_scrapbook_items(
+        &mut conn,
+        &[
+            scrapbook_file_item("hash-1", "one.mp3", "/scrapbook/one.mp3"),
+            scrapbook_file_item("hash-2", "two.mp3", "/scrapbook/two.mp3"),
+        ],
+    )
+    .unwrap();
+    assert_eq!(synced.len(), 2);
+
+    // "two.mp3" is gone from the next scan.
+    let rescanned = artists_toolkit::sync_scrapbook_items(
+        &mut conn,
+        &[scrapbook_file_item("hash-1", "one.mp3", "/scrapbook/one.mp3")],
+    )
+    .unwrap();
+    assert_eq!(rescanned.len(), 1);
+    assert_eq!(rescanned[0].id, "hash-1");
+}
+
+#[test]
+fn sync_scrapbook_items_preserves_tags_across_a_rescan() {
+    let mut conn = open_test_db();
+    artists_toolkit::sync_scrapbook_items(
+        &mut conn,
+        &[scrapbook_file_item("hash-1", "one.mp3", "/scrapbook/one.mp3")],
+    )
+    .unwrap();
+    artists_toolkit::update_scrapbook_tags(&conn, "hash-1", &["favourite".to_string()]).unwrap();
+
+    // Rescanning must not reset tags back to empty, even though the
+    // discovered item carries no tags of its own (folder scans never do).
+    let rescanned = artists_toolkit::sync_scrapbook_items(
+        &mut conn,
+        &[scrapbook_file_item("hash-1", "one.mp3", "/scrapbook/one.mp3")],
+    )
+    .unwrap();
+    assert_eq!(rescanned[0].tags, vec!["favourite".to_string()]);
+}
+
+#[test]
+fn add_scrapbook_item_then_delete() {
+    let conn = open_test_db();
+    let link = ScrapbookItem {
+        id: "link-1".to_string(),
+        kind: "link".to_string(),
+        name: "Interview".to_string(),
+        tags: vec![],
+        song_id: None,
+        url: Some("https://example.com/interview".to_string()),
+        image_url: None,
+        file_type: None,
+        path: None,
+    };
+    let added = artists_toolkit::add_scrapbook_item(&conn, &link).unwrap();
+    assert_eq!(added.url, Some("https://example.com/interview".to_string()));
+
+    artists_toolkit::delete_scrapbook_item(&conn, "link-1").unwrap();
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM scrapbook", [], |r| r.get(0)).unwrap();
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn full_artist_lifecycle_create_rename_delete() {
+    let mut conn = open_test_db();
+
+    // Create: a folder scan discovers a new artist.
+    let artists = artists_toolkit::sync_artist_projects(&mut conn, &["Old Band".to_string()]).unwrap();
+    let artist_id = artists[0].id;
+
+    // Add members.
+    artists_toolkit::update_artist_members(&conn, artist_id, &["Alex".to_string(), "Sam".to_string()])
+        .unwrap();
+
+    // Rename: the UI's rename flow renames the folder, then calls rename_artist_project.
+    let renamed = artists_toolkit::rename_artist_project(&conn, artist_id, "New Band").unwrap();
+    assert_eq!(renamed.id, artist_id);
+    assert_eq!(renamed.members, vec!["Alex".to_string(), "Sam".to_string()]);
+
+    // A subsequent scan under the new name must not recreate the row.
+    let rescanned = artists_toolkit::sync_artist_projects(&mut conn, &["New Band".to_string()]).unwrap();
+    assert_eq!(rescanned.len(), 1);
+    assert_eq!(rescanned[0].id, artist_id);
+    assert_eq!(rescanned[0].members, vec!["Alex".to_string(), "Sam".to_string()]);
+
+    // Give it a song project too, so the cascade-on-delete assertion below is meaningful.
+    artists_toolkit::sync_song_projects_for_artist(
+        &mut conn,
+        artist_id,
+        &[("Anthem".to_string(), "/songbook/New Band/Anthem/Anthem.txt".to_string())],
+    )
+    .unwrap();
+
+    // Delete: the folder is removed, next scan discovers nothing.
+    artists_toolkit::sync_artist_projects(&mut conn, &[]).unwrap();
+    let artist_count: i64 = conn.query_row("SELECT COUNT(*) FROM artist_projects", [], |r| r.get(0)).unwrap();
+    assert_eq!(artist_count, 0);
+    let song_count: i64 = conn.query_row("SELECT COUNT(*) FROM song_projects", [], |r| r.get(0)).unwrap();
+    assert_eq!(song_count, 0, "deleting the artist must cascade to its song projects");
+}
+
+#[test]
+fn full_song_project_lifecycle_survives_a_restart_equivalent() {
+    let mut conn = open_test_db();
+    let artist_id = artists_toolkit::sync_artist_projects(&mut conn, &["Artist A".to_string()]).unwrap()[0].id;
+
+    // Create + first load, mirroring SongProjects.svelte's onCreateSongProject.
+    let created = artists_toolkit::ensure_song_project(
+        &conn,
+        artist_id,
+        "New Anthem",
+        "/songbook/Artist A/New Anthem/New Anthem.txt",
+    )
+    .unwrap();
+
+    // Add a recording and a content item (SongDetails.svelte/ContentDropzone.svelte).
+    let update = artists_toolkit::SongProjectUpdate {
+        album: None,
+        key: None,
+        bpm: None,
+        music_composed_by: vec![],
+        lyrics_written_by: vec![],
+        artwork_file_path: None,
+        lyrics: None,
+        recordings: serde_json::json!([{"recordingType": "master", "song": {"id": "track-1"}}]),
+        other_content_items: serde_json::json!([{"id": "item-1", "type": "link", "name": "Ref", "tags": []}]),
+        song_id: None,
+    };
+    artists_toolkit::update_song_project(&conn, created.id, &update).unwrap();
+
+    // "Restart": drop everything held in memory, re-run the same folder-scan +
+    // find-or-create sequence loadSongProjectsForArtist/loadSongProject would.
+    artists_toolkit::sync_song_projects_for_artist(
+        &mut conn,
+        artist_id,
+        &[("New Anthem".to_string(), "/songbook/Artist A/New Anthem/New Anthem.txt".to_string())],
+    )
+    .unwrap();
+    let reloaded = artists_toolkit::ensure_song_project(
+        &conn,
+        artist_id,
+        "New Anthem",
+        "/songbook/Artist A/New Anthem/New Anthem.txt",
+    )
+    .unwrap();
+
+    assert_eq!(reloaded.id, created.id);
+    assert_eq!(reloaded.recordings, update.recordings);
+    assert_eq!(reloaded.other_content_items, update.other_content_items);
 }

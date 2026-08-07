@@ -1,5 +1,6 @@
 <script lang="ts">
     import { pictureDir } from "@tauri-apps/api/path";
+    import { invoke } from "@tauri-apps/api/core";
     import { open } from "@tauri-apps/plugin-dialog";
     import tippy from "tippy.js";
     import type { LookForArtResult } from "../../App";
@@ -11,13 +12,7 @@
         userSettings,
     } from "../../data/store";
 
-    import {
-        copyFile,
-        mkdir,
-        readDir,
-        remove,
-        rename,
-    } from "@tauri-apps/plugin-fs";
+    import { copyFile, mkdir, remove, rename } from "@tauri-apps/plugin-fs";
     import { openPath } from "@tauri-apps/plugin-opener";
     import { onMount } from "svelte";
     import { loadArtistsFromSongbook } from "../../data/ArtistsToolkitData";
@@ -117,6 +112,14 @@
             `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`,
             `${$userSettings.songbookLocation}/${name}`,
         );
+        // Updates the artist_projects row in place (preserving members) rather
+        // than letting the next sync treat this as delete-old + create-new.
+        if ($songbookSelectedArtist.id != null) {
+            await invoke("rename_artist_project", {
+                id: $songbookSelectedArtist.id,
+                newName: name,
+            });
+        }
         $songbookSelectedArtist.name = name;
         $songbookArtists = await loadArtistsFromSongbook();
         editedArtistName = null;
@@ -176,7 +179,11 @@
             if (typeof selected?.path === "string") {
                 // Delete any existing images called profile.xxx in the artist folder
                 const artistPath = `${$userSettings.songbookLocation}/${$songbookSelectedArtist.name}`;
-                const files = await readDir(artistPath);
+                // Not `readDir` from @tauri-apps/plugin-fs -- see the comment on
+                // `read_dir_blocking` in src-tauri/src/files.rs.
+                const files = await invoke<{ name: string }[]>("read_dir_blocking", {
+                    path: artistPath,
+                });
                 for (const file of files) {
                     if (file.name.startsWith("profile.")) {
                         await remove(`${artistPath}/${file.name}`);

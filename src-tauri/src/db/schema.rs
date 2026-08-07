@@ -5,7 +5,7 @@ use rusqlite::Connection;
 /// inside its own transaction, and recorded in `schema_migrations` — see
 /// `openspec/changes/sqlite-storage-foundation/specs/library-storage/spec.md`
 /// ("Versioned schema migrations").
-const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_0001)];
+pub(crate) const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_0001), (2, MIGRATION_0002)];
 
 const MIGRATION_0001: &str = r#"
 CREATE TABLE tracks (
@@ -181,6 +181,69 @@ END;
 CREATE TRIGGER trg_tracks_fts_delete AFTER DELETE ON tracks BEGIN
     DELETE FROM tracks_fts WHERE id = old.id;
 END;
+"#;
+
+/// Reshapes `song_projects`/`artist_projects` for the identity/reconciliation model in
+/// `openspec/changes/artists-toolkit-storage/design.md` ("Schema" section — this is that SQL
+/// verbatim). Migration 0001 carried these two tables over from Dexie as a straight lift, with no
+/// working identity reconciliation (`artist_projects` had no uniqueness on `name`; `song_projects`
+/// stored a free-text `artist` copy instead of a foreign key), which is exactly what let the
+/// pre-this-change dead-write bug accumulate duplicate rows for the same logical song. The dedup
+/// steps below are for installs where `sqlite-storage-foundation`'s Dexie migration already copied
+/// that duplication into SQLite before this change existed.
+const MIGRATION_0002: &str = r#"
+DELETE FROM artist_projects WHERE id NOT IN (SELECT MAX(id) FROM artist_projects GROUP BY name);
+
+CREATE TABLE artist_projects_new (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name    TEXT NOT NULL UNIQUE,
+    members TEXT NOT NULL DEFAULT '[]' -- JSON array
+) STRICT;
+
+INSERT INTO artist_projects_new (id, name, members)
+SELECT id, name, members FROM artist_projects;
+
+DROP TABLE artist_projects;
+ALTER TABLE artist_projects_new RENAME TO artist_projects;
+
+DELETE FROM song_projects WHERE id NOT IN (SELECT MAX(id) FROM song_projects GROUP BY artist, title);
+
+-- Every song_project's `artist` text must resolve to a tracked artist row before the FK rebuild
+-- below — covers the common case where `artist_projects` never had a row at all (its one write path
+-- was a no-op before this change; see proposal.md).
+INSERT OR IGNORE INTO artist_projects (name, members)
+SELECT DISTINCT artist, '[]' FROM song_projects WHERE artist NOT IN (SELECT name FROM artist_projects);
+
+CREATE TABLE song_projects_new (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    artist_id               INTEGER NOT NULL REFERENCES artist_projects(id) ON DELETE CASCADE,
+    title                   TEXT NOT NULL,
+    song_filepath           TEXT,
+    album                   TEXT,
+    key                     TEXT,
+    bpm                     REAL,
+    music_composed_by       TEXT NOT NULL DEFAULT '[]', -- JSON array
+    lyrics_written_by       TEXT NOT NULL DEFAULT '[]', -- JSON array
+    artwork_file_path       TEXT,
+    lyrics                  TEXT,
+    recordings              TEXT NOT NULL DEFAULT '[]', -- JSON array of SongProjectRecording
+    other_content_items     TEXT NOT NULL DEFAULT '[]', -- JSON array of ArtistContentItem
+    song_id                 TEXT REFERENCES tracks(id) ON DELETE SET NULL,
+    UNIQUE (artist_id, title)
+) STRICT;
+
+INSERT INTO song_projects_new (id, artist_id, title, song_filepath, album, key, bpm,
+    music_composed_by, lyrics_written_by, artwork_file_path, lyrics, recordings,
+    other_content_items, song_id)
+SELECT sp.id, ap.id, sp.title, sp.song_filepath, sp.album, sp.key, sp.bpm,
+    sp.music_composed_by, sp.lyrics_written_by, sp.artwork_file_path, sp.lyrics,
+    sp.recordings, sp.other_content_items, sp.song_id
+FROM song_projects sp JOIN artist_projects ap ON ap.name = sp.artist;
+
+DROP TABLE song_projects;
+ALTER TABLE song_projects_new RENAME TO song_projects;
+
+CREATE INDEX idx_song_projects_artist ON song_projects(artist_id);
 "#;
 
 /// Applies every migration with a version greater than the highest recorded

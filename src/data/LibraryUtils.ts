@@ -1,9 +1,7 @@
-import { path } from "@tauri-apps/api";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { audioDir } from "@tauri-apps/api/path";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
-import { readDir } from "@tauri-apps/plugin-fs";
 import md5 from "md5";
 import { get } from "svelte/store";
 import type {
@@ -247,7 +245,10 @@ export async function getArtistProfileImage(
 ): Promise<LookForArtResult> {
     let foundResult: LookForArtResult = null;
     try {
-        const files = await readDir(folder);
+        // Not `readDir` from @tauri-apps/plugin-fs -- that blocks synchronously with no
+        // spawn_blocking (see src-tauri/src/files.rs), and this runs every time an artist is
+        // selected in the songbook, which may be a cloud-sync-backed folder.
+        const files = await invoke<{ name: string }[]>("read_dir_blocking", { path: folder });
         for (const filename of files) {
             const extension = filename.name.split(".").pop();
             let format = getImageFormat(extension);
@@ -257,9 +258,7 @@ export async function getArtistProfileImage(
                 filename.name.includes("profile")
             ) {
                 foundResult = {
-                    artworkSrc: convertFileSrc(
-                        await path.join(folder, filename.name),
-                    ),
+                    artworkSrc: convertFileSrc(`${folder}/${filename.name}`),
                     artworkFormat: format,
                     artworkFilenameMatch: filename.name,
                 };

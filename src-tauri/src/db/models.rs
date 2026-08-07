@@ -136,3 +136,127 @@ pub fn row_to_playlist_header(row: &Row) -> rusqlite::Result<Playlist> {
         tracks: Vec::new(),
     })
 }
+
+// ---------------------------------------------------------------------------
+// Artist's Toolkit (`song_projects`/`artist_projects`/`scrapbook`) — see
+// `openspec/changes/artists-toolkit-storage/design.md`.
+// ---------------------------------------------------------------------------
+
+pub const ARTIST_PROJECT_COLUMNS: &str = "id, name, members";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistProject {
+    pub id: i64,
+    pub name: String,
+    pub members: Vec<String>,
+}
+
+pub fn row_to_artist_project(row: &Row) -> rusqlite::Result<ArtistProject> {
+    let members: String = row.get("members")?;
+    Ok(ArtistProject {
+        id: row.get("id")?,
+        name: row.get("name")?,
+        members: serde_json::from_str(&members).unwrap_or_default(),
+    })
+}
+
+pub const SONG_PROJECT_COLUMNS: &str = "
+    id, artist_id, title, song_filepath, album, key, bpm, music_composed_by,
+    lyrics_written_by, artwork_file_path, lyrics, recordings, other_content_items, song_id
+";
+
+/// `recordings`/`otherContentItems` stay opaque JSON here rather than typed Rust structs — they
+/// hold arbitrary `SongProjectRecording`/`ArtistContentItem` shapes owned by the frontend
+/// (`src/App.d.ts`), not normalized into their own tables (see design.md's Non-Goals: a recording
+/// can point at a file that isn't an imported library track, so there's no `tracks` row to
+/// reference via a join table the way `playlist_tracks` does).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SongProjectRow {
+    pub id: i64,
+    pub artist_id: i64,
+    pub title: String,
+    pub song_filepath: Option<String>,
+    pub album: Option<String>,
+    pub key: Option<String>,
+    pub bpm: Option<f64>,
+    pub music_composed_by: Vec<String>,
+    pub lyrics_written_by: Vec<String>,
+    pub artwork_file_path: Option<String>,
+    pub lyrics: Option<String>,
+    pub recordings: serde_json::Value,
+    pub other_content_items: serde_json::Value,
+    pub song_id: Option<String>,
+}
+
+pub fn row_to_song_project(row: &Row) -> rusqlite::Result<SongProjectRow> {
+    let music_composed_by: String = row.get("music_composed_by")?;
+    let lyrics_written_by: String = row.get("lyrics_written_by")?;
+    let recordings: String = row.get("recordings")?;
+    let other_content_items: String = row.get("other_content_items")?;
+    Ok(SongProjectRow {
+        id: row.get("id")?,
+        artist_id: row.get("artist_id")?,
+        title: row.get("title")?,
+        song_filepath: row.get("song_filepath")?,
+        album: row.get("album")?,
+        key: row.get("key")?,
+        bpm: row.get("bpm")?,
+        music_composed_by: serde_json::from_str(&music_composed_by).unwrap_or_default(),
+        lyrics_written_by: serde_json::from_str(&lyrics_written_by).unwrap_or_default(),
+        artwork_file_path: row.get("artwork_file_path")?,
+        lyrics: row.get("lyrics")?,
+        recordings: serde_json::from_str(&recordings).unwrap_or(serde_json::Value::Array(vec![])),
+        other_content_items: serde_json::from_str(&other_content_items)
+            .unwrap_or(serde_json::Value::Array(vec![])),
+        song_id: row.get("song_id")?,
+    })
+}
+
+pub const SCRAPBOOK_COLUMNS: &str =
+    "id, type, name, tags, song_id, url, image_url, file_type_type, file_type_extension, path";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScrapbookFileType {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub extension: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScrapbookItem {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub name: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    pub song_id: Option<String>,
+    pub url: Option<String>,
+    pub image_url: Option<String>,
+    pub file_type: Option<ScrapbookFileType>,
+    pub path: Option<String>,
+}
+
+pub fn row_to_scrapbook_item(row: &Row) -> rusqlite::Result<ScrapbookItem> {
+    let tags: String = row.get("tags")?;
+    let file_type_type: Option<String> = row.get("file_type_type")?;
+    let file_type_extension: Option<String> = row.get("file_type_extension")?;
+    let file_type = file_type_type
+        .zip(file_type_extension)
+        .map(|(kind, extension)| ScrapbookFileType { kind, extension });
+    Ok(ScrapbookItem {
+        id: row.get("id")?,
+        kind: row.get("type")?,
+        name: row.get("name")?,
+        tags: serde_json::from_str(&tags).unwrap_or_default(),
+        song_id: row.get("song_id")?,
+        url: row.get("url")?,
+        image_url: row.get("image_url")?,
+        file_type,
+        path: row.get("path")?,
+    })
+}

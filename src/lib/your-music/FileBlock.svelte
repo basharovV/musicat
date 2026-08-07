@@ -2,7 +2,7 @@
     import { convertFileSrc, invoke } from "@tauri-apps/api/core";
     import { openPath } from "@tauri-apps/plugin-opener";
     import type { ArtistFileItem, ContentItem, Song } from "src/App";
-    import { draggedScrapbookItems } from "../../data/store";
+    import { draggedScrapbookItems, os, scrapbookPreviewItem } from "../../data/store";
     import { setQueue } from "../../data/storeHelper";
     import Icon from "../ui/Icon.svelte";
 
@@ -11,6 +11,19 @@
     export let style: "dashed" | "outline" = "outline";
 
     async function openFile() {
+        // macOS: image/video/text preview in-app (FilePreviewOverlay.svelte) instead of leaving
+        // the app -- audio still goes to Musicat's own player below (better than an isolated
+        // preview player), matching what already happens on every platform.
+        if (
+            $os === "macos" &&
+            (item.fileType.type === "image" ||
+                item.fileType.type === "video" ||
+                item.fileType.type === "txt")
+        ) {
+            $scrapbookPreviewItem = item;
+            return;
+        }
+
         if (item.fileType.type === "audio") {
             // Play it in this app
             const song = await invoke<Song>("get_song_metadata", {

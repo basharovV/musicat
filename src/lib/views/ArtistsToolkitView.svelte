@@ -60,9 +60,23 @@
     let unlistenFolderWatch: UnlistenFn;
     let unlistenSongbookWatch: UnlistenFn;
 
-    $: if ($userSettings) {
-        watchScrapbook();
-        watchSongbook();
+    // Only re-run `watchImmediate(..., {recursive: true})` when the location actually changes
+    // -- it walks the whole folder tree to set up, which is expensive and can stall on a
+    // cloud-sync/placeholder-backed folder (e.g. a ProtonDrive mount). The previous `$: if
+    // ($userSettings) {...}` re-triggered on *any* settings edit anywhere in the app, since
+    // Svelte reactive statements re-run whenever the referenced store's value changes at all,
+    // not just the field the `if` happens to check -- so every keystroke in Settings was
+    // tearing down and rebuilding both recursive watchers.
+    let watchedScrapbookLocation: string | null = null;
+    let watchedSongbookLocation: string | null = null;
+
+    $: if ($userSettings?.scrapbookLocation !== watchedScrapbookLocation) {
+        watchedScrapbookLocation = $userSettings?.scrapbookLocation ?? null;
+        if (watchedScrapbookLocation) watchScrapbook();
+    }
+    $: if ($userSettings?.songbookLocation !== watchedSongbookLocation) {
+        watchedSongbookLocation = $userSettings?.songbookLocation ?? null;
+        if (watchedSongbookLocation) watchSongbook();
     }
 
     async function watchScrapbook() {

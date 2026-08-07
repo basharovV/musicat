@@ -1,9 +1,8 @@
 <script lang="ts">
     import { audioDir } from "@tauri-apps/api/path";
     import { open } from "@tauri-apps/plugin-dialog";
-    import { liveQuery } from "dexie";
-    import type { ArtistContentItem } from "src/App";
-    import { db } from "../../data/db";
+    import { invoke } from "@tauri-apps/api/core";
+    import type { ArtistContentItem, ContentItem } from "src/App";
 
     import { copyFile } from "@tauri-apps/plugin-fs";
     import { openPath } from "@tauri-apps/plugin-opener";
@@ -21,6 +20,7 @@
         fileDropHandler,
         hoveredFiles,
         popupOpen,
+        scrapbookItems,
         userSettings,
     } from "../../data/store";
     import LL from "../../i18n/i18n-svelte";
@@ -67,12 +67,8 @@
         selectedContentTypes = selectedContentTypes;
     }
 
-    $: allContentItems = liveQuery(async () => {
-        return await db.scrapbook.toArray();
-    });
-
     $: filteredContentItems =
-        $allContentItems?.filter((item) => {
+        $scrapbookItems?.filter((item) => {
             let matchesContentType = selectedContentTypes.length
                 ? selectedContentTypes.includes(item?.fileType?.type)
                 : true;
@@ -88,7 +84,8 @@
 
     async function addLink(url) {
         const item = await getLinkItemWithData(url);
-        db.scrapbook.add(item);
+        const added = await invoke<ContentItem>("add_scrapbook_item", { item });
+        $scrapbookItems = [...$scrapbookItems, added];
     }
 
     function importContentItem() {
@@ -211,7 +208,7 @@
 
     async function loadScrapbookDir() {
         try {
-            await scanScrapbook();
+            $scrapbookItems = await scanScrapbook();
             scrapbookDirNotFound = false;
         } catch (err) {
             if (err.message === "Scrapbook location not found") {
@@ -257,7 +254,8 @@
         }
         if (contextItem?.id) {
             // Delete the item
-            db.scrapbook.delete(contextItem.id);
+            invoke("delete_scrapbook_item", { id: contextItem.id });
+            $scrapbookItems = $scrapbookItems.filter((i) => i.id !== contextItem.id);
             closeMenu();
         }
     }
@@ -278,7 +276,7 @@
     }
 
     $: tags =
-        $allContentItems?.reduce((tags, item) => {
+        $scrapbookItems?.reduce((tags, item) => {
             item.tags.forEach((t) => {
                 if (!tags.includes(t)) {
                     tags.push(t);
@@ -297,23 +295,27 @@
         rightClickedPos = { x: e.clientX, y: e.clientY };
     }
 
+    function updateItemTags(id: string, tags: string[]) {
+        invoke("update_scrapbook_tags", { id, tags });
+        $scrapbookItems = $scrapbookItems.map((i) =>
+            i.id === id ? { ...i, tags } : i,
+        );
+    }
+
     function deleteTag(tag) {
         contextItem.tags.splice(
             contextItem.tags.findIndex((t) => t === tag),
             1,
         );
         contextItem = contextItem;
-        db.scrapbook.update(contextItem.id, {
-            tags: contextItem.tags,
-        });
+        updateItemTags(contextItem.id, contextItem.tags);
     }
     function addTagToContextItem() {
         if (tagAutoCompleteValue?.length) {
             tagUserInput = tagAutoCompleteValue;
         }
-        db.scrapbook.update(contextItem.id, {
-            tags: [...contextItem.tags, tagUserInput.toLowerCase().trim()],
-        });
+        const newTags = [...contextItem.tags, tagUserInput.toLowerCase().trim()];
+        updateItemTags(contextItem.id, newTags);
         tagUserInput = "";
         contextItem = null;
         tagEditorVisible = false;

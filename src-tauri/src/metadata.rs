@@ -1186,6 +1186,7 @@ pub fn extract_metadata(
                 || ext_str.eq_ignore_ascii_case("ape")
                 || ext_str.eq_ignore_ascii_case("ogg")
                 || ext_str.eq_ignore_ascii_case("m4a")
+                || ext_str.eq_ignore_ascii_case("aac")
             {
                 match read_from_path(&file_path) {
                     Ok(tagged_file) => {
@@ -1254,6 +1255,7 @@ pub fn extract_metadata(
                                 FileType::Speex => Some("Speex".to_string()),
                                 FileType::Vorbis => Some("Vorbis".to_string()),
                                 FileType::Mp4 => Some("MP4".to_string()),
+                                FileType::Aac => Some("AAC".to_string()),
                                 _ => None,
                             },
                         };

@@ -4,29 +4,28 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import Dexie, { type Table } from "dexie";
 import { exportDB, importInto } from "dexie-export-import";
-import type {
-    Album,
-    ArtistProject,
-    ContentItem,
-    Playlist,
-    Song,
-    SongProject,
-} from "src/App";
+import type { Album, Playlist, Song } from "src/App";
 import type { SavedSmartQuery } from "src/lib/smart-query/QueryPart";
 import { get } from "svelte/store";
 import { queryAlbumTracks } from "./query";
 import { userSettings } from "./store";
 import { invoke } from "@tauri-apps/api/core";
 
+// `songProjects`/`artistProjects`/`scrapbook` are intentionally still declared in the `.stores()`
+// calls below (unchanged, all versions) even though the app no longer reads/writes them (see
+// `openspec/changes/artists-toolkit-storage/`) -- retroactively editing a *past* Dexie version's
+// schema string throws a SchemaError for any install that already applied that version, since
+// Dexie requires historical version declarations to exactly match what was previously recorded in
+// IndexedDB. Properly dropping a live table requires a *new* version bump with the table set to
+// `null`, which isn't worth adding here: this whole class is already staged for full removal once
+// `sqlite-storage-foundation`'s group 9 (retire Dexie) lands, at which point `db.delete()` clears
+// everything at once. Their `Table<>` type members are removed since nothing references them.
 export class MySubClassedDexie extends Dexie {
     // 'songs' is added by dexie when declaring the stores()
     // We just tell the typing system this is the case
     songs!: Table<Song>;
     albums!: Table<Album>;
     smartQueries!: Table<SavedSmartQuery>;
-    songProjects!: Table<SongProject>;
-    artistProjects!: Table<ArtistProject>;
-    scrapbook!: Table<ContentItem>;
     playlists!: Table<Playlist>;
     internalPlaylists!: Table<Playlist>;
     constructor() {
@@ -134,9 +133,6 @@ export async function deleteDatabase() {
     await db.albums.clear();
     await db.smartQueries.clear();
     await db.internalPlaylists.clear();
-    await db.songProjects.clear();
-    await db.artistProjects.clear();
-    await db.scrapbook.clear();
     await db.playlists.clear();
     await db.delete();
 }

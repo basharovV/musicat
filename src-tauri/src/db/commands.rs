@@ -497,3 +497,135 @@ pub async fn cutover_migrated_database(db: State<'_, Database>, app: AppHandle) 
     std::fs::remove_file(&shadow_path).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// Artist's Toolkit — see
+// `openspec/changes/artists-toolkit-storage/design.md`.
+// ---------------------------------------------------------------------------
+
+use super::artists_toolkit;
+use super::models::{ArtistProject, ScrapbookItem, SongProjectRow};
+
+#[tauri::command]
+pub async fn sync_artist_projects(discovered_names: Vec<String>, db: State<'_, Database>) -> Result<Vec<ArtistProject>, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::sync_artist_projects(conn, &discovered_names))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn update_artist_members(id: i64, members: Vec<String>, db: State<'_, Database>) -> Result<ArtistProject, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::update_artist_members(conn, id, &members))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn rename_artist_project(id: i64, new_name: String, db: State<'_, Database>) -> Result<ArtistProject, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::rename_artist_project(conn, id, &new_name))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn sync_song_projects_for_artist(
+    artist_id: i64,
+    discovered: Vec<(String, String)>,
+    db: State<'_, Database>,
+) -> Result<Vec<String>, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::sync_song_projects_for_artist(conn, artist_id, &discovered))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn ensure_song_project(
+    artist_id: i64,
+    title: String,
+    song_filepath: String,
+    db: State<'_, Database>,
+) -> Result<SongProjectRow, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::ensure_song_project(conn, artist_id, &title, &song_filepath))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn update_song_project(
+    id: i64,
+    update: artists_toolkit::SongProjectUpdate,
+    db: State<'_, Database>,
+) -> Result<SongProjectRow, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::update_song_project(conn, id, &update))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn rename_song_project(
+    id: i64,
+    new_title: String,
+    new_song_filepath: String,
+    db: State<'_, Database>,
+) -> Result<SongProjectRow, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::rename_song_project(conn, id, &new_title, &new_song_filepath))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn sync_scrapbook_items(discovered: Vec<ScrapbookItem>, db: State<'_, Database>) -> Result<Vec<ScrapbookItem>, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::sync_scrapbook_items(conn, &discovered))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn add_scrapbook_item(item: ScrapbookItem, db: State<'_, Database>) -> Result<ScrapbookItem, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| artists_toolkit::add_scrapbook_item(conn, &item)))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn update_scrapbook_tags(id: String, tags: Vec<String>, db: State<'_, Database>) -> Result<ScrapbookItem, String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        writer.execute(move |conn| artists_toolkit::update_scrapbook_tags(conn, &id, &tags))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn delete_scrapbook_item(id: String, db: State<'_, Database>) -> Result<(), String> {
+    let writer = db.writer.clone();
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| artists_toolkit::delete_scrapbook_item(conn, &id)))
+        .await
+        .map_err(|e| e.to_string())?
+}

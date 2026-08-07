@@ -7,6 +7,7 @@
 //! Additive only for now — see `commands.rs` for why nothing here is called
 //! from the frontend yet.
 
+pub mod artists_toolkit;
 pub mod commands;
 pub mod migration;
 pub mod models;

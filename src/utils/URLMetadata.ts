@@ -1,4 +1,5 @@
 import type { ArtistLinkItem } from "src/App";
+import md5 from "md5";
 
 async function getYouTubeTitle(videoId) {
     let title;
@@ -42,6 +43,7 @@ export async function getLinkItemWithData(url): Promise<ArtistLinkItem> {
     }
 
     return {
+        id: md5(url),
         url,
         name: title,
         imageUrl,

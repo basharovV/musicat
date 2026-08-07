@@ -122,6 +122,8 @@ interface PlaylistFile {
  * Represents a song/track that's in progress.
  */
 interface SongProject {
+    id?: number; // db.songProjects/song_projects row id, once tracked (see ArtistsToolkitData.ts)
+    artistId?: number; // the owning ArtistProject's id
     songFilepath?: string; // path to the song file containing lyrics and metadata (used for populating this object)
     title: string; // Needs to have at least this, everything else is optional
     artist: string;
@@ -141,7 +143,6 @@ interface ArtistProject {
     id?: number;
     name: string;
     members: string[];
-    profilePhoto?: string;
 }
 
 type RecordingType = "master" | "live" | "demo" | "rehearsal";

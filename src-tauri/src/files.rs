@@ -7,6 +7,61 @@ use std::path::Path;
 use tauri::{AppHandle, Emitter};
 use tempfile::Builder;
 
+/// `@tauri-apps/plugin-fs`'s `readDir`/`readTextFile`/`exists` commands (as of 2.4.5) call
+/// `std::fs`/`std::path` synchronously inside their `#[tauri::command]` handlers with no
+/// `spawn_blocking` (verified against the plugin's own source — this is an upstream gap, not
+/// something wrong on our end). A directory or file backed by a cloud-sync placeholder
+/// (Dropbox/OneDrive/ProtonDrive-style "smart sync") can block on a real network download inside
+/// that syscall, and since Tauri's command dispatch shares a small worker-thread pool, one slow
+/// read can stall *every* other command's dispatch, not just the caller's — the whole app "freezes"
+/// even though the code awaiting it is properly async.
+///
+/// These three commands exist to give the Artist's Toolkit (`ArtistsToolkitData.ts` — songbook/
+/// scrapbook folders, the ones most likely to live on a cloud-sync mount) blocking-safe
+/// equivalents: same `std::fs`/`std::path` calls, but run via `spawn_blocking` on Tokio's large
+/// blocking-thread pool instead of a runtime worker thread, so a slow one doesn't starve the rest
+/// of the app. Not a general replacement for `@tauri-apps/plugin-fs` -- just these three hot paths.
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockingSafeDirEntry {
+    pub name: String,
+    pub is_directory: bool,
+}
+
+#[tauri::command]
+pub async fn read_dir_blocking(path: String) -> Result<Vec<BlockingSafeDirEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let entries = fs::read_dir(&path).map_err(|e| format!("failed to read directory at {path}: {e}"))?;
+        let mut result = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_directory = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+            result.push(BlockingSafeDirEntry { name, is_directory });
+        }
+        Ok(result)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn path_exists_blocking(path: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || Path::new(&path).exists())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn read_text_file_blocking(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        fs::read_to_string(&path).map_err(|e| format!("failed to read {path}: {e}"))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteFilesEvent {
