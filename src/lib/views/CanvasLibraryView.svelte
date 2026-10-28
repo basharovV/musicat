@@ -139,6 +139,8 @@
         }
     }
 
+    let latestFetch = 0;
+
     async function fetchLibrarySongsInner(
         uiView: string,
         toDeletePlaylist: { tracks: string[] } | null,
@@ -153,6 +155,7 @@
         isTagOrCondition: boolean,
         songOrder: SongOrder,
     ) {
+        const fetchId = ++latestFetch;
         let results: Song[];
         let isSmartQueryResults = false;
 
@@ -227,6 +230,9 @@
                           matches.every((m) => selectedTags.has(m));
             });
         }
+
+        // A slower, older fetch must not replace a newer one's rows
+        if (fetchId !== latestFetch) return;
 
         results = sortSongs(results, songOrder);
 

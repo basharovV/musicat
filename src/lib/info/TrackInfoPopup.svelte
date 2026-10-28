@@ -375,15 +375,28 @@
             console.log("To reimport: ", toImport);
 
             if (toImport) {
+                // Even on error: with several tracks, the ones that did get
+                // written still need their new values in the library.
+                let isLibraryUpdated = true;
+                if (toImport.songs.length) {
+                    try {
+                        await reImport(toImport);
+                    } catch (err) {
+                        console.error("Error updating library: ", err);
+                        isLibraryUpdated = false;
+                        toast.error(
+                            "Metadata was written to the file, but the library couldn't be updated.",
+                        );
+                    }
+                }
+
                 if (toImport.error) {
                     console.error("Error writing metadata: ", toImport.error);
                     // Show error
                     toast.error(toImport.error);
                     // Roll back to current artwork
                     rollbackArtwork();
-                } else {
-                    reImport(toImport);
-
+                } else if (isLibraryUpdated) {
                     toast.success("Successfully written metadata!", {
                         position: "top-right",
                     });

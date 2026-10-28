@@ -311,11 +311,15 @@ export function songMatchesQuery(song: Song, query: string) {
  * write of what the rescan produced, no client-side merge bookkeeping needed.
  */
 export async function reImport(response: ToImport) {
-    await invoke("upsert_tracks", { tracks: response.songs });
-    if (response.albums.length) {
-        await invoke("upsert_albums", { albums: response.albums });
+    try {
+        await invoke("upsert_tracks", { tracks: response.songs });
+        if (response.albums.length) {
+            await invoke("upsert_albums", { albums: response.albums });
+        }
+    } finally {
+        // The tracks may have landed even if the albums didn't
+        libraryUpdater.update((n) => n + 1);
     }
-    libraryUpdater.update((n) => n + 1);
 }
 
 async function scanExistingStems() {

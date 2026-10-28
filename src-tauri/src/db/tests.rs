@@ -13,6 +13,7 @@ use super::schema;
 use super::settings::{self, Settings};
 use super::smart_queries;
 use super::writer::WriterHandle;
+use crate::tag_edits::TagEdits;
 
 fn open_test_db() -> Connection {
     let mut conn = Connection::open_in_memory().unwrap();
@@ -488,6 +489,7 @@ fn upsert_albums_supersedes_the_placeholder_from_upsert_tracks() {
         path: "/music".to_string(),
         artwork: Some(AlbumArtwork { src: "asset://cover.jpg".to_string(), format: "jpg".to_string() }),
         lossless: true,
+        read_generation: None,
     };
     let result = mutations::upsert_albums(&mut conn, &[full_album]).unwrap();
 
@@ -772,6 +774,7 @@ fn full_import_pipeline_produces_a_coherent_queryable_library() {
             path: "/music/first".into(),
             artwork: None,
             lossless: true,
+            read_generation: None,
         },
         Album {
             id: "album-2".into(),
@@ -785,6 +788,7 @@ fn full_import_pipeline_produces_a_coherent_queryable_library() {
             path: "/music/second".into(),
             artwork: None,
             lossless: false,
+            read_generation: None,
         },
     ];
     mutations::upsert_albums(&mut conn, &albums).unwrap();
@@ -1276,4 +1280,176 @@ fn full_song_project_lifecycle_survives_a_restart_equivalent() {
     assert_eq!(reloaded.id, created.id);
     assert_eq!(reloaded.recordings, update.recordings);
     assert_eq!(reloaded.other_content_items, update.other_content_items);
+}
+
+fn scanned_album(id: &str, title: &str, year: i32, read_generation: Option<u64>) -> Album {
+    Album {
+        id: id.to_string(),
+        title: title.to_lowercase(),
+        display_title: title.to_string(),
+        artist: "Artist A".to_string(),
+        compilation: 0,
+        year,
+        genre: vec![],
+        tracks_ids: vec![],
+        path: "/music".to_string(),
+        artwork: None,
+        lossless: false,
+        read_generation,
+    }
+}
+
+fn stored_track(conn: &Connection, id: &str) -> Song {
+    query::get_tracks_by_ids(conn, &[id.to_string()]).unwrap().remove(0).unwrap()
+}
+
+fn album_exists(conn: &Connection, id: &str) -> bool {
+    query::get_albums_by_ids(conn, &[id.to_string()]).unwrap().remove(0).is_some()
+}
+
+/// A scan snapshots a track, the user saves new tags, then the snapshot's
+/// chunk reaches the database, in the order that used to lose the edit.
+#[test]
+fn a_scan_snapshot_older_than_an_edit_does_not_overwrite_it() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Old Title", "album-1")]).unwrap();
+
+    let (_, scan_read) = edits.read_file(path, || ());
+    let edit = edits.write_file::<()>(path, &["a"], || Ok(())).unwrap();
+
+    let edited = Song { read_generation: Some(edit), ..scanned_track("a", "New Title", "album-1") };
+    mutations::upsert_read_tracks(&mut conn, vec![edited], &edits).unwrap();
+    let snapshot = Song { read_generation: Some(scan_read), ..scanned_track("a", "Old Title", "album-1") };
+    mutations::upsert_read_tracks(&mut conn, vec![snapshot], &edits).unwrap();
+
+    assert_eq!(stored_track(&conn, "a").title, "New Title");
+}
+
+#[test]
+fn a_scan_snapshot_arriving_before_the_edits_own_write_still_ends_on_the_edit() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Old Title", "album-1")]).unwrap();
+
+    let (_, scan_read) = edits.read_file(path, || ());
+    let edit = edits.write_file::<()>(path, &["a"], || Ok(())).unwrap();
+
+    let snapshot = Song { read_generation: Some(scan_read), ..scanned_track("a", "Old Title", "album-1") };
+    mutations::upsert_read_tracks(&mut conn, vec![snapshot], &edits).unwrap();
+    let edited = Song { read_generation: Some(edit), ..scanned_track("a", "New Title", "album-1") };
+    mutations::upsert_read_tracks(&mut conn, vec![edited], &edits).unwrap();
+
+    assert_eq!(stored_track(&conn, "a").title, "New Title");
+}
+
+#[test]
+fn only_the_edited_track_in_a_scan_chunk_is_skipped() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    mutations::upsert_tracks(
+        &mut conn,
+        &[scanned_track("a", "Edited Elsewhere", "album-1"), scanned_track("b", "Old B", "album-1")],
+    )
+    .unwrap();
+
+    let (_, scan_read) = edits.read_file(path, || ());
+    edits.write_file::<()>(path, &["a"], || Ok(())).unwrap();
+
+    let chunk = vec![
+        Song { read_generation: Some(scan_read), ..scanned_track("a", "Stale A", "album-1") },
+        Song { read_generation: Some(scan_read), ..scanned_track("b", "Fresh B", "album-1") },
+        Song { read_generation: Some(scan_read), ..scanned_track("c", "New Import", "album-1") },
+    ];
+    mutations::upsert_read_tracks(&mut conn, chunk, &edits).unwrap();
+
+    assert_eq!(stored_track(&conn, "a").title, "Edited Elsewhere");
+    assert_eq!(stored_track(&conn, "b").title, "Fresh B");
+    assert_eq!(stored_track(&conn, "c").title, "New Import");
+}
+
+#[test]
+fn a_skipped_scan_snapshot_leaves_user_owned_fields_alone() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Old Title", "album-1")]).unwrap();
+    mutations::update_track_favourite(&conn, "a", true).unwrap();
+
+    let (_, scan_read) = edits.read_file(path, || ());
+    let edit = edits.write_file::<()>(path, &["a"], || Ok(())).unwrap();
+    let edited = Song { read_generation: Some(edit), ..scanned_track("a", "New Title", "album-1") };
+    let snapshot = Song { read_generation: Some(scan_read), ..scanned_track("a", "Old Title", "album-1") };
+    mutations::upsert_read_tracks(&mut conn, vec![edited, snapshot], &edits).unwrap();
+
+    assert!(stored_track(&conn, "a").is_favourite);
+}
+
+/// Renaming an album empties and deletes the old one; the scan's late album
+/// chunk must not bring it back as a ghost.
+#[test]
+fn a_stale_album_snapshot_does_not_resurrect_an_album_emptied_by_an_edit() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    mutations::upsert_albums(&mut conn, &[scanned_album("old-album", "Old Album", 2020, None)]).unwrap();
+    mutations::upsert_tracks(&mut conn, &[scanned_track("a", "Song", "old-album")]).unwrap();
+
+    let (_, scan_read) = edits.read_file(path, || ());
+    let edit = edits.write_file::<()>(path, &["a", "old-album"], || Ok(())).unwrap();
+    edits.mark_edited("new-album", edit);
+
+    let edited = Song { read_generation: Some(edit), ..scanned_track("a", "Song", "new-album") };
+    mutations::upsert_read_tracks(&mut conn, vec![edited], &edits).unwrap();
+    mutations::upsert_read_albums(&mut conn, vec![scanned_album("new-album", "New Album", 2020, None)], &edits).unwrap();
+    assert!(!album_exists(&conn, "old-album"));
+
+    let snapshot = scanned_album("old-album", "Old Album", 2020, Some(scan_read));
+    mutations::upsert_read_albums(&mut conn, vec![snapshot], &edits).unwrap();
+
+    assert!(!album_exists(&conn, "old-album"));
+    assert_eq!(stored_track(&conn, "a").album_id.as_deref(), Some("new-album"));
+}
+
+#[test]
+fn a_stale_album_snapshot_does_not_undo_an_edit_to_the_album() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    mutations::upsert_albums(&mut conn, &[scanned_album("album-1", "Album", 2020, None)]).unwrap();
+
+    let (_, scan_read) = edits.read_file(path, || ());
+    edits.write_file::<()>(path, &["a", "album-1"], || Ok(())).unwrap();
+    mutations::upsert_read_albums(&mut conn, vec![scanned_album("album-1", "Album", 2021, None)], &edits).unwrap();
+
+    let snapshot = scanned_album("album-1", "Album", 2020, Some(scan_read));
+    mutations::upsert_read_albums(&mut conn, vec![snapshot], &edits).unwrap();
+
+    assert_eq!(query::get_albums_by_ids(&conn, &["album-1".to_string()]).unwrap()[0].as_ref().unwrap().year, 2021);
+}
+
+#[test]
+fn an_album_written_from_the_database_is_never_treated_as_stale() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    edits.write_file::<()>(std::path::Path::new("/music/a.mp3"), &["album-1"], || Ok(())).unwrap();
+
+    mutations::upsert_read_albums(&mut conn, vec![scanned_album("album-1", "Album", 2021, None)], &edits).unwrap();
+
+    assert!(album_exists(&conn, "album-1"));
+}
+
+#[test]
+fn a_chunk_with_every_track_superseded_is_a_no_op() {
+    let mut conn = open_test_db();
+    let edits = TagEdits::new();
+    let path = std::path::Path::new("/music/a.mp3");
+    let (_, scan_read) = edits.read_file(path, || ());
+    edits.write_file::<()>(path, &["a"], || Ok(())).unwrap();
+
+    let snapshot = Song { read_generation: Some(scan_read), ..scanned_track("a", "Stale", "album-1") };
+    assert!(mutations::upsert_read_tracks(&mut conn, vec![snapshot], &edits).unwrap().is_empty());
 }

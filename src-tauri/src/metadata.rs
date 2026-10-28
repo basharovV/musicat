@@ -19,10 +19,15 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::{thread, time};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::artwork::{cache_artwork, look_for_art};
+use crate::db::Database;
 use crate::store::{load_settings, UserSettings};
+use crate::tag_edits::tag_edits;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MetadataEntry {
@@ -169,6 +174,11 @@ pub struct Song {
     pub markers: Vec<Marker>,
     pub stems: Vec<crate::stem_separator::Stem>,
     pub song_project_id: Option<i64>,
+
+    /// When the tags were read off disk, see `tag_edits`. Not stored; `None`
+    /// on anything that came out of the database.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_generation: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -185,6 +195,10 @@ pub struct Album {
     pub path: String,
     pub artwork: Option<AlbumArtwork>,
     pub lossless: bool,
+
+    /// `read_generation` of the song this album's fields were taken from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_generation: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -221,9 +235,21 @@ pub async fn write_metadatas(
 
     // let v: WriteMetatadaEvent = serde_json::from_str(payload).unwrap();
     for track in event.tracks.iter() {
-        let write_result = write_metadata_track(&track.clone());
+        let track_id = MD5::hash(track.file_path.as_bytes()).to_hex_lowercase();
+        // Looked up before saving: if this edit renames the album, a scan's
+        // snapshot of the old album is stale too, and could bring it back
+        // empty after the track has left it.
+        let previous_album_id = library_album_id(&track_id, &app_handle);
+        let edited_ids: Vec<&str> = std::iter::once(track_id.as_str())
+            .chain(previous_album_id.as_deref())
+            .collect();
+        let write_result = tag_edits().write_file(
+            Path::new(&track.file_path),
+            &edited_ids,
+            || write_metadata_track(track),
+        );
         match write_result {
-            Ok(()) => {
+            Ok(edit_generation) => {
                 if let Some(mut song) = crate::metadata::extract_metadata(
                     Path::new(&track.file_path),
                     true,
@@ -241,6 +267,8 @@ pub async fn write_metadatas(
                         &app_handle,
                     ) {
                         info!("Album: {:?}", album);
+                        tag_edits().mark_edited(&album.id, edit_generation);
+                        song.album_id = Some(album.id.clone());
                         let existing_album = albums.lock().unwrap().get_mut(&album.id).cloned();
                         if let Some(existing_album) = existing_album {
                             // Merge with existing album
@@ -281,6 +309,13 @@ pub async fn write_metadatas(
     }
     // Emit result back to client
 
+    // These albums are the result of the edits, not a snapshot that an edit
+    // can overtake: with several tracks, a later track's edit would otherwise
+    // supersede the album read for the first.
+    for album in albums.lock().unwrap().values_mut() {
+        album.read_generation = None;
+    }
+
     let to_import = ToImportEvent {
         songs: songs.lock().unwrap().clone(),
         albums: albums.lock().unwrap().values().cloned().collect(),
@@ -289,6 +324,14 @@ pub async fn write_metadatas(
         error: error,
     };
     return to_import;
+}
+
+fn library_album_id(track_id: &str, app: &AppHandle) -> Option<String> {
+    let db = app.try_state::<Database>()?;
+    let conn = db.pool.get().ok()?;
+    conn.query_row("SELECT album_id FROM tracks WHERE id = ?1", [track_id], |r| r.get(0))
+        .ok()
+        .flatten()
 }
 
 #[tauri::command]
@@ -356,6 +399,7 @@ pub async fn scan_paths(
                             &app_handle,
                         ) {
                             info!("Album: {:?}", album);
+                            song.album_id = Some(album.id.clone());
                             albums
                                 .lock()
                                 .unwrap()
@@ -738,6 +782,7 @@ fn process_new_album(
         path: album_path.to_string(),
         year: song.year,
         genre: song.genre.clone(),
+        read_generation: song.read_generation,
         artwork: if artwork_src.is_empty() {
             None
         } else {
@@ -1188,7 +1233,9 @@ pub fn extract_metadata(
                 || ext_str.eq_ignore_ascii_case("m4a")
                 || ext_str.eq_ignore_ascii_case("aac")
             {
-                match read_from_path(&file_path) {
+                let (read_result, read_generation) =
+                    tag_edits().read_file(file_path, || read_from_path(&file_path));
+                match read_result {
                     Ok(tagged_file) => {
                         let id =
                             MD5::hash(file_path.to_str().unwrap().as_bytes()).to_hex_lowercase();
@@ -1452,6 +1499,7 @@ pub fn extract_metadata(
                             } else {
                                 None
                             },
+                            read_generation: Some(read_generation),
                             ..Default::default()
                         });
                     }

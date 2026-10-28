@@ -33,6 +33,7 @@ mod resampler;
 mod scrape;
 mod stem_separator;
 mod store;
+mod tag_edits;
 mod updater;
 mod window;
 

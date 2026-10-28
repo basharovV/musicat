@@ -59,12 +59,18 @@
     const libraryAlbums: Writable<Album[]> = writable([]);
     $: albums = $userSettings.beetsDbLocation ? beetsAlbumsOnly : libraryAlbums;
 
+    let latestFetch = 0;
+
     async function fetchAlbums(
         compressionSelected: string,
         albumsViewSortBy: AlbumsSortBy,
         _libraryUpdater: number,
     ) {
+        const fetchId = ++latestFetch;
         let albums = await queryAllAlbums({});
+
+        // A slower, older fetch must not replace a newer one's rows
+        if (fetchId !== latestFetch) return;
 
         if (compressionSelected === "lossless") {
             albums = albums.filter(

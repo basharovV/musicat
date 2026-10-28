@@ -75,6 +75,7 @@ pub fn row_to_track(row: &Row) -> rusqlite::Result<Song> {
         markers: json_or_default::<Vec<Marker>>(row.get("markers")?),
         stems: json_or_default(row.get("stems")?),
         song_project_id: row.get("song_project_id")?,
+        read_generation: None,
     })
 }
 
@@ -114,6 +115,7 @@ pub fn row_to_album(row: &Row) -> rusqlite::Result<Album> {
         path: row.get::<_, Option<String>>("path")?.unwrap_or_default(),
         artwork,
         lossless: row.get::<_, i64>("lossless")? != 0,
+        read_generation: None,
     })
 }
 

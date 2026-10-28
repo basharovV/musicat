@@ -17,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::metadata::{Album, Song};
+use crate::tag_edits::TagEdits;
 
 fn now_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
@@ -230,6 +231,22 @@ pub fn upsert_albums(conn: &mut Connection, albums: &[Album]) -> Result<Vec<Albu
     let ids: Vec<String> = albums.iter().map(|a| a.id.clone()).collect();
     let rows = super::query::get_albums_by_ids(conn, &ids)?;
     Ok(rows.into_iter().flatten().collect())
+}
+
+/// `upsert_tracks` for whatever a read of the files produced, minus any track
+/// edited since it was read (see `tag_edits`). Decided on the writer thread:
+/// an edit landing after the check has its own write queued behind this one.
+pub fn upsert_read_tracks(conn: &mut Connection, mut tracks: Vec<Song>, edits: &TagEdits) -> Result<Vec<Song>, String> {
+    tracks.retain(|track| !edits.is_superseded(&track.id, track.read_generation));
+    upsert_tracks(conn, &tracks)
+}
+
+/// `upsert_albums` counterpart of `upsert_read_tracks`. Without this a late
+/// scan would put an album's old year/artist back, or bring back an album the
+/// edit just emptied.
+pub fn upsert_read_albums(conn: &mut Connection, mut albums: Vec<Album>, edits: &TagEdits) -> Result<Vec<Album>, String> {
+    albums.retain(|album| !edits.is_superseded(&album.id, album.read_generation));
+    upsert_albums(conn, &albums)
 }
 
 /// Deletes tracks and any album that's left with none of its tracks

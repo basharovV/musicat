@@ -12,6 +12,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::metadata::{Album, Song};
+use crate::tag_edits::tag_edits;
 
 use super::migration::{MigrationReport, VerificationReport};
 use super::models::Playlist;
@@ -53,11 +54,12 @@ pub async fn query_playlists(spec: QuerySpec, db: State<'_, Database>) -> Result
 }
 
 /// Insert-or-refresh freshly-scanned tracks. See `db::mutations` for what
-/// "refresh" preserves on an already-existing track.
+/// "refresh" preserves on an already-existing track, and `tag_edits` for why
+/// some of `tracks` may be skipped.
 #[tauri::command]
 pub async fn upsert_tracks(tracks: Vec<Song>, db: State<'_, Database>) -> Result<Vec<Song>, String> {
     let writer = db.writer.clone();
-    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::upsert_tracks(conn, &tracks)))
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::upsert_read_tracks(conn, tracks, tag_edits())))
         .await
         .map_err(|e| e.to_string())?
 }
@@ -65,7 +67,7 @@ pub async fn upsert_tracks(tracks: Vec<Song>, db: State<'_, Database>) -> Result
 #[tauri::command]
 pub async fn upsert_albums(albums: Vec<Album>, db: State<'_, Database>) -> Result<Vec<Album>, String> {
     let writer = db.writer.clone();
-    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::upsert_albums(conn, &albums)))
+    tauri::async_runtime::spawn_blocking(move || writer.execute(move |conn| super::mutations::upsert_read_albums(conn, albums, tag_edits())))
         .await
         .map_err(|e| e.to_string())?
 }

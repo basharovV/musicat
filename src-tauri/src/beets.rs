@@ -289,6 +289,7 @@ pub fn query_beets_albums(
             path: "".to_string(),
             artwork,
             lossless,
+            read_generation: None,
         })
     })?;
 
@@ -410,6 +411,7 @@ pub fn query_beets_albums_by_ids(
             path: "".to_string(),
             artwork,
             lossless,
+            read_generation: None,
         })
     })?;
 
